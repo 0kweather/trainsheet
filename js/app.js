@@ -1160,16 +1160,36 @@ function loadRail() {
       state.railGeo = geojson;
       redrawRail();
       state.rail = new RailIndex(geojson);
-      disruptionGeo = null;
-      redrawDisruptions(); // traced along the track, now it's indexed
-      snapCache.clear();
-      snapStations();
-      computePositions();
-      animateTo();
-      applyFocus(); // a line's track is traced along the rails
+      resnap();
+      loadRailRegions();
     })
     .catch((err) => console.warn("rail index", err)); // trains stay at reported positions
   return railLoading;
+}
+
+// The track just indexed (or grown): everything placed on it goes back on.
+function resnap() {
+  disruptionGeo = null;
+  redrawDisruptions(); // traced along the track, now it's indexed
+  snapCache.clear();
+  snapStations();
+  computePositions();
+  animateTo();
+  applyFocus(); // a line's track is traced along the rails
+}
+
+// Track outside North America (js/railregions.js): a region's joins the
+// drawn rail and the index the first time the map shows it.
+function loadRailRegions() {
+  import("./railregions.js?v=dev")
+    .then(({ watchRegions }) => watchRegions(map, (geojson) => {
+      state.railGeo = { type: "FeatureCollection", features: state.railGeo.features.concat(geojson.features) };
+      focusCache.key = null; // an open railroad's track may run on into this region
+      redrawRail();
+      state.rail.add(geojson);
+      resnap();
+    }))
+    .catch((err) => console.warn("rail regions", err));
 }
 
 // Slides markers from where they're drawn to where they should be.

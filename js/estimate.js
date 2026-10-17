@@ -89,6 +89,12 @@ export class RailIndex {
   constructor(geojson) {
     this.lines = [];
     this.grid = new Map();
+    this.add(geojson);
+  }
+
+  // More track (a region's, js/railregions.js): indexed with the rest, and
+  // joined to it in the routing graph wherever their ends meet.
+  add(geojson) {
     for (const f of geojson.features) {
       const g = f.geometry;
       const parts = g.type === "LineString" ? [g.coordinates] : g.type === "MultiLineString" ? g.coordinates : [];
