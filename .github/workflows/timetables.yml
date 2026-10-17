@@ -6,8 +6,11 @@ name: Refresh timetables
 # timetables, and all the others for search's trains later today, indexed in
 # data/departures.json), and each railroad's first trains (quiet hours).
 # Each build runs on its own, so one railroad's download failing doesn't stop
-# the rest. The stations themselves have their own Monday-afternoon run
-# (stations.yml). Run it by hand from the Actions tab too.
+# the rest: a railroad whose feed fails keeps its last timetable and first
+# trains, and shows as a warning. The railroads are the build's own list, so
+# a new plug-in (scripts/railroads/) joins without an edit here. The stations
+# themselves have their own Monday-afternoon run (stations.yml). Run it by
+# hand from the Actions tab too.
 on:
   schedule:
     - cron: "17 8 * * 1"
@@ -37,14 +40,18 @@ jobs:
 
       - name: Timetables
         run: |
-          for railroad in southshore sunrail railrunner exo septa coaster sprinter atrain tre silverline texrail star upx ontarionorthland alaska \
-                          lirr mnr mbta njt metra rtd frontrunner capmetro caltrain smart metrolink go marc vre sounder ace amtrak via; do
+          railroads=$(python3 scripts/build_schedules.py --list)
+          for railroad in $railroads; do
             python3 scripts/build_schedules.py "$railroad" || echo "::warning::$railroad timetable failed; keeping the last one"
           done
 
       - name: First trains (quiet hours)
         continue-on-error: true
-        run: python3 scripts/build_firsts.py
+        run: |
+          set -o pipefail
+          python3 scripts/build_firsts.py 2>&1 | tee "$RUNNER_TEMP/firsts.log"
+          # A feed that failed kept that railroad's first trains from the last build.
+          grep FAILED "$RUNNER_TEMP/firsts.log" | sed 's/^/::warning::/' || true
 
       - name: Commit and deploy
         env:

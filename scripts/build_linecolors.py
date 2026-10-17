@@ -6,23 +6,31 @@ Output: {railroad: {line name: "#rrggbb"}}. Lines whose railroad gives them
 no color of their own (none, or the same one for every line) are left out.
 
     python3 scripts/build_linecolors.py
+    python3 scripts/build_linecolors.py --only trirail   # a plug-in's railroads (scripts/railroads/), into the existing file
+
+A feed that fails keeps that railroad's colors from the last build.
 """
-import collections, json, pathlib, sys
-from feeds import GTFS, get_zip, rows as csv_rows
+import collections, json, pathlib
+from feeds import EXTRAS, GTFS, chosen, get_zip, rows as csv_rows
 
 ROOT = pathlib.Path(__file__).resolve().parent
 get = lambda url: get_zip(url, timeout=240)
 rows = lambda zf, name: csv_rows(zf, name, optional=True, spaces=True)
 
 
+only = chosen()
+path = ROOT.parent / "data" / "linecolors.json"
+previous = json.loads(path.read_text()) if path.exists() else {}
 out = {}
 for agency, (url, keep, line_name, *_) in GTFS.items():
-    if sys.argv[1:] and agency not in sys.argv[1:]:
+    if only and agency not in only:
         continue
     try:
         zf = get(url)
     except Exception as err:
-        print(f"{agency}: FAILED ({err})")
+        if agency in previous:
+            out[agency] = previous[agency]
+        print(f"{agency}: FAILED ({err}){'; kept from the last build' if agency in previous else ''}")
         continue
     colors = collections.defaultdict(collections.Counter)
     for r in rows(zf, "routes.txt"):
@@ -40,12 +48,14 @@ for agency, (url, keep, line_name, *_) in GTFS.items():
     # Metrolink's Arrow in its blue.
     if agency == "metrolink":
         lines["Metrolink Arrow"] = "#2a62d4"
+    lines.update(EXTRAS.get(agency, {}).get("colors", {}))
     if lines:
         out[agency] = lines
     print(f"{agency}: {len(lines)} lines with colors")
 
-path = ROOT.parent / "data" / "linecolors.json"
-old = json.loads(path.read_text()) if path.exists() and sys.argv[1:] else {}
+# Railroads not asked for stay as they were; one asked for that now has no
+# colors of its own leaves.
+old = {a: v for a, v in previous.items() if a not in only} if only else {}
 old.update(out)
 path.write_text(json.dumps(old, separators=(",", ":"), ensure_ascii=False, sort_keys=True))
 print(f"wrote {path}")
