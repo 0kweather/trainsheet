@@ -98,7 +98,7 @@ function pluginFeed(p, env) {
   const fill = (s, esc) => s.replace(/\{([A-Z0-9_]+)\}/g, (_, k) => esc(env[k] ?? ""));
   const url = (u) => fill(u, encodeURIComponent);
   return {
-    url: p.url && url(p.url), also: p.also?.map(url), routes: p.routes, ttl: p.ttl, format: p.format, fetchFeed: p.fetchFeed,
+    url: p.url && url(p.url), also: p.also?.map(url), routes: p.routes, vehicles: p.vehicles && new RegExp(p.vehicles), ttl: p.ttl, format: p.format, fetchFeed: p.fetchFeed,
     headers: { ...(p.ua ? { "User-Agent": IDENTIFYING_UA } : {}), ...Object.fromEntries(Object.entries(p.headers || {}).map(([k, v]) => [k, fill(v, String)])) },
   };
 }

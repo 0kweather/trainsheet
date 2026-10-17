@@ -85,6 +85,8 @@ def main():
                 fail(mid, f"source {sid} names an agency it doesn't define")
             if s.get("format", "json") not in FORMATS or s.get("scope", "view") not in SCOPES:
                 fail(mid, f"source {sid}: format or scope is off")
+            if not isinstance(s.get("interval"), (int, float)) or isinstance(s["interval"], bool) or s["interval"] <= 0:
+                fail(mid, f"source {sid} needs an interval, seconds between polls")
             first = mod.AGENCIES[s["agencies"][0]]
             stub = {k: v for k, v in s.items() if k in ("id", "agencies", "format", "interval", "relay", "needsKey", "url", "after")}
             stub.update(scope=s.get("scope", "view"), module=mid,

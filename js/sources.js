@@ -12,7 +12,8 @@
 // Railroads added as plug-ins (scripts/railroads/<id>.py, with their parsers
 // in js/railroads/<id>.js) come from js/railroads/index.js, which
 // scripts/gen_registry.py writes; they join the lists below at the place
-// their "after" names, or at the end.
+// their "after" names, or at the end. Their parsers may import the helpers
+// exported here (train, valid, loadSchedule, runNow, runStops, ...).
 
 import { dateFormat } from "./i18n.js?v=dev";
 import { decodeFeed } from "./gtfsrt.js?v=dev";
@@ -94,10 +95,10 @@ export function delayText(min) {
   return `${h} h ${m} min late`;
 }
 
-const mps2mph = (v) => (v == null ? null : v * 2.23694);
-const valid = (lat, lon) => Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0);
+export const mps2mph = (v) => (v == null ? null : v * 2.23694);
+export const valid = (lat, lon) => Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0);
 
-function train(fields) {
+export function train(fields) {
   return { bearing: null, speedMph: null, origin: null, destination: null, nextStop: null,
            delayMin: null, statusText: null, estimated: false, stops: null, route: null,
            routeColor: null, updated: Date.now(), ...fields };
@@ -237,7 +238,7 @@ function mbtaTrips(json) {
   }
   return trips;
 }
-const iso = (t) => (t ? new Date(t).toISOString() : null);
+export const iso = (t) => (t ? new Date(t).toISOString() : null);
 
 // Each running trip's full timetable, for the stops a train has already left
 // (predictions cover only what's ahead). Timetables don't change, so each is
@@ -753,16 +754,16 @@ async function parseCtrail(board) {
 // Railroads whose live data names a train but not its stops (South Shore,
 // SunRail), or that have no live data (Rail Runner), use their timetable.
 const schedules = {};
-const loadSchedule = (agency) => (schedules[agency] ??= fetch(`data/schedules/${agency}.json?v=dev`).then((r) => r.json()));
+export const loadSchedule = (agency) => (schedules[agency] ??= fetch(`data/schedules/${agency}.json?v=dev`).then((r) => r.json()));
 const clocks = {};
 // Minutes past midnight at epoch second `sec` in time zone `tz`.
-function localMinutes(sec, tz) {
+export function localMinutes(sec, tz) {
   clocks[tz] ??= new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "numeric", second: "numeric", hourCycle: "h23" });
   const p = Object.fromEntries(clocks[tz].formatToParts(new Date(sec * 1000)).map((x) => [x.type, +x.value || 0]));
   return p.hour * 60 + p.minute + p.second / 60;
 }
 // "9:44AM" or "11:14 am" in `tz` as epoch seconds, the occurrence nearest `ref`.
-function clockTime(text, ref, tz) {
+export function clockTime(text, ref, tz) {
   const m = /^(\d{1,2}):(\d{2})\s*([AP])M$/i.exec(String(text || "").trim());
   if (!m) return null;
   const mins = (+m[1] % 12 + (/p/i.test(m[3]) ? 12 : 0)) * 60 + +m[2];
@@ -774,7 +775,7 @@ function clockTime(text, ref, tz) {
 // midnight ({ day: the service day's midnight, line, pat }), or null.
 // `slack`: seconds before its first departure and after its last arrival
 // that still count.
-function runNow(tt, number, now, slack) {
+export function runNow(tt, number, now, slack) {
   const midnight = Math.round(now - localMinutes(now, tt.tz) * 60);
   const start = Date.parse(`${tt.start}T00:00:00Z`) / 1000;
   for (const day of [midnight, midnight - 86400]) {
@@ -791,7 +792,7 @@ function runNow(tt, number, now, slack) {
 
 // A run's stop times, shifted by `delay` seconds; `live` (stop id -> epoch
 // second) holds the railroad's own predictions where it gives them.
-function runStops(run, delay = 0, live = {}, tracks = {}) {
+export function runStops(run, delay = 0, live = {}, tracks = {}) {
   return run.pat.map(([id, arr, dep]) => {
     const a = live[id] ?? run.day + arr * 60 + delay;
     return { stopId: id, arrival: { time: a }, departure: { time: Math.max(a, run.day + dep * 60 + delay) },

@@ -1342,7 +1342,9 @@ const viewScoped = (src) => src.scope === "view";
 function meetsView(bbox, bounds) {
   if (!bbox) return true; // nowhere to place it: as if always
   const [w, s, e, n] = bbox, px = (e - w) / 4, py = (n - s) / 4;
-  return w - px <= bounds.getEast() && e + px >= bounds.getWest() && s - py <= bounds.getNorth() && n + py >= bounds.getSouth();
+  // The map's longitudes aren't wrapped to ±180 once it is dragged across the antimeridian.
+  return s - py <= bounds.getNorth() && n + py >= bounds.getSouth() &&
+    [-360, 0, 360].some((k) => w - px + k <= bounds.getEast() && e + px + k >= bounds.getWest());
 }
 function sourceWanted(src) {
   if (!viewScoped(src)) return true;
@@ -1357,13 +1359,14 @@ function sourceWanted(src) {
 }
 const pollTimers = {}; // source id -> its next poll
 const polling = new Set(); // sources being fetched right now
+const backoff = {}; // source id -> when a failed source may be tried again
 // A view-scoped source that has just become wanted (the map moved onto it, a
 // train of it was opened) is polled at once, unless it was a moment ago;
 // with `all`, every one is fetched once whether wanted or not (a search, or
 // a shared link to a train, may be for any railroad).
 function wakeSources(all = false) {
   for (const src of SOURCES) {
-    if (!viewScoped(src) || polling.has(src.id) || !sourceAvailability(src).ok || !(all || sourceWanted(src))) continue;
+    if (!viewScoped(src) || polling.has(src.id) || Date.now() < (backoff[src.id] || 0) || !sourceAvailability(src).ok || !(all || sourceWanted(src))) continue;
     const at = state.sourceStatus[src.id]?.at;
     if (!at || Date.now() - at > src.interval * 1000) poll(src, 0, all);
   }
@@ -1390,10 +1393,16 @@ async function poll(src, attempt = 0, once = false) {
       // Rate limited (the MBTA without a key): its window is a minute.
       if (/HTTP 429/.test(err.message)) delay = Math.max(delay, 60);
     }
+    backoff[src.id] = attempt ? Date.now() + delay * 1000 : 0;
     polling.delete(src.id);
     mergeTrains();
   } else if (state.sourceStatus[src.id]?.status === "loading") {
     state.sourceStatus[src.id] = { status: "idle" }; // not on screen: not fetched yet
+  } else if (!once && !sourceWanted(src) && state.bySource[src.id]?.length && Date.now() - (state.sourceStatus[src.id]?.at || 0) > 5 * 60 * 1000) {
+    // Off screen a while: its last trains are too old to show or count.
+    state.bySource[src.id] = [];
+    state.sourceStatus[src.id] = { status: "idle" };
+    mergeTrains();
   }
   pollTimers[src.id] = setTimeout(() => poll(src, attempt), delay * 1000);
 }
