@@ -1,6 +1,7 @@
 import { AGENCIES, SOURCES, fetchSource, advanceEstimated } from "./sources.js?v=dev";
 import { loadStations, trainsDue, mbtaPredictions, mbtaFacilities, amtrakAddress, meters, norm, stopKey } from "./stations.js?v=dev";
 import { RailIndex, snapToTrack } from "./estimate.js?v=dev";
+import { RAIL_REGIONS } from "./railroads/index.js?v=dev";
 import { NETWORKS, networkColor } from "./networks.js?v=dev";
 import { trainNotices, stationNotices } from "./notices.js?v=dev";
 import { loadDisruptions, aboutLine } from "./disruptions.js?v=dev";
@@ -1179,8 +1180,10 @@ function resnap() {
 }
 
 // Track outside North America (js/railregions.js): a region's joins the
-// drawn rail and the index the first time the map shows it.
+// drawn rail and the index the first time the map shows it. With no regions
+// built yet, the watcher isn't loaded at all.
 function loadRailRegions() {
+  if (!RAIL_REGIONS.length) return;
   import("./railregions.js?v=dev")
     .then(({ watchRegions }) => watchRegions(map, (geojson) => {
       state.railGeo = { type: "FeatureCollection", features: state.railGeo.features.concat(geojson.features) };
