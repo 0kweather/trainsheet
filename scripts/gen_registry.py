@@ -7,7 +7,9 @@ js/railroads/index.js: each plug-in's railroads (AGENCIES, with a bbox from
 data/stations.json where it has their stations, else the module's own), its
 sources as stubs (no parser: js/railroads/<id>.js is imported the first time
 one is polled), the loaders for those files, and RAIL_REGIONS (the regional
-track files in data/rail/index.json, when there is one).
+track files in data/rail/index.json, when there is one) and DATA_REGIONS
+(the station and timetable files of railroads outside the US and Canada,
+data/regions/<region>/, with their railroads and extent).
 
 relay/feeds/index.js: each plug-in's relay feeds (RELAY), and for the ones
 with no url, the custom fetchFeed in relay/feeds/<id>.js (whose Python twin
@@ -21,6 +23,7 @@ import json, pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from railroads import load  # noqa: E402
+from feeds import REGION, read_split  # noqa: E402
 
 KINDS = {"commuter", "intercity"}
 SCOPES = {"view", "always"}
@@ -37,12 +40,10 @@ def fail(mod, msg):
 
 
 def station_boxes():
-    """Each railroad's stations' extent, [west, south, east, north]."""
-    path = ROOT / "data" / "stations.json"
-    if not path.exists():
-        return {}
+    """Each railroad's stations' extent, [west, south, east, north] (the
+    regions' stations too)."""
     boxes = {}
-    for agency, rows in json.loads(path.read_text()).items():
+    for agency, rows in read_split("stations.json").items():
         pts = [(r[3], r[2]) for r in rows if isinstance(r[2], (int, float)) and isinstance(r[3], (int, float))]
         if pts:
             boxes[agency] = [round(min(p[0] for p in pts), 3), round(min(p[1] for p in pts), 3),
@@ -53,6 +54,23 @@ def station_boxes():
 def rail_regions():
     path = ROOT / "data" / "rail" / "index.json"
     return sorted(json.loads(path.read_text()), key=lambda r: r["region"]) if path.exists() else []
+
+
+# The files of data/regions/<region>/ (feeds.write_split), as the page names them.
+KINDS_OF_DATA = ("stations", "departures", "firsts", "linecolors", "trips")
+
+
+def data_regions(agencies):
+    """Each region's station and timetable files (data/regions/<region>/):
+    its railroads, the files it has, and its extent, all its railroads'."""
+    out = []
+    for region in sorted(set(REGION.values())):
+        files = [k for k in KINDS_OF_DATA if (ROOT / "data" / "regions" / region / f"{k}.json").exists()]
+        boxes = [agencies[a]["bbox"] for a in sorted(REGION) if REGION[a] == region and agencies.get(a, {}).get("bbox")]
+        if files and boxes:
+            out.append({"region": region, "agencies": sorted(a for a in REGION if REGION[a] == region and a in agencies), "files": files,
+                        "bbox": [min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)]})
+    return out
 
 
 def main():
@@ -114,6 +132,9 @@ def main():
     out += [f'  {mid}: () => import("./{mid}.js?v=dev"),\n' for mid in sorted(loaders)]
     out += ["};\n\n", "// The regional track files (data/rail/index.json).\n", "export const RAIL_REGIONS = [\n"]
     out += [f"  {js(r)},\n" for r in rail_regions()]
+    out += ["];\n\n", "// Station and timetable data outside the US and Canada (data/regions/<region>/), by region.\n",
+            "export const DATA_REGIONS = [\n"]
+    out += [f"  {js(r)},\n" for r in data_regions(agencies)]
     out += ["];\n"]
     write(ROOT / "js" / "railroads" / "index.js", "".join(out))
 

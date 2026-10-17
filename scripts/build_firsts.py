@@ -13,11 +13,13 @@ Output: {"start": "YYYY-MM-DD",
     python3 scripts/build_firsts.py --only trirail   # a plug-in's railroads (scripts/railroads/)
 
 A feed that fails keeps that railroad's trains from the last build, moved
-to the new start (the days past the old file's end empty).
+to the new start (the days past the old file's end empty). A railroad
+outside the US and Canada goes to data/regions/<region>/firsts.json instead
+(feeds.REGION), with its own "start".
 """
-import datetime, json, re, sys
+import datetime, re, sys
 from collections import defaultdict
-from feeds import DATA, EXTRAS, GTFS, chosen, get_zip, long_name, minutes, rows as csv_rows
+from feeds import EXTRAS, GTFS, chosen, get_zip, long_name, minutes, read_split, rows as csv_rows, write_split
 
 # railroad: (GTFS url, keep route(route row), line name(route row)): every
 # commuter railroad in build_stations.py's table; not the Alaska Railroad,
@@ -34,7 +36,7 @@ get = lambda url: get_zip(url, timeout=240)
 rows = lambda zf, name: csv_rows(zf, name, optional=True, spaces=True)
 
 
-STATIONS = {a: {r[0]: r[1] for r in rs} for a, rs in json.loads((DATA / "stations.json").read_text()).items()}
+STATIONS = {a: {r[0]: r[1] for r in rs} for a, rs in read_split("stations.json").items()}
 # Railroads whose stations fold several stops by name (no ids in common with
 # data/stations.json): any named stop counts as a station.
 FOLDED = {a: (lambda s: bool(s.get("stop_name"))) for a, feed in GTFS.items() if len(feed) > 3 and feed[3]}
@@ -103,10 +105,9 @@ def build(agency, url, keep, line_name, today):
     return {"tz": tz, "days": best}
 
 
-path = DATA / "firsts.json"
 today = datetime.date.today()
 only = chosen()
-previous = json.loads(path.read_text()) if path.exists() else {}
+previous = read_split("firsts.json")  # with the regions' (feeds.REGION)
 out = dict(previous) if only else {}
 if out.get("start") not in (None, today.isoformat()):
     sys.exit("firsts.json starts on another day: rebuild every railroad (no arguments)")
@@ -123,5 +124,5 @@ for agency, (url, keep, line_name) in FEEDS.items():
             days = previous[agency]["days"][gone:] if gone >= 0 else []
             out[agency] = {**previous[agency], "days": days + [[] for _ in range(SPAN - len(days))]}
         print(f"{agency}: FAILED ({err}){'; kept from the last build' if agency in previous else ''}")
-path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
+path = write_split("firsts.json", out, common=("start",))
 print(f"wrote {path} ({path.stat().st_size // 1024} KB)")

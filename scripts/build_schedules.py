@@ -22,7 +22,7 @@ scripts/build_stations.py first).
 import datetime, json, re, sys, unicodedata
 from collections import defaultdict
 from feeds import (AMTRAK_GTFS, VIA_GTFS, ALASKA_LINES, DATA, EXTRAS, GTFS, PLUGINS, TRIP_LINE, chosen, get_zip, long_name, minutes,
-                   nctd_name, rows as csv_rows, slug)
+                   nctd_name, read_split, rows as csv_rows, slug, write_split)
 # railroad: (GTFS url, keep route(row), line name(route row), train number(trip row))
 FEEDS = {
     # Trip ids are train numbers ("22", "1001").
@@ -263,8 +263,8 @@ def departures_index():
         out[path.stem] = {"start": tt["start"], "tz": tt["tz"], **({"unnumbered": True} if tt.get("unnumbered") else {}),
                           **({"file": "ctrail.json"} if path.stem == "ctrail" else {}),
                           "stops": {sid: tt["stops"][sid][0] for sid in ids}, "lines": lines, "ids": ids, "runs": cols}
-    path = DATA / "departures.json"
-    path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
+    # A railroad outside the US and Canada: in its region's departures.json (feeds.REGION).
+    path = write_split("departures.json", out)
     print(f"departures: {sum(len(v['runs']['key']) for v in out.values())} runs ({path.stat().st_size // 1024} KB)")
 
 
@@ -272,7 +272,7 @@ if sys.argv[1:] == ["--list"]:
     print(" ".join(FEEDS))
     sys.exit()
 only = chosen()
-all_stations = json.loads((DATA / "stations.json").read_text())
+all_stations = read_split("stations.json")
 (DATA / "schedules").mkdir(exist_ok=True)
 for agency, (url, keep, line_name, number_of, *station_by) in FEEDS.items():
     if only and agency not in only:

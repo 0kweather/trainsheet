@@ -12,14 +12,17 @@ occasionally (timetables change a few times a year):
     python3 scripts/build_trips.py vre sounder   # just these, into the existing file
     python3 scripts/build_trips.py --only capmetro   # a plug-in's railroads (scripts/railroads/)
 
-A feed that fails keeps that railroad's lookups from the last build.
+A feed that fails keeps that railroad's lookups from the last build. A
+railroad outside the US and Canada goes to data/regions/<region>/trips.json
+instead (feeds.REGION), which its parser reads with js/regiondata.js's
+tripsOf().
 """
-import json, re
-from feeds import DATA, EXTRAS, GTFS, chosen, get_zip, rows as csv_rows
+import re
+from feeds import EXTRAS, GTFS, chosen, get_zip, read_split, rows as csv_rows, write_split
 
 # The station IDs the map uses (data/stations.json), per railroad: some use
 # parent stations, others platforms.
-STATIONS = {a: {r[0] for r in rows} for a, rows in json.loads((DATA / "stations.json").read_text()).items()}
+STATIONS = {a: {r[0] for r in rows} for a, rows in read_split("stations.json").items()}
 
 # Each railroad's timetable (build_stations.py's, but Metra's own file), and
 # the routes to keep for agencies whose feed also covers buses.
@@ -102,8 +105,7 @@ def build(agency, url, routes):
 
 SEQUENCED = {"frontrunner"}
 only = chosen()
-path = DATA / "trips.json"
-previous = json.loads(path.read_text()) if path.exists() else {}
+previous = read_split("trips.json")  # with the regions' (feeds.REGION)
 out = dict(previous) if only else {}
 for k, (u, routes) in FEEDS.items():
     if only and k not in only:
@@ -114,7 +116,7 @@ for k, (u, routes) in FEEDS.items():
         if k in previous:
             out[k] = previous[k]
         print(f"{k}: FAILED {err}; {len(previous.get(k, {}).get('trips', {}))} trips kept from the last build")
-path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
+path = write_split("trips.json", out)
 print(f"wrote {path} ({path.stat().st_size // 1024} KB)")
 for k, v in out.items():
     print(f"  {k}: {len(v['stops'])} stops, {len(v['trips'])} trips")

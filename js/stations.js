@@ -19,7 +19,12 @@ const PRIORITY = Object.keys(AGENCIES);
 // use one namespace.
 export const stopKey = (agency, id) => `${INTERCITY.has(agency) ? "ic" : agency}:${id}`;
 
-export const norm = (s) => String(s || "").toLowerCase().replace(/\b(station|sta|st|street|ave|avenue)\b/g, "").replace(/[^a-z0-9]/g, "");
+// Lowercase with accents dropped ("Hämeenlinna" -> "hameenlinna", "Αθήνα" ->
+// "αθηνα", a Greek word's final sigma as any other), for search and norm().
+export const fold = (s) => String(s || "").normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/ς/g, "σ");
+// A name as its letters and digits, for matching names across feeds: any
+// script's letters (Finnish, Greek, Hebrew), not only Latin ones.
+export const norm = (s) => fold(s).replace(/\b(station|sta|st|street|ave|avenue)\b/g, "").replace(/[^\p{L}\p{N}]/gu, "");
 
 function meters(a, b) {
   const R = 6371000, toRad = (d) => (d * Math.PI) / 180;
@@ -29,7 +34,14 @@ function meters(a, b) {
 }
 
 export async function loadStations() {
-  const raw = await loadStationsData();
+  return mergeStations(await loadStationsData());
+}
+
+// A station list (data/stations.json's railroads, or a region's from
+// data/regions/<region>/stations.json) as merged stations, by id. A region
+// lies far from the rest, so it is merged on its own, and names the busiest
+// tenth of its intercity stations at every zoom.
+export function mergeStations(raw, { region = false } = {}) {
   const members = [];
   for (const [agency, list] of Object.entries(raw)) {
     if (!AGENCIES[agency]) continue;
@@ -44,14 +56,18 @@ export async function loadStations() {
   members.sort((a, b) => PRIORITY.indexOf(a.agency) - PRIORITY.indexOf(b.agency));
 
   // Grid buckets (~550 m, searched with neighbors) so merging doesn't compare every pair.
+  // A bucket narrows east to west with latitude (370 m wide at 60° north),
+  // so far north more neighbors each way are searched, enough to span
+  // MERGE_METERS (one each way, as ever, south of about 52°).
   const cell = (lat, lon) => `${Math.floor(lat * 200)}:${Math.floor(lon * 150)}`;
   const grid = new Map();
   const stations = [];
   for (const m of members) {
     let home = null;
     const gx = Math.floor(m.lat * 200), gy = Math.floor(m.lon * 150);
+    const span = Math.min(20, Math.ceil(MERGE_METERS / ((111320 / 150) * Math.cos((Math.min(89, Math.abs(m.lat)) * Math.PI) / 180))));
     for (let dx = -1; dx <= 1 && !home; dx++) {
-      for (let dy = -1; dy <= 1 && !home; dy++) {
+      for (let dy = -span; dy <= span && !home; dy++) {
         for (const s of grid.get(`${gx + dx}:${gy + dy}`) || []) {
           // Never merge two stops of the same railroad.
           if (!s.members.some((x) => x.agency === m.agency) && meters(s, m) <= MERGE_METERS) {
@@ -90,7 +106,7 @@ export async function loadStations() {
   // fairly), plus each commuter railroad's busiest station.
   const icTrains = (s) => Math.max(0, ...s.members.filter((m) => intercity(m.agency)).map((m) => m.trips));
   [...stations].filter((s) => s.major).sort((a, b) => icTrains(b) - icTrains(a))
-    .slice(0, TOP_INTERCITY).forEach((s) => (s.top = true));
+    .slice(0, region ? Math.ceil(stations.filter((s) => s.major).length / 10) : TOP_INTERCITY).forEach((s) => (s.top = true));
   const busiest = new Map(); // commuter railroad -> its busiest station
   for (const s of stations) {
     for (const m of s.members) {
