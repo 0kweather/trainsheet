@@ -2,8 +2,8 @@
 // The railroad plug-ins, as js/sources.js merges them into AGENCIES and SOURCES.
 
 export const AGENCIES = {
-  capmetro: {"after": "railrunner", "bbox": [-97.856, 30.262, -97.7, 30.588], "color": "#e0218a", "country": "US", "credit": {"href": "https://data.texas.gov", "label": "CapMetro"}, "kind": "commuter", "license": null, "name": "CapMetro Rail", "region": "Austin", "short": "CapMetro", "tz": "America/Chicago"},
-  trirail: {"after": "capmetro", "bbox": [-80.26, 25.781, -80.063, 26.759], "color": "#2ba84a", "country": "US", "credit": {"href": "https://www.tri-rail.com", "label": "Tri-Rail"}, "kind": "commuter", "license": null, "name": "Tri-Rail", "region": "South Florida", "short": "Tri-Rail", "tz": "America/New_York"},
+  capmetro: {"after": "railrunner", "bbox": [-97.856, 30.262, -97.7, 30.588], "color": "#e0218a", "country": "US", "credit": {"href": "https://data.texas.gov", "label": "CapMetro"}, "kind": "commuter", "license": null, "logo": {"aspect": 4.14, "file": "img/logos/capmetro.svg", "white": "img/logos/capmetro-white.svg"}, "name": "CapMetro Rail", "region": "Austin", "short": "CapMetro", "tz": "America/Chicago"},
+  trirail: {"after": "capmetro", "bbox": [-80.26, 25.781, -80.063, 26.759], "color": "#2ba84a", "country": "US", "credit": {"href": "https://www.tri-rail.com", "label": "Tri-Rail"}, "kind": "commuter", "license": null, "logo": {"also": {"trirail-onnavy": {"aspect": 4.4, "file": "img/logos/trirail-onnavy.svg"}}, "aspect": 4.4, "file": "img/logos/trirail.svg"}, "name": "Tri-Rail", "region": "South Florida", "short": "Tri-Rail", "tz": "America/New_York"},
 };
 
 export const SOURCES = [

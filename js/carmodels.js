@@ -10,6 +10,11 @@ import {
 import { badge, spotOnCar } from "./emblems.js?v=dev";
 
 let clipSeq = 0;
+// A new id for a clip path or gradient in a drawing, numbered with this
+// file's own so consist.js renumbers them all alike: for the plug-in
+// railroads' drawings (js/railroads/<id>.cars.js), which import bilevel,
+// cabUnit, coachCar, married and the rest from here.
+export const newId = () => `ts-clip-${++clipSeq}`;
 
 // The railroad's logo on a car side, where the real one is (see
 // js/emblems.js). spec.badge: the spots, each { x, y, h, dark, logo } (one,
@@ -68,7 +73,7 @@ function carEnds(c, { floor = 4, top = 11.4 } = {}) {
 // left; its mate is drawn mirrored, so the two cabs sit at the pair's outer
 // ends and pairs meet cab to cab, as they run.
 // Single cars (pair 2) have a cab at each end.
-const married = (draw) => (c) => {
+export const married = (draw) => (c) => {
   if (c.pair === 2) return draw({ ...c, cabL: true, cabR: true, single: true });
   if (!c.pair) return draw({ ...c, cabL: true, cabR: false });
   const m = { ...c, cabL: true, cabR: false, lead: false, mate: true, mirrored: !c.mirrored, coupledL: c.coupledR, coupledR: c.coupledL };

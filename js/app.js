@@ -6,7 +6,7 @@ import { NETWORKS, networkColor } from "./networks.js?v=dev";
 import { trainNotices, stationNotices } from "./notices.js?v=dev";
 import { loadDisruptions, aboutLine } from "./disruptions.js?v=dev";
 import { inferDelay, restoreFeed } from "./delays.js?v=dev";
-import { consistOf, consistHtml, carSvg, modelIds, fleetSamples } from "./consist.js?v=dev";
+import { consistOf, consistHtml, carSvg, modelIds, fleetSamples, onCars, loadCars, pluginFacts } from "./consist.js?v=dev";
 import { stationLifts } from "./lifts.js?v=dev";
 import { t as T, tn as Tn, lang, langPref, locale, dateFormat, translatePage } from "./i18n.js?v=dev";
 
@@ -2301,7 +2301,9 @@ const AMENITIES = [
 const onBoardFor = (t) => { const c = consistOf(t); return c ? onBoard(c) : ""; };
 function onBoard(c) {
   const keys = new Set(c.cars.map((car) => car.type?.key).filter(Boolean));
-  const has = AMENITIES.filter(([, , types]) => types.some((k) => keys.has(k)));
+  // A plug-in's types list theirs ({ amenities: ["dining", ...] }, consist.js).
+  const own = new Set(c.cars.flatMap((car) => car.type?.amenities || []));
+  const has = AMENITIES.filter(([id, , types]) => own.has(id) || types.some((k) => keys.has(k)));
   if (!has.length) return "";
   const title = T(c.typical ? "Usually on board" : "On board");
   return `<section class="on-board" aria-label="${title}">
@@ -2385,8 +2387,11 @@ function models() {
 }
 function modelOf(c, i) {
   const all = models();
-  return modelIds(c, i).map((id) => all[id]).find(Boolean) || null;
+  return modelIds(c, i).map((id) => all[id] || pluginFacts(id)).find(Boolean) || null;
 }
+// A plug-in railroad's cars come in their own file (consist.js): once in,
+// the train or railroad showing redraws with them.
+onCars(() => { if (state.selected || state.railroad) renderDetail(); });
 
 const factText = {
   topSpeedMph: (v) => (state.units === "km" ? `${Math.round(v * KM_PER_MI)} km/h` : `${v} ${T("mph")}`),
@@ -4637,6 +4642,14 @@ const LOADING_TRAINS = [
   ["caltrain"], ["metrolink"], ["go"], ["marc", "Penn Line"], ["trirail"], ["frontrunner"], ["smart"], ["capmetro"], ["rtd"],
   ["coaster"], ["sprinter"], ["texrail"], ["silverline"], ["tre"], ["upx"], ["alaska", "Aurora Winter Train"],
 ];
+// A plug-in railroad's ("loading": [route or null, ...] in its AGENCIES
+// entry) join for a viewer in its time zone, once its cars are in.
+{
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  for (const [id, a] of Object.entries(AGENCIES)) {
+    if (Array.isArray(a.loading) && a.tz === zone) loadCars(id)?.then((ok) => ok && LOADING_TRAINS.push(...a.loading.map((r) => [id, r ?? undefined])));
+  }
+}
 const loadingStart = Date.now();
 let mapLoaded = false; // map.loaded() turns false whenever the trains layer updates
 map.once("load", () => (mapLoaded = true));

@@ -8,6 +8,18 @@
 // on its spot, h feet tall. A car drawn mirrored (the back half of a married
 // pair, a cab car at the rear) passes c.mirrored so the logo still reads
 // left to right.
+//
+// A railroad added as a plug-in declares its logo in its own module
+// (scripts/railroads/<id>.py), in its AGENCIES entry:
+//   "logo": {"file": "img/logos/<id>.svg", "aspect": 3.2,
+//            "white": "img/logos/<id>-white.svg",                 (optional)
+//            "also": {"<id>-word": {"file": ..., "aspect": ...}}} (optional)
+// aspect: width / height; white: the version for dark paint; also: other
+// logos its drawings name (a badge's logo). Its cars module
+// (js/railroads/<id>.cars.js, see consist.js) may export LOGOS of the same
+// shape, by name, added when it loads.
+
+import { AGENCIES as PLUGINS } from "./railroads/index.js?v=dev";
 
 // key: [width / height, has a white version]
 const LOGOS = {
@@ -15,7 +27,7 @@ const LOGOS = {
   acela: [2.52, true], via: [2.25, true], "via-mark": [3.64, true], brightline: [4.07, true], mta: [0.91, false], mbta: [1, false],
   njt: [4.44, true], "njt-word": [4.98, true], septa: [1, true], "septa-word": [3.98, false], "septa-mark-white": [1.384, false],
   "mta-inverse": [0.91, false], metra: [3.68, true], caltrain: [1.77, false],
-  metrolink: [7.75, true], "metrolink-teal": [7.75, false], rtd: [2.2, true], capmetro: [4.14, true], trirail: [4.4, false], "trirail-onnavy": [4.4, false],
+  metrolink: [7.75, true], "metrolink-teal": [7.75, false], rtd: [2.2, true],
   smart: [3.31, false], frontrunner: [12.85, true], marc: [3.85, true],
   // GO Transit's "GO"; in the older locomotive scheme's green.
   go: [2.09, true], "go-teal": [2.09, false],
@@ -120,6 +132,18 @@ const LETTERING = {
 };
 const BY_AGENCY = { lirr: "mta", mnr: "mta" };
 
+// The plug-ins' logos (see the top): key -> { file, white }, the files'
+// paths in full. One can't take a built-in logo's name.
+const FILES = {};
+export function addLogos(logos) {
+  for (const [key, l] of Object.entries(logos || {})) {
+    if (!l?.file || !(l.aspect > 0) || (LOGOS[key] && !FILES[key])) { console.warn("logo", key, "skipped"); continue; }
+    LOGOS[key] = [l.aspect, !!l.white];
+    FILES[key] = { file: l.file, white: l.white || null };
+  }
+}
+for (const [id, a] of Object.entries(PLUGINS)) if (a.logo) addLogos({ [id]: a.logo, ...a.logo.also });
+
 const n = (v) => Math.round(v * 1000) / 1000;
 function image(key, x, y, h, dark) {
   if (LETTERING[key]) {
@@ -130,8 +154,8 @@ function image(key, x, y, h, dark) {
   if (!LOGOS[key]) return "";
   const [aspect, white] = LOGOS[key];
   const w = h * aspect;
-  const file = `${key}${dark && white ? "-white" : ""}.svg`;
-  return `<image href="img/logos/${file}?v=dev" x="${n(x - w / 2)}" y="${n(y - h / 2)}" width="${n(w)}" height="${n(h)}"/>`;
+  const file = FILES[key] ? FILES[key][dark && white ? "white" : "file"] : `img/logos/${key}${dark && white ? "-white" : ""}.svg`;
+  return `<image href="${file}?v=dev" x="${n(x - w / 2)}" y="${n(y - h / 2)}" width="${n(w)}" height="${n(h)}"/>`;
 }
 
 // The logo a railroad's equipment carries, or null.
