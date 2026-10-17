@@ -20,12 +20,14 @@ Output: {agency: [[id, name, lat, lon, [lines...], place, code, busy, daily, acc
     python3 scripts/build_stations.py --only trirail   # a plug-in's railroads (scripts/railroads/)
 
 A feed that fails keeps that railroad's stations from the last build (Amtrak,
-VIA and Brightline as one set), so the file never loses a railroad.
+VIA and Brightline as one set), so the file never loses a railroad. A
+railroad outside the US and Canada goes to data/regions/<region>/stations.json
+instead (feeds.REGION), the same shape.
 """
 import datetime, json, pathlib, re, urllib.parse, urllib.request
 from collections import defaultdict
 
-from feeds import (AMTRAK_GTFS, VIA_GTFS, EXTRAS, GTFS, TRIP_LINE, chosen, long_name, get_raw, get_zip, rows)
+from feeds import (AMTRAK_GTFS, VIA_GTFS, EXTRAS, GTFS, TRIP_LINE, chosen, long_name, get_raw, get_zip, read_split, rows, write_split)
 
 
 def official_code(stop):
@@ -223,8 +225,7 @@ POSITION_FIX = {("alaska", "FAIR"): (64.85583, -147.70892)}
 
 # Named railroads only: rebuild just those, keeping the rest of the file.
 only = chosen()
-path = pathlib.Path(__file__).resolve().parent.parent / "data" / "stations.json"
-previous = json.loads(path.read_text()) if path.exists() else {}
+previous = read_split("stations.json")  # with the regions' (feeds.REGION)
 if only:
     result = previous
 else:
@@ -268,5 +269,5 @@ if ct.exists() and not only:
     result["ctrail"] = json.loads(ct.read_text())["stations"]
 print({k: len(v) for k, v in result.items()})
 
-path.write_text(json.dumps(result, separators=(",", ":"), ensure_ascii=False))
+path = write_split("stations.json", result)
 print(f"wrote {path} ({path.stat().st_size // 1024} KB)")

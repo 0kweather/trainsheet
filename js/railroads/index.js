@@ -20,3 +20,7 @@ export const PARSERS = {
 // The regional track files (data/rail/index.json).
 export const RAIL_REGIONS = [
 ];
+
+// Station and timetable data outside the US and Canada (data/regions/<region>/), by region.
+export const DATA_REGIONS = [
+];

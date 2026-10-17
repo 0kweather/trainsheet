@@ -8,19 +8,19 @@ no color of their own (none, or the same one for every line) are left out.
     python3 scripts/build_linecolors.py
     python3 scripts/build_linecolors.py --only trirail   # a plug-in's railroads (scripts/railroads/), into the existing file
 
-A feed that fails keeps that railroad's colors from the last build.
+A feed that fails keeps that railroad's colors from the last build. A
+railroad outside the US and Canada goes to data/regions/<region>/linecolors.json
+instead (feeds.REGION).
 """
-import collections, json, pathlib
-from feeds import EXTRAS, GTFS, chosen, get_zip, rows as csv_rows
+import collections
+from feeds import EXTRAS, GTFS, chosen, get_zip, read_split, rows as csv_rows, write_split
 
-ROOT = pathlib.Path(__file__).resolve().parent
 get = lambda url: get_zip(url, timeout=240)
 rows = lambda zf, name: csv_rows(zf, name, optional=True, spaces=True)
 
 
 only = chosen()
-path = ROOT.parent / "data" / "linecolors.json"
-previous = json.loads(path.read_text()) if path.exists() else {}
+previous = read_split("linecolors.json")  # with the regions' (feeds.REGION)
 out = {}
 for agency, (url, keep, line_name, *_) in GTFS.items():
     if only and agency not in only:
@@ -57,5 +57,5 @@ for agency, (url, keep, line_name, *_) in GTFS.items():
 # colors of its own leaves.
 old = {a: v for a, v in previous.items() if a not in only} if only else {}
 old.update(out)
-path.write_text(json.dumps(old, separators=(",", ":"), ensure_ascii=False, sort_keys=True))
+path = write_split("linecolors.json", old, sort_keys=True)
 print(f"wrote {path}")

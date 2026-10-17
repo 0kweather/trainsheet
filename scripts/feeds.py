@@ -5,7 +5,7 @@ the CSV reader and the clock. Imported by scripts/build_*.py (which used to
 carry their own copies, or read the top of build_stations.py); nothing here
 runs on its own.
 """
-import csv, io, pathlib, re, ssl, sys, time, unicodedata, urllib.parse, urllib.request, zipfile
+import csv, gzip, io, json, pathlib, re, ssl, sys, time, unicodedata, urllib.parse, urllib.request, zipfile
 
 from railroads import load
 
@@ -121,6 +121,9 @@ GTFS = {
 #                   feeds that give only stop and trip ids
 #   "firsts":       False: none in data/firsts.json
 #   "colors":       {line: "#rrggbb"} for data/linecolors.json
+#   "headers":      sent with the feed's download ({"Accept-Encoding":
+#                   "gzip"}, which Finland's Digitraffic requires; a gzipped
+#                   answer is unpacked)
 # PLUGINS: each plug-in's railroads, for a build script's --only.
 EXTRAS, PLUGINS = {}, {}
 for _mod in load():
@@ -134,6 +137,63 @@ for _mod in load():
 for _agency in [a for a, f in GTFS.items() if f is None]:  # a plug-in taken out
     del GTFS[_agency]
 TRANSLATE = {GTFS[a][0]: x["translations"] for a, x in EXTRAS.items() if x.get("translations")}
+HEADERS = {GTFS[a][0]: x["headers"] for a, x in EXTRAS.items() if x.get("headers")}
+
+# A railroad outside the US and Canada (by its AGENCIES country) keeps its
+# rows of the station and timetable files out of the ones every viewer loads
+# at startup: they go to data/regions/<region>/ (stations.json,
+# departures.json, firsts.json, linecolors.json, trips.json, each shaped as
+# data/'s own), which the page loads the first time the map shows the
+# region, a search runs or a link needs it (js/regiondata.js). The region is
+# the plug-in's RAIL region, else the railroad's country, lowercase.
+# REGION: {railroad: region}, for read_split and write_split.
+HOME = {"US", "CA"}
+REGIONS = DATA / "regions"
+REGION = {}
+for _mod in load():
+    _agencies = getattr(_mod, "AGENCIES", {})
+    _abroad = [a["country"] for a in _agencies.values() if a.get("country") not in HOME]
+    _rail = (getattr(_mod, "RAIL", None) or {}).get("region")
+    for _agency in sorted({*getattr(_mod, "GTFS", {}), *_agencies}) if _abroad else ():
+        _country = _agencies[_agency].get("country") if _agency in _agencies else _abroad[0]
+        if _country not in HOME:
+            REGION[_agency] = (_rail or _country).lower()
+
+
+def read_split(name):
+    """data/<name> with every region's rows of it (data/regions/*/<name>) put
+    back, as one dict: the file as it was before regions had their own."""
+    path = DATA / name
+    out = json.loads(path.read_text()) if path.exists() else {}
+    for part in sorted(REGIONS.glob(f"*/{name}")):
+        out.update({k: v for k, v in json.loads(part.read_text()).items() if k not in out})
+    return out
+
+
+def write_split(name, data, common=(), **dump):
+    """Writes a read_split dict, rebuilt, back: the railroads in REGION to
+    their regions' files, the rest to data/<name>, each in data's order.
+    common: keys every file carries (firsts.json's "start"). A region with no
+    rows left loses its file. dump: json.dumps' options beyond compact
+    separators and unescaped letters. Returns data/<name>'s path."""
+    head = {k: data[k] for k in common if k in data}
+    parts = {"": {}}
+    for k, v in data.items():
+        if k in common:
+            parts[""][k] = v
+        else:
+            parts.setdefault(REGION.get(k, ""), dict(head))[k] = v
+    dump = {"separators": (",", ":"), "ensure_ascii": False, **dump}
+    path = DATA / name
+    path.write_text(json.dumps(parts.pop(""), **dump))
+    for old in REGIONS.glob(f"*/{name}"):
+        if old.parent.name not in parts:
+            old.unlink()
+    for region, part in sorted(parts.items()):
+        (REGIONS / region).mkdir(parents=True, exist_ok=True)
+        (REGIONS / region / name).write_text(json.dumps(part, **dump))
+        print(f"wrote {(REGIONS / region / name).relative_to(DATA.parent)} ({len(part) - len(head)} railroads)")
+    return path
 
 
 def chosen(argv=None):
@@ -171,12 +231,14 @@ TLS_RSA.set_ciphers("DEFAULT")
 def get_raw(url, timeout=180, attempts=1):
     """The bytes at url, trying again on a dropped download (a connection
     reset, a timeout) as many times as attempts allows."""
-    req = urllib.request.Request(url, headers={"User-Agent": "trainsheet-build"})
+    req = urllib.request.Request(url, headers={"User-Agent": "trainsheet-build", **HEADERS.get(url, {})})
     context = TLS_RSA if urllib.parse.urlsplit(url).hostname in RSA_ONLY_HOSTS else None
     for attempt in range(attempts):
         try:
             with urllib.request.urlopen(req, timeout=timeout, context=context) as r:
-                return r.read()
+                data = r.read()
+                # Asked for gzip (Digitraffic's answers nothing else): unpacked.
+                return gzip.decompress(data) if url in HEADERS and data[:2] == b"\x1f\x8b" else data
         except Exception as err:
             if attempt == attempts - 1:
                 raise
