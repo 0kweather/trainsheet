@@ -26,7 +26,7 @@ railroads' track in it as last fetched (data/rail/src/<id>.json):
 
     python3 scripts/build_rail.py --only digitraffic
 """
-import hashlib, json, math, os, pathlib, sys, time, urllib.parse, urllib.request
+import hashlib, json, math, os, pathlib, re, socket, ssl, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import defaultdict
 
 URL = ("https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/"
@@ -195,33 +195,142 @@ OSM_CACHE = ROOT / "scripts" / ".osm-cache"
 TRACK_ATTEMPTS = int(os.environ.get("OSM_TRACK_ATTEMPTS", "2"))
 MIRRORS = ("https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter",
            "https://maps.mail.ru/osm/tools/overpass/api/interpreter")
+# Hosts whose TLS handshake urllib can't make here (macOS's own python3 is
+# built on LibreSSL 2.8.3, which overpass-api.de refuses): curl makes it.
+CURL_HOSTS = set()
+# A box a server gives up on is split in four, and each quarter again, down
+# to 1/64 of it. A 502 or 504 that comes quicker than GAVE_UP_S is a busy
+# server turning the query away, not one that ran out of time.
+TILE_DEPTH = 3
+GAVE_UP_S = 60
 
 
-def overpass(query, name, attempts=9):
-    """Run an Overpass query, caching the answer so reruns don't hammer the
-    (often busy) public servers. Delete scripts/.osm-cache to refresh."""
-    cached = OSM_CACHE / f"{name}.json"
-    if cached.exists():
-        return json.loads(cached.read_text())
+class TooBig(Exception):
+    """The server gave up on the query: a gateway timeout, or its own time or memory limit."""
+
+
+class Busy(Exception):
+    """The server turned the query away: it can't spare the memory and time it asks for now."""
+
+
+def gateway(code, since, body):
+    if b"too busy" in body:
+        return Busy(f"HTTP {code}, too busy")
+    if time.time() - since >= GAVE_UP_S:
+        return TooBig(f"HTTP {code} after {time.time() - since:.0f} s")
+    return RuntimeError(f"HTTP {code}")
+
+
+def post(url, query):
+    """One Overpass answer, as JSON: through urllib, or curl for a host whose
+    handshake urllib fails."""
+    data = urllib.parse.urlencode({"data": query}).encode()
+    host = urllib.parse.urlsplit(url).hostname
+    since = time.time()
+    if host not in CURL_HOSTS:
+        try:
+            req = urllib.request.Request(url, data=data, headers={"User-Agent": "trainsheet-build"})
+            with urllib.request.urlopen(req, timeout=300) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as err:
+            if err.code in (502, 504):
+                raise gateway(err.code, since, err.read()) from err
+            raise
+        except urllib.error.URLError as err:
+            if isinstance(err.reason, (socket.timeout, TimeoutError)):
+                raise TooBig("timed out") from err
+            if not isinstance(err.reason, (ssl.SSLError, ConnectionResetError)):
+                raise
+            print(f"  {host}: no TLS handshake from here ({err.reason}), using curl")
+        except (ssl.SSLError, ConnectionResetError) as err:
+            print(f"  {host}: no TLS handshake from here ({err}), using curl")
+        except (socket.timeout, TimeoutError) as err:
+            raise TooBig("timed out") from err
+        CURL_HOSTS.add(host)
+    run = subprocess.run(["curl", "-sS", "--max-time", "300", "-A", "trainsheet-build", "--data-binary", "@-",
+                          "-w", "\n%{http_code}", url], input=data, capture_output=True)
+    if run.returncode == 28:
+        raise TooBig("timed out")
+    if run.returncode:
+        raise RuntimeError(f"curl exit {run.returncode}: {run.stderr.decode(errors='replace').strip()[:120]}")
+    body, _, code = run.stdout.rpartition(b"\n")
+    if code in (b"502", b"504"):
+        raise gateway(code.decode(), since, body)
+    if code != b"200":
+        raise RuntimeError(f"HTTP {code.decode()}")
+    return json.loads(body)
+
+
+def lighter(query):
+    """The query asking for a quarter of the memory and half the time it did
+    (at least 64 MiB and 3 minutes), which a busy server finds a slot for
+    sooner; one that then needs more fails as too big, and is split."""
+    query = re.sub(r"\[maxsize:(\d+)\]", lambda m: f"[maxsize:{max(1 << 26, int(m[1]) // 4)}]", query, count=1)
+    return re.sub(r"\[timeout:(\d+)\]", lambda m: f"[timeout:{max(180, int(m[1]) // 2)}]", query, count=1)
+
+
+def fetch(query, box, attempts, depth=0):
+    """The query's elements, trying each mirror in turn; when one gives up
+    on it and the query names a box (box: "south,west,north,east" as written
+    in it), the box's quarters instead, merged. None if every try failed."""
     for attempt in range(attempts):
         url = MIRRORS[attempt % len(MIRRORS)]
         try:
-            req = urllib.request.Request(url, data=urllib.parse.urlencode({"data": query}).encode(),
-                                         headers={"User-Agent": "trainsheet-build"})
-            with urllib.request.urlopen(req, timeout=300) as r:
-                answer = json.load(r)
+            answer = post(url, query)
             # A query that times out or runs out of memory still answers 200,
             # with a remark and whatever it got so far: don't cache that.
-            if "error" in answer.get("remark", ""):
-                raise RuntimeError(answer["remark"][:120])
-            elements = answer["elements"]
-            OSM_CACHE.mkdir(exist_ok=True)
-            cached.write_text(json.dumps(elements))
-            return elements
+            remark = answer.get("remark", "")
+            if "error" in remark:
+                raise (TooBig if "timed out" in remark or "out of memory" in remark else RuntimeError)(remark[:120])
+            return answer["elements"]
+        except TooBig as err:
+            if box and depth < TILE_DEPTH:
+                print(f"  overpass: {urllib.parse.urlsplit(url).hostname} gave up ({err}), splitting {box} in four")
+                return tiles(query, box, attempts, depth)
+            print(f"  overpass retry {attempt + 1} ({err})")
+        except Busy as err:
+            query = lighter(query)
+            print(f"  overpass retry {attempt + 1} ({err}), asking for less")
         except Exception as err:
             print(f"  overpass retry {attempt + 1} ({err})")
-            time.sleep(min(90, 15 * (attempt + 1)))
+        time.sleep(min(90, 15 * (attempt + 1)))
     return None
+
+
+def tiles(query, box, attempts, depth):
+    """The query run on each quarter of its box, the answers merged as one
+    answer for the whole box comes: each element once, nodes, then ways, then
+    relations, each by id."""
+    s, w, n, e = (float(v) for v in box.split(","))
+    ms, mw = (s + n) / 2, (w + e) / 2
+    found = {}
+    for quarter in ((s, w, ms, mw), (s, mw, ms, e), (ms, w, n, mw), (ms, mw, n, e)):
+        sub = ",".join(repr(round(v, 7)) for v in quarter)
+        part = fetch(lighter(query.replace(box, sub)), sub, attempts, depth + 1)
+        if part is None:
+            return None
+        for el in part:
+            found.setdefault((el["type"], el["id"]), el)
+        time.sleep(2)
+    rank = {"node": 0, "way": 1, "relation": 2}
+    return [found[k] for k in sorted(found, key=lambda k: (rank.get(k[0], 3), k[1]))]
+
+
+
+
+def overpass(query, name, attempts=9, box=None):
+    """Run an Overpass query, caching the answer so reruns don't hammer the
+    (often busy) public servers. Delete scripts/.osm-cache to refresh. box:
+    the query's box as written in it, "south,west,north,east", which may then
+    be fetched in pieces (see fetch)."""
+    cached = OSM_CACHE / f"{name}.json"
+    if cached.exists():
+        return json.loads(cached.read_text())
+    elements = fetch(query, box, attempts)
+    if elements is not None:
+        OSM_CACHE.mkdir(exist_ok=True)
+        cached.write_text(json.dumps(elements))
+    return elements
 
 
 def meters(a, b):
@@ -446,7 +555,7 @@ def fill_gaps(segs):
 (relation["route"="train"]["operator"~"{operators}",i]({bbox});
  relation["route"="train"]["network"~"{operators}",i]({bbox}););
 way(r)["railway"="rail"];
-out geom;""", f"routes-{net}")
+out geom;""", f"routes-{net}", box=bbox)
         if elements is None:
             print(f"  {net}: skipped, OpenStreetMap unavailable (rerun later to fill its gaps)")
             continue
@@ -457,7 +566,7 @@ out geom;""", f"routes-{net}")
         match = f'["operator"="{exact}"]' if exact else f'["operator"~"{operators}",i]'
         elements = overpass(f"""[out:json][timeout:600][maxsize:1073741824];
 way["railway"="rail"]{match}[!"service"]({bbox});
-out geom;""", f"track-{net}", attempts=TRACK_ATTEMPTS)
+out geom;""", f"track-{net}", attempts=TRACK_ATTEMPTS, box=bbox)
         if elements is None:
             print(f"  {net}: own track skipped, OpenStreetMap unavailable")
             continue
@@ -471,7 +580,7 @@ out geom;""", f"track-{net}", attempts=TRACK_ATTEMPTS)
         elements = overpass(f"""[out:json][timeout:240];
 relation["route"="train"]{routes}({bbox});
 way(r)["railway"="rail"]({bbox});
-out geom;""", f"targeted-{name}")
+out geom;""", f"targeted-{name}", box=bbox)
         if elements is None:
             print(f"  {name}: skipped, OpenStreetMap unavailable")
             continue
@@ -977,9 +1086,13 @@ def plugin_id(mod):
     return mod.__name__.rsplit(".", 1)[-1]
 
 
-def rail_query(rail):
+def rail_box(rail):
     w, s, e, n = rail["bbox"]
-    box = f"{s},{w},{n},{e}"
+    return f"{s},{w},{n},{e}"
+
+
+def rail_query(rail):
+    box = rail_box(rail)
     if rail.get("relations"):
         body = ("(" + "".join(f'relation["route"="train"]["{tag}"~"{value}",i]({box});'
                               for tag, value in sorted(rail["relations"].items()))
@@ -1033,7 +1146,7 @@ def simplify(line, tol=REGION_TOLERANCE):
 def osm_track(mod):
     """A plug-in's pieces of track from OpenStreetMap, or None if it's unavailable."""
     q = rail_query(mod.RAIL)
-    elements = overpass(q, f"rail-{plugin_id(mod)}-{hashlib.sha1(q.encode()).hexdigest()[:8]}")
+    elements = overpass(q, f"rail-{plugin_id(mod)}-{hashlib.sha1(q.encode()).hexdigest()[:8]}", box=rail_box(mod.RAIL))
     if elements is None:
         return None
     lines = []
