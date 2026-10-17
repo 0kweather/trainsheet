@@ -1311,10 +1311,47 @@ function sourceAvailability(src) {
   return { ok: true };
 }
 
-async function poll(src, attempt = 0) {
+// A plug-in source scoped to the view (scope "view") is polled only while
+// one of its railroads is wanted: its stations' area (padded by a quarter)
+// meets the map, or one of its trains is open or tracked, its page is open,
+// or "Near you" is looking where it runs. Every other source always is.
+const viewScoped = (src) => src.scope === "view";
+function meetsView(bbox, bounds) {
+  if (!bbox) return true; // nowhere to place it: as if always
+  const [w, s, e, n] = bbox, px = (e - w) / 4, py = (n - s) / 4;
+  return w - px <= bounds.getEast() && e + px >= bounds.getWest() && s - py <= bounds.getNorth() && n + py >= bounds.getSouth();
+}
+function sourceWanted(src) {
+  if (!viewScoped(src)) return true;
+  const bounds = map.getBounds();
+  const ours = (agency) => src.agencies.includes(agency);
+  return src.agencies.some((id) => meetsView(AGENCIES[id].bbox, bounds)) ||
+    ours(state.trains.get(state.selected)?.agency) || ours(state.railroad) || state.tracked.some((r) => ours(r.agency)) ||
+    Boolean(nearFix && src.agencies.some((id) => {
+      const b = AGENCIES[id].bbox;
+      return !b || (nearFix.lon >= b[0] - 1.5 && nearFix.lon <= b[2] + 1.5 && nearFix.lat >= b[1] - 1.5 && nearFix.lat <= b[3] + 1.5); // about NEAR_MAX_M
+    }));
+}
+const pollTimers = {}; // source id -> its next poll
+const polling = new Set(); // sources being fetched right now
+// A view-scoped source that has just become wanted (the map moved onto it, a
+// train of it was opened) is polled at once, unless it was a moment ago;
+// with `all`, every one is fetched once whether wanted or not (a search, or
+// a shared link to a train, may be for any railroad).
+function wakeSources(all = false) {
+  for (const src of SOURCES) {
+    if (!viewScoped(src) || polling.has(src.id) || !sourceAvailability(src).ok || !(all || sourceWanted(src))) continue;
+    const at = state.sourceStatus[src.id]?.at;
+    if (!at || Date.now() - at > src.interval * 1000) poll(src, 0, all);
+  }
+}
+
+async function poll(src, attempt = 0, once = false) {
+  clearTimeout(pollTimers[src.id]);
   let delay = src.interval;
   // Background tabs skip refreshes, but always load once.
-  if (!document.hidden || !state.sourceStatus[src.id]?.at) {
+  if ((once || sourceWanted(src)) && (!document.hidden || !state.sourceStatus[src.id]?.at)) {
+    polling.add(src.id);
     try {
       state.bySource[src.id] = await fetchSource(src, RELAY);
       state.sourceStatus[src.id] = { status: "ok", at: Date.now() };
@@ -1330,9 +1367,12 @@ async function poll(src, attempt = 0) {
       // Rate limited (the MBTA without a key): its window is a minute.
       if (/HTTP 429/.test(err.message)) delay = Math.max(delay, 60);
     }
+    polling.delete(src.id);
     mergeTrains();
+  } else if (state.sourceStatus[src.id]?.status === "loading") {
+    state.sourceStatus[src.id] = { status: "idle" }; // not on screen: not fetched yet
   }
-  setTimeout(() => poll(src, attempt), delay * 1000);
+  pollTimers[src.id] = setTimeout(() => poll(src, attempt), delay * 1000);
 }
 
 async function start() {
@@ -1388,13 +1428,16 @@ async function start() {
       poll(src);
     }
   }
+  // A shared link to a train: its railroad may be anywhere.
+  if (wanted) wakeSources(true);
   renderAll();
 }
+map.on("moveend", () => wakeSources());
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     // Refresh soon after returning to the tab; regular polling resumes itself.
-    for (const src of SOURCES) if (sourceAvailability(src).ok) fetchSource(src, RELAY).then((l) => {
+    for (const src of SOURCES) if (sourceAvailability(src).ok && sourceWanted(src)) fetchSource(src, RELAY).then((l) => {
       state.bySource[src.id] = l;
       state.sourceStatus[src.id] = { status: "ok", at: Date.now() };
       mergeTrains();
@@ -1481,9 +1524,23 @@ function agencyCounts() {
   return counts;
 }
 
+// A country's name in the reader's language ("US" -> "United States").
+let countryNames = null;
+function countryName(code) {
+  try {
+    countryNames ??= new Intl.DisplayNames([lang], { type: "region" });
+    return countryNames.of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
 function renderAgencies() {
   const counts = agencyCounts();
-  const rows = { intercity: [], commuter: [], off: [] };
+  // By country, in the order each first comes in the source list; within
+  // one, intercity railroads and then commuter ones, in that order too.
+  const countries = new Map(); // country code -> { intercity: [], commuter: [] }
+  const rows = { off: [] };
   for (const src of SOURCES) {
     const avail = sourceAvailability(src);
     const st = state.sourceStatus[src.id];
@@ -1502,7 +1559,9 @@ function renderAgencies() {
       let count = `<span class="count">${T("{n} running", { n: counts[id] || 0 })} ›</span>`;
       if (st?.status === "loading") count = `<span class="count"><span class="sk sk-count" aria-label="${T("Loading")}"></span></span>`;
       else if (st?.status === "error" && !counts[id]) count = `<span class="count err" title="${esc(st.error)}">${T("offline")} ›</span>`;
-      rows[a.kind].push(`
+      else if (st?.status === "idle") count = `<span class="count">${T("Off screen")} ›</span>`;
+      if (!countries.has(a.country)) countries.set(a.country, { intercity: [], commuter: [] });
+      countries.get(a.country)[a.kind].push(`
         <div class="agency ${off ? "off" : ""}" style="--swatch:${a.color}">
           <button type="button" class="check-hit" data-toggle="${id}" aria-pressed="${!off}" aria-label="${esc(T(off ? "Show {name} trains" : "Hide {name} trains", { name: a.name }))}" title="${T(off ? "Show its trains" : "Hide its trains")}"><span class="check">${CHECK}</span></button>
           <button type="button" class="agency-open" data-railroad="${id}" aria-label="${esc(T("{name}: its lines and fleet", { name: a.name }))}">
@@ -1513,8 +1572,9 @@ function renderAgencies() {
     }
   }
   setPane($("agencies"), nearbyHtml() +
-    `<div class="group-title">${T("Intercity")}</div>${rows.intercity.join("")}` +
-    `<div class="group-title">${T("Commuter & regional")}</div>${rows.commuter.join("")}` +
+    [...countries].map(([c, g]) => `<div class="group-title country-title">${esc(countryName(c))}</div>` +
+      (g.intercity.length ? `<div class="group-title">${T("Intercity")}</div>${g.intercity.join("")}` : "") +
+      (g.commuter.length ? `<div class="group-title">${T("Commuter & regional")}</div>${g.commuter.join("")}` : "")).join("") +
     (rows.off.length
       ? `<div class="group-title">${T("Not connected yet")}</div>${rows.off.join("")}
          <p class="note">${T(RELAY ? "These railroads publish live data, but it has to be fetched through a small relay server or with a free developer key. See the README to switch them on." : "These railroads publish live data, but it has to be fetched through a small relay server. See the README to switch them on.")}</p>`
@@ -1552,6 +1612,7 @@ function locateNear({ quiet = false } = {}) {
     nearFix = { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() };
     nearState = "ok";
     store.set("tt-near", true);
+    wakeSources(); // railroads near the reader, though off screen
     renderNearby();
   }, (err) => {
     nearAsking = false;
@@ -1625,10 +1686,20 @@ function nearbyHtml() {
   }).join("");
 }
 
+// The open licenses some plug-in railroads publish under, which ask for
+// attribution: named, and linked, beside their credit.
+const LICENSES = {
+  "CC BY 4.0": "https://creativecommons.org/licenses/by/4.0/",
+  "ODbL": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "NLOD": "https://data.norge.no/nlod/en/2.0",
+};
+const creditHtml = ({ label, href, license }) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(label)}</a>` +
+  (!license ? "" : LICENSES[license] ? ` (<a href="${LICENSES[license]}" target="_blank" rel="noopener">${esc(license)}</a>)` : ` (${esc(license)})`);
 function renderCredits() {
   const seen = new Map();
-  for (const s of SOURCES) if (sourceAvailability(s).ok) seen.set(s.credit.label, s.credit.href);
-  setPane($("credits"), T("Data:") + " " + [...seen].map(([l, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener">${esc(l)}</a>`).join(", ") +
+  // A view-scoped source is credited once its data has been shown.
+  for (const s of SOURCES) if (sourceAvailability(s).ok && (!viewScoped(s) || state.sourceStatus[s.id]?.at)) seen.set(s.credit.label, s.credit);
+  setPane($("credits"), T("Data:") + " " + [...seen.values()].map(creditHtml).join(", ") +
     `. ${T("Map")} © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.`);
 }
 
@@ -3074,7 +3145,7 @@ function renderRailroad() {
     lineList.length > 1 ? plainSection(T("Lines"), lineList.length,
       `<ul class="rr-lines">${lineList.map((l) => `<li><button type="button" class="rr-line" data-line="${esc(l.name)}"><span class="served-name">${lineMark(id, l.name)}<span>${esc(l.name)}</span></span><span class="sub">${l.running ? T("{n} running", { n: l.running }) : T("none running")} ›</span></button></li>`).join("")}</ul>`) : "",
     fleet.count ? rrSection("fleet", T("Fleet"), fleet.count, `<p class="rr-hint">${T("Tap one to read about it.")}</p><div class="rr-cars">${fleet.html}</div>`) : "",
-    src ? `<p class="estimate-note">${T("Data:")} <a href="${esc(src.credit.href)}" target="_blank" rel="noopener">${esc(src.credit.label)}</a></p>` : ""]);
+    src ? `<p class="estimate-note">${T("Data:")} ${creditHtml(src.credit)}</p>` : ""]);
 }
 
 // Quiet hours: nothing of a railroad's is running, so its page says when
@@ -4114,6 +4185,8 @@ on("share-btn", "click", async () => {
 });
 
 on("search", "input", (e) => {
+  // A new search may be for a railroad off screen: every one is fetched once.
+  if (!state.query.trim() && e.target.value.trim()) wakeSources(true);
   state.query = e.target.value;
   renderResults();
   if (isPhone && state.query) setSheet("expanded");

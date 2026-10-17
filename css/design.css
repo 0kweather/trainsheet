@@ -179,6 +179,9 @@ html, body {
 }
 .agencies, .results { padding: 0 16px 16px; }
 .agencies .group-title, .results .group-title { margin: 22px 4px 6px; }
+/* The railroads by country: its name over its intercity and commuter cards. */
+.agencies .country-title { margin-top: 28px; font-size: var(--fs-md); font-weight: 600; color: var(--text); }
+.agencies .country-title + .group-title { margin-top: 4px; }
 
 /* The railroad list: consecutive rows form one card. */
 .agency { position: relative; background: var(--group); border-radius: 0; }
