@@ -14,8 +14,19 @@ Output features: properties { n: number of networks, a, b, c: network ids }.
 Run after scripts/build_stations.py (it uses data/stations.json):
 
     python3 scripts/build_rail.py
+
+Track outside North America comes from OpenStreetMap, one file per region
+(data/rail/<region>.geojson, listed in data/rail/index.json), for each
+railroad plug-in (scripts/railroads/<id>.py) that declares RAIL: its
+route=train relations by operator or network, or an Overpass query for its
+ways (main and branch lines in its box by default). The same chaining,
+healing and parallel-track passes then run on it. A plain run builds North
+America and every region; one railroad's region alone, with the other
+railroads' track in it as last fetched (data/rail/src/<id>.json):
+
+    python3 scripts/build_rail.py --only digitraffic
 """
-import json, math, os, pathlib, time, urllib.parse, urllib.request
+import hashlib, json, math, os, pathlib, sys, time, urllib.parse, urllib.request
 from collections import defaultdict
 
 URL = ("https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/"
@@ -110,24 +121,26 @@ def networks(props, pt):
     return tuple(sorted(out, key=lambda n: (ORDER.index(n) if n in ORDER else len(ORDER), n)))[:3]
 
 
-print("passenger lines (US and Canada)")
-segments = []
-# Main lines, plus the few passenger links NTAD files as major industrial
-# leads (NET = 'I': Hell Gate Bridge, some station approaches) and long
-# passing sidings (which the parallel-track pass below hides). Yard tracks and
-# minor leads are left out: they're what make big terminals look like a
-# tangle. PASSNGR: A Amtrak, B Amtrak and commuter, C commuter, D Alaska
-# Railroad, V VIA Rail (Canada).
-for f in query("NET IN ('M', 'I', 'S') AND COUNTRY IN ('US', 'CA') AND PASSNGR IN ('A','B','C','D','V')", ["PASSNGR"] + CODE_FIELDS):
-    for line in parts(f["geometry"]):
-        if len(line) >= 2:
-            segments.append((networks(f["properties"], line[len(line) // 2]), line))
+def north_america():
+    print("passenger lines (US and Canada)")
+    segments = []
+    # Main lines, plus the few passenger links NTAD files as major industrial
+    # leads (NET = 'I': Hell Gate Bridge, some station approaches) and long
+    # passing sidings (which the parallel-track pass below hides). Yard tracks and
+    # minor leads are left out: they're what make big terminals look like a
+    # tangle. PASSNGR: A Amtrak, B Amtrak and commuter, C commuter, D Alaska
+    # Railroad, V VIA Rail (Canada).
+    for f in query("NET IN ('M', 'I', 'S') AND COUNTRY IN ('US', 'CA') AND PASSNGR IN ('A','B','C','D','V')", ["PASSNGR"] + CODE_FIELDS):
+        for line in parts(f["geometry"]):
+            if len(line) >= 2:
+                segments.append((networks(f["properties"], line[len(line) // 2]), line))
 
-print("Brightline (Florida East Coast main line, Miami to Cocoa)")
-for f in query("RROWNER1 = 'FEC' AND NET = 'M'", ["RROWNER1"]):
-    for line in parts(f["geometry"]):
-        if len(line) >= 2 and line[0][1] < 28.45:
-            segments.append((("brightline",), line))
+    print("Brightline (Florida East Coast main line, Miami to Cocoa)")
+    for f in query("RROWNER1 = 'FEC' AND NET = 'M'", ["RROWNER1"]):
+        for line in parts(f["geometry"]):
+            if len(line) >= 2 and line[0][1] < 28.45:
+                segments.append((("brightline",), line))
+    return segments
 
 
 # ---------- Gap filling from OpenStreetMap ----------
@@ -559,13 +572,6 @@ def apply_shapes(segs):
         print(f"  {net}: {retagged} segments retagged, {added} added along its route shapes")
 
 
-print("railroads' route shapes")
-apply_shapes(segments)
-
-print("filling gaps from OpenStreetMap")
-fill_gaps(segments)
-
-
 # ---------- Heal near-miss dead ends ----------
 # Track pieces whose end stops a few meters short of another line (common
 # where OSM station tracks meet NTAD, and in places within NTAD) would leave
@@ -601,9 +607,6 @@ def heal_dead_ends(segs):
                 healed += 1
     split_segments(segs, cuts)
     print(f"joined {healed} dead ends to nearby track")
-
-
-heal_dead_ends(segments)
 
 
 # ---------- Bridge small breaks ----------
@@ -670,9 +673,6 @@ def order(nets):
     return tuple(sorted(set(nets), key=lambda n: (ORDER.index(n) if n in ORDER else len(ORDER), n)))[:3]
 
 
-bridge_breaks(segments)
-
-
 # ---------- Collapse parallel tracks ----------
 # NTAD (and OSM) sometimes map a corridor's two main tracks as separate lines a
 # few dozen meters apart (Providence, many stations), which draws the route
@@ -730,9 +730,6 @@ def collapse_parallel(segs):
     return hidden
 
 
-hidden = collapse_parallel(segments)
-
-
 def key(pt):
     return (round(pt[0], 4), round(pt[1], 4))
 
@@ -772,9 +769,6 @@ def tie_hidden_ends(segs, hidden):
         segs.append(link)
         hidden.add(len(segs) - 1)
     print(f"tied {len(done)} ends of hidden stretches to the drawn track")
-
-
-tie_hidden_ends(segments, hidden)
 
 
 # Two drawn lines of a railroad can share a corridor for miles and then split
@@ -832,9 +826,6 @@ def join_splits(segs, hidden):
     print(f"joined {len(made)} places where lines sharing a corridor split")
 
 
-join_splits(segments, hidden)
-
-
 # Where two of a railroad's lines both pass one of its stations, its trains
 # change between them there (Charlottesville: the Lynchburg line and the
 # Cardinal's cross at the station, meeting otherwise only 50 km away). Join
@@ -877,9 +868,6 @@ def join_at_stations(segs, hidden):
         segs.append(link)
         hidden.add(len(segs) - 1)
     print(f"joined {joined} pairs of lines at stations they both pass")
-
-
-join_at_stations(segments, hidden)
 
 
 # Chain segments that meet end to end (at nodes where exactly two segments
@@ -925,30 +913,201 @@ def oriented(chain):
     return chain[::-1] if flip else chain
 
 
-by_nets = defaultdict(list)
-for i, (nets, line) in enumerate(segments):
-    by_nets[(nets, i in hidden)].append(line)
+def finish(segments):
+    """Heal, bridge, collapse and join the track, then chain it into features."""
+    heal_dead_ends(segments)
+    bridge_breaks(segments)
+    hidden = collapse_parallel(segments)
+    tie_hidden_ends(segments, hidden)
+    join_splits(segments, hidden)
+    join_at_stations(segments, hidden)
 
-degree = defaultdict(int)
-for _nets, line in segments:
-    degree[key(line[0])] += 1
-    degree[key(line[-1])] += 1
+    by_nets = defaultdict(list)
+    for i, (nets, line) in enumerate(segments):
+        by_nets[(nets, i in hidden)].append(line)
 
-features = []
-for (nets, is_hidden), lines in by_nets.items():
-    for chain in merge(lines, degree):
-        props = {"n": len(nets)}
-        if is_hidden:
-            props["h"] = 1  # routing only, not drawn
-        props.update({k: v for k, v in zip("abc", nets)})
-        features.append({"type": "Feature", "properties": props,
-                         "geometry": {"type": "LineString", "coordinates": oriented(chain)}})
+    degree = defaultdict(int)
+    for _nets, line in segments:
+        degree[key(line[0])] += 1
+        degree[key(line[-1])] += 1
 
-counts = defaultdict(int)
-for nets, _ in segments:
-    for n in nets:
-        counts[n] += 1
-print("segments per network:", dict(sorted(counts.items(), key=lambda x: -x[1])))
-path = ROOT / "data" / "rail.geojson"
-path.write_text(json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":")))
-print(f"wrote {path} ({path.stat().st_size // 1024} KB, {len(features)} lines from {len(segments)} segments)")
+    features = []
+    for (nets, is_hidden), lines in by_nets.items():
+        for chain in merge(lines, degree):
+            props = {"n": len(nets)}
+            if is_hidden:
+                props["h"] = 1  # routing only, not drawn
+            props.update({k: v for k, v in zip("abc", nets)})
+            features.append({"type": "Feature", "properties": props,
+                             "geometry": {"type": "LineString", "coordinates": oriented(chain)}})
+
+    counts = defaultdict(int)
+    for nets, _ in segments:
+        for n in nets:
+            counts[n] += 1
+    print("segments per network:", dict(sorted(counts.items(), key=lambda x: -x[1])))
+    return features
+
+
+# ---------- Track outside North America ----------
+# A railroad plug-in's RAIL (scripts/railroads/<id>.py):
+#   {"region": "fi", "bbox": [west, south, east, north], "network": "<agency id>",
+#    "relations": {"operator": "<regex>", "network": "<regex>"}  (route=train relations matching any)
+#    or "query": "<Overpass QL selecting ways; {bbox} is the box as south,west,north,east>"}
+# With neither, the box's main and branch lines (no sidings, yards or spurs).
+# Ways are cut where they meet (OSM joins track at shared nodes, often in the
+# middle of a way), chained, thinned the way NTAD serves its lines (0.0003°,
+# four decimals) and tagged with the network. Each railroad's pieces are kept
+# in data/rail/src/<id>.json, and a region is built from all of its
+# railroads' pieces by the passes above, as North America is: so rebuilding
+# one railroad gives the region exactly what a full build would, and a
+# railroad whose track can't be fetched keeps what it had.
+REGIONS = ROOT / "data" / "rail"
+REGION_TOLERANCE = 0.0003
+DEFAULT_WAYS = 'way["railway"="rail"]["usage"~"^(main|branch)$"][!"service"]({bbox});'
+
+
+def plugins():
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from railroads import load
+    return [m for m in load() if getattr(m, "RAIL", None)]
+
+
+def plugin_id(mod):
+    return mod.__name__.rsplit(".", 1)[-1]
+
+
+def rail_query(rail):
+    w, s, e, n = rail["bbox"]
+    box = f"{s},{w},{n},{e}"
+    if rail.get("relations"):
+        body = ("(" + "".join(f'relation["route"="train"]["{tag}"~"{value}",i]({box});'
+                              for tag, value in sorted(rail["relations"].items()))
+                + f');\nway(r)["railway"="rail"]({box});')
+    else:
+        body = "(" + rail.get("query", DEFAULT_WAYS).replace("{bbox}", box) + ");\nway._;"
+    return f"[out:json][timeout:600][maxsize:1073741824];\n{body}\nout geom;"
+
+
+def cut_at_junctions(elements):
+    """Each way split at the nodes it shares with other ways, as one-way
+    elements that chains() joins back up through plain two-way nodes."""
+    ways = [[(round(g["lon"], 5), round(g["lat"], 5)) for g in w.get("geometry", [])]
+            for w in elements if w.get("type") == "way"]
+    uses = defaultdict(int)
+    for w in ways:
+        for p in set(w):
+            uses[p] += 1
+    out = []
+    for w in ways:
+        piece = w[:1]
+        for p in w[1:]:
+            piece.append(p)
+            if uses[p] > 1:
+                out.append(piece)
+                piece = [p]
+        out.append(piece)
+    return [{"geometry": [{"lon": x, "lat": y} for x, y in piece]} for piece in out if len(piece) >= 2]
+
+
+def simplify(line, tol=REGION_TOLERANCE):
+    """Douglas-Peucker in degrees, as NTAD serves its lines; ends kept."""
+    keep = {0, len(line) - 1}
+    stack = [(0, len(line) - 1)]
+    while stack:
+        i, j = stack.pop()
+        (ax, ay), (bx, by) = line[i], line[j]
+        L = math.hypot(bx - ax, by - ay)
+        best, far = tol, None
+        for k in range(i + 1, j):
+            px, py = line[k]
+            d = abs((bx - ax) * (ay - py) - (ax - px) * (by - ay)) / L if L else math.hypot(px - ax, py - ay)
+            if d > best:
+                best, far = d, k
+        if far is not None:
+            keep.add(far)
+            stack += [(i, far), (far, j)]
+    return [line[k] for k in sorted(keep)]
+
+
+def osm_track(mod):
+    """A plug-in's pieces of track from OpenStreetMap, or None if it's unavailable."""
+    q = rail_query(mod.RAIL)
+    elements = overpass(q, f"rail-{plugin_id(mod)}-{hashlib.sha1(q.encode()).hexdigest()[:8]}")
+    if elements is None:
+        return None
+    lines = []
+    for line in chains(cut_at_junctions(elements)):
+        pts = []
+        for x, y in line:
+            p = [round(x, 4), round(y, 4)]
+            if not pts or p != pts[-1]:
+                pts.append(p)
+        if len(pts) >= 2:
+            lines.append(simplify(pts))
+    return lines
+
+
+def plugin_track(mod, fetch):
+    """The plug-in's segments: fetched (and kept in its file) when asked,
+    else (or when OpenStreetMap is unavailable) the ones in its file."""
+    rid, net = plugin_id(mod), mod.RAIL["network"]
+    path = REGIONS / "src" / f"{rid}.json"
+    lines = osm_track(mod) if fetch else None
+    if lines is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("[\n" + ",\n".join(json.dumps(c, separators=(",", ":")) for c in lines) + "\n]\n")
+        print(f"  {rid}: {len(lines)} pieces of track from OpenStreetMap")
+    elif path.exists():
+        lines = json.loads(path.read_text())
+        print(f"  {rid}: {len(lines)} pieces of track on file" + (" (OpenStreetMap unavailable)" if fetch else ""))
+    else:
+        print(f"  {rid}: skipped, " + ("OpenStreetMap unavailable and " if fetch else "") + "no track on file")
+        return []
+    return [((net,), c) for c in lines]
+
+
+def write_region(region, features):
+    path = REGIONS / f"{region}.geojson"
+    path.write_text(json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":")))
+    # The track's extent, rounded outward: the page loads the file once the map shows part of it.
+    xs = [x for f in features for x, _ in f["geometry"]["coordinates"]]
+    ys = [y for f in features for _, y in f["geometry"]["coordinates"]]
+    bbox = [math.floor(min(xs) * 100) / 100, math.floor(min(ys) * 100) / 100,
+            math.ceil(max(xs) * 100) / 100, math.ceil(max(ys) * 100) / 100]
+    index_path = REGIONS / "index.json"
+    index = [r for r in (json.loads(index_path.read_text()) if index_path.exists() else []) if r["region"] != region]
+    index.append({"region": region, "bbox": bbox, "file": f"data/rail/{region}.geojson", "bytes": path.stat().st_size})
+    index_path.write_text("[\n" + ",\n".join(json.dumps(r) for r in sorted(index, key=lambda r: r["region"])) + "\n]\n")
+    print(f"wrote {path} ({path.stat().st_size // 1024} KB, {len(features)} lines)")
+
+
+def build_regions(only=None):
+    """Each region's track from its railroads' plug-ins; with only, just that
+    railroad's region, the others in it taken from their files."""
+    mods = plugins()
+    regions = sorted({m.RAIL["region"] for m in mods if not only or plugin_id(m) == only})
+    if only and not regions:
+        sys.exit(f"no railroad plug-in {only} with RAIL in scripts/railroads/")
+    for region in regions:
+        print(f"track in region {region}")
+        segments = []
+        for m in mods:
+            if m.RAIL["region"] == region:
+                segments += plugin_track(m, fetch=not only or plugin_id(m) == only)
+        if segments:
+            write_region(region, finish(segments))
+
+
+only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
+if not only:
+    segments = north_america()
+    print("railroads' route shapes")
+    apply_shapes(segments)
+    print("filling gaps from OpenStreetMap")
+    fill_gaps(segments)
+    features = finish(segments)
+    path = ROOT / "data" / "rail.geojson"
+    path.write_text(json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":")))
+    print(f"wrote {path} ({path.stat().st_size // 1024} KB, {len(features)} lines from {len(segments)} segments)")
+build_regions(only)
