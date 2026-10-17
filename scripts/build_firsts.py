@@ -10,14 +10,19 @@ Output: {"start": "YYYY-MM-DD",
   origin: the station's name as on the map (data/stations.json).
 
     python3 scripts/build_firsts.py [railroad ...]
+    python3 scripts/build_firsts.py --only trirail   # a plug-in's railroads (scripts/railroads/)
+
+A feed that fails keeps that railroad's trains from the last build, moved
+to the new start (the days past the old file's end empty).
 """
 import datetime, json, re, sys
 from collections import defaultdict
-from feeds import DATA, GTFS, get_zip, long_name, minutes, rows as csv_rows
+from feeds import DATA, EXTRAS, GTFS, chosen, get_zip, long_name, minutes, rows as csv_rows
 
 # railroad: (GTFS url, keep route(route row), line name(route row)): every
-# commuter railroad in build_stations.py's table; not the Alaska Railroad.
-FEEDS = {agency: GTFS[agency][:3] for agency in GTFS if agency != "alaska"}
+# commuter railroad in build_stations.py's table; not the Alaska Railroad,
+# nor a plug-in's that says "firsts": False.
+FEEDS = {agency: GTFS[agency][:3] for agency in GTFS if agency != "alaska" and EXTRAS.get(agency, {}).get("firsts", True)}
 # MBTA's lines as its timetable names them ("Fall River/New Bedford Line";
 # the station list spaces the slash).
 FEEDS["mbta"] = (GTFS["mbta"][0], GTFS["mbta"][1], long_name)
@@ -32,7 +37,7 @@ rows = lambda zf, name: csv_rows(zf, name, optional=True, spaces=True)
 STATIONS = {a: {r[0]: r[1] for r in rs} for a, rs in json.loads((DATA / "stations.json").read_text()).items()}
 # Railroads whose stations fold several stops by name (no ids in common with
 # data/stations.json): any named stop counts as a station.
-FOLDED = {a: (lambda s: bool(s.get("stop_name"))) for a in ("exo", "marc", "coaster", "sprinter")}
+FOLDED = {a: (lambda s: bool(s.get("stop_name"))) for a, feed in GTFS.items() if len(feed) > 3 and feed[3]}
 EACH = 3  # trains kept per stretch
 
 
@@ -94,23 +99,29 @@ def build(agency, url, keep, line_name, today):
     for day in starts:
         day.sort(key=lambda e: e[0])
         best.append([e for e in day if 150 <= e[0] < 1440][:EACH] + [e for e in day if e[0] >= 1440][:EACH])
-    tz = next((a["agency_timezone"] for a in rows(zf, "agency.txt") if a.get("agency_timezone")), None)
+    tz = EXTRAS.get(agency, {}).get("tz") or next((a["agency_timezone"] for a in rows(zf, "agency.txt") if a.get("agency_timezone")), None)
     return {"tz": tz, "days": best}
 
 
 path = DATA / "firsts.json"
 today = datetime.date.today()
-out = json.loads(path.read_text()) if path.exists() and sys.argv[1:] else {}
+only = chosen()
+previous = json.loads(path.read_text()) if path.exists() else {}
+out = dict(previous) if only else {}
 if out.get("start") not in (None, today.isoformat()):
     sys.exit("firsts.json starts on another day: rebuild every railroad (no arguments)")
 out["start"] = today.isoformat()
 for agency, (url, keep, line_name) in FEEDS.items():
-    if sys.argv[1:] and agency not in sys.argv[1:]:
+    if only and agency not in only:
         continue
     try:
         out[agency] = build(agency, url, keep, line_name, today)
         print(f"{agency}: {sum(1 for d in out[agency]['days'] if d)} days with trains, today {out[agency]['days'][0][:1]}")
     except Exception as err:
-        print(f"{agency}: FAILED ({err})")
+        if agency in previous:  # the last build's days from today on
+            gone = (today - datetime.date.fromisoformat(previous["start"])).days
+            days = previous[agency]["days"][gone:] if gone >= 0 else []
+            out[agency] = {**previous[agency], "days": days + [[] for _ in range(SPAN - len(days))]}
+        print(f"{agency}: FAILED ({err}){'; kept from the last build' if agency in previous else ''}")
 path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
 print(f"wrote {path} ({path.stat().st_size // 1024} KB)")
