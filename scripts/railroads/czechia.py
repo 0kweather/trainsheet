@@ -14,7 +14,7 @@ import re
 GTFS_URL = "https://motis.obehy.cz/get-feeds/cz-czptt-gtfs.zip"
 CREDIT = {"label": "Oběhy (SŽ, CIS JŘ)", "href": "https://motis.obehy.cz/get-feeds/"}
 BBOX = [12.09, 48.55, 18.86, 51.06]
-COMMON = {"region": "Czechia", "country": "CZ", "tz": "Europe/Prague", "credit": CREDIT, "license": None, "bbox": BBOX}
+COMMON = {"region": "Czechia", "country": "CZ", "tz": "Europe/Prague", "credit": CREDIT, "license": None, "bbox": BBOX, "cars": True}
 
 AGENCIES = {
     "czcd": {"name": "České dráhy", "short": "ČD", "color": "#1c64b4", "kind": "intercity", **COMMON},

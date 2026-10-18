@@ -46,6 +46,9 @@ export const parse = {
         destination: p.destination || (stops.length && tt.stops[stops[stops.length - 1].stopId][0]) || null,
         nextStop: p.nextStation || null,
         delayMin, statusText: delayText(delayMin),
+        // The unit or locomotive running it ("460110", a Desiro's cab car):
+        // one car, which hellenictrain.cars.js draws as its model's train.
+        cars: p.locomotiveNumber ? { numbers: [String(p.locomotiveNumber)], complete: false } : null,
         updated: at * 1000,
         stops: stops.length ? stops.map((s, i) => ({
           key: `${AGENCY}:${s.stopId}`, name: tt.stops[s.stopId][0], tz: TZ,
