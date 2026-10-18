@@ -15,6 +15,8 @@
 //   GET /history/:railroad/:number -> how late an Amtrak, VIA or Brightline
 //                       train number reached its last stop, day by day (the
 //                       last 30 trips recorded; see "Track record" below).
+//   GET /delays/:railroad/:number -> how late it was at each of its stops,
+//                       day by day, over the last eight weeks (Delays by stop).
 //   GET /feed/:id    -> the upstream feed, byte for byte. For railroads that
 //                       publish positions and predicted stop times as two
 //                       GTFS-realtime feeds, both, back to back: concatenated
@@ -25,7 +27,7 @@ import { FEEDS as PLUGIN_FEEDS } from "./feeds/index.js";
 const CACHE_SECONDS = 15;
 const feedMem = new Map(); // feed -> { at, bytes, type }: its last good copy
 const STALE_MS = 5 * 60 * 1000; // how old a copy may be served when the railroad refuses
-const RELAY_VERSION = "2026-10-17 (railroad plug-ins: relay/feeds)";
+const RELAY_VERSION = "2026-10-18 (delays by stop)";
 // Sent where a railroad's terms ask callers to say who they are.
 const IDENTIFYING_UA = "Trainsheet/1.0 (+https://trainsheet.com)";
 
@@ -608,7 +610,42 @@ function finishedRuns(json) {
       const left = Date.parse(first.schDep || first.schArr);
       if (!Number.isFinite(left)) continue;
       const day = new Date(left).toLocaleDateString("en-CA", { timeZone: first.tz || "America/New_York" });
-      out.push({ rr, num: String(t.trainNum), day, origin: first.name, dest: last.name, sch: last.schArr, delay });
+      out.push({ rr, num: trainNum(t), day, origin: first.name, dest: last.name, sch: last.schArr, delay });
+    }
+  }
+  return out;
+}
+
+// A train's number as the app has it: Amtraker writes VIA's as "v65".
+const trainNum = (t) => String(t.trainNum).replace(/^v/i, "");
+// The day a trip counts from: the day it left its first stop, there.
+function tripDay(first) {
+  const left = Date.parse(first?.schDep || first?.schArr);
+  return Number.isFinite(left) ? new Date(left).toLocaleDateString("en-CA", { timeZone: first.tz || "America/New_York" }) : null;
+}
+
+// ---------- Delays by stop ----------
+// From the same reads: how late each train was at each stop it has left (at
+// its first, against its departure; at the rest, its arrival; at its last,
+// once it's there), one row per train, day and stop, kept eight weeks. The
+// app predicts from them how late a train will be at the stops still ahead.
+const DELAY_KEEP_DAYS = 56;
+function stopDelays(json) {
+  const out = [];
+  for (const list of Object.values(json || {})) {
+    for (const t of list) {
+      const rr = HISTORY_RAILROADS[t.provider], st = t.stations || [];
+      const day = rr && tripDay(st[0]);
+      if (!day) continue;
+      st.forEach((s, i) => {
+        if (s.bus || !s.code) return;
+        const last = i === st.length - 1;
+        const done = s.status === "Departed" || (last && (t.trainState === "Completed" || s.status === "Station"));
+        if (!done) return;
+        const [at, sch] = i === 0 ? [s.dep, s.schDep] : [s.arr, s.schArr];
+        const delay = Math.round((Date.parse(at) - Date.parse(sch)) / 60000);
+        if (Number.isFinite(delay) && delay >= -60 && delay <= 48 * 60) out.push({ rr, num: trainNum(t), day, code: s.code, idx: i, delay });
+      });
     }
   }
   return out;
@@ -619,8 +656,10 @@ async function recordRuns(env) {
   if (!store) return 0;
   const res = await fetch("https://api-v3.amtraker.com/v3/trains", { headers: { "User-Agent": "Trainsheet relay" } });
   if (!res.ok) throw new Error(`Amtraker HTTP ${res.status}`);
-  const runs = finishedRuns(await res.json());
+  const json = await res.json();
+  const runs = finishedRuns(json), stops = stopDelays(json);
   if (runs.length) await store.fetch("https://store/history/record", { method: "POST", body: JSON.stringify(runs) });
+  if (stops.length) await store.fetch("https://store/delays/record", { method: "POST", body: JSON.stringify(stops) });
   return runs.length;
 }
 
@@ -743,6 +782,8 @@ export class Store {
     if (pathname === "/tracks/query") return Response.json(this.queryTracks(searchParams.get("rr"), searchParams.get("stop")));
     if (pathname === "/history/record") return this.recordRuns(await request.json());
     if (pathname === "/history/query") return Response.json(this.queryRuns(searchParams.get("rr"), searchParams.get("num")));
+    if (pathname === "/delays/record") return this.recordDelays(await request.json());
+    if (pathname === "/delays/query") return Response.json(this.queryDelays(searchParams.get("rr"), searchParams.get("num")));
     if (request.method === "POST") {
       await this.ctx.storage.put("data", await request.json());
       return new Response("ok");
@@ -788,6 +829,49 @@ export class Store {
     for (const r of rows) sql.exec("INSERT OR IGNORE INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?)", r.rr, r.num, r.day, r.origin, r.dest, r.sch, r.delay, now);
     if (Math.random() < 0.02) sql.exec("DELETE FROM runs WHERE at < ?", now - 120 * 86400 * 1000);
     return new Response("ok");
+  }
+  // Delays by stop, kept eight weeks. Each cron read repeats every stop a
+  // train has left so far: the ones this copy has already written are
+  // skipped in memory, so a row is written once.
+  delays() {
+    const sql = this.ctx.storage.sql;
+    if (!this.delaysReady) {
+      sql.exec("CREATE TABLE IF NOT EXISTS stop_delays (rr TEXT, num TEXT, day TEXT, code TEXT, idx INTEGER, delay INTEGER, PRIMARY KEY (rr, num, day, code))");
+      sql.exec("CREATE INDEX IF NOT EXISTS stop_delays_day ON stop_delays (day)");
+      this.delaysReady = true;
+    }
+    return sql;
+  }
+  recordDelays(rows) {
+    const sql = this.delays();
+    this.delaysSeen ||= new Set();
+    for (const r of rows) {
+      const k = `${r.rr}|${r.num}|${r.day}|${r.code}`;
+      if (this.delaysSeen.has(k)) continue;
+      sql.exec("INSERT OR IGNORE INTO stop_delays VALUES (?, ?, ?, ?, ?, ?)", r.rr, r.num, r.day, r.code, r.idx, r.delay);
+      this.delaysSeen.add(k);
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    if (this.delaysPruned !== today) {
+      this.delaysPruned = today;
+      const cut = new Date(Date.now() - DELAY_KEEP_DAYS * 86400000).toISOString().slice(0, 10);
+      sql.exec("DELETE FROM stop_delays WHERE day < ?", cut);
+      for (const k of this.delaysSeen) if (k.split("|")[2] < cut) this.delaysSeen.delete(k);
+    }
+    return new Response("ok");
+  }
+  // One train number's delays, newest day first: { days: [day], stops: [{ code,
+  // idx, d: [minutes late each day, or null] }] }, stops in the train's order.
+  queryDelays(rr, num) {
+    const rows = this.delays().exec("SELECT day, code, idx, delay FROM stop_delays WHERE rr = ? AND num = ? ORDER BY day DESC", rr, num).toArray();
+    const days = [...new Set(rows.map((r) => r.day))];
+    const at = new Map(days.map((d, i) => [d, i]));
+    const stops = new Map();
+    for (const r of rows) {
+      if (!stops.has(r.code)) stops.set(r.code, { code: r.code, idx: r.idx, d: days.map(() => null) });
+      stops.get(r.code).d[at.get(r.day)] = r.delay;
+    }
+    return { days, stops: [...stops.values()].sort((a, b) => a.idx - b.idx) };
   }
   queryRuns(rr, num) {
     return { runs: this.runs().exec("SELECT day, origin, dest, delay FROM runs WHERE rr = ? AND num = ? ORDER BY day DESC LIMIT 30", rr, num).toArray() };
@@ -894,6 +978,18 @@ export default {
         return new Response(await fetchSeptaLifts(), { headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": "public, max-age=120" } });
       } catch (err) {
         return new Response(`Upstream error: ${err.message}`, { status: 502, headers: CORS });
+      }
+    }
+
+    const dl = pathname.match(/^\/delays\/(amtrak|via|brightline)\/(\w{1,6})$/);
+    if (dl) {
+      const store = runsStore(env);
+      if (!store) return new Response("Not configured", { status: 404, headers: CORS });
+      try {
+        const r = await store.fetch(`https://store/delays/query?rr=${dl[1]}&num=${encodeURIComponent(dl[2])}`);
+        return new Response(r.body, { headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": "public, max-age=900" } });
+      } catch (err) {
+        return new Response(`Storage error: ${err.message}`, { status: 502, headers: CORS });
       }
     }
 
