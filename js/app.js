@@ -1,11 +1,12 @@
 import { AGENCIES, SOURCES, fetchSource, advanceEstimated } from "./sources.js?v=dev";
-import { loadStations, trainsDue, mbtaPredictions, mbtaFacilities, amtrakAddress, meters, norm, stopKey } from "./stations.js?v=dev";
+import { loadStations, mergeStations, trainsDue, mbtaPredictions, mbtaFacilities, amtrakAddress, meters, norm, fold, stopKey } from "./stations.js?v=dev";
 import { RailIndex, snapToTrack } from "./estimate.js?v=dev";
+import { RAIL_REGIONS, DATA_REGIONS } from "./railroads/index.js?v=dev";
 import { NETWORKS, networkColor } from "./networks.js?v=dev";
 import { trainNotices, stationNotices } from "./notices.js?v=dev";
 import { loadDisruptions, aboutLine } from "./disruptions.js?v=dev";
 import { inferDelay, restoreFeed } from "./delays.js?v=dev";
-import { consistOf, consistHtml, carSvg, modelIds, fleetSamples } from "./consist.js?v=dev";
+import { consistOf, consistHtml, carSvg, modelIds, fleetSamples, onCars, loadCars, pluginFacts } from "./consist.js?v=dev";
 import { stationLifts } from "./lifts.js?v=dev";
 import { t as T, tn as Tn, lang, langPref, locale, dateFormat, translatePage } from "./i18n.js?v=dev";
 
@@ -1160,16 +1161,87 @@ function loadRail() {
       state.railGeo = geojson;
       redrawRail();
       state.rail = new RailIndex(geojson);
-      disruptionGeo = null;
-      redrawDisruptions(); // traced along the track, now it's indexed
-      snapCache.clear();
-      snapStations();
-      computePositions();
-      animateTo();
-      applyFocus(); // a line's track is traced along the rails
+      resnap();
+      loadRailRegions();
     })
     .catch((err) => console.warn("rail index", err)); // trains stay at reported positions
   return railLoading;
+}
+
+// The track just indexed (or grown): everything placed on it goes back on.
+function resnap() {
+  disruptionGeo = null;
+  redrawDisruptions(); // traced along the track, now it's indexed
+  snapCache.clear();
+  snapStations();
+  computePositions();
+  animateTo();
+  applyFocus(); // a line's track is traced along the rails
+}
+
+// Track outside North America (js/railregions.js): a region's joins the
+// drawn rail and the index the first time the map shows it. With no regions
+// built yet, the watcher isn't loaded at all.
+function loadRailRegions() {
+  if (!RAIL_REGIONS.length) return;
+  import("./railregions.js?v=dev")
+    .then(({ watchRegions }) => watchRegions(map, (geojson) => {
+      state.railGeo = { type: "FeatureCollection", features: state.railGeo.features.concat(geojson.features) };
+      focusCache.key = null; // an open railroad's track may run on into this region
+      redrawRail();
+      state.rail.add(geojson);
+      resnap();
+    }))
+    .catch((err) => console.warn("rail regions", err));
+}
+
+// Stations and timetables outside the US and Canada (js/regiondata.js): a
+// region's join the station list, "Later today", first trains and line
+// colors the first time the map shows it, or a search, a link or a page
+// needs them. With no such railroads, the module isn't loaded at all.
+let regionData = null;
+function dataRegions() {
+  if (!DATA_REGIONS.length) return null;
+  return (regionData ??= import("./regiondata.js?v=dev").then((m) => {
+    m.watchData(map, addRegion);
+    return m;
+  }).catch((err) => {
+    console.warn("data regions", err);
+    regionData = null;
+  }));
+}
+// A railroad's region loaded (a promise of it), or null for one in the US or Canada.
+const needData = (agency) => (DATA_REGIONS.some((r) => r.agencies.includes(agency)) ? dataRegions().then((m) => m?.loadFor(agency)) : null);
+// fn() once a railroad's data is in: at once for one in the US or Canada.
+const withData = (agency, fn) => (needData(agency)?.then(fn) ?? fn());
+let stationsLoaded;
+const stationsReady = new Promise((done) => (stationsLoaded = done));
+// The railroads whose region's stations and timetables have loaded, which
+// renderCredits() names whether or not their feed answers.
+const regionAgencies = new Set();
+function addRegion({ region, stations, departures: runs, firsts: first, linecolors }) {
+  for (const id of region.agencies) regionAgencies.add(id);
+  if (runs) departuresData = { ...departuresData, ...decodeDepartures(runs) };
+  // Each railroad's first trains count from its own file's start.
+  if (first) firstsData = { ...firstsData, ...Object.fromEntries(Object.entries(first).filter(([k]) => k !== "start").map(([k, v]) => [k, { ...v, start: first.start }])) };
+  if (linecolors) lineColorsData = { ...lineColorsData, ...linecolors };
+  return stationsReady.then(() => {
+    const added = mergeStations(stations, { region: true });
+    state.stations = new Map([...state.stations, ...added]);
+    lineSizes = null;
+    for (const st of added.values()) {
+      for (const k of st.keys) state.stationOfKey.set(k, st.id);
+      for (const m of st.members) {
+        state.stopPos.set(m.key, { lat: m.lat, lon: m.lon });
+        state.stopByName.set(`${m.agency}:${m.norm}`, { lat: m.lat, lon: m.lon });
+        lineCounts.delete(m.agency);
+      }
+    }
+    snapStations();
+    applyInference();
+    computePositions();
+    renderAll();
+  });
 }
 
 // Slides markers from where they're drawn to where they should be.
@@ -1311,10 +1383,50 @@ function sourceAvailability(src) {
   return { ok: true };
 }
 
-async function poll(src, attempt = 0) {
+// A plug-in source scoped to the view (scope "view") is polled only while
+// one of its railroads is wanted: its stations' area (padded by a quarter)
+// meets the map, or one of its trains is open or tracked, its page is open,
+// or "Near you" is looking where it runs. Every other source always is.
+const viewScoped = (src) => src.scope === "view";
+function meetsView(bbox, bounds) {
+  if (!bbox) return true; // nowhere to place it: as if always
+  const [w, s, e, n] = bbox, px = (e - w) / 4, py = (n - s) / 4;
+  // The map's longitudes aren't wrapped to ±180 once it is dragged across the antimeridian.
+  return s - py <= bounds.getNorth() && n + py >= bounds.getSouth() &&
+    [-360, 0, 360].some((k) => w - px + k <= bounds.getEast() && e + px + k >= bounds.getWest());
+}
+function sourceWanted(src) {
+  if (!viewScoped(src)) return true;
+  const bounds = map.getBounds();
+  const ours = (agency) => src.agencies.includes(agency);
+  return src.agencies.some((id) => meetsView(AGENCIES[id].bbox, bounds)) ||
+    ours(state.trains.get(state.selected)?.agency) || ours(state.railroad) || state.tracked.some((r) => ours(r.agency)) ||
+    Boolean(nearFix && src.agencies.some((id) => {
+      const b = AGENCIES[id].bbox;
+      return !b || (nearFix.lon >= b[0] - 1.5 && nearFix.lon <= b[2] + 1.5 && nearFix.lat >= b[1] - 1.5 && nearFix.lat <= b[3] + 1.5); // about NEAR_MAX_M
+    }));
+}
+const pollTimers = {}; // source id -> its next poll
+const polling = new Set(); // sources being fetched right now
+const backoff = {}; // source id -> when a failed source may be tried again
+// A view-scoped source that has just become wanted (the map moved onto it, a
+// train of it was opened) is polled at once, unless it was a moment ago;
+// with `all`, every one is fetched once whether wanted or not (a search, or
+// a shared link to a train, may be for any railroad).
+function wakeSources(all = false) {
+  for (const src of SOURCES) {
+    if (!viewScoped(src) || polling.has(src.id) || Date.now() < (backoff[src.id] || 0) || !sourceAvailability(src).ok || !(all || sourceWanted(src))) continue;
+    const at = state.sourceStatus[src.id]?.at;
+    if (!at || Date.now() - at > src.interval * 1000) poll(src, 0, all);
+  }
+}
+
+async function poll(src, attempt = 0, once = false) {
+  clearTimeout(pollTimers[src.id]);
   let delay = src.interval;
   // Background tabs skip refreshes, but always load once.
-  if (!document.hidden || !state.sourceStatus[src.id]?.at) {
+  if ((once || sourceWanted(src)) && (!document.hidden || !state.sourceStatus[src.id]?.at)) {
+    polling.add(src.id);
     try {
       state.bySource[src.id] = await fetchSource(src, RELAY);
       state.sourceStatus[src.id] = { status: "ok", at: Date.now() };
@@ -1330,13 +1442,24 @@ async function poll(src, attempt = 0) {
       // Rate limited (the MBTA without a key): its window is a minute.
       if (/HTTP 429/.test(err.message)) delay = Math.max(delay, 60);
     }
+    backoff[src.id] = attempt ? Date.now() + delay * 1000 : 0;
+    polling.delete(src.id);
+    mergeTrains();
+  } else if (state.sourceStatus[src.id]?.status === "loading") {
+    state.sourceStatus[src.id] = { status: "idle" }; // not on screen: not fetched yet
+  } else if (!once && !sourceWanted(src) && state.bySource[src.id]?.length && Date.now() - (state.sourceStatus[src.id]?.at || 0) > 5 * 60 * 1000) {
+    // Off screen a while: its last trains are too old to show or count.
+    state.bySource[src.id] = [];
+    state.sourceStatus[src.id] = { status: "idle" };
     mergeTrains();
   }
-  setTimeout(() => poll(src, attempt), delay * 1000);
+  pollTimers[src.id] = setTimeout(() => poll(src, attempt), delay * 1000);
 }
 
 async function start() {
   loadRail();
+  dataRegions();
+  for (const r of state.tracked) needData(r.agency); // a ride followed abroad
   loadStations()
     .then((stations) => {
       state.stations = stations;
@@ -1361,12 +1484,14 @@ async function start() {
       computePositions();
       redrawStations();
       refreshDisruptions();
-      if (wantedStation) selectStation(wantedStation);
+      stationsLoaded();
+      if (wantedStation) selectStation(wantedStation); // abroad, once its region is in
       else if (AGENCIES[wantedRailroad]) {
-        // Framed once the map is ready (a shared link may open before it is).
+        // Framed once the map is ready (a shared link may open before it is),
+        // and a railroad abroad once its stations are in.
         openRailroad(wantedRailroad, { fly: false, line: new URL(location.href).searchParams.get("line") });
         const frame = () => frameFocus();
-        mapLoaded ? frame() : map.once("load", frame);
+        withData(wantedRailroad, () => (mapLoaded ? frame() : map.once("load", frame)));
       }
       renderResults();
     })
@@ -1388,13 +1513,16 @@ async function start() {
       poll(src);
     }
   }
+  // A shared link to a train: its railroad may be anywhere.
+  if (wanted) wakeSources(true);
   renderAll();
 }
+map.on("moveend", () => wakeSources());
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     // Refresh soon after returning to the tab; regular polling resumes itself.
-    for (const src of SOURCES) if (sourceAvailability(src).ok) fetchSource(src, RELAY).then((l) => {
+    for (const src of SOURCES) if (sourceAvailability(src).ok && sourceWanted(src)) fetchSource(src, RELAY).then((l) => {
       state.bySource[src.id] = l;
       state.sourceStatus[src.id] = { status: "ok", at: Date.now() };
       mergeTrains();
@@ -1481,9 +1609,23 @@ function agencyCounts() {
   return counts;
 }
 
+// A country's name in the reader's language ("US" -> "United States").
+let countryNames = null;
+function countryName(code) {
+  try {
+    countryNames ??= new Intl.DisplayNames([lang], { type: "region" });
+    return countryNames.of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
 function renderAgencies() {
   const counts = agencyCounts();
-  const rows = { intercity: [], commuter: [], off: [] };
+  // By country, in the order each first comes in the source list; within
+  // one, intercity railroads and then commuter ones, in that order too.
+  const countries = new Map(); // country code -> { intercity: [], commuter: [] }
+  const rows = { off: [] };
   for (const src of SOURCES) {
     const avail = sourceAvailability(src);
     const st = state.sourceStatus[src.id];
@@ -1502,7 +1644,9 @@ function renderAgencies() {
       let count = `<span class="count">${T("{n} running", { n: counts[id] || 0 })} ›</span>`;
       if (st?.status === "loading") count = `<span class="count"><span class="sk sk-count" aria-label="${T("Loading")}"></span></span>`;
       else if (st?.status === "error" && !counts[id]) count = `<span class="count err" title="${esc(st.error)}">${T("offline")} ›</span>`;
-      rows[a.kind].push(`
+      else if (st?.status === "idle") count = `<span class="count">${T("Off screen")} ›</span>`;
+      if (!countries.has(a.country)) countries.set(a.country, { intercity: [], commuter: [] });
+      countries.get(a.country)[a.kind].push(`
         <div class="agency ${off ? "off" : ""}" style="--swatch:${a.color}">
           <button type="button" class="check-hit" data-toggle="${id}" aria-pressed="${!off}" aria-label="${esc(T(off ? "Show {name} trains" : "Hide {name} trains", { name: a.name }))}" title="${T(off ? "Show its trains" : "Hide its trains")}"><span class="check">${CHECK}</span></button>
           <button type="button" class="agency-open" data-railroad="${id}" aria-label="${esc(T("{name}: its lines and fleet", { name: a.name }))}">
@@ -1513,8 +1657,9 @@ function renderAgencies() {
     }
   }
   setPane($("agencies"), nearbyHtml() +
-    `<div class="group-title">${T("Intercity")}</div>${rows.intercity.join("")}` +
-    `<div class="group-title">${T("Commuter & regional")}</div>${rows.commuter.join("")}` +
+    [...countries].map(([c, g]) => `<div class="group-title country-title">${esc(countryName(c))}</div>` +
+      (g.intercity.length ? `<div class="group-title">${T("Intercity")}</div>${g.intercity.join("")}` : "") +
+      (g.commuter.length ? `<div class="group-title">${T("Commuter & regional")}</div>${g.commuter.join("")}` : "")).join("") +
     (rows.off.length
       ? `<div class="group-title">${T("Not connected yet")}</div>${rows.off.join("")}
          <p class="note">${T(RELAY ? "These railroads publish live data, but it has to be fetched through a small relay server or with a free developer key. See the README to switch them on." : "These railroads publish live data, but it has to be fetched through a small relay server. See the README to switch them on.")}</p>`
@@ -1552,6 +1697,7 @@ function locateNear({ quiet = false } = {}) {
     nearFix = { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() };
     nearState = "ok";
     store.set("tt-near", true);
+    wakeSources(); // railroads near the reader, though off screen
     renderNearby();
   }, (err) => {
     nearAsking = false;
@@ -1625,10 +1771,35 @@ function nearbyHtml() {
   }).join("");
 }
 
+// The open licenses some plug-in railroads publish under, which ask for
+// attribution: named, and linked, beside their credit.
+const LICENSES = {
+  "CC BY 4.0": "https://creativecommons.org/licenses/by/4.0/",
+  "CC BY 3.0 AU": "https://creativecommons.org/licenses/by/3.0/au/",
+  "CC BY 2.5 AR": "https://creativecommons.org/licenses/by/2.5/ar/",
+  "CC BY 1.0": "https://creativecommons.org/licenses/by/1.0/",
+  "CC0": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "ODbL": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "NLOD": "https://data.norge.no/nlod/en/2.0",
+};
+// A license as given ("CC BY 4.0", or "CC BY 4.0 (timetable)"), linked to its text.
+const licenseHtml = (license) => {
+  const k = Object.keys(LICENSES).find((k) => license === k || license.startsWith(`${k} `));
+  return k ? `<a href="${LICENSES[k]}" target="_blank" rel="noopener">${esc(license)}</a>` : esc(license);
+};
+const creditHtml = ({ label, href, license }) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(label)}</a>` +
+  (license ? ` (${licenseHtml(license)})` : "");
 function renderCredits() {
   const seen = new Map();
-  for (const s of SOURCES) if (sourceAvailability(s).ok) seen.set(s.credit.label, s.credit.href);
-  setPane($("credits"), T("Data:") + " " + [...seen].map(([l, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener">${esc(l)}</a>`).join(", ") +
+  // A view-scoped source is credited once its data has been shown.
+  for (const s of SOURCES) if (sourceAvailability(s).ok && (!viewScoped(s) || state.sourceStatus[s.id]?.at)) seen.set(s.credit.label, s.credit);
+  // A railroad abroad, once its region's stations and timetables are in,
+  // though its feed may be off or down.
+  for (const id of regionAgencies) {
+    const a = AGENCIES[id];
+    if (a?.credit && !seen.has(a.credit.label)) seen.set(a.credit.label, { ...a.credit, license: a.license });
+  }
+  setPane($("credits"), T("Data:") + " " + [...seen.values()].map(creditHtml).join(", ") +
     `. ${T("Map")} © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.`);
 }
 
@@ -1664,7 +1835,7 @@ function factTiles(t) {
       ${at ? `<span class="ft-sub">${esc(fmtIn(at) === T("now") ? T("Arriving now") : T("in {time}", { time: fmtIn(at) }))} · ${esc(fmtTime(next.time, next.tz))}</span>` : ""}</div>`);
   }
   if (t.speedMph != null && !t.estimated) {
-    const km = state.units === "km", v = Math.round(km ? t.speedMph * KM_PER_MI : t.speedMph);
+    const km = unitsOf(t.agency) === "km", v = Math.round(km ? t.speedMph * KM_PER_MI : t.speedMph);
     tiles.push(`<div class="ft ft-speed"><span class="ft-label">${T("Speed")}</span><span class="ft-value">${v}<small>${km ? "km/h" : T("mph")}</small></span></div>`);
   }
   const note = t.estimated ? `${T("Estimated from predicted times")} · ${fmtAgo(t.updated)}` : `${T("GPS")} · ${fmtAgo(t.updated)}`;
@@ -1703,7 +1874,8 @@ function renderRecents() {
 }
 
 function renderResults() {
-  const q = state.query.trim().toLowerCase();
+  // Matched with accents dropped, in any script: "hameenlinna" finds Hämeenlinna.
+  const q = fold(state.query.trim());
   const el = $("results");
   if (!q) {
     el.hidden = true;
@@ -1719,7 +1891,7 @@ function renderResults() {
   for (const t of state.trains.values()) {
     if (!inLists(t)) continue;
     const a = AGENCIES[t.agency];
-    const hay = `${a.name} ${a.short} ${a.region} ${t.number} ${t.route} ${t.origin} ${t.destination} ${t.nextStop}`.toLowerCase();
+    const hay = fold(`${a.name} ${a.short} ${a.region} ${t.number} ${t.route} ${t.origin} ${t.destination} ${t.nextStop}`);
     if (!terms.every((w) => hay.includes(w))) continue;
     const exact = String(t.number).toLowerCase() === q || terms.includes(String(t.number).toLowerCase());
     matches.push({ t, score: (exact ? 0 : 1) + (a.kind === "intercity" ? 0 : 0.5) });
@@ -1728,7 +1900,7 @@ function renderResults() {
   const stationHits = [];
   for (const st of state.stations.values()) {
     if (!st.agencies.some(agencyShown)) continue;
-    const hay = `${st.name} ${st.place} ${st.members.map((m) => `${m.name} ${m.lines.join(" ")} ${AGENCIES[m.agency].short}`).join(" ")}`.toLowerCase();
+    const hay = fold(`${st.name} ${st.place} ${st.members.map((m) => `${m.name} ${m.lines.join(" ")} ${AGENCIES[m.agency].short}`).join(" ")}`);
     if (terms.every((w) => hay.includes(w))) stationHits.push(st);
   }
   stationHits.sort((a, b) => (b.major - a.major) || (b.members.length - a.members.length) || a.name.localeCompare(b.name));
@@ -1740,7 +1912,7 @@ function renderResults() {
   const stationBlock = stationHtml ? `<div class="group-title">${T("Stations")}</div>${stationHtml}` : "";
 
   // Railroads and lines, opening their pages.
-  const has = (hay) => terms.every((w) => hay.toLowerCase().includes(w));
+  const has = (hay) => terms.every((w) => fold(hay).includes(w));
   const railroads = Object.entries(AGENCIES).filter(([, a]) => has(`${a.name} ${a.short} ${a.region}`));
   const railroadBlock = railroads.length ? `<div class="group-title">${T("Railroads")}</div>` + railroads.slice(0, 4).map(([id, a]) => {
     const n = [...state.trains.values()].filter((t) => t.agency === id).length;
@@ -1751,7 +1923,7 @@ function renderResults() {
     </button>`;
   }).join("") : "";
   const lines = allLines().filter((l) => has(`${l.name} ${AGENCIES[l.agency].name} ${AGENCIES[l.agency].short}`))
-    .sort((x, y) => Number(!x.name.toLowerCase().startsWith(q)) - Number(!y.name.toLowerCase().startsWith(q)) || y.running - x.running);
+    .sort((x, y) => Number(!fold(x.name).startsWith(q)) - Number(!fold(y.name).startsWith(q)) || y.running - x.running);
   const lineBlock = lines.length ? `<div class="group-title">${T("Lines")}</div>` + lines.slice(0, 6).map((l) => {
     const a = AGENCIES[l.agency];
     return `<button class="result" data-open-line="${esc(l.name)}" data-line-railroad="${l.agency}">
@@ -1807,12 +1979,12 @@ function renderResults() {
 // key, line, first stop, last stop, departure, days], ...]}}). Search lists
 // the matching trains still to leave today (each railroad's own today), and
 // a tap shows one's stops and times.
-let departuresData = null;
+let departuresData = {}, departuresDataAsked = false; // and the regions' (addRegion)
 function departures() {
-  if (!departuresData) {
-    departuresData = {};
+  if (!departuresDataAsked) {
+    departuresDataAsked = true;
     fetch("data/departures.json?v=dev").then((r) => r.json()).then((d) => {
-      departuresData = decodeDepartures(d);
+      departuresData = { ...decodeDepartures(d), ...departuresData };
       if (state.query) renderResults();
     }).catch((err) => console.warn("departures", err));
   }
@@ -1859,7 +2031,7 @@ function laterToday(terms, q) {
         const number = d.unnumbered ? null : key;
         if (at <= now || (number && running.has(`${id}|${number}`))) continue;
         const origin = d.stops[from] || "", dest = d.stops[to] || "";
-        const hay = `${a.name} ${a.short} ${a.region} ${number || ""} ${line} ${origin} ${dest}`.toLowerCase();
+        const hay = fold(`${a.name} ${a.short} ${a.region} ${number || ""} ${line} ${origin} ${dest}`);
         if (!terms.every((w) => hay.includes(w))) continue;
         const exact = Boolean(number) && (String(number).toLowerCase() === q || terms.includes(String(number).toLowerCase()));
         out.push({ id, key, number, line, origin, dest, at, dep, idx, start, tz: d.tz, exact });
@@ -1952,6 +2124,11 @@ function fmtAgo(ms) {
 
 
 const KM_PER_MI = 1.609344;
+// A railroad's speeds and sizes in its own country's units (km/h in
+// Finland) until the viewer picks units; in the US and Canada, and the
+// countries still on miles, the viewer's.
+const VIEWER_UNITS = new Set(["US", "CA", "GB", "LR", "MM"]);
+const unitsOf = (agency) => (store.get("tt-units", null) == null && !VIEWER_UNITS.has(AGENCIES[agency]?.country || "US") ? "km" : state.units);
 
 // ---------- Crowding ----------
 // How full a train is, car by car: NJ Transit's (its Rail Data API) and the
@@ -2198,7 +2375,9 @@ const AMENITIES = [
 const onBoardFor = (t) => { const c = consistOf(t); return c ? onBoard(c) : ""; };
 function onBoard(c) {
   const keys = new Set(c.cars.map((car) => car.type?.key).filter(Boolean));
-  const has = AMENITIES.filter(([, , types]) => types.some((k) => keys.has(k)));
+  // A plug-in's types list theirs ({ amenities: ["dining", ...] }, consist.js).
+  const own = new Set(c.cars.flatMap((car) => car.type?.amenities || []));
+  const has = AMENITIES.filter(([id, , types]) => own.has(id) || types.some((k) => keys.has(k)));
   if (!has.length) return "";
   const title = T(c.typical ? "Usually on board" : "On board");
   return `<section class="on-board" aria-label="${title}">
@@ -2282,19 +2461,22 @@ function models() {
 }
 function modelOf(c, i) {
   const all = models();
-  return modelIds(c, i).map((id) => all[id]).find(Boolean) || null;
+  return modelIds(c, i).map((id) => all[id] || pluginFacts(id)).find(Boolean) || null;
 }
+// A plug-in railroad's cars come in their own file (consist.js): once in,
+// the train or railroad showing redraws with them.
+onCars(() => { if (state.selected || state.railroad) renderDetail(); });
 
 const factText = {
-  topSpeedMph: (v) => (state.units === "km" ? `${Math.round(v * KM_PER_MI)} km/h` : `${v} ${T("mph")}`),
-  powerHp: (v) => (state.units === "km" ? `${Math.round(v * 0.7457).toLocaleString(locale)} kW` : `${v.toLocaleString(locale)} ${T("hp")}`),
+  topSpeedMph: (v, units) => (units === "km" ? `${Math.round(v * KM_PER_MI)} km/h` : `${v} ${T("mph")}`),
+  powerHp: (v, units) => (units === "km" ? `${Math.round(v * 0.7457).toLocaleString(locale)} kW` : `${v.toLocaleString(locale)} ${T("hp")}`),
   seats: (v) => `${v}`,
-  lengthFt: (v) => (state.units === "km" ? `${(v * 0.3048).toFixed(1)} m` : `${Math.round(v)} ${T("ft")}`),
+  lengthFt: (v, units) => (units === "km" ? `${(v * 0.3048).toFixed(1)} m` : `${Math.round(v)} ${T("ft")}`),
 };
 const FACT_LABELS = { built: "Built", fleet: "Fleet", topSpeedMph: "Top speed", powerHp: "Power", seats: "Seats", lengthFt: "Length" };
-function facts(m, keys) {
+function facts(m, keys, units = state.units) {
   return keys.filter((k) => m[k] != null && m[k] !== "")
-    .map((k) => `<div><dt>${T(FACT_LABELS[k])}</dt><dd>${esc(factText[k] ? factText[k](m[k]) : m[k])}</dd></div>`).join("");
+    .map((k) => `<div><dt>${T(FACT_LABELS[k])}</dt><dd>${esc(factText[k] ? factText[k](m[k], units) : m[k])}</dd></div>`).join("");
 }
 
 // The card under the drawing: what the car is, and a few numbers.
@@ -2308,7 +2490,7 @@ function modelCard(t, c, i) {
       <div><strong>${esc(name)}</strong>${car?.number ? ` <span class="model-num">${esc(car.number)}</span>` : ""}${sub ? `<span>${esc(sub)}</span>` : ""}</div>
       <button type="button" class="icon-btn sm" data-car-close aria-label="${T("Close")}">${CLOSE_ICON}</button>
     </div>
-    ${m ? `<dl class="facts">${facts(m, keys)}</dl>` : ""}
+    ${m ? `<dl class="facts">${facts(m, keys, unitsOf(t.agency))}</dl>` : ""}
     <button type="button" class="link-btn" data-model-more>${esc(T("More about the {model}", { model: m?.model || car?.type?.name || T("car") }))} ›</button>
   </div>`;
 }
@@ -2332,7 +2514,7 @@ function renderModelPage(t, el) {
       <div class="model-art">${carSvg(c, i, a.color, width, "tsc_m")}</div>
       <h2>${esc(m?.model || car.type?.name || T("This car"))}</h2>
       <p class="model-sub">${esc([m?.type, m?.builder].filter(Boolean).join(" · ") || car.type?.name || "")}${car.number && !t.fleet ? ` · ${T("No.")} ${esc(car.number)}` : ""}</p>
-      ${m ? `<dl class="facts wide">${facts(m, ["built", "fleet", "topSpeedMph", "powerHp", "seats", "lengthFt"])}</dl>` : ""}
+      ${m ? `<dl class="facts wide">${facts(m, ["built", "fleet", "topSpeedMph", "powerHp", "seats", "lengthFt"], unitsOf(t.agency))}</dl>` : ""}
       ${m?.about ? `<p class="model-about">${esc(m.about)}</p>` : ""}
       ${source ? `<p class="model-source">${T("Source:")} <a href="${esc(m.source)}" target="_blank" rel="noopener">${esc(source)}</a></p>` : ""}
       ${c.typical && !t.fleet ? `<div class="model-note"><strong>${T("Car count and type may not be accurate.")}</strong> ${esc(why)}${c.summary ? ` ${esc(T("Typical for this route: {summary}.", { summary: c.summary }))}` : ""}</div>` : ""}
@@ -2664,6 +2846,7 @@ function liftsSection(data) {
 
 function openRailroad(id, { fly = true, line = null } = {}) {
   if (!AGENCIES[id]) return;
+  needData(id); // its stations, abroad
   if (state.hidden.has(id)) {
     state.hidden.delete(id);
     store.set("tt-hidden", [...state.hidden]);
@@ -2688,8 +2871,9 @@ const openLine = (id, name, opts = {}) => openRailroad(id, { ...opts, line: name
 
 // "Framingham / Worcester Line" and "Framingham/Worcester Line" are one line,
 // and a timetable's "Franklin / Foxboro Line" is the "Franklin Line" (short
-// names like "S Line" must match exactly).
-const lineKey = (l) => String(l).toLowerCase().replace(/\bline\b/g, "").replace(/[^a-z0-9]/g, "");
+// names like "S Line" must match exactly). Any script's letters count, so a
+// Greek or Hebrew line name isn't empty.
+const lineKey = (l) => fold(l).replace(/\bline\b/g, "").replace(/[^\p{L}\p{N}]/gu, "");
 const sameLine = (x, y) => x === y || (Math.min(x.length, y.length) >= 5 && (x.includes(y) || y.includes(x)));
 const onLine = (t, name) => Boolean(t.route) && lineKey(t.route) === lineKey(name);
 
@@ -2747,12 +2931,12 @@ const lineColor = (id, name) => lineColorOf(id, name);
 // Each line's own color: its railroad's timetable (data/linecolors.json, from
 // scripts/build_linecolors.py), else the one its running trains carry, else
 // its railroad's.
-let lineColorsData = null;
+let lineColorsData = {}, lineColorsDataAsked = false; // and the regions' (addRegion)
 function lineColors() {
-  if (!lineColorsData) {
-    lineColorsData = {};
+  if (!lineColorsDataAsked) {
+    lineColorsDataAsked = true;
     fetch("data/linecolors.json?v=dev").then((r) => r.json()).then((d) => {
-      lineColorsData = d;
+      lineColorsData = { ...d, ...lineColorsData };
       renderAll();
     }).catch((err) => console.warn("line colors", err));
   }
@@ -3074,17 +3258,17 @@ function renderRailroad() {
     lineList.length > 1 ? plainSection(T("Lines"), lineList.length,
       `<ul class="rr-lines">${lineList.map((l) => `<li><button type="button" class="rr-line" data-line="${esc(l.name)}"><span class="served-name">${lineMark(id, l.name)}<span>${esc(l.name)}</span></span><span class="sub">${l.running ? T("{n} running", { n: l.running }) : T("none running")} ›</span></button></li>`).join("")}</ul>`) : "",
     fleet.count ? rrSection("fleet", T("Fleet"), fleet.count, `<p class="rr-hint">${T("Tap one to read about it.")}</p><div class="rr-cars">${fleet.html}</div>`) : "",
-    src ? `<p class="estimate-note">${T("Data:")} <a href="${esc(src.credit.href)}" target="_blank" rel="noopener">${esc(src.credit.label)}</a></p>` : ""]);
+    src ? `<p class="estimate-note">${T("Data:")} ${creditHtml(src.credit)}</p>` : ""]);
 }
 
 // Quiet hours: nothing of a railroad's is running, so its page says when
 // its first train goes (data/firsts.json, from its timetable).
-let firstsData = null;
+let firstsData = {}, firstsDataAsked = false; // and the regions' (addRegion)
 function firsts() {
-  if (!firstsData) {
-    firstsData = {};
+  if (!firstsDataAsked) {
+    firstsDataAsked = true;
     fetch("data/firsts.json?v=dev").then((r) => r.json()).then((d) => {
-      firstsData = d;
+      firstsData = { ...d, ...firstsData };
       if (state.railroad) renderDetail();
     }).catch((err) => console.warn("firsts", err));
   }
@@ -3098,8 +3282,9 @@ function zoneOffset(ms, tz) {
 }
 function nextFirstTrain(id) {
   const all = firsts(), d = all[id];
-  if (!d?.days || !all.start) return null;
-  const [y, m, day] = all.start.split("-").map(Number), now = Date.now();
+  const start = d?.start || all.start; // a region's railroad: its own file's
+  if (!d?.days || !start) return null;
+  const [y, m, day] = start.split("-").map(Number), now = Date.now();
   let best = null;
   d.days.forEach((list, i) => {
     const noon = Date.UTC(y, m - 1, day + i, 12);
@@ -3525,7 +3710,7 @@ function rideGuessCard() {
     state.rideGuess = null;
     return "";
   }
-  const a = AGENCIES[t.agency], km = state.units === "km";
+  const a = AGENCIES[t.agency], km = unitsOf(t.agency) === "km";
   const speed = `${Math.round(km ? g.mph * KM_PER_MI : g.mph)} ${km ? "km/h" : T("mph")}`;
   const next = t.stops?.find((s) => s.status === "next")?.name || t.nextStop;
   return `<div class="track-card live guess" style="--c:${t.routeColor || a.color}" data-ride-guess="${esc(t.id)}">
@@ -3686,6 +3871,7 @@ function showDetailView(open) {
 function select(id, { fly = true } = {}) {
   const opened = id && state.trains.get(id);
   if (opened) remember({ kind: "train", id, agency: opened.agency, name: trainTitle(opened), number: opened.number || "" });
+  if (opened) needData(opened.agency); // its stops' stations, abroad
   state.returnTo = null;
   if (state.trackSheet?.id !== id) closeTrackSheet();
   state.railroad = null;
@@ -3751,7 +3937,8 @@ function selectStation(id, { fly = true } = {}) {
   const openedSt = state.stations.get(id);
   if (openedSt) remember({ kind: "station", id, agency: openedSt.agencies[0], name: openedSt.name });
   const st = state.stations.get(id);
-  if (!st) return;
+  // A station abroad (a recent one) opens once its region is in.
+  if (!st) return void needData(String(id).split(":")[0])?.then(() => state.stations.has(id) && selectStation(id, { fly }));
   state.selected = null;
   state.railroad = null;
   state.line = null;
@@ -4114,6 +4301,12 @@ on("share-btn", "click", async () => {
 });
 
 on("search", "input", (e) => {
+  // A new search may be for a railroad off screen: every one is fetched
+  // once, and every region's stations and timetables.
+  if (!state.query.trim() && e.target.value.trim()) {
+    wakeSources(true);
+    dataRegions()?.then((m) => m?.loadAll());
+  }
   state.query = e.target.value;
   renderResults();
   if (isPhone && state.query) setSheet("expanded");
@@ -4500,6 +4693,7 @@ const sharedRide = (() => {
   return q.get("ride") ? { to: q.get("to") } : null;
 })();
 if (wanted) {
+  needData(wanted.split(":")[0]); // its stops' stations, abroad
   const wait = setInterval(() => {
     if (state.trains.has(wanted)) {
       clearInterval(wait);
@@ -4532,6 +4726,14 @@ const LOADING_TRAINS = [
   ["caltrain"], ["metrolink"], ["go"], ["marc", "Penn Line"], ["trirail"], ["frontrunner"], ["smart"], ["capmetro"], ["rtd"],
   ["coaster"], ["sprinter"], ["texrail"], ["silverline"], ["tre"], ["upx"], ["alaska", "Aurora Winter Train"],
 ];
+// A plug-in railroad's ("loading": [route or null, ...] in its AGENCIES
+// entry) join for a viewer in its time zone, once its cars are in.
+{
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  for (const [id, a] of Object.entries(AGENCIES)) {
+    if (Array.isArray(a.loading) && a.tz === zone) loadCars(id)?.then((ok) => ok && LOADING_TRAINS.push(...a.loading.map((r) => [id, r ?? undefined])));
+  }
+}
 const loadingStart = Date.now();
 let mapLoaded = false; // map.loaded() turns false whenever the trains layer updates
 map.once("load", () => (mapLoaded = true));

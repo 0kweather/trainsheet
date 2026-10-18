@@ -16,10 +16,13 @@ Stop ids and names are the stations' in data/stations.json (run
 scripts/build_stations.py first).
 
     python3 scripts/build_schedules.py [railroad ...]
+    python3 scripts/build_schedules.py --only trirail   # a plug-in's railroads (scripts/railroads/)
+    python3 scripts/build_schedules.py --list           # every railroad this builds, for the weekly run
 """
 import datetime, json, re, sys, unicodedata
 from collections import defaultdict
-from feeds import AMTRAK_GTFS, VIA_GTFS, ALASKA_LINES, DATA, GTFS, TRIP_LINE, get_zip, long_name, minutes, nctd_name, rows as csv_rows, slug
+from feeds import (AMTRAK_GTFS, VIA_GTFS, ALASKA_LINES, DATA, EXTRAS, GTFS, PLUGINS, TRIP_LINE, chosen, get_zip, long_name, minutes,
+                   nctd_name, read_split, rows as csv_rows, slug, write_split)
 # railroad: (GTFS url, keep route(row), line name(route row), train number(trip row))
 FEEDS = {
     # Trip ids are train numbers ("22", "1001").
@@ -73,9 +76,14 @@ NUMBERS = {
     "marc": lambda t: re.sub(r"^Train\s*", "", t.get("trip_short_name") or "", flags=re.I) or None,  # "Train 446"
     "go": lambda t: t["trip_id"].rsplit("-", 1)[-1],                                        # "20261028-ST-7420": 7420
     "ace": lambda t: (re.match(r"ACE0*(\d+)", t["trip_id"]) or [None, None])[1],             # "ACE03H": 3
-    # (Tri-Rail's published timetable ran out in August 2025: left out until there's a current one.)
-    "rtd": None, "frontrunner": None, "capmetro": None, "smart": None,
+    "rtd": None, "frontrunner": None, "smart": None,
 }
+# The plug-ins' railroads (scripts/railroads/), unless one says "schedule":
+# False (Tri-Rail, whose published timetable ran out in August 2025), each
+# train numbered by its "number" (a trip row's), else unnumbered.
+for _agency in sorted({a for agencies in PLUGINS.values() for a in agencies}):
+    if _agency in GTFS and _agency not in NUMBERS and EXTRAS[_agency].get("schedule", True):
+        NUMBERS[_agency] = EXTRAS[_agency].get("number")
 for _agency, _number_of in NUMBERS.items():
     _url, _keep, _line_name, *_group = GTFS[_agency]
     FEEDS[_agency] = (_url, _keep, _line_name, _number_of, *([lambda s, g=_group[0]: g(s["stop_name"])[0]] if _group and _group[0] else []))
@@ -194,7 +202,8 @@ def build(agency, url, keep, line_name, number_of, stations, station_by=None):
         patterns[n][key] = patterns[n].get(key, 0) | mask
     used = {sid for p in patterns.values() for (_, pat) in p for sid, *_ in pat}
     # Times are in the feed's own zone (Amtrak's are all Eastern, whatever the station's).
-    tz = next((a.get("agency_timezone") for a in rows(zf, "agency.txt") if a.get("agency_timezone")), None) \
+    tz = EXTRAS.get(agency, {}).get("tz") \
+        or next((a.get("agency_timezone") for a in rows(zf, "agency.txt") if a.get("agency_timezone")), None) \
         or next((s[10] for s in stations.values() if s[10]), None)
     out = {"start": today.isoformat(), "tz": tz,
            "stops": {sid: stations[sid][1:4] for sid in sorted(used)},
@@ -254,15 +263,19 @@ def departures_index():
         out[path.stem] = {"start": tt["start"], "tz": tt["tz"], **({"unnumbered": True} if tt.get("unnumbered") else {}),
                           **({"file": "ctrail.json"} if path.stem == "ctrail" else {}),
                           "stops": {sid: tt["stops"][sid][0] for sid in ids}, "lines": lines, "ids": ids, "runs": cols}
-    path = DATA / "departures.json"
-    path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
+    # A railroad outside the US and Canada: in its region's departures.json (feeds.REGION).
+    path = write_split("departures.json", out)
     print(f"departures: {sum(len(v['runs']['key']) for v in out.values())} runs ({path.stat().st_size // 1024} KB)")
 
 
-all_stations = json.loads((DATA / "stations.json").read_text())
+if sys.argv[1:] == ["--list"]:
+    print(" ".join(FEEDS))
+    sys.exit()
+only = chosen()
+all_stations = read_split("stations.json")
 (DATA / "schedules").mkdir(exist_ok=True)
 for agency, (url, keep, line_name, number_of, *station_by) in FEEDS.items():
-    if sys.argv[1:] and agency not in sys.argv[1:]:
+    if only and agency not in only:
         continue
     out = build(agency, url, keep, line_name, number_of, {r[0]: r for r in all_stations[agency]}, *station_by)
     path = DATA / "schedules" / f"{agency}.json"

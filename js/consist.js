@@ -1,5 +1,7 @@
 import { MODELS } from "./carmodels.js?v=dev";
 import { PX_PER_FT, HEIGHT_FT, locoCoupler } from "./carart.js?v=dev";
+import { addLogos } from "./emblems.js?v=dev";
+import { AGENCIES as PLUGINS, SOURCES as PLUGIN_SOURCES } from "./railroads/index.js?v=dev";
 
 // What a train is made of.
 //   - Live, from the car numbers a railroad reports: SEPTA lists every car in
@@ -243,6 +245,62 @@ const TYPES = {
 };
 
 for (const [key, type] of Object.entries(TYPES)) type.key = key;
+
+// ---------- Plug-in railroads' cars ----------
+// A railroad added as a plug-in keeps its cars in its own file,
+// js/railroads/<id>.cars.js, named by "cars" in its AGENCIES entry
+// (scripts/railroads/<id>.py): true for the plug-in's own id, or another
+// plug-in's id to share its file. It is loaded the first time one of that
+// railroad's trains or its fleet is drawn (consistOf gives null until then,
+// and onCars' callback redraws), and may export:
+//   TYPES:   { key: { name, kind, ...flags } }, as TYPES above;
+//   MODELS:  { key: { draw(ctx), len, oneEnd, variant } }, as carmodels.js's
+//            MODELS (len in feet over the couplers, or a function of the
+//            agency; draw from carmodels.js's builders and carart.js);
+//   FLEETS:  { agency: [[first, last, key], ...] }, as FLEETS above;
+//   TYPICAL: { agency: (t, reported) => ({ label, units: [[key, count], ...] }) or null },
+//            as typicalFor's cases (built-in keys work too);
+//   FACTS:   { "key", "key@agency", "key@agency/route": fact sheet }, as
+//            data/models.json's entries (model, type, builder, built, fleet,
+//            topSpeedMph, powerHp, seats, lengthFt, about, source); a car of
+//            the built-in "coach" type, or of none known, looks up "coach@agency";
+//   LOGOS:   more logos, as in emblems.js.
+// Built-in keys and railroads stay as they are: an entry naming one is skipped.
+const TYPICAL = {}, FACTS = {};
+const carsLoads = new Map(); // file -> promise of true once its cars are in
+const carsDone = new Set();
+let carsListener = null;
+const carsFile = (agency) => {
+  const own = PLUGINS[agency]?.cars;
+  if (!own) return null;
+  return typeof own === "string" ? own : PLUGIN_SOURCES.find((s) => s.agencies.includes(agency))?.module || agency;
+};
+// fn(agency) runs when a railroad's cars have loaded.
+export const onCars = (fn) => (carsListener = fn);
+// Loads a plug-in railroad's cars (a promise), or null for one with none.
+export function loadCars(agency) {
+  const file = carsFile(agency);
+  if (!file) return null;
+  if (!carsLoads.has(file)) {
+    carsLoads.set(file, import(`./railroads/${file}.cars.js?v=dev`).then((m) => {
+      addCars(m);
+      carsDone.add(file);
+      carsListener?.(agency);
+      return true;
+    }).catch((err) => { console.warn("cars", file, err); return false; }));
+  }
+  return carsLoads.get(file);
+}
+function addCars(m) {
+  for (const [key, type] of Object.entries(m.TYPES || {})) if (!TYPES[key]) TYPES[key] = { ...type, key };
+  for (const [key, model] of Object.entries(m.MODELS || {})) if (!MODELS[key]) MODELS[key] = model;
+  for (const [agency, ranges] of Object.entries(m.FLEETS || {})) if (PLUGINS[agency] && !FLEETS[agency]) FLEETS[agency] = ranges;
+  for (const [agency, fn] of Object.entries(m.TYPICAL || {})) if (PLUGINS[agency] && !TYPICAL[agency]) TYPICAL[agency] = fn;
+  for (const [id, facts] of Object.entries(m.FACTS || {})) FACTS[id] ??= facts;
+  addLogos(m.LOGOS);
+}
+// A plug-in model's fact sheet (app.js looks here after data/models.json).
+export const pluginFacts = (id) => FACTS[id] || null;
 
 const LOCOMOTIVE = new Set(["diesel", "electric"]);
 
@@ -505,7 +563,7 @@ function typicalFor(t, reported) {
       if (/Hurricane/.test(t.route || "")) return set("GP40-2 locomotive with a coach and an F40 power and cab car", ["gp402", 1], ["akCoach", 1], ["f40", 1]);
       if (/Aurora/.test(t.route || "")) return set("SD70MAC locomotive with a baggage car, a café car and coaches", ["sd70mac", 1], ["akBaggage", 1], ["akDiner", 1], ["akCoach", 3]);
       return set("SD70MAC locomotive with coaches, a dining car and dome cars (domes drawn as coaches)", ["sd70mac", 1], ["akBaggage", 1], ["akCoach", 3], ["akDiner", 1], ["akCoach", 2]);
-    default: return null;
+    default: return TYPICAL[t.agency]?.(t, reported) || null;
   }
 }
 
@@ -519,6 +577,9 @@ export function fleetSamples(agency) {
 }
 
 export function consistOf(t) {
+  // A plug-in railroad's cars come in their own file.
+  const file = carsFile(t.agency);
+  if (file && !carsDone.has(file)) { loadCars(t.agency); return null; }
   // A feed may name each car's model (t.cars.types, TYPES keys); else its
   // number says what it is.
   const reported = (t.cars?.numbers || []).map((number, i) => ({ number, key: typeOf(t.agency, number) || (TYPES[t.cars.types?.[i]] ? t.cars.types[i] : null) }));
@@ -646,9 +707,10 @@ export function carSvg(c, i, color, width, uid = `tsp${++renderSeq}`) {
 
 // Where to look up car i's fact sheet (data/models.json), most specific
 // first: model@railroad/route, model@railroad, model. The generic "coach"
-// is an Amfleet I except on the Piedmont.
+// is an Amfleet I except on the Piedmont and on a railroad with its own
+// cars file, whose FACTS may give "coach@<agency>".
 export function modelIds(c, i) {
   const key = c.cars[i]?.type?.key || "coach";
-  const k = key === "coach" && !(c.agency === "amtrak" && c.route === "Piedmont") ? "amfleet" : key;
+  const k = key === "coach" && !carsFile(c.agency) && !(c.agency === "amtrak" && c.route === "Piedmont") ? "amfleet" : key;
   return [`${k}@${c.agency}/${c.route || ""}`, `${k}@${c.agency}`, k];
 }

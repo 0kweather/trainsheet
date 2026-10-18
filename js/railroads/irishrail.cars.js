@@ -1,0 +1,347 @@
+// Irish Rail's cars (scripts/railroads/irishrail.py): its InterCity and
+// commuter railcars, the DART's electric units, and the locomotive-hauled
+// Dublin–Cork and Enterprise sets. The realtime API names no units, so every
+// train is drawn as what usually runs on its line. Trainsheet's own side
+// views, from published dimensions and photographs; liveries simplified.
+import { newId, married, bilevel } from "../carmodels.js?v=dev";
+import { C, rect, path, poly, win, door, truck, pantograph, slats, underframe } from "../carart.js?v=dev";
+
+const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
+
+// InterCity green and silver; DART's dark green and lime.
+const IE = { silver: "#d6dade", roof: "#b3b9c0", green: "#0b6b3e", dark: "#0d4f30", lime: "#9fca3b", yellow: "#f2c21b", skirt: "#3a3e44", band: "#22272c" };
+const DART = { green: "#2f5b34", lime: "#c4d22a", red: "#b3262d" };
+
+// A locomotive or driving car's body, which the carmodels.js builders can't
+// shape (a cab at each end): the outline filled, its livery clipped to it and
+// shaded like the built-in drawings (soft shadow low, highlight high).
+function shell(d, base, liv) {
+  const id = newId();
+  const shade = `<linearGradient id="${id}-s" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="14">` +
+    '<stop offset="0.2" stop-color="#000" stop-opacity="0.16" style="stop-opacity:var(--car-shade-low,0.16)"/><stop offset="0.45" stop-color="#000" stop-opacity="0"/>' +
+    '<stop offset="0.6" stop-color="#fff" stop-opacity="0"/><stop offset="0.85" stop-color="#fff" stop-opacity="0.1" style="stop-opacity:var(--car-shade-high,0.1)"/>' +
+    '<stop offset="1" stop-color="#000" stop-opacity="0.08" style="stop-opacity:var(--car-shade-roof,0.08)"/></linearGradient>';
+  return path(d, base) + `<clipPath id="${id}"><path d="${d}"/></clipPath><defs>${shade}</defs>` +
+    `<g clip-path="url(#${id})">${liv}<rect x="-5" y="0" width="200" height="16" fill="url(#${id}-s)"/></g>` + path(d, "none", 0.8);
+}
+// Side buffers at a body end (x: the buffer face), as on Irish locomotives
+// and coaches.
+const buffers = (x, side, y = 3.4) => rect(side < 0 ? x : x - 1.1, y - 0.45, 1.1, 0.9, "currentColor", 0, 'rx="0.2"') +
+  rect(side < 0 ? x : x - 0.25, y - 0.7, 0.25, 1.4, "currentColor");
+
+// --- 22000 Class ICR (Hyundai Rotem with Tokyu bogies, 2007-12; 41 more
+// middle cars 2022-23): 63 sets of 3 to 6 cars, end cars 23.2 m, middle
+// cars 22.4 m, one MTU engine under each car. A single plug door at each
+// end of each car side (behind the cab on a driving car); the windows set
+// in one dark band. Silver; a dark green panel sweeping back from the
+// windshield to the first door, green doors there, a yellow front; a thin
+// green line swinging along the lower side.
+const ICR = { roof: 12.6, sill: 3.5, cornerR: 1.1, end: 0.6, trucks: { centers: 52, wb: 8.2, d: 33 }, diaphragm: [3.9, 11.6], badge: false };
+function icrPaint(c, g, cab) {
+  const L = g.L, a = cab ? 13.0 : 6.0;
+  let s = rect(0, 0, L, 17, IE.silver) + rect(0, 11.7, L, 2, IE.roof) + rect(0, 0, L, 3.5, IE.skirt);
+  s += rect(a, 6.85, L - a - 6.0, 2.95, IE.band, 0, 'rx="0.5"');
+  // The green line low on the side, curling up at its ends.
+  s += path(`M${a + 2} 5.6Q${a + 6} 4.9 ${a + 12} 5.15L${L - 12} 5.15Q${L - 9} 5.15 ${L - 7.5} 6.2L${L - 7.9} 6.25Q${L - 9.5} 5.45 ${L - 12} 5.45L${a + 12} 5.45Q${a + 6} 5.25 ${a + 2.3} 5.8Z`, IE.dark);
+  if (cab) {
+    s += path("M0 0L0 8.4Q2.8 8.2 5.2 7.4L5.2 0Z", IE.yellow);
+    s += path("M2.4 9.0Q5.2 7.6 8.0 6.4L8.0 3.5L12.2 3.5L12.2 17L4.8 17Z", IE.dark);
+  } else s += rect(0.6, 3.5, 4.0, 13.5, IE.dark) + rect(L - 4.6, 3.5, 4.0, 13.5, IE.dark);
+  return s;
+}
+const icrDoor = (x) => ({ x, w: 2.7, y0: 3.7, y1: 10.9, glassY: 0.55, glassH: 0.3, grabs: false, fill: "rgba(0,0,0,0.12)" });
+export const icrCab = (c) => bilevel({ ...c, cabL: true, cabR: false }, { ...ICR,
+  nose: [[1.0, 3.5], [1.0, 6.0], ["q", 1.1, 7.3, 1.9, 8.3], [4.8, 11.9], ["q", 5.6, 12.6, 7.2, 12.6]],
+  rows: [{ xs: seq(13.6, 5.55, 10), y: 7.1, w: 4.5, h: 2.45, r: 0.3 }],
+  doors: [icrDoor(8.9), icrDoor(c.L - 4.4)], cabLen: 7,
+  roofItems: [[16, 9, 0.5], [46, 9, 0.5]],
+  paint: (c, g) => icrPaint(c, g, true),
+  cab: () => path(poly([[2.0, 8.3], [4.7, 11.6], [6.4, 11.6], [6.4, 8.3]]), C.glass) + rect(0.9, 5.6, 0.35, 0.7, "#f4f4ee"),
+  extra: () => underframe(20, 50, 3.5, { depth: 1.3, boxes: 3 }),
+});
+export const icrMid = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...ICR,
+  rows: [{ xs: seq(6.6, 5.55, 11), y: 7.1, w: 4.5, h: 2.45, r: 0.3 }],
+  doors: [icrDoor(1.6), icrDoor(c.L - 4.3)],
+  roofItems: [[14, 9, 0.5], [46, 9, 0.5]],
+  paint: (c, g) => icrPaint(c, g, false),
+  extra: () => underframe(20, 52, 3.5, { depth: 1.3, boxes: 3 }),
+});
+
+// --- 29000 Class (CAF, 2002-05): 29 four-car railcars, 81.5 m long, an
+// MAN engine under each car, 121 km/h. Two pairs of sliding doors a side on
+// every car, at about the third points. Bright green over a gray skirt, the
+// windows in a dark green band, white doors, a yellow front.
+const CAF29 = { roof: 12.6, sill: 3.6, cornerR: 1.0, end: 0.6, trucks: { centers: 46, wb: 8.2, d: 33 }, diaphragm: [3.9, 11.6], badge: false };
+const c29Paint = (c, g, cab) => {
+  const L = g.L;
+  let s = rect(0, 0, L, 17, "#3c9c3a") + rect(0, 11.8, L, 2, "#9aa2a9") + rect(0, 0, L, 3.6, IE.skirt);
+  s += rect(cab ? 6.0 : 0, 6.9, L - (cab ? 6.0 : 0), 3.0, "#1d5e2f");
+  if (cab) s += path("M0 0L0 7.6L3.2 7.6L3.2 0Z", IE.yellow);
+  return s;
+};
+const c29Door = (x) => ({ x, w: 4.3, y0: 3.7, y1: 10.9, leaves: 2, glassY: 0.45, glassH: 0.42, fill: "#eef0f1" });
+export const c29Cab = (c) => bilevel({ ...c, cabL: true, cabR: false }, { ...CAF29,
+  nose: [[0.9, 3.6], [0.9, 9.4], ["q", 1.0, 11.4, 2.0, 12.2], ["q", 2.8, 12.6, 4.4, 12.6]],
+  rows: [{ xs: [7.6, ...seq(23.6, 5.3, 4), 50.3, 55.6, 61.2], y: 7.1, w: 4.3, h: 2.5, r: 0.3 }],
+  doors: [c29Door(17.6), c29Door(44.5)], cabLen: 5,
+  roofItems: [[8, 8, 0.45], [48, 9, 0.45]],
+  paint: (c, g) => c29Paint(c, g, true),
+  cab: () => path(poly([[1.0, 8.2], [1.7, 11.4], [4.2, 11.4], [4.2, 8.2]]), C.glass),
+  extra: () => underframe(22, 44, 3.6, { depth: 1.3, boxes: 2 }),
+});
+export const c29Mid = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...CAF29,
+  rows: [{ xs: [2.0, 7.4, ...seq(22.6, 5.3, 4), 49.6, 54.9, 60.3], y: 7.1, w: 4.3, h: 2.5, r: 0.3 }],
+  doors: [c29Door(16.8), c29Door(43.8)],
+  roofItems: [[6, 8, 0.45], [46, 9, 0.45]],
+  paint: (c, g) => c29Paint(c, g, false),
+  extra: () => underframe(22, 44, 3.6, { depth: 1.3, boxes: 2 }),
+});
+
+// --- 2600 Class (Tokyu Car, 1993; Cork's suburban trains) and 2800 Class
+// (Tokyu Car, 2000; Limerick and the west): two-car railcars, a Cummins
+// engine and hydraulic drive under each car. A single sliding door a side
+// near each end of each car; between them big windows. Silver over a gray
+// skirt, a dark green panel and door behind the yellow cab front, the
+// windows in a dark band.
+const tokyu = (big) => married((c) => bilevel(c, {
+  roof: 12.6, sill: 3.7, cornerR: 1.0, end: 0.6, trucks: { centers: 47, wb: 8.2, d: 33 }, diaphragm: [3.9, 11.6], badge: false,
+  nose: [[0.9, 3.7], [0.9, 9.6], ["q", 1.0, 11.6, 2.1, 12.3], ["q", 2.9, 12.6, 4.4, 12.6]],
+  rows: [{ xs: big ? seq(13.4, 7.4, 6) : seq(13.2, 5.9, 8), y: 7.1, w: big ? 6.2 : 4.6, h: 2.6, r: 0.35 }],
+  doors: [{ x: 7.6, w: 3.0, y0: 3.8, y1: 10.9, glassY: 0.5, glassH: 0.36, fill: IE.dark }, { x: c.L - 5.6, w: 3.0, y0: 3.8, y1: 10.9, glassY: 0.5, glassH: 0.36 }],
+  roofItems: [[14, 9, 0.45], [42, 10, 0.45]], cabLen: 5,
+  paint: (c, g) => {
+    const L = g.L;
+    return rect(0, 0, L, 17, IE.silver) + rect(0, 11.7, L, 2, IE.roof) + rect(0, 0, L, 3.7, IE.skirt) +
+      rect(12.4, 6.85, L - 19, 3.1, IE.band, 0, 'rx="0.4"') + path("M0 0L0 7.8L3.4 7.8L3.4 0Z", IE.yellow) +
+      path("M3.4 3.7L11.4 3.7L11.4 17L3.4 17Z", IE.dark);
+  },
+  cab: () => path(poly([[1.0, 8.1], [1.8, 11.4], [3.3, 11.4], [3.3, 8.1]]), C.glass) + win(4.6, 7.4, 2.0, 2.4, 0.3),
+  extra: () => underframe(20, 46, 3.7, { depth: 1.3, boxes: 2 }),
+}));
+export const ie2600 = tokyu(false);
+export const ie2800 = tokyu(true);
+
+// --- DART 8100 Class (Linke-Hofmann-Busch with GEC, 1983-84): two-car
+// sets, a power car (8101-8140) with its pantograph and a driving trailer
+// (8301-8340), 20.49 m each, 100 km/h; up to four sets coupled. Two pairs
+// of sliding doors a side; the windows between and beyond them. DART's
+// dark green, lime cab fronts with a red sill.
+const dartPaint = (c, g, front) => {
+  const L = g.L;
+  let s = rect(0, 0, L, 17, DART.green) + rect(0, 11.9, L, 2, "#8d969e") + rect(0, 0, L, 3.7, IE.skirt);
+  s += rect(0, 6.45, L, 0.35, DART.lime);
+  if (front) s += path(`M0 3.7L${front} 3.7L${front} 7.6L0 7.6Z`, DART.lime) + rect(0, 3.7, front, 0.6, DART.red);
+  return s;
+};
+const dartDoor = (x) => ({ x, w: 4.2, y0: 3.8, y1: 10.9, leaves: 2, glassY: 0.45, glassH: 0.42, fill: "#3f6b42" });
+export const dart8100 = married((c) => bilevel(c, {
+  roof: 12.6, sill: 3.7, cornerR: 0.9, end: 0.6, trucks: { centers: 45, wb: 8.2, d: 33 }, diaphragm: [3.9, 11.6], badge: false,
+  rows: [{ xs: [6.0, ...seq(21.4, 5.1, 4), 47.0, 52.1, 57.6], y: 7.15, w: 4.2, h: 2.65, r: 0.3 }],
+  doors: [dartDoor(14.6), dartDoor(41.0)], cabLen: 4,
+  roofItems: [[c.pan ? 18 : 6, 10, 0.45], [44, 10, 0.45]],
+  paint: (c, g) => dartPaint(c, g, c.cabL ? 2.2 : 0),
+  cab: (c, { x0 }) => rect(x0, 7.6, 0.42, 4.0, DART.lime) + win(x0 + 1.0, 7.3, 2.6, 3.1, 0.25),
+  extra: (c) => underframe(18, 44, 3.7, { depth: 1.3, boxes: 3 }) + (c.pan ? pantograph(9.5, 12.6, { up: true, facing: -1 }) : ""),
+}));
+
+// --- DART 8500, 8510 and 8520 Classes (Tokyu Car, 2000-04): 17 four-car
+// sets, driving trailers (86xx, 20.56 m) at the ends and two power cars
+// (85xx, 20.76 m) between, 100 km/h in service. Two pairs of sliding doors
+// a side, wide windows; a pantograph on each power car. The same green and
+// lime as the 8100s, the front a big flat windshield over the lime.
+const dart85 = (cab) => (c) => bilevel(cab ? { ...c, cabL: true, cabR: false } : { ...c, cabL: false, cabR: false }, {
+  roof: 12.6, sill: 3.7, cornerR: 0.9, end: 0.6, trucks: { centers: 45, wb: 8.2, d: 33 }, diaphragm: [3.9, 11.6], badge: false,
+  rows: [{ xs: cab ? [6.4, 22.0, 28.1, 34.2, 48.7, 54.8, 61.0] : [1.8, 7.9, 22.6, 28.7, 34.8, 49.4, 55.5, 61.6], y: 7.05, w: 5.0, h: 2.8, r: 0.3 }],
+  doors: cab ? [dartDoor(15.0), dartDoor(41.6)] : [dartDoor(15.6), dartDoor(42.2)], cabLen: cab ? 5 : 0,
+  roofItems: cab ? [[6, 10, 0.45], [44, 10, 0.45]] : [[22, 18, 0.45]],
+  paint: (c, g) => dartPaint(c, g, cab ? 2.6 : 0),
+  cab: (c, { x0 }) => rect(x0, 7.6, 0.42, 4.2, DART.lime) + path(poly([[x0 + 0.4, 7.4], [x0 + 0.9, 11.3], [x0 + 4.0, 11.3], [x0 + 4.0, 7.4]]), C.glass),
+  extra: () => underframe(18, 44, 3.7, { depth: 1.3, boxes: cab ? 2 : 3 }) + (cab ? "" : pantograph(8.5, 12.6, { up: true, facing: -1 })),
+});
+export const dart85Cab = dart85(true);
+export const dart85Mid = dart85(false);
+
+// --- 201 Class (General Motors JT42HCW, London, Ontario, 1994-95): 34
+// six-axle locomotives, 3,200 hp, 160 km/h, 20.96 m; a cab at each end.
+// Now they haul the Dublin–Cork Mark 4 sets and the Enterprise. Drawn in
+// the InterCity green and silver with yellow ends.
+export function loco201(c) {
+  const { L } = c, sill = 4.0, roof = 13.0;
+  const d = poly([[0.8, sill], [L - 0.8, sill], [L - 0.8, 9.2], [L - 1.6, 12.4], ["q", L - 1.9, roof, L - 2.8, roof],
+    [2.8, roof], ["q", 1.9, roof, 1.6, 12.4], [0.8, 9.2]]);
+  let s = truck(L / 2 - 21.5, { wb: 12.6, d: 40, kind: "loco", top: sill, axles: 3 }) + truck(L / 2 + 21.5, { wb: 12.6, d: 40, kind: "loco", top: sill, axles: 3 });
+  s += rect(26, 1.6, L - 52, sill - 1.6, "currentColor", 0, 'opacity="0.82" rx="0.6"');                  // fuel tank
+  let liv = rect(0, 0, L, 15, IE.silver) + rect(0, 0, L, 7.0, IE.green) + rect(0, 7.0, L, 0.35, IE.lime) + rect(0, 12.3, L, 2, IE.roof);
+  for (const x of [0, L - 2.6]) liv += rect(x, 0, 2.6, 9.2, IE.yellow);
+  liv += path(poly([[1.05, 9.5], [1.75, 12.2], [3.6, 12.2], [3.6, 9.5]]), C.glass) + path(poly([[L - 1.05, 9.5], [L - 1.75, 12.2], [L - 3.6, 12.2], [L - 3.6, 9.5]]), C.glass);
+  s += shell(d, IE.silver, liv);
+  s += win(4.4, 9.3, 2.0, 2.2, 0.2) + win(L - 6.4, 9.3, 2.0, 2.2, 0.2);
+  s += door(7.0, 4.3, 2.0, 7.4, { glass: false }) + door(L - 9.0, 4.3, 2.0, 7.4, { glass: false });
+  s += rect(12, 8.2, 12, 3.4, "rgba(20,22,25,0.5)", 0.4) + slats(12, 8.2, 12, 3.4, 0.4, "rgba(255,255,255,0.18)");
+  s += rect(L - 26, 8.2, 14, 3.4, "rgba(20,22,25,0.5)", 0.4) + slats(L - 26, 8.2, 14, 3.4, 0.4, "rgba(255,255,255,0.18)");
+  for (const x of [L - 24, L - 18]) s += path(`M${x - 2} ${roof}Q${x} ${roof + 0.7} ${x + 2} ${roof}Z`, C.steelDark, 0.4);
+  return s + buffers(0.8, -1) + buffers(L - 0.8, 1);
+}
+
+// --- Mark 4 (CAF, 2004-06): the Dublin–Cork sets, eight cars behind a 201
+// Class, 23.66 m coaches and a 23.81 m generator and control car at the
+// Dublin end, 160 km/h. A single plug door at each end of each coach side,
+// square windows between. Green below and above a silver window band, a
+// lime line under it; the control car's raked cab front yellow, its side
+// a luggage van with a big door and the generator's grilles.
+const MK4 = { roof: 12.9, sill: 3.8, cornerR: 1.1, end: 0.6, trucks: { centers: 56, wb: 8.5, d: 36 }, diaphragm: [4.0, 11.8], badge: false };
+const mk4Paint = (c, g) => {
+  const L = g.L;
+  return rect(0, 0, L, 17, IE.green) + rect(0, 6.75, L, 3.25, IE.silver) + rect(0, 6.5, L, 0.25, IE.lime) + rect(0, 12.0, L, 2, IE.roof) + rect(0, 0, L, 3.8, IE.skirt);
+};
+const mk4Door = (x) => ({ x, w: 2.7, y0: 4.0, y1: 10.9, glassY: 0.55, glassH: 0.3, grabs: false, fill: "#0a5c35" });
+export const mk4 = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...MK4,
+  rows: [{ xs: seq(7.0, 5.4, 12), y: 7.0, w: 4.2, h: 2.75, r: 0.35 }],
+  doors: [mk4Door(1.6), mk4Door(c.L - 4.3)], paint: mk4Paint,
+  roofItems: [[10, 9, 0.4], [c.L - 19, 9, 0.4]],
+  extra: () => underframe(20, 58, 3.8, { depth: 1.2, boxes: 3 }),
+});
+export const mk4Dvt = (c) => bilevel({ ...c, cabL: true, cabR: false }, { ...MK4,
+  nose: [[1.2, 3.8], [1.0, 6.2], ["q", 1.1, 7.4, 2.0, 8.4], [6.4, 12.2], ["q", 7.4, 12.9, 9.4, 12.9]],
+  rows: [{ xs: [52.6, 58.0, 63.4, 68.8], y: 7.0, w: 4.2, h: 2.75, r: 0.35 }],
+  doors: [mk4Door(11.2), { x: 30.0, w: 6.0, y0: 4.0, y1: 10.9, leaves: 2, glass: false, glassY: 0.6, glassH: 0.2, grabs: false, fill: "#0a5c35" }, mk4Door(c.L - 4.3)],
+  cabLen: 9, paint: (c, g) => mk4Paint(c, g) + path("M0 0L0 8.0Q4 7.6 7.6 6.9L7.6 0Z", IE.yellow) + rect(14.2, 6.75, 15, 3.25, IE.green) + rect(36.6, 6.75, 15, 3.25, IE.green),
+  cab: () => path(poly([[2.1, 8.4], [6.2, 11.8], [8.6, 11.8], [8.6, 8.4]]), C.glass),
+  extra: () => rect(15.6, 7.0, 11.5, 3.0, "rgba(20,22,25,0.45)", 0.4) + slats(15.6, 7.0, 11.5, 3.0, 0.4, "rgba(255,255,255,0.2)") +
+    rect(38.0, 7.0, 12.0, 3.0, "rgba(20,22,25,0.45)", 0.4) + slats(38.0, 7.0, 12.0, 3.0, 0.4, "rgba(255,255,255,0.2)") + underframe(20, 58, 3.8, { depth: 1.4, boxes: 3 }),
+});
+
+// --- The Enterprise's De Dietrich coaches (1996-97, shared with NI
+// Railways): seven-car sets with a driving trailer at the Dublin end, 145
+// km/h. A plug door at each end of each side, long rows of windows. Silver
+// with a green band low on the side under a lime line, as repainted in
+// 2007-09; the driving trailer's flat front yellow.
+const DD = { roof: 12.8, sill: 3.8, cornerR: 1.0, end: 0.6, trucks: { centers: 55, wb: 8.5, d: 36 }, diaphragm: [4.0, 11.8], badge: false };
+const ddPaint = (c, g, a = 0) => {
+  const L = g.L;
+  return rect(0, 0, L, 17, IE.silver) + rect(0, 3.8, L, 2.4, IE.green) + rect(0, 6.2, L, 0.3, IE.lime) + rect(a, 6.95, L - a, 2.9, IE.band) + rect(0, 11.9, L, 2, IE.roof) + rect(0, 0, L, 3.8, IE.skirt);
+};
+export const ddCoach = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...DD,
+  rows: [{ xs: seq(6.6, 5.2, 12), y: 7.1, w: 4.4, h: 2.55, r: 0.3 }],
+  doors: [mk4Door(1.6), mk4Door(c.L - 4.3)], paint: ddPaint,
+  extra: () => underframe(20, 56, 3.8, { depth: 1.2, boxes: 3 }),
+});
+export const ddCab = (c) => bilevel({ ...c, cabL: true, cabR: false }, { ...DD,
+  nose: [[0.9, 3.8], [0.9, 10.2], ["q", 1.0, 12.2, 2.4, 12.6], ["q", 3.0, 12.8, 4.4, 12.8]],
+  rows: [{ xs: seq(11.6, 5.2, 11), y: 7.1, w: 4.4, h: 2.55, r: 0.3 }],
+  doors: [mk4Door(6.6), mk4Door(c.L - 4.3)], cabLen: 5,
+  paint: (c, g) => ddPaint(c, g, 9.6) + rect(0, 0, 2.6, 8.4, IE.yellow),
+  cab: () => path(poly([[1.0, 8.6], [1.6, 11.6], [4.4, 11.6], [4.4, 8.6]]), C.glass),
+  extra: () => underframe(20, 56, 3.8, { depth: 1.2, boxes: 3 }),
+});
+
+export const TYPES = {
+  ie201: { name: "201 Class locomotive", kind: "diesel" },
+  ieIcrCab: { name: "22000 Class ICR driving car", kind: "emu" },
+  ieIcr: { name: "22000 Class ICR middle car", kind: "emu" },
+  ie29kCab: { name: "29000 Class driving car", kind: "emu" },
+  ie29k: { name: "29000 Class middle car", kind: "emu" },
+  ie2600: { name: "2600 Class railcar", kind: "emu" },
+  ie2800: { name: "2800 Class railcar", kind: "emu" },
+  ie8100: { name: "DART 8100 Class car", kind: "emu", pan: true },
+  ie8500Cab: { name: "DART 8500 Class driving trailer", kind: "emu" },
+  ie8500: { name: "DART 8500 Class power car", kind: "emu", pan: true },
+  ieMk4: { name: "Mark 4 coach", kind: "coach", amenities: ["first", "cafe"] },
+  ieMk4Cab: { name: "Mark 4 generator and control car", kind: "coach", cab: true },
+  ieDd: { name: "De Dietrich coach", kind: "coach", amenities: ["first", "cafe"] },
+  ieDdCab: { name: "De Dietrich driving trailer", kind: "coach", cab: true },
+};
+// oneEnd: single-cab equipment, drawn cab-left and mirrored at the back of a train.
+const M = (draw, len, oneEnd = false) => ({ draw, len, oneEnd, variant: null });
+export const MODELS = {
+  ie201: M(loco201, 68.75, true),
+  ieIcrCab: M(icrCab, 76.1, true),
+  ieIcr: M(icrMid, 73.5),
+  ie29kCab: M(c29Cab, 67.5, true),
+  ie29k: M(c29Mid, 66.2),
+  ie2600: M(ie2600, 67),
+  ie2800: M(ie2800, 68),
+  ie8100: M(dart8100, 67.2),
+  ie8500Cab: M(dart85Cab, 67.4, true),
+  ie8500: M(dart85Mid, 68.1),
+  ieMk4: M(mk4, 77.6),
+  ieMk4Cab: M(mk4Dvt, 78.1, true),
+  ieDd: M(ddCoach, 75.5),
+  ieDdCab: M(ddCab, 75.5, true),
+};
+// Fleet numbers: 201 Class 201-234; ICR driving cars 221xx-223xx and middle
+// cars 224xx-228xx; 29000 sets 29001-29029; 2600 and 2800 cars; the DART's
+// 8100s (power cars 8101-8140, trailers 8301-8340) and 8500s (power cars
+// 8501-8540, driving trailers 8601-8640).
+export const FLEETS = {
+  irishrail: [[201, 234, "ie201"], [2601, 2617, "ie2600"], [2801, 2820, "ie2800"], [8101, 8140, "ie8100"], [8301, 8340, "ie8100"],
+    [8501, 8540, "ie8500"], [8601, 8640, "ie8500Cab"], [22101, 22399, "ieIcrCab"], [22401, 22899, "ieIcr"], [29001, 29029, "ie29kCab"]],
+};
+
+const set = (label, ...units) => ({ label, units });
+const ICR3 = set("22000 Class InterCity railcar, usually 3 to 6 cars", ["ieIcrCab", 1], ["ieIcr", 2], ["ieIcrCab", 1]);
+export const TYPICAL = {
+  irishrail: (t, reported) => {
+    const r = t.route || "";
+    if (reported === "ie8500" || reported === "ie8500Cab") return set("DART 8500 Class electric set, 4 or 8 cars", ["ie8500Cab", 1], ["ie8500", 2], ["ie8500Cab", 1]);
+    if (r === "DART" || reported === "ie8100") return set("DART electric sets, usually 4 to 8 cars (8100 Class shown; also 8500, 8510 and 8520 Class sets)", ["ie8100", 4]);
+    // The Mark 4s' control car is at the Dublin end, the locomotive at Cork's.
+    if (reported === "ie201" || r === "Dublin–Cork") {
+      const units = [["ie201", 1], ["ieMk4", 7], ["ieMk4Cab", 1]];
+      return set("201 Class locomotive with Mark 4 coaches and a control car (some trains 22000 Class railcars)",
+        ...(/Dublin/.test(t.destination || "") ? units.reverse() : units));
+    }
+    if (r === "Enterprise") return set("201 Class locomotive with De Dietrich coaches and a driving trailer (generator van not drawn)", ["ie201", 1], ["ieDd", 6], ["ieDdCab", 1]);
+    if (reported === "ie29kCab" || /Northern Commuter|Western Commuter|Rosslare/.test(r)) return set("29000 Class commuter railcar, 4 or 8 cars (some trains 22000 Class)", ["ie29kCab", 1], ["ie29k", 2], ["ie29kCab", 1]);
+    if (reported === "ie2600" || r === "Cork Commuter") return set("2600 Class railcars, usually 2 or 4 cars (some trains 22000 Class)", ["ie2600", 2]);
+    if (reported === "ie2800" || /^Limerick–/.test(r)) return set("2800 Class railcars, usually 2 or 4 cars (some trains 22000 Class)", ["ie2800", 2]);
+    return ICR3;
+  },
+};
+
+// Facts come in km/h and kW; the page converts them back for display.
+const kmh = (v) => Math.round((v / 1.609344) * 10) / 10, kw = (v) => Math.round(v / 0.7457);
+const WP = "https://en.wikipedia.org/wiki/";
+export const FACTS = {
+  ie201: { model: "GM EMD JT42HCW (201 Class)", type: "Diesel-electric locomotive", builder: "General Motors Diesel, London, Ontario", built: "1994–1995",
+    fleet: "34 built (2 owned by NI Railways)", topSpeedMph: kmh(160), powerHp: 3200, lengthFt: 68.75,
+    about: "Irish Rail's mainline locomotive, with a cab at each end. In passenger service it now hauls only the Dublin–Cork Mark 4 sets and, with NI Railways, the Dublin–Belfast Enterprise.", source: `${WP}IÉ_201_Class` },
+  ieIcrCab: { model: "22000 Class ICR", type: "Diesel multiple unit", builder: "Hyundai Rotem (bogies by Tokyu Car)", built: "2007–2012, middle cars 2022–2023",
+    fleet: "63 sets, 3 to 6 cars", topSpeedMph: kmh(160), powerHp: 483, seats: 66, lengthFt: 76.1,
+    about: "The InterCity Railcar runs most of Ireland's InterCity lines and many outer commuter trains. Each car has its own MTU engine; 41 extra middle cars arrived in 2022–23 to lengthen sets.", source: `${WP}IÉ_22000_Class` },
+  ieIcr: { model: "22000 Class ICR middle car", type: "Diesel multiple unit", builder: "Hyundai Rotem (bogies by Tokyu Car)", built: "2007–2012, 2022–2023",
+    fleet: "63 sets, 3 to 6 cars", topSpeedMph: kmh(160), powerHp: 483, seats: 72, lengthFt: 73.5,
+    about: "A middle car of the InterCity Railcar, with its own engine under the floor and a door at each end of each side.", source: `${WP}IÉ_22000_Class` },
+  ie29kCab: { model: "29000 Class", type: "Diesel multiple unit", builder: "CAF", built: "2002–2005", fleet: "29 four-car sets",
+    topSpeedMph: kmh(121), powerHp: 400, seats: 185, lengthFt: 67.5,
+    about: "Dublin's suburban railcar, used on the Northern and Western Commuter lines and Dublin–Rosslare. Seats are for the whole four-car set; the dark blue Commuter livery gave way to green in the 2010s.", source: `${WP}IÉ_29000_Class` },
+  ie29k: { model: "29000 Class middle car", type: "Diesel multiple unit", builder: "CAF", built: "2002–2005", fleet: "29 four-car sets", topSpeedMph: kmh(121), powerHp: 400, lengthFt: 66.2,
+    about: "A middle car of the CAF commuter railcar, with two pairs of sliding doors a side and its own engine.", source: `${WP}IÉ_29000_Class` },
+  ie2600: { model: "2600 Class", type: "Diesel multiple unit", builder: "Tokyu Car", built: "1993", fleet: "8 two-car sets in service",
+    topSpeedMph: kmh(120), seats: 130,
+    about: "Cork's suburban railcars, on the lines to Cobh, Midleton and Mallow. They first ran on Dublin's Arrow service to Kildare in 1994.", source: `${WP}IÉ_2600_Class` },
+  ie2800: { model: "2800 Class", type: "Diesel multiple unit", builder: "Tokyu Car", built: "2000", fleet: "10 two-car sets",
+    topSpeedMph: kmh(120), powerHp: kw(260), seats: 85,
+    about: "Railcars based at Limerick since the ICRs replaced them in Dublin: Limerick–Ennis–Galway, Nenagh, Ballybrophy and the Ballina branch.", source: `${WP}IÉ_2800_Class` },
+  ie8100: { model: "DART 8100 Class", type: "Electric multiple unit", builder: "Linke-Hofmann-Busch, with GEC", built: "1983–1984",
+    fleet: "38 two-car sets", topSpeedMph: kmh(100), seats: 64, lengthFt: 67.2,
+    about: "The DART's original cars, a power car and a driving trailer in each set, refurbished in 2007–08. The Alstom X'Trapolis trains ordered for DART+ are to replace them from 2027.", source: `${WP}CIÉ_8100_Class` },
+  ie8500Cab: { model: "DART 8500 Class driving trailer", type: "Electric multiple unit", builder: "Tokyu Car", built: "2000–2004 (8500, 8510, 8520 Classes)",
+    fleet: "17 four-car sets", topSpeedMph: kmh(100), seats: 40, lengthFt: 67.4,
+    about: "The newer DART sets, two power cars between two driving trailers; the 8520s were the first fully air-conditioned DART cars. Seats are a quarter of the set's 160.", source: `${WP}IÉ_8500_Class` },
+  ie8500: { model: "DART 8500 Class power car", type: "Electric multiple unit", builder: "Tokyu Car", built: "2000–2004", fleet: "17 four-car sets",
+    topSpeedMph: kmh(100), powerHp: kw(560), seats: 40, lengthFt: 68.1,
+    about: "One of the two powered middle cars of a DART 8500, 8510 or 8520 set, each with its pantograph and four 140 kW motors.", source: `${WP}IÉ_8500_Class` },
+  ieMk4: { model: "Mark 4 coach", type: "Passenger coach", builder: "CAF", built: "2004–2006", fleet: "67 cars in 8 sets",
+    topSpeedMph: kmh(160), lengthFt: 77.6,
+    about: "The Dublin–Cork push-pull sets: first class, a catering car and standard coaches behind a 201 Class, about 422 seats a train. Built for 200 km/h, they run at 160.", source: `${WP}Mark_4_(Iarnród_Éireann)` },
+  ieMk4Cab: { model: "Mark 4 generator and control car", type: "Driving van trailer", builder: "CAF", built: "2004–2006", fleet: "8, one per set",
+    topSpeedMph: kmh(160), lengthFt: 78.1,
+    about: "The driving car at the Dublin end of a Mark 4 set, with the generator that powers the train's lights and heating, and luggage space.", source: `${WP}Mark_4_(Iarnród_Éireann)` },
+  ieDd: { model: "De Dietrich Enterprise coach", type: "Passenger coach", builder: "De Dietrich Ferroviaire", built: "1996–1997",
+    fleet: "28 cars, shared with NI Railways", topSpeedMph: kmh(145),
+    about: "The Dublin–Belfast Enterprise's coaches, run jointly by Irish Rail and NI Railways and refurbished in 2007–09. Stadler electro-diesel FLIRTs are to replace them from about 2029.", source: `${WP}Enterprise_(train_service)` },
+  ieDdCab: { model: "De Dietrich Enterprise driving trailer", type: "Driving trailer", builder: "De Dietrich Ferroviaire", built: "1996–1997",
+    fleet: "28 Enterprise cars in all", topSpeedMph: kmh(145),
+    about: "The cab car at the far end of an Enterprise set from its 201 Class locomotive.", source: `${WP}Enterprise_(train_service)` },
+};

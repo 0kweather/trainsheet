@@ -20,14 +20,18 @@
 //                       GTFS-realtime feeds, both, back to back: concatenated
 //                       protobuf messages read as one feed with every entity.
 
+import { FEEDS as PLUGIN_FEEDS } from "./feeds/index.js";
+
 const CACHE_SECONDS = 15;
 const feedMem = new Map(); // feed -> { at, bytes, type }: its last good copy
 const STALE_MS = 5 * 60 * 1000; // how old a copy may be served when the railroad refuses
-const RELAY_VERSION = "2026-10-17 (FrontRunner-only UTA feed, protobuf typed for compression)";
+const RELAY_VERSION = "2026-10-17 (railroad plug-ins: relay/feeds)";
+// Sent where a railroad's terms ask callers to say who they are.
+const IDENTIFYING_UA = "Trainsheet/1.0 (+https://trainsheet.com)";
 
 const FEEDS = {
   septa: () => ({ url: "https://www3.septa.org/api/TrainView/index.php" }),
-  // RTD and CapMetro feeds cover every bus too; only the rail lines are kept.
+  // RTD's feeds cover every bus too; only the rail lines are kept.
   rtd: () => ({
     url: "https://open-data.rtd-denver.com/files/gtfs-rt/rtd/VehiclePosition.pb",
     also: ["https://open-data.rtd-denver.com/files/gtfs-rt/rtd/TripUpdate.pb"],
@@ -38,12 +42,6 @@ const FEEDS = {
   // The feeds cover TRAX and every bus; only FrontRunner's trains (vehicles
   // L1, L2, ...) and their trips' predicted stop times are passed on.
   uta: (env) => ({ ...(env.TRANSITLAND_API_KEY ? { transitland: "f-9x0-uta~rt" } : { url: "https://apps.rideuta.com/tms/gtfs/Vehicle" }), vehicles: /^L\d+$/ }),
-  capmetro: () => ({
-    url: "https://data.texas.gov/download/eiei-9rpf/application%2Foctet-stream",
-    also: ["https://data.texas.gov/download/rmk2-acnw/application%2Foctet-stream"],
-    routes: ["550"],
-  }),
-  trirail: () => ({ url: "https://gtfsr.tri-rail.com/download.aspx?file=position_updates.pb" }),
   marc: () => ({
     url: "https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-vp.pb",
     also: ["https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb"],
@@ -89,7 +87,21 @@ const FEEDS = {
       also: ["gtfsrt-trips", "gtfsrt-tripupdates", "gtfsrt-trip-updates"].map((p) => `https://metrolink-gtfsrt.gbsdigital.us/feed/${p}`),
       headers: { "X-Api-Key": env.METROLINK_API_KEY },
     },
+  // The railroad plug-ins' feeds (relay/feeds/index.js, from scripts/railroads/*.py).
+  ...Object.fromEntries(Object.entries(PLUGIN_FEEDS).map(([id, p]) => [id, (env) => pluginFeed(p, env)])),
 };
+
+// A plug-in's feed, its {NAME} placeholders filled from the Worker's secrets
+// (escaped in urls, as is in headers); off while any of its keys is unset.
+function pluginFeed(p, env) {
+  if ((p.keys || []).some((k) => !env[k])) return null;
+  const fill = (s, esc) => s.replace(/\{([A-Z0-9_]+)\}/g, (_, k) => esc(env[k] ?? ""));
+  const url = (u) => fill(u, encodeURIComponent);
+  return {
+    url: p.url && url(p.url), also: p.also?.map(url), routes: p.routes, vehicles: p.vehicles && new RegExp(p.vehicles), ttl: p.ttl, format: p.format, fetchFeed: p.fetchFeed,
+    headers: { ...(p.ua ? { "User-Agent": IDENTIFYING_UA } : {}), ...Object.fromEntries(Object.entries(p.headers || {}).map(([k, v]) => [k, fill(v, String)])) },
+  };
+}
 
 // 511 SF Bay: positions plus predicted stop times for one operator.
 function feed511(agency, env) {
@@ -931,6 +943,7 @@ export default {
         : spec.goTracker ? Response.json(await fetchGoTracker())
         : spec.exoHub ? Response.json(await fetchExo())
         : spec.transitland ? await fetchTransitland(spec.transitland, env)
+        : spec.fetchFeed ? await spec.fetchFeed(env, match[1], ctx) // a plug-in's own fetching (relay/feeds/<id>.js)
         : await fetch(spec.url, { headers });
     } catch (err) {
       if (kept && Date.now() - kept.at < STALE_MS) return keptResponse();
@@ -953,9 +966,10 @@ export default {
 
     // GTFS-realtime goes out as application/x-protobuf, which Cloudflare
     // compresses on the way to the browser (octet-stream it leaves as is);
-    // the JSON feeds keep their type.
+    // the JSON feeds keep their type, and so do a plug-in's XML or text ones.
     const upstreamType = upstream.headers.get("Content-Type") || "";
-    const type = /json/i.test(upstreamType) ? upstreamType : "application/x-protobuf";
+    const type = /json/i.test(upstreamType) ? upstreamType
+      : spec.format === "xml" || spec.format === "text" ? upstreamType || "text/plain; charset=utf-8" : "application/x-protobuf";
     body = new Uint8Array(await new Response(body).arrayBuffer());
     feedMem.set(match[1], { at: Date.now(), bytes: body, type });
     const response = new Response(body, {

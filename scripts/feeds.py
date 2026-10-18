@@ -5,7 +5,9 @@ the CSV reader and the clock. Imported by scripts/build_*.py (which used to
 carry their own copies, or read the top of build_stations.py); nothing here
 runs on its own.
 """
-import csv, io, pathlib, re, ssl, time, unicodedata, urllib.parse, urllib.request, zipfile
+import csv, gzip, io, json, pathlib, re, ssl, sys, time, unicodedata, urllib.parse, urllib.request, zipfile
+
+from railroads import load
 
 DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
 # Amtrak's and VIA's own timetables (Amtrak's also carries Shore Line East
@@ -19,7 +21,19 @@ rail = lambda r: r.get("route_type") == "2"
 long_name = lambda r: (r.get("route_long_name") or r.get("route_short_name") or "").strip()
 EXO_GTFS = "https://exo.quebec/uploads/ressources-telechargeables/a-propos/donnees-ouvertes/trains/google_transit.zip"
 exo_line = lambda r: re.sub(r"^\d+\s*-\s*", "", long_name(r)).replace("/", "-")
-slug = lambda name: re.sub(r"[^a-z0-9]+", "-", unicodedata.normalize("NFKD", name.lower()).encode("ascii", "ignore").decode()).strip("-")
+
+
+def slug(name):
+    """A name as an id: "Gare Vaudreuil/Hudson" -> "gare-vaudreuil-hudson",
+    accents dropped. A name in another script than Latin keeps its letters
+    ("תל אביב - מרכז" -> "תל-אביב-מרכז"), which dropping them would leave empty."""
+    name = unicodedata.normalize("NFKD", name.lower())
+    if all(c.isascii() or unicodedata.name(c, "").startswith("LATIN") for c in name if c.isalnum()):
+        return re.sub(r"[^a-z0-9]+", "-", name.encode("ascii", "ignore").decode()).strip("-")
+    return re.sub(r"-+", "-", "".join(c if c.isalnum() or unicodedata.combining(c) else "-"
+                                      for c in unicodedata.normalize("NFC", name))).strip("-")
+
+
 # NCTD's stop names: "Oceanside Transit Center Platform 3" -> "Oceanside Transit Center".
 NCTD_WORDS = {"Rd": "Road", "Dr": "Drive", "Blvd": "Boulevard", "St": "Street", "Hwy": "Highway"}
 nctd_name = lambda name: re.sub(r"\b(Rd|Dr|Blvd|St|Hwy)$", lambda m: NCTD_WORDS[m.group(1)],
@@ -39,8 +53,9 @@ GTFS = {
             lambda r: r["route_id"] in ("A", "113B", "113G", "117N"),
             lambda r: (r.get("route_short_name") or r["route_id"][-1]) + " Line"),
     "frontrunner": (MDB.format("mdb-170"), rail, lambda r: "FrontRunner"),
-    "capmetro": (MDB.format("mdb-150"), lambda r: r["route_id"] == "550", lambda r: "Red Line"),
-    "trirail": (MDB.format("mdb-333"), rail, lambda r: "Tri-Rail"),  # not the airport shuttle stops
+    # Moved to their plug-ins (scripts/railroads/), keeping their place in the
+    # data files' order.
+    "capmetro": None, "trirail": None,
     "caltrain": ("https://data.trilliumtransit.com/gtfs/caltrain-ca-us/caltrain-ca-us.zip", rail, lambda r: "Caltrain"),
     "smart": ("https://data.trilliumtransit.com/gtfs/smart-ca-us/smart-ca-us.zip", rail, lambda r: "SMART"),
     "metrolink": (MDB.format("mdb-96"), lambda r: True, long_name),
@@ -85,6 +100,116 @@ GTFS = {
     "alaska": ("https://www.alaskarailroad.com/gtfs", lambda r: True, lambda r: ALASKA_LINES.get(r["route_id"], r.get("route_long_name", ""))),
 }
 
+# The plug-ins' railroads (scripts/railroads/<id>.py, GTFS: the same entries
+# as above) join the table, after the railroads above; an entry may end with
+# a dict of extras, kept apart in EXTRAS so the table's entries stay the
+# shape every build script unpacks:
+#   "tz":           the feed's time zone, where agency.txt lacks or misstates it
+#   "translations": a language ("en"): stop, route and headsign names from the
+#                   feed's translations.txt (Israel's, in Hebrew, has English)
+#   "fold":         {"strip": regex}: stops with no parent station fold into
+#                   one per name, less the regex ("Platform 2"), as exo's do
+#   "suffix", "names", "positions": a regex cut from station names, names
+#                   put right ({as filed: as signed}) and stations placed
+#                   right ({stop id: [lat, lon]}), as build_stations.py's
+#                   NAME_SUFFIX, NAME_FIX and POSITION_FIX
+#   "weekend":      the days (0 Monday) that aren't weekdays, where not
+#                   Saturday and Sunday ([4, 5] in Israel)
+#   "schedule":     False: no data/schedules/ file; "number": a trip row's
+#                   train number (else the runs go unnumbered)
+#   "trips":        route ids (or True: all) for data/trips.json, for live
+#                   feeds that give only stop and trip ids
+#   "firsts":       False: none in data/firsts.json
+#   "colors":       {line: "#rrggbb"} for data/linecolors.json
+#   "headers":      sent with the feed's download ({"Accept-Encoding":
+#                   "gzip"}, which Finland's Digitraffic requires; a gzipped
+#                   answer is unpacked)
+# PLUGINS: each plug-in's railroads, for a build script's --only.
+EXTRAS, PLUGINS = {}, {}
+for _mod in load():
+    _id = _mod.__name__.rsplit(".", 1)[1]
+    for _agency, (_url, _keep, _line, *_more) in getattr(_mod, "GTFS", {}).items():
+        _extras = _more.pop() if _more and isinstance(_more[-1], dict) else {}
+        if not _more and "fold" in _extras:
+            _more = [lambda name, cut=re.compile(_extras["fold"]["strip"]): (slug(cut.sub("", name).strip()), cut.sub("", name).strip())]
+        GTFS[_agency], EXTRAS[_agency] = (_url, _keep, _line, *_more), _extras
+    PLUGINS[_id] = sorted({*getattr(_mod, "GTFS", {}), *getattr(_mod, "AGENCIES", {})})
+for _agency in [a for a, f in GTFS.items() if f is None]:  # a plug-in taken out
+    del GTFS[_agency]
+TRANSLATE = {GTFS[a][0]: x["translations"] for a, x in EXTRAS.items() if x.get("translations")}
+HEADERS = {GTFS[a][0]: x["headers"] for a, x in EXTRAS.items() if x.get("headers")}
+
+# A railroad outside the US and Canada (by its AGENCIES country) keeps its
+# rows of the station and timetable files out of the ones every viewer loads
+# at startup: they go to data/regions/<region>/ (stations.json,
+# departures.json, firsts.json, linecolors.json, trips.json, each shaped as
+# data/'s own), which the page loads the first time the map shows the
+# region, a search runs or a link needs it (js/regiondata.js). The region is
+# the plug-in's RAIL region, else the railroad's country, lowercase.
+# REGION: {railroad: region}, for read_split and write_split.
+HOME = {"US", "CA"}
+REGIONS = DATA / "regions"
+REGION = {}
+for _mod in load():
+    _agencies = getattr(_mod, "AGENCIES", {})
+    _abroad = [a["country"] for a in _agencies.values() if a.get("country") not in HOME]
+    _rail = (getattr(_mod, "RAIL", None) or {}).get("region")
+    for _agency in sorted({*getattr(_mod, "GTFS", {}), *_agencies}) if _abroad else ():
+        _country = _agencies[_agency].get("country") if _agency in _agencies else _abroad[0]
+        if _country not in HOME:
+            REGION[_agency] = (_rail or _country).lower()
+
+
+def read_split(name):
+    """data/<name> with every region's rows of it (data/regions/*/<name>) put
+    back, as one dict: the file as it was before regions had their own."""
+    path = DATA / name
+    out = json.loads(path.read_text()) if path.exists() else {}
+    for part in sorted(REGIONS.glob(f"*/{name}")):
+        out.update({k: v for k, v in json.loads(part.read_text()).items() if k not in out})
+    return out
+
+
+def write_split(name, data, common=(), **dump):
+    """Writes a read_split dict, rebuilt, back: the railroads in REGION to
+    their regions' files, the rest to data/<name>, each in data's order.
+    common: keys every file carries (firsts.json's "start"). A region with no
+    rows left loses its file. dump: json.dumps' options beyond compact
+    separators and unescaped letters. Returns data/<name>'s path."""
+    head = {k: data[k] for k in common if k in data}
+    parts = {"": {}}
+    for k, v in data.items():
+        if k in common:
+            parts[""][k] = v
+        else:
+            parts.setdefault(REGION.get(k, ""), dict(head))[k] = v
+    dump = {"separators": (",", ":"), "ensure_ascii": False, **dump}
+    path = DATA / name
+    path.write_text(json.dumps(parts.pop(""), **dump))
+    for old in REGIONS.glob(f"*/{name}"):
+        if old.parent.name not in parts:
+            old.unlink()
+    for region, part in sorted(parts.items()):
+        (REGIONS / region).mkdir(parents=True, exist_ok=True)
+        (REGIONS / region / name).write_text(json.dumps(part, **dump))
+        print(f"wrote {(REGIONS / region / name).relative_to(DATA.parent)} ({len(part) - len(head)} railroads)")
+    return path
+
+
+def chosen(argv=None):
+    """The railroads a build script was asked for: `--only <id>` (a plug-in's
+    id, for all its railroads, or one railroad's), or railroads named plainly
+    as before. Empty: every railroad."""
+    args, out = list(sys.argv[1:] if argv is None else argv), []
+    while args:
+        arg = args.pop(0)
+        if arg == "--only":
+            arg = args.pop(0)
+        elif arg.startswith("--only="):
+            arg = arg[len("--only="):]
+        out += [a for a in PLUGINS.get(arg, [arg]) if a not in out]
+    return out
+
 
 # NCTD's server (IIS, Coaster's and Sprinter's timetable) negotiates only
 # the cipher suites without forward secrecy (plain RSA key exchange), which
@@ -106,12 +231,14 @@ TLS_RSA.set_ciphers("DEFAULT")
 def get_raw(url, timeout=180, attempts=1):
     """The bytes at url, trying again on a dropped download (a connection
     reset, a timeout) as many times as attempts allows."""
-    req = urllib.request.Request(url, headers={"User-Agent": "trainsheet-build"})
+    req = urllib.request.Request(url, headers={"User-Agent": "trainsheet-build", **HEADERS.get(url, {})})
     context = TLS_RSA if urllib.parse.urlsplit(url).hostname in RSA_ONLY_HOSTS else None
     for attempt in range(attempts):
         try:
             with urllib.request.urlopen(req, timeout=timeout, context=context) as r:
-                return r.read()
+                data = r.read()
+                # Asked for gzip (Digitraffic's answers nothing else): unpacked.
+                return gzip.decompress(data) if url in HEADERS and data[:2] == b"\x1f\x8b" else data
         except Exception as err:
             if attempt == attempts - 1:
                 raise
@@ -148,8 +275,12 @@ def get_zip(url, timeout=180, attempts=4, page_link=True):
             data = get_raw(url, timeout)
             if page_link and data[:2] != b"PK":
                 href = re.search(rb'href="([^"]+\.zip)"', data, re.I).group(1).decode()
-                return get_zip(urllib.parse.urljoin(url, href), timeout, attempts, page_link)
-            return zipfile.ZipFile(io.BytesIO(data))
+                zf = get_zip(urllib.parse.urljoin(url, href), timeout, attempts, page_link)
+            else:
+                zf = zipfile.ZipFile(io.BytesIO(data))
+            if url in TRANSLATE:  # rows() reads its names in that language
+                zf.names_in = translations(zf, TRANSLATE[url])
+            return zf
         except Exception as err:
             if attempt == attempts - 1:
                 raise
@@ -161,7 +292,9 @@ def rows(zf, name, optional=False, spaces=False, strip=True):
     """The rows of one file in a timetable, as dicts. optional: a file the feed
     may not have (calendar.txt) reads as nothing rather than failing. spaces:
     the feed puts a space after every comma (Metra). strip: pad or no, keys
-    and values come trimmed (the one reader that keeps them raw says so)."""
+    and values come trimmed (the one reader that keeps them raw says so), and
+    names come in the language a plug-in asked for (EXTRAS' "translations")
+    where the feed has them."""
     if optional and name not in zf.namelist():
         return
     with zf.open(name) as f:
@@ -169,8 +302,42 @@ def rows(zf, name, optional=False, spaces=False, strip=True):
         if not strip:
             yield from reader
             return
+        names_in = getattr(zf, "names_in", None)
+        named = NAMED.get(name, ()) if names_in else ()
         for r in reader:
-            yield {k.strip(): (v or "").strip() for k, v in r.items() if k}
+            r = {k.strip(): (v or "").strip() for k, v in r.items() if k}
+            for table, field, key in named:
+                if r.get(field):
+                    r[field] = names_in.get((table, field, r.get(key))) or names_in.get((table, field, "=" + r[field])) or r[field]
+            yield r
+
+
+# The names a feed's translations.txt can give in another language, by file:
+# (table, field, the record's id column).
+NAMED = {"stops.txt": [("stops", "stop_name", "stop_id")],
+         "routes.txt": [("routes", "route_long_name", "route_id"), ("routes", "route_short_name", "route_id")],
+         "trips.txt": [("trips", "trip_headsign", "trip_id")]}
+
+
+def translations(zf, lang):
+    """A feed's names in lang from its translations.txt, as {(table, field,
+    record id): name} and {(table, field, "=" + name as filed): name}. The
+    older form of the file (Google's: trans_id, lang, translation, the form
+    Israel's Ministry of Transport has published) gives each name as filed
+    with no table, so it counts for every table's."""
+    out = {}
+    for t in rows(zf, "translations.txt", optional=True):
+        if (t.get("language") or t.get("lang") or "").lower() != lang.lower() or not t.get("translation"):
+            continue
+        if "table_name" in t:
+            if t.get("record_id"):
+                out[(t["table_name"], t["field_name"], t["record_id"])] = t["translation"]
+            elif t.get("field_value"):
+                out[(t["table_name"], t["field_name"], "=" + t["field_value"])] = t["translation"]
+        else:
+            for table, field, _ in (x for named in NAMED.values() for x in named):
+                out[(table, field, "=" + t["trans_id"])] = t["translation"]
+    return out
 
 
 def minutes(hms):

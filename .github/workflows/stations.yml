@@ -3,10 +3,12 @@ name: Refresh stations
 # The station list (data/stations.json) is rebuilt every Monday afternoon
 # (North American time): each commuter railroad's stations from its
 # timetable, Amtrak's, VIA's and Brightline's from USDOT's NTAD list and
-# Amtraker. Afternoon rather than with the timetables' early-morning run
-# because an intercity station's busyness, which decides whose label wins
-# the space, counts the trains tracked at that moment, and at four in the
-# morning that's a handful of overnight trains. Rebuilt weekly, a broken
+# Amtraker; a railroad outside the US and Canada's go to its region's
+# data/regions/<region>/stations.json. Afternoon rather than with the
+# timetables' early-morning run because an intercity station's busyness,
+# which decides whose label wins the space, counts the trains tracked at
+# that moment, and at four in the morning that's a handful of overnight
+# trains. Rebuilt weekly, a broken
 # build gets noticed (it failed unseen for two days in October 2026): a feed
 # that fails keeps that railroad's stations from the last build and shows as
 # a warning, and a script that fails ends the run red with nothing committed.
@@ -42,13 +44,20 @@ jobs:
           # A feed that failed kept that railroad's stations from the last build.
           grep FAILED "$RUNNER_TEMP/stations.log" | sed 's/^/::warning::/' || true
 
+      - name: Registry
+        # The plug-in railroads' extents in js/railroads/index.js come from
+        # their stations, so they follow the new list.
+        run: python3 scripts/gen_registry.py
+
       - name: Commit and deploy
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "trainsheet-bot"
           git config user.email "trainsheet-bot@users.noreply.github.com"
-          git add data/stations.json
+          git add data/stations.json js/railroads/index.js
+          # Railroads outside the US and Canada: their regions' files (none yet, or one gone).
+          git add -A data/regions 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Nothing changed."
             exit 0

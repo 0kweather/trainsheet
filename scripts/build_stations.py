@@ -17,14 +17,17 @@ Output: {agency: [[id, name, lat, lon, [lines...], place, code, busy, daily, acc
 
     python3 scripts/build_stations.py
     python3 scripts/build_stations.py vre sounder   # just these, into the existing file
+    python3 scripts/build_stations.py --only trirail   # a plug-in's railroads (scripts/railroads/)
 
 A feed that fails keeps that railroad's stations from the last build (Amtrak,
-VIA and Brightline as one set), so the file never loses a railroad.
+VIA and Brightline as one set), so the file never loses a railroad. A
+railroad outside the US and Canada goes to data/regions/<region>/stations.json
+instead (feeds.REGION), the same shape.
 """
-import datetime, json, pathlib, re, sys, urllib.parse, urllib.request
+import datetime, json, pathlib, re, urllib.parse, urllib.request
 from collections import defaultdict
 
-from feeds import (AMTRAK_GTFS, VIA_GTFS, GTFS, TRIP_LINE, long_name, get_raw, get_zip, rows)
+from feeds import (AMTRAK_GTFS, VIA_GTFS, EXTRAS, GTFS, TRIP_LINE, chosen, long_name, get_raw, get_zip, read_split, rows, write_split)
 
 
 def official_code(stop):
@@ -34,15 +37,16 @@ def official_code(stop):
     return ""
 
 
-def weekday_trips(zf, trip_ids):
+def weekday_trips(zf, trip_ids, weekend=(5, 6)):
     """The trips running on a typical weekday: of the next three weeks'
-    weekdays, the one with the most of `trip_ids` running."""
+    weekdays, the one with the most of `trip_ids` running. weekend: the days
+    that aren't weekdays (0 Monday), Friday and Saturday in Israel."""
     names = set(zf.namelist())
     today = datetime.date.today()
-    days = [today + datetime.timedelta(d) for d in range(21) if (today + datetime.timedelta(d)).weekday() < 5]
+    days = [today + datetime.timedelta(d) for d in range(21) if (today + datetime.timedelta(d)).weekday() not in weekend]
     active = defaultdict(set)  # date -> service ids
     if "calendar.txt" in names:
-        cols = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+        cols = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
         for c in rows(zf, "calendar.txt"):
             start, end = (datetime.datetime.strptime(c[k], "%Y%m%d").date() for k in ("start_date", "end_date"))
             for d in days:
@@ -66,12 +70,13 @@ def access_of(stop, children):
     return None if not flags else 1 if "1" in flags else 0
 
 
-def gtfs_stations(url, keep, line_name, group=None, trip_line=None):
+def gtfs_stations(url, keep, line_name, group=None, trip_line=None, extras={}):
     """group(stop) -> (station id, name): folds stops into stations where a
     feed has no parent stations (MARC). trip_line(trip, line): a trip's line
-    where it isn't its route's."""
+    where it isn't its route's. extras: a plug-in's (feeds.EXTRAS), for the
+    feed's time zone and weekend."""
     zf = get_zip(url)
-    agency_tz = next((a.get("agency_timezone") for a in rows(zf, "agency.txt")), None) or None
+    agency_tz = extras.get("tz") or next((a.get("agency_timezone") for a in rows(zf, "agency.txt")), None) or None
     routes = {r["route_id"]: line_name(r) for r in rows(zf, "routes.txt") if keep(r)}
     trip_line = {t["trip_id"]: (trip_line or (lambda t, line: line))(t, routes[t["route_id"]]) for t in rows(zf, "trips.txt") if t["route_id"] in routes}
     stops = {s["stop_id"]: s for s in rows(zf, "stops.txt")}
@@ -79,7 +84,7 @@ def gtfs_stations(url, keep, line_name, group=None, trip_line=None):
     for st in stops.values():
         if st.get("parent_station"):
             children[st["parent_station"]].append(st)
-    today = weekday_trips(zf, set(trip_line))
+    today = weekday_trips(zf, set(trip_line), extras.get("weekend", (5, 6)))
     lines, visits, daily = defaultdict(set), defaultdict(int), defaultdict(set)
     for st in rows(zf, "stop_times.txt"):
         line = trip_line.get(st["trip_id"])
@@ -219,9 +224,8 @@ NAME_FIX = {"L Enfant": "L'Enfant", "San Jose Station Diridon": "San Jose Dirido
 POSITION_FIX = {("alaska", "FAIR"): (64.85583, -147.70892)}
 
 # Named railroads only: rebuild just those, keeping the rest of the file.
-only = sys.argv[1:]
-path = pathlib.Path(__file__).resolve().parent.parent / "data" / "stations.json"
-previous = json.loads(path.read_text()) if path.exists() else {}
+only = chosen()
+previous = read_split("stations.json")  # with the regions' (feeds.REGION)
 if only:
     result = previous
 else:
@@ -233,14 +237,19 @@ else:
 for agency, (url, keep, line_name, *group) in GTFS.items():
     if only and agency not in only:
         continue
+    # A plug-in's own name and position fixes (feeds.EXTRAS).
+    extras = EXTRAS.get(agency, {})
+    suffix = NAME_SUFFIX.get(agency) or (re.compile(extras["suffix"]) if extras.get("suffix") else None)
+    names = {**NAME_FIX, **extras.get("names", {})}
+    positions = {**POSITION_FIX, **{(agency, sid): tuple(p) for sid, p in extras.get("positions", {}).items()}}
     try:
-        result[agency] = gtfs_stations(url, keep, line_name, *(group or [None]), trip_line=TRIP_LINE.get(agency))
+        result[agency] = gtfs_stations(url, keep, line_name, *(group or [None]), trip_line=TRIP_LINE.get(agency), extras=extras)
         for row in result[agency]:  # "Belen Rail Runner Station" -> "Belen"
-            row[1] = NAME_SUFFIX[agency].sub("", row[1]) if agency in NAME_SUFFIX else row[1]
-            row[1] = NAME_FIX.get(row[1].strip(), row[1].strip())
+            row[1] = suffix.sub("", row[1]) if suffix else row[1]
+            row[1] = names.get(row[1].strip(), row[1].strip())
             row[1] = re.sub(r"\s{2,}", " ", row[1])
-            if (agency, row[0]) in POSITION_FIX:
-                row[2], row[3] = POSITION_FIX[(agency, row[0])]
+            if (agency, row[0]) in positions:
+                row[2], row[3] = positions[(agency, row[0])]
         print(f"{agency}: {len(result[agency])} stations")
     except Exception as err:  # keep going, with the last build's stations for this one
         if agency in previous:
@@ -260,5 +269,5 @@ if ct.exists() and not only:
     result["ctrail"] = json.loads(ct.read_text())["stations"]
 print({k: len(v) for k, v in result.items()})
 
-path.write_text(json.dumps(result, separators=(",", ":"), ensure_ascii=False))
+path = write_split("stations.json", result)
 print(f"wrote {path} ({path.stat().st_size // 1024} KB)")

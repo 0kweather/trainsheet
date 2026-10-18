@@ -8,48 +8,68 @@
 // "direct" sources send CORS headers, so the browser can read them from any
 // site. "relay" sources don't (or need an API key), so they go through the
 // small Cloudflare Worker in /relay when one is configured.
+//
+// Railroads added as plug-ins (scripts/railroads/<id>.py, with their parsers
+// in js/railroads/<id>.js) come from js/railroads/index.js, which
+// scripts/gen_registry.py writes; they join the lists below at the place
+// their "after" names, or at the end. Their parsers may import the helpers
+// exported here (train, valid, loadSchedule, runNow, runStops, ...).
 
 import { dateFormat } from "./i18n.js?v=dev";
 import { decodeFeed } from "./gtfsrt.js?v=dev";
+import { AGENCIES as PLUGIN_AGENCIES, SOURCES as PLUGIN_SOURCES, PARSERS } from "./railroads/index.js?v=dev";
 
-export const AGENCIES = {
-  amtrak:     { name: "Amtrak",              short: "Amtrak",   region: "United States",       color: "#1f5fad", kind: "intercity" },
-  brightline: { name: "Brightline",          short: "Brightline", region: "Florida",           color: "#d9a400", kind: "intercity" },
-  via:        { name: "VIA Rail",            short: "VIA",      region: "Canada",              color: "#c8102e", kind: "intercity" },
-  mbta:       { name: "MBTA Commuter Rail",  short: "MBTA",     region: "Boston",              color: "#80276c", kind: "commuter" },
-  lirr:       { name: "Long Island Rail Road", short: "LIRR",   region: "New York",            color: "#0b8a7e", kind: "commuter" },
-  mnr:        { name: "Metro-North",         short: "Metro-North", region: "New York",         color: "#d7263d", kind: "commuter" },
-  njt:        { name: "NJ Transit Rail",     short: "NJT",      region: "New Jersey",          color: "#f47b20", kind: "commuter" },
-  exo:        { name: "exo",                 short: "exo",      region: "Montréal",            color: "#0098a6", kind: "commuter" },
-  go:         { name: "GO Transit",          short: "GO",       region: "Toronto",             color: "#3f9c35", kind: "commuter" },
-  ctrail:     { name: "CT Rail",             short: "CT Rail",  region: "Connecticut",         color: "#9e1b32", kind: "commuter" },
-  marc:       { name: "MARC Train",          short: "MARC",     region: "Maryland",            color: "#f58025", kind: "commuter" },
-  vre:        { name: "Virginia Railway Express", short: "VRE",  region: "Northern Virginia",   color: "#a6192e", kind: "commuter" },
-  septa:      { name: "SEPTA Regional Rail", short: "SEPTA",    region: "Philadelphia",        color: "#5b6e7f", kind: "commuter" },
-  metra:      { name: "Metra",               short: "Metra",    region: "Chicago",             color: "#0096d6", kind: "commuter" },
-  southshore: { name: "South Shore Line",    short: "South Shore", region: "Chicago–South Bend", color: "#8d1b3d", kind: "commuter" },
-  rtd:        { name: "RTD Commuter Rail",   short: "RTD",      region: "Denver",              color: "#2e9bd6", kind: "commuter" },
-  frontrunner:{ name: "UTA FrontRunner",     short: "FrontRunner", region: "Salt Lake City",   color: "#8e44ad", kind: "commuter" },
-  railrunner: { name: "Rail Runner Express", short: "Rail Runner", region: "New Mexico",        color: "#c1121f", kind: "commuter" },
-  capmetro:   { name: "CapMetro Rail",       short: "CapMetro", region: "Austin",              color: "#e0218a", kind: "commuter" },
-  trirail:    { name: "Tri-Rail",            short: "Tri-Rail", region: "South Florida",       color: "#2ba84a", kind: "commuter" },
-  sunrail:    { name: "SunRail",             short: "SunRail",  region: "Orlando",             color: "#e6731c", kind: "commuter" },
-  caltrain:   { name: "Caltrain",            short: "Caltrain", region: "San Francisco",       color: "#e31837", kind: "commuter" },
-  ace:        { name: "Altamont Corridor Express", short: "ACE", region: "Stockton–San Jose",   color: "#7b3f98", kind: "commuter" },
-  smart:      { name: "SMART",               short: "SMART",    region: "Sonoma–Marin",        color: "#3f9b3f", kind: "commuter" },
-  metrolink:  { name: "Metrolink",           short: "Metrolink", region: "Los Angeles",        color: "#00a3ad", kind: "commuter" },
-  sounder:    { name: "Sounder",             short: "Sounder",  region: "Seattle",             color: "#2a7f9e", kind: "commuter" },
-  coaster:    { name: "COASTER",             short: "COASTER",  region: "San Diego",           color: "#00459d", kind: "commuter" },
-  sprinter:   { name: "SPRINTER",            short: "SPRINTER", region: "Oceanside–Escondido", color: "#00ab9b", kind: "commuter" },
-  atrain:     { name: "DCTA A-train",        short: "A-train",  region: "Denton",              color: "#9a7b16", kind: "commuter" },
-  tre:        { name: "Trinity Railway Express", short: "TRE",  region: "Dallas–Fort Worth",   color: "#1d3a8a", kind: "commuter" },
-  silverline: { name: "DART Silver Line",    short: "Silver Line", region: "Dallas",           color: "#8a9097", kind: "commuter" },
-  texrail:    { name: "TEXRail",             short: "TEXRail",  region: "Fort Worth",          color: "#7d2248", kind: "commuter" },
-  star:       { name: "WeGo Star",           short: "Star",     region: "Nashville",           color: "#6a4bb8", kind: "commuter" },
-  upx:        { name: "UP Express",          short: "UP Express", region: "Toronto",           color: "#5a6b2f", kind: "commuter" },
-  ontarionorthland: { name: "Ontario Northland", short: "Ontario Northland", region: "Northern Ontario", color: "#2c5aa0", kind: "intercity" },
-  alaska:     { name: "Alaska Railroad",     short: "Alaska Railroad", region: "Alaska",       color: "#1b4f9c", kind: "intercity" },
+// The list with each extra item put right after the one its "after" names
+// (an item named by another extra one goes in first), or at the end.
+function placed(list, extra) {
+  const out = [...list], rest = [...extra];
+  while (rest.length) {
+    const i = Math.max(0, rest.findIndex((x) => !x.after || out.some((y) => y.id === x.after)));
+    const [x] = rest.splice(i, 1);
+    const at = out.findIndex((y) => y.id === x.after);
+    out.splice(at < 0 ? out.length : at + 1, 0, x);
+  }
+  return out;
+}
+
+const BUILT_IN = {
+  amtrak:     { name: "Amtrak",              short: "Amtrak",   region: "United States",       color: "#1f5fad", country: "US", kind: "intercity" },
+  brightline: { name: "Brightline",          short: "Brightline", region: "Florida",           color: "#d9a400", country: "US", kind: "intercity" },
+  via:        { name: "VIA Rail",            short: "VIA",      region: "Canada",              color: "#c8102e", country: "CA", kind: "intercity" },
+  mbta:       { name: "MBTA Commuter Rail",  short: "MBTA",     region: "Boston",              color: "#80276c", country: "US", kind: "commuter" },
+  lirr:       { name: "Long Island Rail Road", short: "LIRR",   region: "New York",            color: "#0b8a7e", country: "US", kind: "commuter" },
+  mnr:        { name: "Metro-North",         short: "Metro-North", region: "New York",         color: "#d7263d", country: "US", kind: "commuter" },
+  njt:        { name: "NJ Transit Rail",     short: "NJT",      region: "New Jersey",          color: "#f47b20", country: "US", kind: "commuter" },
+  exo:        { name: "exo",                 short: "exo",      region: "Montréal",            color: "#0098a6", country: "CA", kind: "commuter" },
+  go:         { name: "GO Transit",          short: "GO",       region: "Toronto",             color: "#3f9c35", country: "CA", kind: "commuter" },
+  ctrail:     { name: "CT Rail",             short: "CT Rail",  region: "Connecticut",         color: "#9e1b32", country: "US", kind: "commuter" },
+  marc:       { name: "MARC Train",          short: "MARC",     region: "Maryland",            color: "#f58025", country: "US", kind: "commuter" },
+  vre:        { name: "Virginia Railway Express", short: "VRE",  region: "Northern Virginia",   color: "#a6192e", country: "US", kind: "commuter" },
+  septa:      { name: "SEPTA Regional Rail", short: "SEPTA",    region: "Philadelphia",        color: "#5b6e7f", country: "US", kind: "commuter" },
+  metra:      { name: "Metra",               short: "Metra",    region: "Chicago",             color: "#0096d6", country: "US", kind: "commuter" },
+  southshore: { name: "South Shore Line",    short: "South Shore", region: "Chicago–South Bend", color: "#8d1b3d", country: "US", kind: "commuter" },
+  rtd:        { name: "RTD Commuter Rail",   short: "RTD",      region: "Denver",              color: "#2e9bd6", country: "US", kind: "commuter" },
+  frontrunner:{ name: "UTA FrontRunner",     short: "FrontRunner", region: "Salt Lake City",   color: "#8e44ad", country: "US", kind: "commuter" },
+  railrunner: { name: "Rail Runner Express", short: "Rail Runner", region: "New Mexico",        color: "#c1121f", country: "US", kind: "commuter" },
+  sunrail:    { name: "SunRail",             short: "SunRail",  region: "Orlando",             color: "#e6731c", country: "US", kind: "commuter" },
+  caltrain:   { name: "Caltrain",            short: "Caltrain", region: "San Francisco",       color: "#e31837", country: "US", kind: "commuter" },
+  ace:        { name: "Altamont Corridor Express", short: "ACE", region: "Stockton–San Jose",   color: "#7b3f98", country: "US", kind: "commuter" },
+  smart:      { name: "SMART",               short: "SMART",    region: "Sonoma–Marin",        color: "#3f9b3f", country: "US", kind: "commuter" },
+  metrolink:  { name: "Metrolink",           short: "Metrolink", region: "Los Angeles",        color: "#00a3ad", country: "US", kind: "commuter" },
+  sounder:    { name: "Sounder",             short: "Sounder",  region: "Seattle",             color: "#2a7f9e", country: "US", kind: "commuter" },
+  coaster:    { name: "COASTER",             short: "COASTER",  region: "San Diego",           color: "#00459d", country: "US", kind: "commuter" },
+  sprinter:   { name: "SPRINTER",            short: "SPRINTER", region: "Oceanside–Escondido", color: "#00ab9b", country: "US", kind: "commuter" },
+  atrain:     { name: "DCTA A-train",        short: "A-train",  region: "Denton",              color: "#9a7b16", country: "US", kind: "commuter" },
+  tre:        { name: "Trinity Railway Express", short: "TRE",  region: "Dallas–Fort Worth",   color: "#1d3a8a", country: "US", kind: "commuter" },
+  silverline: { name: "DART Silver Line",    short: "Silver Line", region: "Dallas",           color: "#8a9097", country: "US", kind: "commuter" },
+  texrail:    { name: "TEXRail",             short: "TEXRail",  region: "Fort Worth",          color: "#7d2248", country: "US", kind: "commuter" },
+  star:       { name: "WeGo Star",           short: "Star",     region: "Nashville",           color: "#6a4bb8", country: "US", kind: "commuter" },
+  upx:        { name: "UP Express",          short: "UP Express", region: "Toronto",           color: "#5a6b2f", country: "CA", kind: "commuter" },
+  ontarionorthland: { name: "Ontario Northland", short: "Ontario Northland", region: "Northern Ontario", color: "#2c5aa0", country: "CA", kind: "intercity" },
+  alaska:     { name: "Alaska Railroad",     short: "Alaska Railroad", region: "Alaska",       color: "#1b4f9c", country: "US", kind: "intercity" },
 };
+export const AGENCIES = Object.fromEntries(placed(Object.entries(BUILT_IN).map(([id, a]) => ({ id, ...a })),
+  Object.entries(PLUGIN_AGENCIES).map(([id, a]) => ({ id, ...a }))).map(({ id, ...a }) => [id, a]));
 
 const STALE_SECONDS = 20 * 60;
 const nowSec = () => Date.now() / 1000;
@@ -75,10 +95,10 @@ export function delayText(min) {
   return `${h} h ${m} min late`;
 }
 
-const mps2mph = (v) => (v == null ? null : v * 2.23694);
-const valid = (lat, lon) => Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0);
+export const mps2mph = (v) => (v == null ? null : v * 2.23694);
+export const valid = (lat, lon) => Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0);
 
-function train(fields) {
+export function train(fields) {
   return { bearing: null, speedMph: null, origin: null, destination: null, nextStop: null,
            delayMin: null, statusText: null, estimated: false, stops: null, route: null,
            routeColor: null, updated: Date.now(), ...fields };
@@ -218,7 +238,7 @@ function mbtaTrips(json) {
   }
   return trips;
 }
-const iso = (t) => (t ? new Date(t).toISOString() : null);
+export const iso = (t) => (t ? new Date(t).toISOString() : null);
 
 // Each running trip's full timetable, for the stops a train has already left
 // (predictions cover only what's ahead). Timetables don't change, so each is
@@ -734,16 +754,16 @@ async function parseCtrail(board) {
 // Railroads whose live data names a train but not its stops (South Shore,
 // SunRail), or that have no live data (Rail Runner), use their timetable.
 const schedules = {};
-const loadSchedule = (agency) => (schedules[agency] ??= fetch(`data/schedules/${agency}.json?v=dev`).then((r) => r.json()));
+export const loadSchedule = (agency) => (schedules[agency] ??= fetch(`data/schedules/${agency}.json?v=dev`).then((r) => r.json()));
 const clocks = {};
 // Minutes past midnight at epoch second `sec` in time zone `tz`.
-function localMinutes(sec, tz) {
+export function localMinutes(sec, tz) {
   clocks[tz] ??= new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "numeric", second: "numeric", hourCycle: "h23" });
   const p = Object.fromEntries(clocks[tz].formatToParts(new Date(sec * 1000)).map((x) => [x.type, +x.value || 0]));
   return p.hour * 60 + p.minute + p.second / 60;
 }
 // "9:44AM" or "11:14 am" in `tz` as epoch seconds, the occurrence nearest `ref`.
-function clockTime(text, ref, tz) {
+export function clockTime(text, ref, tz) {
   const m = /^(\d{1,2}):(\d{2})\s*([AP])M$/i.exec(String(text || "").trim());
   if (!m) return null;
   const mins = (+m[1] % 12 + (/p/i.test(m[3]) ? 12 : 0)) * 60 + +m[2];
@@ -755,7 +775,7 @@ function clockTime(text, ref, tz) {
 // midnight ({ day: the service day's midnight, line, pat }), or null.
 // `slack`: seconds before its first departure and after its last arrival
 // that still count.
-function runNow(tt, number, now, slack) {
+export function runNow(tt, number, now, slack) {
   const midnight = Math.round(now - localMinutes(now, tt.tz) * 60);
   const start = Date.parse(`${tt.start}T00:00:00Z`) / 1000;
   for (const day of [midnight, midnight - 86400]) {
@@ -772,7 +792,7 @@ function runNow(tt, number, now, slack) {
 
 // A run's stop times, shifted by `delay` seconds; `live` (stop id -> epoch
 // second) holds the railroad's own predictions where it gives them.
-function runStops(run, delay = 0, live = {}, tracks = {}) {
+export function runStops(run, delay = 0, live = {}, tracks = {}) {
   return run.pat.map(([id, arr, dep]) => {
     const a = live[id] ?? run.day + arr * 60 + delay;
     return { stopId: id, arrival: { time: a }, departure: { time: Math.max(a, run.day + dep * 60 + delay) },
@@ -932,11 +952,12 @@ async function parseSunRail(list) {
 // ---------- Generic GTFS-realtime vehicle feeds ----------
 
 // Stop and trip lookups from the timetables of railroads whose realtime feeds
-// carry only IDs (scripts/build_trips.py).
-const TIME_ZONES = { rtd: "America/Denver", capmetro: "America/Chicago", metra: "America/Chicago", marc: "America/New_York", frontrunner: "America/Denver",
+// carry only IDs (scripts/build_trips.py). A plug-in's railroad names its
+// own time zone (tz).
+const TIME_ZONES = { rtd: "America/Denver", metra: "America/Chicago", marc: "America/New_York", frontrunner: "America/Denver",
                      vre: "America/New_York" };
 let tripsStatic = null;
-const loadTrips = () => (tripsStatic ??= fetch("data/trips.json?v=dev").then((r) => r.json()));
+export const loadTrips = () => (tripsStatic ??= fetch("data/trips.json?v=dev").then((r) => r.json()));
 
 // Fills in a train's upcoming stops, next stop, destination and delay from its
 // trip's predicted stop times (GTFS-realtime trip updates) and the railroad's
@@ -959,7 +980,7 @@ function addTrip(t, agency, tripId, tu, west, now) {
   t.stops = list.map((s, i) => ({
     key: `${agency}:${west.stops[s.stopId][3]}`,
     name: west.stops[s.stopId][0],
-    tz: TIME_ZONES[agency] || "America/Los_Angeles",
+    tz: TIME_ZONES[agency] || AGENCIES[agency]?.tz || "America/Los_Angeles",
     time: iso(evTime(s)),
     arr: iso(s.arrival?.time), dep: iso(s.departure?.time),
     status: i === nextIdx ? "next" : nextIdx < 0 || i < nextIdx ? "past" : "future",
@@ -976,7 +997,7 @@ function addTrip(t, agency, tripId, tu, west, now) {
   }
 }
 
-function gtfsVehicles(agency, buf, { keep = () => true, route, number, destination, west: lookup, zeroHeading = false, idOf } = {}) {
+export function gtfsVehicles(agency, buf, { keep = () => true, route, number, destination, west: lookup, zeroHeading = false, idOf } = {}) {
   const feed = decodeFeed(buf);
   const now = nowSec();
   const tripUpdates = new Map(feed.tripUpdates.filter((u) => u.trip?.tripId).map((u) => [u.trip.tripId, u]));
@@ -1046,7 +1067,7 @@ async function parseSepta(json) {
 
 const RTD_LINES = { A: "A Line", "113B": "B Line", "113G": "G Line", "117N": "N Line" };
 
-export const SOURCES = [
+const BUILT_IN_SOURCES = [
   {
     id: "amtraker", agencies: ["amtrak", "via", "brightline"], format: "json", interval: 60,
     url: "https://api-v3.amtraker.com/v3/trains",
@@ -1110,25 +1131,7 @@ export const SOURCES = [
       west: (await loadTrips()).frontrunner,
     }),
   },
-  {
-    id: "capmetro", agencies: ["capmetro"], format: "pb", interval: 30, relay: true,
-    credit: { label: "CapMetro", href: "https://data.texas.gov" },
-    parse: async (buf) => gtfsVehicles("capmetro", buf, {
-      keep: (v) => v.trip?.routeId === "550",
-      route: () => "Red Line",
-      number: () => null,
-      west: (await loadTrips()).capmetro,
-    }),
-  },
-  {
-    id: "trirail", agencies: ["trirail"], format: "pb", interval: 30, relay: true,
-    credit: { label: "Tri-Rail", href: "https://www.tri-rail.com" },
-    parse: (buf) => gtfsVehicles("trirail", buf, {
-      route: () => "Tri-Rail",
-      zeroHeading: true,
-      number: (v) => (v.vehicle?.label || "").replace(/^P/, "") || null, // "P625" is train 625
-    }),
-  },
+  // (CapMetro and Tri-Rail come here, from their plug-ins.)
   // ----- through the relay, with an API key stored on the relay -----
   {
     id: "metra", agencies: ["metra"], format: "pb", interval: 30, relay: true, needsKey: "METRA_API_TOKEN",
@@ -1272,14 +1275,26 @@ export const SOURCES = [
     },
   },
 ];
+// A plug-in's source has no parser until its file is loaded (fetchSource).
+// Its scope says when it's polled: "always", like the railroads above, or
+// "view": only while its railroads are on screen or being followed (app.js).
+export const SOURCES = placed(BUILT_IN_SOURCES, PLUGIN_SOURCES.map((s) => ({ ...s })));
 
 export async function fetchSource(src, relayBase) {
-  if (src.load) return src.parse(await src.load());
+  // A plug-in's parser file loads alongside its first fetch.
+  const parser = src.parse ? null : PARSERS[src.module]().then((m) => (src.parse = m.parse[src.id]));
+  parser?.catch(() => {}); // a failed load is reported by the await below
+  if (src.load) {
+    const body = await src.load();
+    await parser;
+    return src.parse(body);
+  }
   // A per-feed address in config.js wins (for feeds that block the relay).
   const override = (window.TRAINSHEET_FEEDS || {})[src.id];
   const url = override || (src.relay ? `${relayBase.replace(/\/$/, "")}/feed/${src.id}` : src.url);
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const body = src.format === "pb" ? await res.arrayBuffer() : await res.json();
+  const body = src.format === "pb" ? await res.arrayBuffer() : src.format === "xml" || src.format === "text" ? await res.text() : await res.json();
+  await parser;
   return src.parse(body);
 }
