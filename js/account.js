@@ -30,7 +30,8 @@ let ctx;          // what js/app.js lends this module (init())
 let sb;           // the Supabase client
 let user = null;  // the signed-in user, or null
 let trips = null; // the account's trips once fetched: [row]
-let view = "signin"; // what the sheet shows: signin, signup, reset, newpass, trips, form
+let view = "signin"; // what the sheet shows: signin, signup, reset, code, newpass, trips, form
+let resetEmail = ""; // where the reset email went (the code view)
 let tab = "upcoming";
 let editing = null;  // the trip being edited in the form (null: a new one)
 let notice = "";     // a line over the form: "Check your email…", or an error
@@ -86,7 +87,7 @@ async function authChanged(event, session) {
     trips = null;
     remoteAt = null;
     lastSig = null;
-    if (!["signup", "reset"].includes(view)) view = "signin";
+    if (!["signup", "reset", "code"].includes(view)) view = "signin";
   }
   render();
   ctx.tripsChanged?.();
@@ -265,10 +266,18 @@ function render() {
       <p class="acct-legal"><a href="privacy.html">${T("Privacy policy")}</a></p>`;
   } else if (view === "reset") {
     body = head(T("Reset your password"), "signin") + note +
-      `<form class="acct-form" data-form="reset"><p class="acct-lede">${T("We'll email you a link to choose a new password.")}</p>${email()}
-        <button class="btn primary" type="submit"${dis}>${T("Send the link")}</button></form>`;
+      `<form class="acct-form" data-form="reset"><p class="acct-lede">${T("We'll email you a code and a link to choose a new password.")}</p>${email()}
+        <button class="btn primary" type="submit"${dis}>${T("Send the email")}</button></form>`;
+  } else if (view === "code") {
+    // The email's code works on any device; its link only in the browser
+    // that asked for it (PKCE), which a phone's mail app often isn't.
+    body = head(T("Enter the code"), "reset") + note +
+      `<form class="acct-form" data-form="code"><p class="acct-lede">${esc(T("Type the code in the email sent to {email}, or open the link in it on this device.", { email: resetEmail }))}</p>
+        <label class="acct-field"><span>${T("Code")}</span><input name="token" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,10}" maxlength="10"></label>
+        <button class="btn primary" type="submit"${dis}>${T("Continue")}</button></form>
+      <div class="acct-links"><button type="button" class="acct-link" data-resend>${T("Send it again")}</button></div>`;
   } else if (view === "newpass") {
-    body = head(T("Choose a new password")) + note +
+    body = head(T("Choose a new password"), changing ? "trips" : null) + note +
       `<form class="acct-form" data-form="newpass"><label class="acct-field"><span>${T("New password")}</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
         <button class="btn primary" type="submit"${dis}>${T("Save password")}</button></form>`;
   } else if (view === "form") {
@@ -314,6 +323,7 @@ function tripsView() {
       : `<p class="empty">${tab === "upcoming" ? T("No trips planned. Add the trains you're going to take, and they'll show here.")
         : T("No trips yet. Trains you track to your stop are added here when you arrive, or add a trip yourself.")}</p>`}</div>
     <details class="acct-danger"><summary>${T("Account")}</summary>
+      <p><button type="button" class="acct-link" data-change-password>${T("Change password")}</button></p>
       <p>${T("Deleting your account deletes your trips and tracked trains from Trainsheet's servers. It can't be undone.")}</p>
       <button type="button" class="btn small acct-delete" data-delete-account>${T("Delete my account")}</button>
       <p><a href="privacy.html">${T("Privacy policy")}</a></p></details>`;
@@ -428,6 +438,16 @@ function instant(day, hhmm, tz) {
   return new Date(guess - (shown - guess)).toISOString();
 }
 
+let changing = false; // the new-password view opened from the account, not a reset
+
+async function sendReset(email) {
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: here() });
+  if (error) throw error;
+  resetEmail = email;
+  view = "code";
+  notice = T("If there's an account for {email}, an email with a code is on its way.", { email });
+}
+
 // ---------- Events ----------
 
 async function run(fn) {
@@ -461,6 +481,8 @@ function onClick(e) {
       if (error) throw error;
     });
   }
+  if (d.changePassword != null) { view = "newpass"; changing = true; notice = ""; return render(); }
+  if (d.resend != null) return run(() => sendReset(resetEmail));
   if (d.signout != null) return run(async () => { await sb.auth.signOut(); view = "signin"; });
   if (d.taken) {
     return run(async () => {
@@ -513,14 +535,18 @@ function onSubmit(e) {
       if (error) throw error;
       if (!data.session) { view = "signin"; notice = T("Check your email for a link to confirm your account."); }
     } else if (kind === "reset") {
-      const { error } = await sb.auth.resetPasswordForEmail(f.email, { redirectTo: here() });
-      if (error) throw error;
-      view = "signin";
-      notice = T("If there's an account for {email}, a link to reset its password is on its way.", { email: f.email });
+      await sendReset(f.email);
+    } else if (kind === "code") {
+      const { error } = await sb.auth.verifyOtp({ email: resetEmail, token: f.token.replace(/\s/g, ""), type: "recovery" });
+      if (error) throw new Error(T("That code didn't work. Check it, or send a new one."));
+      // Signed in by the code: now the new password (authChanged keeps this view).
+      view = "newpass";
+      changing = false;
     } else if (kind === "newpass") {
       const { error } = await sb.auth.updateUser({ password: f.password });
       if (error) throw error;
       view = "trips";
+      changing = false;
       ctx.toast(T("Your password has been changed."));
       if (trips === null) loadTrips();
     } else if (kind === "trip") {
@@ -551,7 +577,7 @@ const api = {
   get user() { return user; },
   open() {
     if (user && view !== "newpass") view = "trips";
-    if (!user && !["signin", "signup", "reset"].includes(view)) view = "signin";
+    if (!user && !["signin", "signup", "reset", "code"].includes(view)) view = "signin";
     openSheet();
   },
   trackedChanged,
