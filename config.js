@@ -15,4 +15,4 @@ window.TRAINSHEET_FEEDS = {};
 // buttons offered besides email, each turned on under Authentication ›
 // Providers: "google", "facebook", "apple", "github", "azure", "discord".
 // See README, "Accounts".
-window.TRAINSHEET_ACCOUNTS = { url: "https://zmjzfhmeixauuzteqmgi.supabase.co", key: "sb_publishable_eggvhVjWV_QOvjpo56SOxg_u24ev9iJ", providers: [] };
+window.TRAINSHEET_ACCOUNTS = { url: "https://zmjzfhmeixauuzteqmgi.supabase.co", key: "sb_publishable_eggvhVjWV_QOvjpo56SOxg_u24ev9iJ", providers: ["google"] };

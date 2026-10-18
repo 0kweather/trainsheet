@@ -801,3 +801,6 @@ kbd {
 .acct-delete { color: var(--bad); }
 .acct-danger summary { cursor: pointer; font-size: var(--fs-sm); color: var(--muted); }
 .acct-danger p { margin: 8px 0; font-size: var(--fs-sm); color: var(--muted); }
+.acct-legal { margin: 0; text-align: center; font-size: var(--fs-xs); }
+.acct-legal a, .acct-danger a { color: var(--muted); }
+a.menu-link { box-sizing: border-box; text-decoration: none; }

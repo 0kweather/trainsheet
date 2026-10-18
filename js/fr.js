@@ -413,4 +413,6 @@ export default {
   "Delete my account": "Supprimer mon compte",
   "Delete your Trainsheet account, with all your trips? This can't be undone.": "Supprimer votre compte Trainsheet et tous vos voyages? C’est irréversible.",
   "Your account has been deleted.": "Votre compte a été supprimé.",
+  "Privacy": "Confidentialité",
+  "Privacy policy": "Politique de confidentialité",
 };

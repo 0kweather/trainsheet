@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy · Trainsheet</title>
+  <meta name="description" content="What Trainsheet keeps about you, why, and how to delete it.">
+  <link rel="icon" type="image/svg+xml" href="img/icon.svg">
+  <style>
+    :root {
+      --bg: #f2f2f7; --card: #ffffff; --text: #000000; --muted: rgba(60, 60, 67, 0.68);
+      --line: rgba(60, 60, 67, 0.16); --accent: #007aff;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #000000; --card: #1c1c1e; --text: #ffffff; --muted: rgba(235, 235, 245, 0.62); --line: rgba(255, 255, 255, 0.11); --accent: #0a84ff; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px 16px 64px; background: var(--bg); color: var(--text);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    }
+    main { max-width: 680px; margin: 0 auto; }
+    .back { display: inline-block; margin-bottom: 18px; color: var(--accent); text-decoration: none; font-size: 15px; }
+    h1 { margin: 0 0 4px; font-size: 32px; line-height: 1.15; }
+    .updated { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+    section { margin: 0 0 14px; padding: 18px 20px; border-radius: 16px; background: var(--card); }
+    h2 { margin: 0 0 8px; font-size: 19px; }
+    p, li { margin: 0 0 10px; }
+    p:last-child, li:last-child { margin-bottom: 0; }
+    ul { margin: 0 0 10px; padding-left: 20px; }
+    a { color: var(--accent); }
+    .short { border: 1px solid var(--line); }
+    .short li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">‹ Back to the map</a>
+  <h1>Privacy</h1>
+  <p class="updated">Last updated October 18, 2026</p>
+
+  <section class="short">
+    <h2>The short version</h2>
+    <ul>
+      <li>You can use the whole map without an account. Nothing about you leaves your device except what any website sees (your IP address, your browser).</li>
+      <li>If you make an account, Trainsheet keeps your email address, your trips and the trains you're tracking, so you can see them on every device. That's all, and it's only used to show them back to you.</li>
+      <li>Your location is used on your device to find trains near you. It's never sent to Trainsheet or saved.</li>
+      <li>No ads, no analytics, no tracking cookies. Nothing is sold or shared for marketing.</li>
+      <li>You can delete your account and everything in it from Settings at any time.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Without an account</h2>
+    <p>Trainsheet runs in your browser. Your settings (theme, units, language and so on), the trains you're tracking, your recent searches and the railroads you've hidden are kept in your browser's own storage on your device. They aren't sent to Trainsheet. Clearing your browser's data for trainsheet.com removes them.</p>
+    <p>To show live trains, your browser fetches data from the railroads' public feeds, some directly and some through Trainsheet's relay (a small Cloudflare service that forwards feed requests). The map's background comes from OpenFreeMap. Those requests carry your IP address and browser details, as any web request does. Trainsheet doesn't keep logs of them.</p>
+  </section>
+
+  <section id="location">
+    <h2>Your location</h2>
+    <p>Trainsheet asks for your location only when you press "Find trains near me" or the locate button, and your browser asks your permission first. It's used on your device to list the closest trains and, while you're riding, to work out which train you're on. It isn't sent to Trainsheet, saved, or added to your account. Trainsheet remembers only whether you allowed it, so it can refresh the nearby list on your next visit.</p>
+    <p>You can turn location off at any time in your browser's site settings.</p>
+  </section>
+
+  <section id="accounts">
+    <h2>If you make an account</h2>
+    <p>Accounts are optional. With one, Trainsheet keeps:</p>
+    <ul>
+      <li><strong>How you sign in:</strong> your email address. With a password, the password is stored only as a secure hash, which nobody can read back, Trainsheet included. With Google, Trainsheet receives your name, email address and profile picture link from Google. Only your email is used.</li>
+      <li><strong>Your trips:</strong> the ones you add (railroad, train number, date, stations, times and any notes you write) and the ones logged when a train you're tracking reaches your stop.</li>
+      <li><strong>Your tracked trains:</strong> the trains you're following, so they appear on your other devices too.</li>
+      <li><strong>Sign-in records:</strong> when the account was created and last signed in, kept by the sign-in service for security.</li>
+    </ul>
+    <p>This is used only to provide those features to you. Each account can read only its own data. Trainsheet doesn't look at it, sell it, share it, or use it for ads. Information received from Google is used only to sign you in, under the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+  </section>
+
+  <section>
+    <h2>Who else handles it</h2>
+    <p>Trainsheet relies on a few services. Each sees only what it needs to do its job:</p>
+    <ul>
+      <li><strong>Supabase</strong> stores accounts and their data on servers in the Americas, handles sign-in, and sends sign-up and password-reset emails.</li>
+      <li><strong>Google</strong> handles signing in with Google, if you choose it.</li>
+      <li><strong>GitHub Pages</strong> serves the website.</li>
+      <li><strong>Cloudflare</strong> runs the relay for railroad feeds.</li>
+      <li><strong>jsDelivr and unpkg</strong> serve the code libraries the site uses.</li>
+      <li><strong>OpenFreeMap</strong> serves the map.</li>
+      <li><strong>The railroads' feeds</strong> provide the live train data.</li>
+    </ul>
+  </section>
+
+  <section id="delete">
+    <h2>Deleting your data</h2>
+    <p><strong>To delete your account:</strong> open Settings, then Your trips. Under Account, choose Delete my account. Your account, trips and tracked trains are deleted from Trainsheet's servers right away. This can't be undone.</p>
+    <p>If you signed in with Google, you can also remove Trainsheet's access at <a href="https://myaccount.google.com/connections">myaccount.google.com/connections</a>.</p>
+    <p>If you can't sign in, email <a href="mailto:alexanderbronzini@gmail.com">alexanderbronzini@gmail.com</a> from the address on the account, and it will be deleted within 30 days.</p>
+    <p>Data on your device (settings and so on) stays until you clear your browser's data for trainsheet.com.</p>
+  </section>
+
+  <section>
+    <h2>How long it's kept</h2>
+    <p>Account data is kept until you delete it. Copies in the database provider's routine backups are gone within a few weeks after that.</p>
+  </section>
+
+  <section>
+    <h2>Your rights</h2>
+    <p>You can see and change your trips in the app at any time. Wherever you live, you can ask for a copy of your data, ask for it to be corrected or deleted, or object to how it's used, by emailing <a href="mailto:alexanderbronzini@gmail.com">alexanderbronzini@gmail.com</a>. If you're in the EU or UK, you can also complain to your data protection authority.</p>
+  </section>
+
+  <section>
+    <h2>Security</h2>
+    <p>Everything travels over HTTPS. Account data is protected by access rules in the database that let each account reach only its own rows. Passwords are never stored in readable form.</p>
+  </section>
+
+  <section>
+    <h2>Children</h2>
+    <p>Trainsheet accounts aren't meant for children under 13, and Trainsheet doesn't knowingly keep their data. If you think a child has made an account, email the address below and it will be deleted.</p>
+  </section>
+
+  <section>
+    <h2>Changes and contact</h2>
+    <p>If this policy changes, the new version will be posted here with a new date. For anything about your privacy, email <a href="mailto:alexanderbronzini@gmail.com">alexanderbronzini@gmail.com</a>.</p>
+  </section>
+</main>
+</body>
+</html>

@@ -258,7 +258,8 @@ function render() {
         <button class="btn primary" type="submit"${dis}>${view === "signin" ? T("Sign in") : T("Create account")}</button></form>
       <div class="acct-links">${view === "signin"
         ? `<button type="button" class="acct-link" data-go="signup">${T("Create an account")}</button><button type="button" class="acct-link" data-go="reset">${T("Forgot your password?")}</button>`
-        : `<button type="button" class="acct-link" data-go="signin">${T("I already have an account")}</button>`}</div>`;
+        : `<button type="button" class="acct-link" data-go="signin">${T("I already have an account")}</button>`}</div>
+      <p class="acct-legal"><a href="privacy.html">${T("Privacy policy")}</a></p>`;
   } else if (view === "reset") {
     body = head(T("Reset your password"), "signin") + note +
       `<form class="acct-form" data-form="reset"><p class="acct-lede">${T("We'll email you a link to choose a new password.")}</p>${email()}
@@ -311,7 +312,8 @@ function tripsView() {
         : T("No trips yet. Trains you track to your stop are added here when you arrive, or add a trip yourself.")}</p>`}</div>
     <details class="acct-danger"><summary>${T("Account")}</summary>
       <p>${T("Deleting your account deletes your trips and tracked trains from Trainsheet's servers. It can't be undone.")}</p>
-      <button type="button" class="btn small acct-delete" data-delete-account>${T("Delete my account")}</button></details>`;
+      <button type="button" class="btn small acct-delete" data-delete-account>${T("Delete my account")}</button>
+      <p><a href="privacy.html">${T("Privacy policy")}</a></p></details>`;
 }
 
 function tripRow(r) {
