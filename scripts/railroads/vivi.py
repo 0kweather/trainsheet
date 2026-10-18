@@ -11,7 +11,7 @@ AGENCIES = {
     "vivi": {"name": "Vivi", "short": "Vivi", "region": "Latvia", "country": "LV", "color": "#8bc34a",
              "kind": "commuter", "tz": "Europe/Riga",
              "credit": {"label": "Vivi timetable, Pieturas live data", "href": "https://gsvalbe.id.lv/pieturas/avoti.html"},
-             "license": None, "bbox": [20.95, 55.80, 28.20, 57.80]},
+             "license": None, "cars": True, "bbox": [20.95, 55.80, 28.20, 57.80]},
 }
 SOURCES = [{"id": "vivi", "agencies": ["vivi"], "format": "pb", "interval": 30, "relay": True, "needsKey": False,
             "scope": "view"}]

@@ -13,7 +13,7 @@ AGENCIES = {
     "elron": {"name": "Elron", "short": "Elron", "region": "Estonia", "country": "EE", "color": "#ff711d",
               "kind": "commuter", "tz": "Europe/Tallinn",
               "credit": {"label": "Elron, Regionaal- ja Põllumajandusministeerium", "href": "https://elron.ee"},
-              "license": "CC0 (timetable)", "bbox": [24.0, 56.9, 28.3, 59.5]},
+              "license": "CC0 (timetable)", "bbox": [24.0, 56.9, 28.3, 59.5], "cars": True},
 }
 # The site's own map asks every 2 s while it is open; the positions move every
 # few seconds. A poll every 30 s while Estonia is in view, and the relay's 15 s

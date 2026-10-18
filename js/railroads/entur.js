@@ -15,6 +15,13 @@ const NUMBER = {
   goaheadnorge: (v) => /:ServiceJourney:(\d+)[-_]/.exec(v.trip?.tripId || "")?.[1],
   flytoget: (v) => /:ServiceJourney:\d+-\d+-(\d+)-\d{8}/.exec(v.trip?.tripId || "")?.[1],
 };
+// Flytoget's positions name the unit ("71-14", "78-02"), which says its
+// model (js/railroads/entur.cars.js); Vy's and Go-Ahead's name the trip.
+const UNIT_TYPES = { 71: "noType71", 78: "noType78" };
+function unitOf(agency, v) {
+  const m = agency === "flytoget" && /^(7[18])-\d+/.exec(v.vehicle?.id || "");
+  return m ? { numbers: [m[0]], types: [UNIT_TYPES[m[1]]], complete: false } : null;
+}
 // A position older than this is a train no longer reporting.
 const STALE_SECONDS = 10 * 60;
 // Minutes before its first departure and after its last arrival a train
@@ -48,7 +55,7 @@ async function parseEntur(agency, buf) {
     out.push(train({
       id: `${agency}:${number}`, agency, number, route: run.line,
       lat: p.lat, lon: p.lon, bearing: p.bearing || null, speedMph: mps2mph(p.speed),
-      updated: (v.timestamp || feed.timestamp || now) * 1000,
+      updated: (v.timestamp || feed.timestamp || now) * 1000, cars: unitOf(agency, v),
       ...runFields(agency, tt, runTimes(run, u), now),
     }));
   }
