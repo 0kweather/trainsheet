@@ -1216,7 +1216,11 @@ const needData = (agency) => (DATA_REGIONS.some((r) => r.agencies.includes(agenc
 const withData = (agency, fn) => (needData(agency)?.then(fn) ?? fn());
 let stationsLoaded;
 const stationsReady = new Promise((done) => (stationsLoaded = done));
-function addRegion({ stations, departures: runs, firsts: first, linecolors }) {
+// The railroads whose region's stations and timetables have loaded, which
+// renderCredits() names whether or not their feed answers.
+const regionAgencies = new Set();
+function addRegion({ region, stations, departures: runs, firsts: first, linecolors }) {
+  for (const id of region.agencies) regionAgencies.add(id);
   if (runs) departuresData = { ...departuresData, ...decodeDepartures(runs) };
   // Each railroad's first trains count from its own file's start.
   if (first) firstsData = { ...firstsData, ...Object.fromEntries(Object.entries(first).filter(([k]) => k !== "start").map(([k, v]) => [k, { ...v, start: first.start }])) };
@@ -1771,15 +1775,30 @@ function nearbyHtml() {
 // attribution: named, and linked, beside their credit.
 const LICENSES = {
   "CC BY 4.0": "https://creativecommons.org/licenses/by/4.0/",
+  "CC BY 3.0 AU": "https://creativecommons.org/licenses/by/3.0/au/",
+  "CC BY 2.5 AR": "https://creativecommons.org/licenses/by/2.5/ar/",
+  "CC BY 1.0": "https://creativecommons.org/licenses/by/1.0/",
+  "CC0": "https://creativecommons.org/publicdomain/zero/1.0/",
   "ODbL": "https://opendatacommons.org/licenses/odbl/1-0/",
   "NLOD": "https://data.norge.no/nlod/en/2.0",
 };
+// A license as given ("CC BY 4.0", or "CC BY 4.0 (timetable)"), linked to its text.
+const licenseHtml = (license) => {
+  const k = Object.keys(LICENSES).find((k) => license === k || license.startsWith(`${k} `));
+  return k ? `<a href="${LICENSES[k]}" target="_blank" rel="noopener">${esc(license)}</a>` : esc(license);
+};
 const creditHtml = ({ label, href, license }) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(label)}</a>` +
-  (!license ? "" : LICENSES[license] ? ` (<a href="${LICENSES[license]}" target="_blank" rel="noopener">${esc(license)}</a>)` : ` (${esc(license)})`);
+  (license ? ` (${licenseHtml(license)})` : "");
 function renderCredits() {
   const seen = new Map();
   // A view-scoped source is credited once its data has been shown.
   for (const s of SOURCES) if (sourceAvailability(s).ok && (!viewScoped(s) || state.sourceStatus[s.id]?.at)) seen.set(s.credit.label, s.credit);
+  // A railroad abroad, once its region's stations and timetables are in,
+  // though its feed may be off or down.
+  for (const id of regionAgencies) {
+    const a = AGENCIES[id];
+    if (a?.credit && !seen.has(a.credit.label)) seen.set(a.credit.label, { ...a.credit, license: a.license });
+  }
   setPane($("credits"), T("Data:") + " " + [...seen.values()].map(creditHtml).join(", ") +
     `. ${T("Map")} © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.`);
 }
