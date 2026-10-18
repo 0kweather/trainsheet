@@ -1620,33 +1620,42 @@ function countryName(code) {
   }
 }
 
-function renderAgencies() {
+// The home list: the trains near the reader, then every country with its
+// railroads' running count. A country opens to its railroads (each with its
+// checkbox and its page) and the map moves to it.
+let openCountry = null; // the country the list shows, or null for all of them
+const HOME_COUNTRIES = ["US", "CA"]; // first, in this order; the rest by name
+
+function agencyRows() {
   const counts = agencyCounts();
-  // By country, in the order each first comes in the source list; within
-  // one, intercity railroads and then commuter ones, in that order too.
-  const countries = new Map(); // country code -> { intercity: [], commuter: [] }
-  const rows = { off: [] };
+  const countries = new Map(); // country code -> { intercity: [], commuter: [], off: [], agencies: [], running, idle }
+  const of = (c) => {
+    if (!countries.has(c)) countries.set(c, { intercity: [], commuter: [], off: [], agencies: [], running: 0, idle: true });
+    return countries.get(c);
+  };
   for (const src of SOURCES) {
     const avail = sourceAvailability(src);
     const st = state.sourceStatus[src.id];
     for (const id of src.agencies) {
-      const a = AGENCIES[id];
+      const a = AGENCIES[id], g = of(a.country);
+      g.agencies.push(id);
       if (!avail.ok) {
-        rows.off.push(`
+        g.off.push(`
           <div class="agency unavailable" style="--swatch:${a.color}" title="${esc(avail.reason)}">
             <span class="check-hit"><span class="check"></span></span>
             <span class="agency-open"><span class="name">${esc(a.name)}<span class="sub">${esc(T(a.region))} · ${esc(avail.reason)}</span></span></span>
           </div>`);
         continue;
       }
+      g.running += counts[id] || 0;
+      if (st?.status !== "idle") g.idle = false;
       // The checkbox shows or hides its trains; the rest of the row opens its page.
       const off = state.hidden.has(id);
       let count = `<span class="count">${T("{n} running", { n: counts[id] || 0 })} ›</span>`;
       if (st?.status === "loading") count = `<span class="count"><span class="sk sk-count" aria-label="${T("Loading")}"></span></span>`;
       else if (st?.status === "error" && !counts[id]) count = `<span class="count err" title="${esc(st.error)}">${T("offline")} ›</span>`;
       else if (st?.status === "idle") count = `<span class="count">${T("Off screen")} ›</span>`;
-      if (!countries.has(a.country)) countries.set(a.country, { intercity: [], commuter: [] });
-      countries.get(a.country)[a.kind].push(`
+      g[a.kind].push(`
         <div class="agency ${off ? "off" : ""}" style="--swatch:${a.color}">
           <button type="button" class="check-hit" data-toggle="${id}" aria-pressed="${!off}" aria-label="${esc(T(off ? "Show {name} trains" : "Hide {name} trains", { name: a.name }))}" title="${T(off ? "Show its trains" : "Hide its trains")}"><span class="check">${CHECK}</span></button>
           <button type="button" class="agency-open" data-railroad="${id}" aria-label="${esc(T("{name}: its lines and fleet", { name: a.name }))}">
@@ -1656,14 +1665,62 @@ function renderAgencies() {
         </div>`);
     }
   }
+  return countries;
+}
+
+function renderAgencies() {
+  const countries = agencyRows();
+  if (openCountry && !countries.has(openCountry)) openCountry = null;
+  if (!openCountry) {
+    const order = [...countries.keys()].sort((x, y) => {
+      const hx = HOME_COUNTRIES.indexOf(x), hy = HOME_COUNTRIES.indexOf(y);
+      if (hx >= 0 || hy >= 0) return (hx < 0 ? 99 : hx) - (hy < 0 ? 99 : hy);
+      return countryName(x).localeCompare(countryName(y), lang);
+    });
+    setPane($("agencies"), nearbyHtml() + `<div class="group-title">${T("Countries")}</div>` + order.map((c) => {
+      const g = countries.get(c), n = g.agencies.length;
+      // A country whose feeds wait for the map to reach it has no count yet.
+      const count = g.idle && !g.running ? "" : `${T("{n} running", { n: g.running })} `;
+      return `
+        <button type="button" class="agency country-row" data-country="${c}" aria-label="${esc(T("{country}: its railroads", { country: countryName(c) }))}">
+          <span class="cc" aria-hidden="true">${c}</span>
+          <span class="agency-open"><span class="name">${esc(countryName(c))}<span class="sub">${esc(Tn(n, "{n} railroad", "{n} railroads"))}</span></span><span class="count">${count}›</span></span>
+        </button>`;
+    }).join(""));
+    return;
+  }
+  const g = countries.get(openCountry);
   setPane($("agencies"), nearbyHtml() +
-    [...countries].map(([c, g]) => `<div class="group-title country-title">${esc(countryName(c))}</div>` +
-      (g.intercity.length ? `<div class="group-title">${T("Intercity")}</div>${g.intercity.join("")}` : "") +
-      (g.commuter.length ? `<div class="group-title">${T("Commuter & regional")}</div>${g.commuter.join("")}` : "")).join("") +
-    (rows.off.length
-      ? `<div class="group-title">${T("Not connected yet")}</div>${rows.off.join("")}
+    `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${T("Countries")}</button>` +
+    `<div class="group-title country-title">${esc(countryName(openCountry))}</div>` +
+    (g.intercity.length ? `<div class="group-title">${T("Intercity")}</div>${g.intercity.join("")}` : "") +
+    (g.commuter.length ? `<div class="group-title">${T("Commuter & regional")}</div>${g.commuter.join("")}` : "") +
+    (g.off.length
+      ? `<div class="group-title">${T("Not connected yet")}</div>${g.off.join("")}
          <p class="note">${T(RELAY ? "These railroads publish live data, but it has to be fetched through a small relay server or with a free developer key. See the README to switch them on." : "These railroads publish live data, but it has to be fetched through a small relay server. See the README to switch them on.")}</p>`
       : ""));
+}
+
+// Opens a country's railroads on the home list and frames them on the map:
+// its regional track where it has some (cut at the border, unlike the
+// railroads' own boxes, which reach as far as their trains run abroad),
+// else its railroads' boxes, else their stations.
+function openCountryList(code) {
+  openCountry = code;
+  renderAgencies();
+  $("agencies").querySelector(".country-back")?.scrollIntoView({ block: "nearest" });
+  const ids = new Set(agencyRows().get(code)?.agencies || []);
+  const b = new maplibregl.LngLatBounds();
+  const region = RAIL_REGIONS.find((r) => r.region === code.toLowerCase());
+  for (const box of region ? [region.bbox] : [...ids].map((id) => AGENCIES[id].bbox).filter(Boolean)) {
+    b.extend([box[0], box[1]]);
+    b.extend([box[2], box[3]]);
+  }
+  if (b.isEmpty()) for (const st of state.stations.values()) if (st.agencies.some((a) => ids.has(a))) b.extend([stationPos(st).lon, stationPos(st).lat]);
+  if (b.isEmpty()) return;
+  const pad = panelPadding();
+  map.stop();
+  map.fitBounds(b, { padding: { top: Math.max(40, pad.top + 20), right: 40, bottom: Math.max(40, pad.bottom + 20), left: Math.max(40, pad.left + 30) }, maxZoom: 9, duration: 900 });
 }
 
 
@@ -4374,6 +4431,12 @@ on("agencies", "click", (e) => {
   }
   const near = e.target.closest("[data-select]");
   if (near) return select(near.dataset.select);
+  const country = e.target.closest("[data-country]");
+  if (country) return openCountryList(country.dataset.country);
+  if (e.target.closest("[data-country-back]")) {
+    openCountry = null;
+    return renderAgencies();
+  }
   const toggle = e.target.closest("[data-toggle]");
   const info = e.target.closest("[data-railroad]");
   if (toggle) {

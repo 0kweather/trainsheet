@@ -68,6 +68,10 @@ export default {
   "Commuter & regional": "Banlieue et régional",
   "Commuter rail": "Train de banlieue",
   "Not connected yet": "Pas encore connectés",
+  "Countries": "Pays",
+  "{n} railroad": "{n} réseau",
+  "{n} railroads": "{n} réseaux",
+  "{country}: its railroads": "{country} : ses réseaux",
   "These railroads publish live data, but it has to be fetched through a small relay server or with a free developer key. See the README to switch them on.":
     "Ces réseaux publient des données en temps réel, mais il faut les obtenir par un petit serveur relais ou avec une clé de développeur gratuite. Consultez le README pour les activer.",
   "These railroads publish live data, but it has to be fetched through a small relay server. See the README to switch them on.":
