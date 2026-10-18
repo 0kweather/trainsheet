@@ -262,7 +262,8 @@ for (const [key, type] of Object.entries(TYPES)) type.key = key;
 //            as typicalFor's cases (built-in keys work too);
 //   FACTS:   { "key", "key@agency", "key@agency/route": fact sheet }, as
 //            data/models.json's entries (model, type, builder, built, fleet,
-//            topSpeedMph, powerHp, seats, lengthFt, about, source);
+//            topSpeedMph, powerHp, seats, lengthFt, about, source); a car of
+//            the built-in "coach" type, or of none known, looks up "coach@agency";
 //   LOGOS:   more logos, as in emblems.js.
 // Built-in keys and railroads stay as they are: an entry naming one is skipped.
 const TYPICAL = {}, FACTS = {};
@@ -706,9 +707,10 @@ export function carSvg(c, i, color, width, uid = `tsp${++renderSeq}`) {
 
 // Where to look up car i's fact sheet (data/models.json), most specific
 // first: model@railroad/route, model@railroad, model. The generic "coach"
-// is an Amfleet I except on the Piedmont.
+// is an Amfleet I except on the Piedmont and on a railroad with its own
+// cars file, whose FACTS may give "coach@<agency>".
 export function modelIds(c, i) {
   const key = c.cars[i]?.type?.key || "coach";
-  const k = key === "coach" && !(c.agency === "amtrak" && c.route === "Piedmont") ? "amfleet" : key;
+  const k = key === "coach" && !carsFile(c.agency) && !(c.agency === "amtrak" && c.route === "Piedmont") ? "amfleet" : key;
   return [`${k}@${c.agency}/${c.route || ""}`, `${k}@${c.agency}`, k];
 }

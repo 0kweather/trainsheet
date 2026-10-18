@@ -1224,6 +1224,7 @@ function addRegion({ stations, departures: runs, firsts: first, linecolors }) {
   return stationsReady.then(() => {
     const added = mergeStations(stations, { region: true });
     state.stations = new Map([...state.stations, ...added]);
+    lineSizes = null;
     for (const st of added.values()) {
       for (const k of st.keys) state.stationOfKey.set(k, st.id);
       for (const m of st.members) {
