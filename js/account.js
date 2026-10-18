@@ -103,8 +103,8 @@ let remoteAt = null;  // updated_at of the account's copy this device last had
 let lastSig = null;   // the trains and stops last pushed or taken
 let pushTimer;
 const sig = (list) => JSON.stringify(list.map((r) => [r.id, r.number, r.stopKey]));
-const slim = (list) => list.map(({ id, agency, number, route, stopKey, stopName, eta, lastSeen, fromKey, fromName, departAt }) =>
-  ({ id, agency, number, route, stopKey, stopName, eta, lastSeen, fromKey, fromName, departAt }));
+const slim = (list) => list.map(({ id, agency, number, route, stopKey, stopName, eta, lastSeen, fromKey, fromName, departAt, riding, confirmed }) =>
+  ({ id, agency, number, route, stopKey, stopName, eta, lastSeen, fromKey, fromName, departAt, riding, confirmed }));
 
 async function pullTracked() {
   const { data, error } = await sb.from("user_state").select("tracked, updated_at").maybeSingle();

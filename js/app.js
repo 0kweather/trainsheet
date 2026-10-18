@@ -52,7 +52,8 @@ const state = {
   stations: new Map(),   // merged station id -> station
   station: null,         // selected station id
   railroad: null,        // railroad whose page is open
-  trackSheet: null,      // { id, key }: the "Where are you getting off?" sheet, open for a train, and the stop chosen
+  trackSheet: null,      // { id, key, from, riding }: the track sheet, open for a train: the stop to get off (or track to), where the rider got on, and whether they're riding it
+  rideAsks: store.get("tt-ride-asks", []), // rides that ended without the rider's location matching the train: "Were you on it?"
   line: null,            // ...and the line, on a line's page
   predictions: null,     // live MBTA predictions for the selected station
   showStations: store.get("tt-stations", true),
@@ -1327,6 +1328,7 @@ function mergeTrains() {
   animateTo();
   checkTracked();
   trackPlanned();
+  checkRiding();
   renderAll();
   if (state.follow && state.selected) {
     const t = state.trains.get(state.selected);
@@ -1751,6 +1753,10 @@ const stopTzOf = (key) => {
   const s = key && state.stations.get(state.stationOfKey?.get(key));
   return s ? s.members.find((m) => m.key === key)?.tz || s.tz : null;
 };
+const stationNameOf = (key) => {
+  const s = key && state.stations.get(state.stationOfKey?.get(key));
+  return s ? s.members.find((m) => m.key === key)?.name || s.name : null;
+};
 const tripTime = (iso, key, agency) => (iso ? fmtTime(iso, stopTzOf(key) || AGENCIES[agency]?.tz) : "");
 function fmtSpan(ms) {
   const m = Math.round(ms / 60000), h = Math.floor(m / 60);
@@ -1779,12 +1785,16 @@ function homeHtml() {
     const tracked = live && state.tracked.some((x) => x.id === live.id);
     const dep = tripTime(next.depart_at, next.from_key, next.agency), arr = tripTime(next.arrive_at, next.to_key, next.agency);
     const span = next.depart_at && next.arrive_at ? fmtSpan(Date.parse(next.arrive_at) - Date.parse(next.depart_at)) : "";
+    // How late this train usually gets to the rider's stop (Likely delays).
+    const toKey = next.to_key || (next.to_name && [...(loadDelays(next.agency, next.number)?.stops.keys() || [])].find((k) => stationNameOf(k) && fold(stationNameOf(k)) === fold(next.to_name)));
+    const usual = toKey && !live ? usualDelay(next.agency, next.number, toKey) : null;
     const state_ = live ? (tracked ? `<span class="nt-flag">${BELL_ICON}${T("Tracking")}</span>` : `<span class="nt-flag">${T("On the map")} ›</span>`)
       : `<span class="nt-flag">${BELL_ICON}${T("Tracked on the day")}</span>`;
     html += `<div class="group-title">${esc(T("Next trip · {when}", { when: tripWhen(next.service_date) }))}</div>
       <button type="button" class="next-trip" ${live ? `data-select="${esc(live.id)}"` : `data-trip="${esc(next.id)}"`}>
         <span class="nt-top"><span>${plate(next.number || a.short, a.color, "xs")}<span class="nt-name">${esc(next.route || a.name)}</span></span>${state_}</span>
         <span class="nt-date">${esc(tripDate(next.service_date, { weekday: "long", month: "long", day: "numeric" }))} · ${esc(a.short)}${live ? ` · ${statusSpan(live, "status")}` : ""}</span>
+        ${usual ? `<span class="nt-usual ${lateText(usual.median).cls}">${esc(usualText(usual))}${next.to_name ? ` ${esc(T("at {place}", { place: next.to_name }))}` : ""}</span>` : ""}
         ${next.from_name || next.to_name ? `<span class="nt-leg">
           <span class="nt-end"><strong>${esc(dep || "—")}</strong><span>${esc(next.from_name || "")}</span></span>
           <span class="nt-span">${esc(span)}</span>
@@ -1841,11 +1851,11 @@ function trackPlanned() {
     if (done.includes(r.id) || state.tracked.length >= MAX_TRACKED) continue;
     const t = tripTrain(r);
     if (!t || state.tracked.some((x) => x.id === t.id)) continue;
-    const stop = t.stops?.find((s) => s.key && (s.key === r.to_key || (r.to_name && fold(s.name) === fold(r.to_name))));
+    const stop = stopOfTrip(t, r.to_key, r.to_name);
     done = [r.id, ...done].slice(0, 50);
     store.set("tt-autotracked", done);
     if (stop?.status === "past") continue;
-    startTracking(t, stop?.key || null);
+    startTracking(t, stop?.key || null, { fromKey: stopOfTrip(t, r.from_key, r.from_name)?.key || null, riding: true });
     toast(T("Tracking {train}, your trip today.", { train: trainLabel({ agency: t.agency, number: t.number }) }));
   }
 }
@@ -2022,7 +2032,7 @@ function factTiles(t) {
     tiles.push(`<div class="ft ft-speed"><span class="ft-label">${T("Speed")}</span><span class="ft-value">${v}<small>${km ? "km/h" : T("mph")}</small></span></div>`);
   }
   const note = t.estimated ? `${T("Estimated from predicted times")} · ${fmtAgo(t.updated)}` : `${T("GPS")} · ${fmtAgo(t.updated)}`;
-  return `<div class="facts">${tiles.length ? `<div class="ft-tiles">${tiles.join("")}</div>` : ""}<p class="ft-note">${t.estimated ? "" : SIGNAL_ICON}${esc(note)}</p></div>`;
+  return `<div class="facts">${tiles.length ? `<div class="ft-tiles">${tiles.join("")}</div>` : ""}${likelyLine(t)}<p class="ft-note">${t.estimated ? "" : SIGNAL_ICON}${esc(note)}</p></div>`;
 }
 
 function trainTitle(t) {
@@ -2502,6 +2512,7 @@ function renderDetail() {
   const from = at ? ahead : ahead - 1;
   const leg = (i) => dest < 0 ? ""
     : i === dest ? " dest" : i > dest ? " beyond" : i === from ? " ride-from" : i < from ? " before" : " ride";
+  const likely = likelyDelays(t);
   const stops = t.stops?.length
     ? rrSection("stops", T("Stops"), t.stops.length, `<div class="stops-scroll"><ol class="stops" style="--line-color:${lineColor}">${t.stops.map((s, i) => {
         // Late by five minutes or more: the new time, with the timetable's
@@ -2513,7 +2524,9 @@ function renderDetail() {
         // Each stop opens its station's page ("back" returns to this train).
         const sid = s.key && state.stationOfKey?.get(s.key);
         const link = sid ? ` data-stop-station="${esc(sid)}" role="button" tabindex="0" title="${esc(T("{name} station", { name: s.name }))}"` : "";
-        return `<li class="${s.status}${s.here ? " here" : ""}${leg(i)}${sid ? " link" : ""}"${link}><span class="stop-dot" aria-hidden="true"></span><span>${esc(s.name)}</span><span class="time">${time}</span></li>`;
+        const guess = likely?.get(s.key);
+        const name = guess ? `${esc(s.name)}<small class="likely ${lateText(guess.min).cls}">${esc(likelyText(guess.min))}</small>` : esc(s.name);
+        return `<li class="${s.status}${s.here ? " here" : ""}${leg(i)}${sid ? " link" : ""}"${link}><span class="stop-dot" aria-hidden="true"></span><span>${name}</span><span class="time">${time}</span></li>`;
       }).join("")}</ol></div>`)
     : "";
   // Re-rendering replaces the content; keep the reader where they were in
@@ -2625,6 +2638,95 @@ function loadHistory(t) {
       if (state.selected === t.id) renderDetail();
     })
     .catch(() => {});
+}
+
+// ---------- Likely delays ----------
+// How late an Amtrak, VIA or Brightline train has been at each of its stops
+// over the last eight weeks (the relay's Delays by stop), and from that how
+// late it's likely to be at the stops still ahead: past trips of the same
+// train that were about as late as it is now at the stop it last left, and
+// how much later (or less late) they got from there. Before it leaves, how
+// late it usually is.
+const delaysCache = new Map(); // "agency:number" -> { at, data }
+const DELAY_MIN_TRIPS = 4;     // fewer past trips than this: no guess
+function loadDelays(agency, number) {
+  if (!RELAY || !HISTORY_RR.has(agency) || !number) return null;
+  const k = `${agency}:${number}`, hit = delaysCache.get(k);
+  if (hit && Date.now() - hit.at < 30 * 60 * 1000) return hit.data;
+  delaysCache.set(k, { at: Date.now(), data: hit?.data || null });
+  fetch(`${RELAY.replace(/\/$/, "")}/delays/${agency}/${encodeURIComponent(number)}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => {
+      if (!d?.stops) return;
+      delaysCache.set(k, { at: Date.now(), data: { days: d.days, stops: new Map(d.stops.map((x) => [`ic:${x.code}`, x.d])) } });
+      renderTracked();
+      if (!state.query.trim() && !filtersOn()) renderAgencies();
+      const sel = state.trains.get(state.selected);
+      if (sel?.agency === agency && String(sel.number) === String(number)) renderDetail();
+    })
+    .catch(() => {});
+  return hit?.data || null;
+}
+// The middle of weighted values: [[value, weight]].
+function weightedMedian(pairs) {
+  const list = pairs.slice().sort((a, b) => a[0] - b[0]);
+  const half = list.reduce((n, p) => n + p[1], 0) / 2;
+  let run = 0;
+  for (const [v, w] of list) if ((run += w) >= half) return v;
+  return list[list.length - 1]?.[0] ?? null;
+}
+// How late it was at a stop, where it has left it: against its departure at
+// its first stop, its arrival at the rest.
+function delayAt(t, i) {
+  const s = t.stops[i];
+  const [at, sch] = i === 0 ? [s.dep, s.schDep] : [s.arr, s.schArr];
+  const d = at && sch ? Math.round((Date.parse(at) - Date.parse(sch)) / 60000) : null;
+  return Number.isFinite(d) ? d : null;
+}
+// { key -> { min, n } } for the stops still ahead: minutes late, likely, and
+// from how many past trips.
+function likelyDelays(t) {
+  const data = t.stops?.length && loadDelays(t.agency, t.number);
+  if (!data) return null;
+  const past = t.stops.map((s, i) => (s.status === "past" ? i : -1)).filter((i) => i >= 0);
+  const anchor = past.length ? past[past.length - 1] : null;
+  const now = anchor != null ? delayAt(t, anchor) : null;
+  const before = anchor != null && now != null ? data.stops.get(t.stops[anchor].key) : null;
+  const out = new Map();
+  t.stops.forEach((s, j) => {
+    if (s.status === "past") return;
+    const hist = data.stops.get(s.key);
+    if (!hist) return;
+    if (before) {
+      // Trips about as late as this one weigh most.
+      const pairs = [];
+      hist.forEach((d, k) => { if (d != null && before[k] != null) pairs.push([d - before[k], 1 / (1 + Math.abs(before[k] - now) / 10)]); });
+      if (pairs.length >= DELAY_MIN_TRIPS) out.set(s.key, { min: Math.round(now + weightedMedian(pairs)), n: pairs.length });
+    } else {
+      const vals = hist.filter((d) => d != null);
+      if (vals.length >= DELAY_MIN_TRIPS) out.set(s.key, { min: Math.round(weightedMedian(vals.map((v) => [v, 1]))), n: vals.length, usual: true });
+    }
+  });
+  return out;
+}
+// How late a train number usually is at a stop: { median, within, n }.
+function usualDelay(agency, number, key) {
+  const vals = loadDelays(agency, number)?.stops.get(key)?.filter((d) => d != null);
+  if (!vals || vals.length < DELAY_MIN_TRIPS) return null;
+  return { median: Math.round(weightedMedian(vals.map((v) => [v, 1]))), within: vals.filter((d) => d <= ON_TIME_MIN).length, n: vals.length };
+}
+const likelyText = (min) => (lateText(min).cls === "good" ? T("likely on time") : T("likely {late}", { late: lateText(min).text.toLowerCase() }));
+const usualText = (u) => `${lateText(u.median).cls === "good" ? T("Usually on time") : T("Usually {late}", { late: lateText(u.median).text.toLowerCase() })} · ${T("within {n} min on {k} of {m} trips", { n: ON_TIME_MIN, k: u.within, m: u.n })}`;
+// The stop a train's guess is about: the one it's tracked to, else its last.
+const guessStop = (t) => {
+  const rec = state.tracked.find((r) => r.id === t.id);
+  return (rec?.stopKey && t.stops?.find((s) => s.key === rec.stopKey)) || t.stops?.[t.stops.length - 1] || null;
+};
+function likelyLine(t) {
+  const stop = guessStop(t), guess = stop && likelyDelays(t)?.get(stop.key);
+  if (!guess) return "";
+  const text = guess.usual ? usualText(usualDelay(t.agency, t.number, stop.key)) : `${likelyText(guess.min)}`;
+  return `<p class="likely-note"><span class="likely ${lateText(guess.min).cls}">${esc(guess.usual ? text : text.charAt(0).toUpperCase() + text.slice(1))}</span> ${esc(T("at {place}", { place: stop.name }))}${guess.usual ? "" : ` · ${esc(T("from {n} past trips", { n: guess.n }))}`}</p>`;
 }
 
 const HISTORY_DAYS = 14;
@@ -3628,14 +3730,14 @@ function checkTracked() {
         rec.stopName = stop.name;
       }
       if (stop && hasArrived(t, stop)) {
-        account?.logRide(rec, Date.parse(stop.time) || now);
+        finishRide(rec, Date.parse(stop.time) || now);
         untrack(rec.id, T("{train} arrived at {place}.", { train: trainLabel(rec), place: stop.name }));
         continue;
       }
       changed = true;
     } else if (rec.eta && rec.eta < now) {
       // Vanished after its arrival time: it got there and the trip ended.
-      account?.logRide(rec, rec.eta);
+      finishRide(rec, rec.eta);
       untrack(rec.id, rec.lastSeen < PAGE_OPENED ? null : T("{train} arrived at {place}.", { train: trainLabel(rec), place: rec.stopName }));
     } else if (now - (rec.lastSeen || 0) > LOST_MS) {
       untrack(rec.id, rec.lastSeen < PAGE_OPENED ? null
@@ -3645,25 +3747,100 @@ function checkTracked() {
   if (changed) saveTracked();
 }
 
-function startTracking(t, stopKey) {
+// Tracking a train: to the stop chosen (or its last). A rider who says
+// they're riding it names where they got on (the sheet, or their planned
+// trip); only rides go to their trips, and only once it's clear they took it
+// (finishRide).
+function startTracking(t, stopKey, { fromKey = null, riding = false, confirmed = false } = {}) {
   if (state.tracked.some((r) => r.id === t.id)) return;
   if (state.tracked.length >= MAX_TRACKED) return toast(T("You can track up to three trains at once."));
   const stop = stopKey ? t.stops?.find((s) => s.key === stopKey) : null;
-  // Where the ride began, for the account's trip log: the stop the train is
-  // at or last left, or its first if it hasn't left yet.
-  const stops = t.stops || [];
-  const from = [...stops].reverse().find((s) => s.here || s.status === "past") || stops[0];
+  const from = riding ? (fromKey && t.stops?.find((s) => s.key === fromKey)) || boardingGuess(t) : null;
   state.tracked.push({
     id: t.id, agency: t.agency, number: t.number, route: t.route,
     stopKey: stop?.key || null, stopName: stop?.name || null,
     eta: stop ? Date.parse(stop.time) : null, lastSeen: Date.now(),
-    fromKey: from && from !== stop ? from.key || null : null, fromName: from && from !== stop ? from.name || null : null,
-    departAt: from && from !== stop ? Date.parse(from.dep || from.time) || null : null,
+    riding, confirmed,
+    ...rideFrom(from && from !== stop ? from : null),
   });
   saveTracked();
   checkTracked();
   applySelectionFilter();
   renderAll();
+}
+
+const rideFrom = (s) => ({ fromKey: s?.key || null, fromName: s?.name || null, departAt: s ? Date.parse(s.dep || s.time) || null : null });
+// Where a rider most likely got on, before they say: the stop the train is
+// at or last left, or, before it has left, its first.
+function boardingGuess(t) {
+  const stops = t.stops || [];
+  return [...stops].reverse().find((s) => s.here || s.status === "past") || stops[0] || null;
+}
+// Today's planned trip on this train, if the rider has one.
+const plannedTrip = (t) => account?.upcoming?.()?.find((r) => r.service_date === account.today() && r.agency === t.agency && r.number && String(r.number) === String(t.number)) || null;
+const stopOfTrip = (t, key, name) => t.stops?.find((s) => s.key && ((key && s.key === key) || (name && fold(s.name) === fold(name)))) || null;
+
+// A ride reached its stop. Its location matched the train along the way:
+// it goes to the rider's trips. Otherwise they're asked (an island) first.
+// Trains only watched never do.
+function finishRide(rec, arrivedAt) {
+  if (rec.riding === false || !account?.user) return;
+  if (rec.confirmed) {
+    account.logRide(rec, arrivedAt);
+    return toast(T("Added to your trips."));
+  }
+  state.rideAsks = [{ rec: { ...rec }, arrivedAt, at: Date.now() }, ...state.rideAsks.filter((a) => a.rec.id !== rec.id)].slice(0, 3);
+  store.set("tt-ride-asks", state.rideAsks);
+}
+const RIDE_ASK_MS = 3 * 86400000; // an unanswered "Were you on it?" goes away after this
+function rideAskCards() {
+  state.rideAsks = state.rideAsks.filter((a) => Date.now() - a.at < RIDE_ASK_MS);
+  return state.rideAsks.map(({ rec }) => {
+    const a = AGENCIES[rec.agency] || { color: "#888", short: "" };
+    const leg = [rec.fromName, rec.stopName].filter(Boolean).join(" → ");
+    return `<div class="track-card live guess ask" style="--c:${a.color}" data-ride-ask="${esc(rec.id)}">
+      <div class="la-top">${plate(rec.number || a.short, a.color, "xs")}<span class="la-route">${esc(T("Were you on {train}?", { train: rec.route || trainLabel(rec) }))}</span></div>
+      ${leg ? `<div class="la-where">${esc(leg)}</div>` : ""}
+      <div class="ask-actions"><button type="button" class="guess-go" data-ask-yes>${T("Yes, add it to my trips")}</button><button type="button" class="ask-no" data-ask-no>${T("No")}</button></div>
+    </div>`;
+  }).join("");
+}
+function answerRideAsk(id, yes) {
+  const ask = state.rideAsks.find((a) => a.rec.id === id);
+  state.rideAsks = state.rideAsks.filter((a) => a.rec.id !== id);
+  store.set("tt-ride-asks", state.rideAsks);
+  if (ask && yes) loadAccount().then((a) => {
+    a?.logRide(ask.rec, ask.arrivedAt);
+    toast(T("Added to your trips."));
+  });
+  renderTracked();
+}
+
+// While a ride is tracked, where the rider's location is already allowed,
+// a look every few minutes for whether they're with the train: once they
+// are, the ride goes to their trips without asking. The position stays on
+// the device.
+const RIDE_CHECK_MS = 3 * 60 * 1000;
+let rideCheckAt = 0;
+function checkRiding() {
+  const open = state.tracked.filter((r) => r.riding && !r.confirmed && trackedTrain(r));
+  if (!open.length || !navigator.geolocation || Date.now() - rideCheckAt < RIDE_CHECK_MS || document.hidden) return;
+  rideCheckAt = Date.now();
+  navigator.permissions?.query({ name: "geolocation" }).then((p) => {
+    if (p.state !== "granted") return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const fix = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      let changed = false;
+      for (const rec of open) {
+        const t = trackedTrain(rec), p = t && (state.display.get(t.id) || targetOf(t));
+        if (p && meters(fix, p) < 1500 + Math.min(pos.coords.accuracy || 0, 1000)) {
+          rec.confirmed = true;
+          changed = true;
+        }
+      }
+      if (changed) saveTracked();
+    }, () => {}, { enableHighAccuracy: false, maximumAge: 60000, timeout: 20000 });
+  }).catch(() => {});
 }
 
 function untrack(id, message) {
@@ -3691,17 +3868,24 @@ function trackButton(t) {
 // and every one after.
 const stopsAhead = (t) => (t.stops || []).filter((s) => s.status !== "past" && s.key);
 
-function openTrackSheet(t) {
+function openTrackSheet(t, { riding = null, confirmed = false } = {}) {
   const left = stopsAhead(t);
   const rec = state.tracked.find((r) => r.id === t.id);
   if (!left.length) {
     if (rec) return untrack(t.id);
     return startTracking(t, null);
   }
-  const chosen = rec?.stopKey && left.some((s) => s.key === rec.stopKey) ? rec.stopKey : left[left.length - 1].key;
-  state.trackSheet = { id: t.id, key: chosen };
+  // A planned trip on this train today names both stops.
+  const trip = plannedTrip(t);
+  const planned = trip && stopOfTrip(t, trip.to_key, trip.to_name);
+  const chosen = rec?.stopKey && left.some((s) => s.key === rec.stopKey) ? rec.stopKey
+    : planned && left.includes(planned) ? planned.key : left[left.length - 1].key;
+  const from = rec?.fromKey || (trip && stopOfTrip(t, trip.from_key, trip.from_name)?.key) || boardingGuess(t)?.key || null;
+  state.trackSheet = { id: t.id, key: chosen, from, riding: canRide() && (rec ? rec.riding !== false : riding ?? true), confirmed };
   renderTrackSheet();
 }
+// Rides go to the rider's trips: offered only when they're signed in.
+const canRide = () => Boolean(account?.user);
 function closeTrackSheet() {
   if (!state.trackSheet) return;
   state.trackSheet = null;
@@ -3721,6 +3905,13 @@ function renderTrackSheet() {
     return;
   }
   const rec = state.tracked.find((r) => r.id === t.id);
+  const offAt = (t.stops || []).findIndex((s) => s.key === sh.key);
+  const boardable = (t.stops || []).filter((s, i) => s.key && (offAt < 0 || i < offAt));
+  const ride = canRide() ? `<div class="segmented two ts-mode" role="radiogroup">
+      <button type="button" data-sheet-riding="1" aria-pressed="${sh.riding}">${T("I'm riding it")}</button>
+      <button type="button" data-sheet-riding="0" aria-pressed="${!sh.riding}">${T("Just watching")}</button></div>` +
+    (sh.riding ? `<label class="ts-from"><span>${T("Got on at")}</span><select data-sheet-from>${boardable.map((s) =>
+      `<option value="${esc(s.key)}"${s.key === sh.from ? " selected" : ""}>${esc(s.name)}${s.time ? ` · ${esc(fmtTime(s.dep || s.time, s.tz))}` : ""}</option>`).join("")}</select></label>` : "") : "";
   const rows = stopsAhead(t).map((s) => {
     const on = s.key === sh.key;
     return `<button type="button" class="ts-stop${on ? " on" : ""}" role="radio" aria-checked="${on}" data-sheet-stop="${esc(s.key)}">
@@ -3729,7 +3920,8 @@ function renderTrackSheet() {
   el.hidden = false;
   el.innerHTML = `<div class="ts-scrim" data-sheet-close></div>
     <div class="ts-card" role="dialog" aria-modal="true" aria-labelledby="ts-title">
-      <div class="ts-head"><h3 id="ts-title">${T("Where are you getting off?")}</h3><button type="button" class="tc-x ts-x" data-sheet-close aria-label="${T("Close")}">×</button></div>
+      <div class="ts-head"><h3 id="ts-title">${T(sh.riding || !canRide() ? "Where are you getting off?" : "Track it until")}</h3><button type="button" class="tc-x ts-x" data-sheet-close aria-label="${T("Close")}">×</button></div>
+      ${ride}
       <div class="ts-list" role="radiogroup" aria-labelledby="ts-title">${rows}</div>
       <div class="ts-actions">
         ${rec ? `<button type="button" class="btn small" data-sheet-untrack>${T("Stop tracking")}</button>` : ""}
@@ -3745,9 +3937,10 @@ function startFromSheet() {
   renderTrackSheet();
   if (!t) return;
   const rec = state.tracked.find((r) => r.id === t.id);
-  if (!rec) return startTracking(t, sh.key);
+  if (!rec) return startTracking(t, sh.key, { fromKey: sh.from, riding: sh.riding, confirmed: sh.confirmed });
   const stop = t.stops?.find((s) => s.key === sh.key);
-  Object.assign(rec, { stopKey: stop?.key || null, stopName: stop?.name || null, eta: stop ? Date.parse(stop.time) : null });
+  const from = sh.riding ? t.stops?.find((s) => s.key === sh.from) || boardingGuess(t) : null;
+  Object.assign(rec, { stopKey: stop?.key || null, stopName: stop?.name || null, eta: stop ? Date.parse(stop.time) : null, riding: sh.riding, ...rideFrom(from) });
   saveTracked();
   checkTracked();
   renderAll();
@@ -3764,12 +3957,20 @@ on("track-sheet", "click", (e) => {
     }
     return;
   }
+  const mode = e.target.closest("[data-sheet-riding]");
+  if (mode && state.trackSheet) {
+    state.trackSheet.riding = mode.dataset.sheetRiding === "1";
+    return renderTrackSheet();
+  }
   if (e.target.closest("[data-sheet-start]")) return startFromSheet();
   if (e.target.closest("[data-sheet-untrack]")) {
     const id = state.trackSheet?.id;
     closeTrackSheet();
     if (id) untrack(id);
   }
+});
+on("track-sheet", "change", (e) => {
+  if (e.target.matches("[data-sheet-from]") && state.trackSheet) state.trackSheet.from = e.target.value;
 });
 on("track-sheet", "keydown", (e) => {
   if (e.key === "Escape") { e.stopPropagation(); return closeTrackSheet(); }
@@ -3785,7 +3986,7 @@ on("track-sheet", "keydown", (e) => {
 function renderTracked() {
   const el = $("tracked");
   if (!el) return;
-  const guess = rideGuessCard();
+  const guess = rideGuessCard() + rideAskCards();
   el.hidden = !state.tracked.length && !guess;
   el.innerHTML = guess + state.tracked.map((rec) => {
     const t = trackedTrain(rec);
@@ -3805,6 +4006,9 @@ function renderTracked() {
       }
       const late = lateText(t.delayMin);
       if (late.text) status = `<span class="status ${late.cls}${t.inferred ? " inferred" : ""}"${t.inferred ? ` title="${INFERRED_TITLE}"` : ""}>${late.text}</span>`;
+      const end = (rec.stopKey && t.stops?.find((s) => s.key === rec.stopKey)) || t.stops?.[t.stops.length - 1];
+      const guess = end && likelyDelays(t)?.get(end.key);
+      if (guess && !guess.usual) status += `${status ? " · " : ""}<span class="status ${lateText(guess.min).cls}">${esc(likelyText(guess.min))}</span>`;
       if (Date.now() - t.updated > STALE_MS && !t.estimated) warn = `<span class="stale">⚠ ${T("Position {ago}", { ago: fmtAgo(t.updated) })}</span>`;
     } else {
       where = rec.stopName ? `${T("to")} <strong>${esc(rec.stopName)}</strong>` : "";
@@ -3829,7 +4033,7 @@ function renderTracked() {
   // A train just tracked grows out of a pill, like the Dynamic Island. A
   // redraw midway picks the animation up where it was.
   const now = Date.now();
-  const keyOf = (card) => card.dataset.trackOpen || `guess:${card.dataset.rideGuess}`;
+  const keyOf = (card) => card.dataset.trackOpen || (card.dataset.rideAsk ? `ask:${card.dataset.rideAsk}` : `guess:${card.dataset.rideGuess}`);
   for (const card of el.children) {
     const since = now - (islandsShown.get(keyOf(card)) ?? now);
     if (since < 600) {
@@ -3960,7 +4164,7 @@ function answerRideGuess(id, answer) {
   // it's tracked to the end.
   renderTracked();
   select(id);
-  openTrackSheet(t);
+  openTrackSheet(t, { riding: true, confirmed: true }); // found by the rider's own location
 }
 
 function openTracked(id) {
@@ -4381,6 +4585,12 @@ map.on("dragstart", () => state.follow && setFollow(false));
 
 on("back-btn", "click", closeDetail);
 on("tracked", "click", (e) => {
+  const ask = e.target.closest("[data-ride-ask]");
+  if (ask) {
+    if (e.target.closest("[data-ask-yes]")) return answerRideAsk(ask.dataset.rideAsk, true);
+    if (e.target.closest("[data-ask-no]")) return answerRideAsk(ask.dataset.rideAsk, false);
+    return;
+  }
   const guess = e.target.closest("[data-ride-guess]");
   if (guess) return answerRideGuess(guess.dataset.rideGuess, e.target.closest("[data-ride-no]") ? "no" : e.target.closest("[data-ride-yes]") ? "yes" : "open");
   const share = e.target.closest("[data-share-ride]");

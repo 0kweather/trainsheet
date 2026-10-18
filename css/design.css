@@ -892,3 +892,29 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .filter select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
 .filter:has(select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .filter-clear { flex: none; margin: 0 4px; font-weight: 500; }
+
+/* The track sheet: riding it or just watching, and where the rider got on. */
+.ts-mode { margin: 0; flex: none; }
+.ts-from {
+  flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; box-sizing: border-box;
+  padding: 0 14px; border-radius: var(--r-card); background: var(--group); font-size: var(--fs-md);
+}
+.ts-from select {
+  min-width: 0; max-width: 62%; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: var(--fs-md); text-align: right; cursor: pointer;
+}
+.ts-from select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+/* "Were you on it?": a ride that ended, asked about before it goes to the rider's trips. */
+.live .ask-actions { display: flex; align-items: center; gap: 10px; }
+.live .ask-no { padding: 7px 12px; border: 0; border-radius: var(--r-pill, 999px); background: rgba(255, 255, 255, 0.16); color: inherit; font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.live .ask-no:hover { background: rgba(255, 255, 255, 0.26); }
+
+/* Likely delays: on the live card, under each stop ahead, and on the next trip. */
+.likely-note { margin: 8px 2px 0; font-size: var(--fs-sm); color: var(--muted); }
+.likely-note .likely, .nt-usual { font-weight: 600; }
+.likely.good, .nt-usual.good { color: var(--good); }
+.likely.warn, .nt-usual.warn { color: var(--warn); }
+.likely.bad, .nt-usual.bad { color: var(--bad); }
+.stops small.likely { display: block; font-size: var(--fs-xs); font-weight: 500; line-height: 1.2; }
+.stops small.likely.good { color: var(--muted); }
+.nt-usual { font-size: var(--fs-sm); }
