@@ -804,3 +804,91 @@ kbd {
 .acct-legal { margin: 0; text-align: center; font-size: var(--fs-xs); }
 .acct-legal a, .acct-danger a { color: var(--muted); }
 a.menu-link { box-sizing: border-box; text-decoration: none; }
+
+/* ---------- Home: your trips ----------
+   The next trip on a card of its own; the ones after it, what you've
+   ridden, and Browse on inset grouped cards, rows 44pt or more as elsewhere. */
+
+.home-signin { margin-top: 16px; padding: 14px 16px; border-radius: var(--r-card); background: color-mix(in srgb, var(--accent) 13%, var(--group)); }
+.home-signin-title { font-size: var(--fs-md); font-weight: 600; letter-spacing: -0.02em; }
+.home-signin p { margin: 4px 0 12px; font-size: var(--fs-sm); color: var(--muted); }
+.home-signin-actions { display: flex; align-items: center; gap: 16px; }
+.home-signin-actions .link-btn { margin: 0; font-weight: 500; }
+
+.agencies .home-title { display: flex; align-items: center; justify-content: space-between; }
+.home-title .link-btn { margin: 0; font-weight: 400; }
+.home-note { margin: 0 4px; }
+
+.next-trip {
+  display: flex; flex-direction: column; gap: 6px; width: 100%; box-sizing: border-box;
+  padding: 12px 14px 14px; border: 0; border-radius: var(--r-card); background: var(--group);
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
+.next-trip:focus-visible, .home-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.nt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.nt-top > span:first-child { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.nt-name { font-size: var(--fs-base); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nt-flag { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: var(--fs-xs); font-weight: 600; color: var(--accent); }
+.nt-date { font-size: var(--fs-sm); color: var(--muted); }
+.nt-leg { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 10px; margin-top: 4px; }
+.nt-end { display: flex; flex-direction: column; min-width: 0; }
+.nt-end.right { text-align: right; }
+.nt-end strong { font-family: var(--font-display); font-size: 24px; white-space: nowrap; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.nt-end span { font-size: var(--fs-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nt-span { padding-bottom: 20px; font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
+.nt-notes { font-size: var(--fs-sm); color: var(--muted); }
+.next-trip.empty-trip { align-items: flex-start; gap: 10px; cursor: default; font-size: var(--fs-sm); color: var(--muted); }
+.next-trip .sk-line { width: 60%; }
+.next-trip .sk-line.short { width: 35%; }
+
+.home-stats { margin: 0 0 8px; }
+.home-stats .rr-stat { background: var(--group); }
+
+/* A row on a home card: Browse, a trip, "3 more planned". */
+.home-row {
+  position: relative; display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; min-height: 44px;
+  padding: 0 14px; border: 0; border-radius: 0; background: var(--group); color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.home-row:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
+.group-title + .home-row, .home-stats + .home-row { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
+.home-row:not(:has(+ .home-row)) { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
+.home-row + .home-row::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 0.5px; background: var(--line); }
+.trip-row + .home-row::before, .home-row + .trip-row::before { left: 60px; }
+.home-row-icon { display: grid; place-items: center; width: 22px; color: var(--accent); }
+.home-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: var(--fs-md); letter-spacing: -0.02em; }
+.home-row .count { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
+.trip-row { padding: 10px 14px; }
+.trip-row .plate { flex: none; min-width: 34px; }
+.trip-row .title { font-size: var(--fs-base); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-row .sub { font-size: var(--fs-sm); letter-spacing: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-date { flex: none; display: flex; flex-direction: column; align-items: center; width: 34px; line-height: 1.1; }
+.tr-date span { font-size: var(--fs-xs); color: var(--bad); font-weight: 600; }
+.tr-date strong { font-size: var(--fs-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.tr-bell { display: grid; color: var(--accent); }
+
+/* All railroads: one line a railroad, under its country. */
+.agencies .country-head {
+  display: flex; justify-content: space-between; gap: 8px; width: calc(100% - 8px); padding: 0;
+  border: 0; background: none; font: inherit; font-size: var(--fs-sm); color: var(--muted); text-align: left; cursor: pointer;
+}
+.agencies .country-head:hover { color: var(--text); }
+.agency.compact .agency-open { padding-top: 11px; padding-bottom: 11px; }
+.agency.compact .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agency.compact .rgn { font-weight: 400; font-size: var(--fs-sm); letter-spacing: 0; color: var(--muted); }
+
+/* Search's filters: pills under the search field, each a menu. Shown while
+   searching, or while one is set. */
+.filters { display: none; gap: 6px; margin: 10px 16px 0; overflow-x: auto; scrollbar-width: none; }
+.filters::-webkit-scrollbar { display: none; }
+.search-area:focus-within .filters, .search-area.active .filters { display: flex; }
+.filter {
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px 0 12px;
+  border-radius: var(--r-pill); background: var(--fill); font-size: var(--fs-sm); font-weight: 500; color: var(--text); white-space: nowrap; cursor: pointer;
+}
+.filter svg { color: var(--muted); }
+.filter.on { background: var(--accent); color: #fff; }
+.filter.on svg { color: currentColor; }
+.filter select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.filter:has(select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.filter-clear { flex: none; margin: 0 4px; font-weight: 500; }

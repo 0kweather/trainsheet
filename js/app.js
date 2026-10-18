@@ -104,6 +104,7 @@ const state = {
   stopByName: new Map(), // "agency:normalized name" -> { lat, lon }
   follow: false,
   query: "",
+  filters: { kind: "", country: "", region: "", agency: "" }, // search's: type, country, network, railroad
   upcomingOpen: null,    // a train later today whose stops are shown in search ("railroad|number|day|departure")
   relayFeeds: null,      // feeds the relay can serve (null = no relay)
   // The train a rider pressing locate seems to be on: { id, mph, at }.
@@ -1325,6 +1326,7 @@ function mergeTrains() {
   computePositions();
   animateTo();
   checkTracked();
+  trackPlanned();
   renderAll();
   if (state.follow && state.selected) {
     const t = state.trains.get(state.selected);
@@ -1620,97 +1622,94 @@ function countryName(code) {
   }
 }
 
-// The home list: the trains near the reader, then every country with its
-// railroads' running count. A country opens to its railroads (each with its
-// checkbox and its page) and the map moves to it.
-let openCountry = null; // the country the list shows, or null for all of them
-const HOME_COUNTRIES = ["US", "CA"]; // first, in this order; the rest by name
+// The home list, all about the reader: signed in, their next trip, the
+// ones planned after it, and what they've ridden; signed out, a card to sign
+// in. Then the trains near them, and every railroad. "All railroads" opens
+// them in one list, by country (alphabetical, as are the railroads in each).
+let openCountry = null; // "*" while the list shows every railroad, else null (home)
+
+// A railroad's region where it says more than its country ("New York", not
+// "United States").
+const regionOf = (a) => (a.region && T(a.region) !== countryName(a.country) ? T(a.region) : "");
 
 function agencyRows() {
   const counts = agencyCounts();
-  const countries = new Map(); // country code -> { intercity: [], commuter: [], off: [], agencies: [], running, idle }
+  const countries = new Map(); // country code -> { rows: [{ name, html }], agencies, running, idle, off }
   const of = (c) => {
-    if (!countries.has(c)) countries.set(c, { intercity: [], commuter: [], off: [], agencies: [], running: 0, idle: true });
+    if (!countries.has(c)) countries.set(c, { rows: [], agencies: [], running: 0, idle: true, off: false });
     return countries.get(c);
   };
   for (const src of SOURCES) {
     const avail = sourceAvailability(src);
     const st = state.sourceStatus[src.id];
     for (const id of src.agencies) {
-      const a = AGENCIES[id], g = of(a.country);
+      const a = AGENCIES[id], g = of(a.country), region = regionOf(a);
       g.agencies.push(id);
+      const name = `<span class="name">${esc(a.name)}${region ? ` <span class="rgn">${esc(region)}</span>` : ""}</span>`;
       if (!avail.ok) {
-        g.off.push(`
-          <div class="agency unavailable" style="--swatch:${a.color}" title="${esc(avail.reason)}">
+        g.off = true;
+        g.rows.push({ name: a.name, html: `
+          <div class="agency compact unavailable" style="--swatch:${a.color}" title="${esc(avail.reason)}">
             <span class="check-hit"><span class="check"></span></span>
-            <span class="agency-open"><span class="name">${esc(a.name)}<span class="sub">${esc(T(a.region))} · ${esc(avail.reason)}</span></span></span>
-          </div>`);
+            <span class="agency-open">${name}<span class="count">${esc(T("Not connected"))}</span></span>
+          </div>` });
         continue;
       }
       g.running += counts[id] || 0;
       if (st?.status !== "idle") g.idle = false;
       // The checkbox shows or hides its trains; the rest of the row opens its page.
       const off = state.hidden.has(id);
-      let count = `<span class="count">${T("{n} running", { n: counts[id] || 0 })} ›</span>`;
+      let count = `<span class="count">${counts[id] || 0} ›</span>`;
       if (st?.status === "loading") count = `<span class="count"><span class="sk sk-count" aria-label="${T("Loading")}"></span></span>`;
       else if (st?.status === "error" && !counts[id]) count = `<span class="count err" title="${esc(st.error)}">${T("offline")} ›</span>`;
-      // Not fetched yet (its area hasn't been in view): no count, as on its country's row.
+      // Not fetched yet (its area hasn't been in view): no count.
       else if (st?.status === "idle") count = `<span class="count">›</span>`;
-      g[a.kind].push(`
-        <div class="agency ${off ? "off" : ""}" style="--swatch:${a.color}">
+      g.rows.push({ name: a.name, html: `
+        <div class="agency compact ${off ? "off" : ""}" style="--swatch:${a.color}">
           <button type="button" class="check-hit" data-toggle="${id}" aria-pressed="${!off}" aria-label="${esc(T(off ? "Show {name} trains" : "Hide {name} trains", { name: a.name }))}" title="${T(off ? "Show its trains" : "Hide its trains")}"><span class="check">${CHECK}</span></button>
           <button type="button" class="agency-open" data-railroad="${id}" aria-label="${esc(T("{name}: its lines and fleet", { name: a.name }))}">
-            <span class="name">${esc(a.name)}<span class="sub">${esc(T(a.region))}</span></span>
-            ${count}
+            ${name}${count}
           </button>
-        </div>`);
+        </div>` });
     }
   }
   return countries;
 }
 
+const byName = (x, y) => x.localeCompare(y, lang, { sensitivity: "base" });
+
 function renderAgencies() {
-  const countries = agencyRows();
-  if (openCountry && !countries.has(openCountry)) openCountry = null;
-  if (!openCountry) {
-    const order = [...countries.keys()].sort((x, y) => {
-      const hx = HOME_COUNTRIES.indexOf(x), hy = HOME_COUNTRIES.indexOf(y);
-      if (hx >= 0 || hy >= 0) return (hx < 0 ? 99 : hx) - (hy < 0 ? 99 : hy);
-      return countryName(x).localeCompare(countryName(y), lang);
-    });
-    setPane($("agencies"), nearbyHtml() + `<div class="group-title">${T("Countries")}</div>` + order.map((c) => {
-      const g = countries.get(c), n = g.agencies.length;
-      // A country whose feeds wait for the map to reach it has no count yet.
-      const count = g.idle && !g.running ? "" : `${T("{n} running", { n: g.running })} `;
-      return `
-        <button type="button" class="agency country-row" data-country="${c}" aria-label="${esc(T("{country}: its railroads", { country: countryName(c) }))}">
-          <span class="country-cc" aria-hidden="true">${c}</span>
-          <span class="agency-open"><span class="name">${esc(countryName(c))}<span class="sub">${esc(Tn(n, "{n} railroad", "{n} railroads"))}</span></span><span class="count">${count}›</span></span>
-        </button>`;
-    }).join(""));
-    return;
-  }
-  const g = countries.get(openCountry);
-  setPane($("agencies"), nearbyHtml() +
-    `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${T("Countries")}</button>` +
-    `<div class="group-title country-title">${esc(countryName(openCountry))}</div>` +
-    (g.intercity.length ? `<div class="group-title">${T("Intercity")}</div>${g.intercity.join("")}` : "") +
-    (g.commuter.length ? `<div class="group-title">${T("Commuter & regional")}</div>${g.commuter.join("")}` : "") +
-    (g.off.length
-      ? `<div class="group-title">${T("Not connected yet")}</div>${g.off.join("")}
-         <p class="note">${T(RELAY ? "These railroads publish live data, but it has to be fetched through a small relay server or with a free developer key. See the README to switch them on." : "These railroads publish live data, but it has to be fetched through a small relay server. See the README to switch them on.")}</p>`
-      : ""));
+  if (openCountry) return setPane($("agencies"), allRailroadsHtml());
+  setPane($("agencies"), homeHtml() + nearbyHtml() + `<div class="group-title">${T("Browse")}</div>
+    <button type="button" class="home-row" data-all-railroads>
+      <span class="home-row-icon" aria-hidden="true">${TRAIN_ICON}</span>
+      <span class="home-row-text">${T("All railroads")}</span>
+      <span class="count">${esc(Tn(Object.keys(AGENCIES).length, "{n} railroad", "{n} railroads"))} ›</span>
+    </button>`);
 }
 
-// Opens a country's railroads on the home list and frames them on the map:
-// its regional track where it has some (cut at the border, unlike the
-// railroads' own boxes, which reach as far as their trains run abroad),
-// else its railroads' boxes, else their stations.
-function openCountryList(code) {
-  openCountry = code;
-  renderAgencies();
-  $("agencies").querySelector(".country-back")?.scrollIntoView({ block: "nearest" });
-  const ids = new Set(agencyRows().get(code)?.agencies || []);
+function allRailroadsHtml() {
+  const countries = agencyRows();
+  const order = [...countries.keys()].sort((x, y) => byName(countryName(x), countryName(y)));
+  const anyOff = order.some((c) => countries.get(c).off);
+  return `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${T("Home")}</button>` +
+    `<div class="group-title country-title">${T("All railroads")}</div>` +
+    order.map((c) => {
+      const g = countries.get(c);
+      const count = g.idle && !g.running ? "" : T("{n} running", { n: g.running });
+      return `<button type="button" class="group-title country-head" data-country="${c}" title="${esc(T("Show {country} on the map", { country: countryName(c) }))}">
+          <span>${esc(countryName(c))}</span><span>${esc(count)}</span></button>` +
+        g.rows.sort((x, y) => byName(x.name, y.name)).map((r) => r.html).join("");
+    }).join("") +
+    (anyOff ? `<p class="note">${T(RELAY ? "Railroads marked Not connected publish live data, but it has to be fetched through a small relay server or with a free developer key. See the README to switch them on." : "Railroads marked Not connected publish live data, but it has to be fetched through a small relay server. See the README to switch them on.")}</p>` : "");
+}
+
+// Frames a country's railroads on the map: its regional track where it has
+// some (cut at the border, unlike the railroads' own boxes, which reach as
+// far as their trains run abroad), else its railroads' boxes, else their
+// stations.
+function frameCountry(code) {
+  const ids = new Set(Object.keys(AGENCIES).filter((id) => AGENCIES[id].country === code));
   const b = new maplibregl.LngLatBounds();
   const region = RAIL_REGIONS.find((r) => r.region === code.toLowerCase());
   for (const box of region ? [region.bbox] : [...ids].map((id) => AGENCIES[id].bbox).filter(Boolean)) {
@@ -1722,8 +1721,134 @@ function openCountryList(code) {
   const pad = panelPadding();
   map.stop();
   map.fitBounds(b, { padding: { top: Math.max(40, pad.top + 20), right: 40, bottom: Math.max(40, pad.bottom + 20), left: Math.max(40, pad.left + 30) }, maxZoom: 9, duration: 900 });
+  if (isPhone) setSheet("");
 }
 
+// ---------- Home: your trips ----------
+
+const ACCOUNTS = window.TRAINSHEET_ACCOUNTS || {};
+let account = null;        // js/account.js once loaded (Account, below)
+let accountLoading = null;
+
+const TRAIN_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="6" y="3.5" width="12" height="13" rx="3"/><path d="M6 10.5h12M9.5 13.5h.01M14.5 13.5h.01M9 16.5l-2 4M15 16.5l2 4"/></g></svg>';
+const signedInHere = () => Boolean(account?.user || (!account && store.get("tt-auth", null)));
+const accountsOn = () => Boolean(ACCOUNTS.url && ACCOUNTS.key);
+const tripDate = (day, opts = { weekday: "short", month: "short", day: "numeric" }) => {
+  const d = new Date(`${day}T12:00:00Z`);
+  const year = day.slice(0, 4) !== String(new Date().getFullYear()) ? { year: "numeric" } : {};
+  return dateFormat({ ...opts, ...year, timeZone: "UTC" }).format(d);
+};
+// How far off a trip's day is: "today", "tomorrow", "in 5 days", "in 3 months".
+function tripWhen(day) {
+  const n = Math.round((Date.parse(`${day}T12:00:00Z`) - Date.parse(`${account.today()}T12:00:00Z`)) / 86400000);
+  if (n <= 0) return T("today");
+  if (n === 1) return T("tomorrow");
+  if (n < 45) return T("in {n} days", { n });
+  return Tn(Math.round(n / 30.4), "in 1 month", "in {n} months");
+}
+const tripTrain = (r) => (r.number ? [...state.trains.values()].find((t) => t.agency === r.agency && String(t.number) === String(r.number)) : null);
+const stopTzOf = (key) => {
+  const s = key && state.stations.get(state.stationOfKey?.get(key));
+  return s ? s.members.find((m) => m.key === key)?.tz || s.tz : null;
+};
+const tripTime = (iso, key, agency) => (iso ? fmtTime(iso, stopTzOf(key) || AGENCIES[agency]?.tz) : "");
+function fmtSpan(ms) {
+  const m = Math.round(ms / 60000), h = Math.floor(m / 60);
+  return h ? (m % 60 ? `${h} h ${m % 60} min` : `${h} h`) : `${m} min`;
+}
+
+function homeHtml() {
+  if (!accountsOn()) return "";
+  if (!signedInHere()) {
+    return `<div class="home-signin">
+      <div class="home-signin-title">${T("Your trips, on every device")}</div>
+      <p>${T("Sign in to plan the trains you'll take, have them tracked on the day, and keep a log of every ride.")}</p>
+      <div class="home-signin-actions"><button type="button" class="btn primary small" data-home-signin>${T("Sign in")}</button>
+        <button type="button" class="link-btn" data-home-signin>${T("Create an account")}</button></div>
+    </div>`;
+  }
+  const upcoming = account?.upcoming?.(), taken = account?.taken?.();
+  if (!upcoming) {
+    return `<div class="group-title">${T("Next trip")}</div><div class="next-trip"><span class="sk sk-line"></span><span class="sk sk-line short"></span></div>`;
+  }
+  const [next, ...later] = upcoming;
+  let html = "";
+  if (next) {
+    const a = AGENCIES[next.agency] || { short: next.agency, name: next.agency, color: "#888" };
+    const live = next.service_date === account.today() ? tripTrain(next) : null;
+    const tracked = live && state.tracked.some((x) => x.id === live.id);
+    const dep = tripTime(next.depart_at, next.from_key, next.agency), arr = tripTime(next.arrive_at, next.to_key, next.agency);
+    const span = next.depart_at && next.arrive_at ? fmtSpan(Date.parse(next.arrive_at) - Date.parse(next.depart_at)) : "";
+    const state_ = live ? (tracked ? `<span class="nt-flag">${BELL_ICON}${T("Tracking")}</span>` : `<span class="nt-flag">${T("On the map")} ›</span>`)
+      : `<span class="nt-flag">${BELL_ICON}${T("Tracked on the day")}</span>`;
+    html += `<div class="group-title">${esc(T("Next trip · {when}", { when: tripWhen(next.service_date) }))}</div>
+      <button type="button" class="next-trip" ${live ? `data-select="${esc(live.id)}"` : `data-trip="${esc(next.id)}"`}>
+        <span class="nt-top"><span>${plate(next.number || a.short, a.color, "xs")}<span class="nt-name">${esc(next.route || a.name)}</span></span>${state_}</span>
+        <span class="nt-date">${esc(tripDate(next.service_date, { weekday: "long", month: "long", day: "numeric" }))} · ${esc(a.short)}${live ? ` · ${statusSpan(live, "status")}` : ""}</span>
+        ${next.from_name || next.to_name ? `<span class="nt-leg">
+          <span class="nt-end"><strong>${esc(dep || "—")}</strong><span>${esc(next.from_name || "")}</span></span>
+          <span class="nt-span">${esc(span)}</span>
+          <span class="nt-end right"><strong>${esc(arr || "—")}</strong><span>${esc(next.to_name || "")}</span></span>
+        </span>` : ""}
+        ${next.notes ? `<span class="nt-notes">${esc(next.notes)}</span>` : ""}
+      </button>`;
+  } else {
+    html += `<div class="group-title">${T("Next trip")}</div>
+      <div class="next-trip empty-trip"><span>${T("No trips planned. Add the trains you're going to take: they're tracked for you on the day.")}</span>
+        <button type="button" class="btn primary small" data-trip-add>${T("Plan a trip")}</button></div>`;
+  }
+  if (next) {
+    html += `<div class="group-title home-title"><span>${T("Coming up")}</span><button type="button" class="link-btn" data-trip-add>+ ${T("Plan a trip")}</button></div>`;
+    html += later.length ? later.slice(0, 5).map(tripRowHome).join("") +
+      (later.length > 5 ? `<button type="button" class="home-row" data-trips-tab="upcoming"><span class="home-row-text">${esc(T("{n} more planned", { n: later.length - 5 }))}</span><span class="count">›</span></button>` : "")
+      : `<p class="note home-note">${T("Nothing else planned yet.")}</p>`;
+  }
+  if (taken?.length) {
+    const ids = new Set(taken.map((r) => r.agency));
+    const countries = new Set(taken.map((r) => AGENCIES[r.agency]?.country).filter(Boolean));
+    html += `<div class="group-title home-title"><span>${T("Your history")}</span><button type="button" class="link-btn" data-trips-tab="history">${T("All")} ›</button></div>
+      <div class="rr-stats home-stats">${statTile(taken.length, esc(Tn(taken.length, "trip", "trips")))}${statTile(ids.size, esc(Tn(ids.size, "railroad", "railroads")))}${statTile(countries.size, esc(Tn(countries.size, "country", "countries")))}</div>` +
+      taken.slice(0, 2).map(tripRowHome).join("");
+  }
+  return html;
+}
+
+function tripRowHome(r) {
+  const a = AGENCIES[r.agency] || { short: r.agency, name: r.agency, color: "#888" };
+  const d = new Date(`${r.service_date}T12:00:00Z`);
+  const month = dateFormat({ month: "short", timeZone: "UTC" }).format(d), day = d.getUTCDate();
+  const leg = [r.from_name, r.to_name].filter(Boolean).join(" → ");
+  const past = r.status !== "planned";
+  const when = past ? tripDate(r.service_date) : [tripTime(r.depart_at, r.from_key, r.agency), r.service_date.slice(0, 4) !== String(new Date().getFullYear()) ? r.service_date.slice(0, 4) : ""].filter(Boolean).join(" · ");
+  return `<button type="button" class="home-row trip-row" data-trip="${esc(r.id)}">
+      ${past ? plate(r.number || a.short, a.color, "xs") : `<span class="tr-date"><span>${esc(month)}</span><strong>${day}</strong></span>`}
+      <span class="home-row-text"><span class="title">${esc([past ? "" : a.short, r.route || (past ? a.name : ""), r.number && !past ? r.number : ""].filter(Boolean).join(" "))}</span>
+        <span class="sub">${esc([leg, when].filter(Boolean).join(" · "))}</span></span>
+      ${past ? "" : `<span class="tr-bell" title="${T("Tracked on the day")}">${BELL_ICON}</span>`}
+    </button>`;
+}
+
+// Trips planned for today are tracked by themselves, to the stop they're
+// planned to, once their train is out and reporting: each once (untracking
+// one leaves it be).
+function trackPlanned() {
+  const list = account?.upcoming?.();
+  if (!list?.length) return;
+  const today = account.today();
+  let done = store.get("tt-autotracked", []);
+  for (const r of list) {
+    if (r.service_date !== today) break;
+    if (done.includes(r.id) || state.tracked.length >= MAX_TRACKED) continue;
+    const t = tripTrain(r);
+    if (!t || state.tracked.some((x) => x.id === t.id)) continue;
+    const stop = t.stops?.find((s) => s.key && (s.key === r.to_key || (r.to_name && fold(s.name) === fold(r.to_name))));
+    done = [r.id, ...done].slice(0, 50);
+    store.set("tt-autotracked", done);
+    if (stop?.status === "past") continue;
+    startTracking(t, stop?.key || null);
+    toast(T("Tracking {train}, your trip today.", { train: trainLabel({ agency: t.agency, number: t.number }) }));
+  }
+}
 
 // ---------- Near you ----------
 // The trains closest to the reader, on the home list: each opens its page,
@@ -1931,11 +2056,46 @@ function renderRecents() {
     }).join("")}</div>`);
 }
 
+// Search's filters: a type (intercity, or commuter and regional), a
+// country, a network (a railroad's region: New York, Toronto, Madrid...),
+// and a railroad. Each one's choices are those the others leave.
+const FILTER_KINDS = { intercity: "Intercity", commuter: "Commuter & regional" };
+const filtersOn = () => Object.values(state.filters).some(Boolean);
+function agencyFiltered(id, skip = null) {
+  const f = state.filters, a = AGENCIES[id];
+  return Boolean(a) && (skip === "kind" || !f.kind || a.kind === f.kind) && (skip === "country" || !f.country || a.country === f.country)
+    && (skip === "region" || !f.region || regionOf(a) === f.region) && (skip === "agency" || !f.agency || id === f.agency);
+}
+function filterChoices(key) {
+  const ids = Object.keys(AGENCIES).filter((id) => agencyFiltered(id, key));
+  const pairs = key === "kind" ? Object.entries(FILTER_KINDS).filter(([k]) => ids.some((id) => AGENCIES[id].kind === k)).map(([k, label]) => [k, T(label)])
+    : key === "country" ? [...new Set(ids.map((id) => AGENCIES[id].country))].map((c) => [c, countryName(c)])
+    : key === "region" ? [...new Set(ids.map((id) => regionOf(AGENCIES[id])).filter(Boolean))].map((r) => [r, r])
+    : ids.map((id) => [id, AGENCIES[id].name]);
+  return key === "kind" ? pairs : pairs.sort((x, y) => byName(x[1], y[1]));
+}
+const FILTERS = [["kind", "Type"], ["country", "Country"], ["region", "Network"], ["agency", "Railroad"]];
+function renderFilters() {
+  const el = $("filters");
+  if (!el) return;
+  // A choice the others no longer leave is let go.
+  for (const [key] of FILTERS) if (state.filters[key] && !filterChoices(key).some(([v]) => v === state.filters[key])) state.filters[key] = "";
+  el.closest(".search-area")?.classList.toggle("active", Boolean(state.query.trim()) || filtersOn());
+  setPane(el, FILTERS.map(([key, label]) => {
+    const v = state.filters[key], choices = filterChoices(key);
+    const shown = v ? choices.find(([k]) => k === v)?.[1] : T(label);
+    return `<label class="filter${v ? " on" : ""}"><span>${esc(shown)}</span><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M7 9.5 12 14.5 17 9.5Z"/></svg>
+      <select data-filter="${key}" aria-label="${esc(T(label))}"><option value="">${esc(T(key === "kind" ? "Any type" : key === "country" ? "Any country" : key === "region" ? "Any network" : "Any railroad"))}</option>${choices.map(([k, name]) =>
+        `<option value="${esc(k)}"${k === v ? " selected" : ""}>${esc(name)}</option>`).join("")}</select></label>`;
+  }).join("") + (filtersOn() ? `<button type="button" class="link-btn filter-clear" data-filters-clear>${T("Clear")}</button>` : ""));
+}
+
 function renderResults() {
   // Matched with accents dropped, in any script: "hameenlinna" finds Hämeenlinna.
   const q = fold(state.query.trim());
   const el = $("results");
-  if (!q) {
+  renderFilters();
+  if (!q && !filtersOn()) {
     el.hidden = true;
     $("agencies").hidden = false;
     renderRecents();
@@ -1947,7 +2107,7 @@ function renderResults() {
   const terms = q.split(/\s+/);
   const matches = [];
   for (const t of state.trains.values()) {
-    if (!inLists(t)) continue;
+    if (!inLists(t) || !agencyFiltered(t.agency)) continue;
     const a = AGENCIES[t.agency];
     const hay = fold(`${a.name} ${a.short} ${a.region} ${t.number} ${t.route} ${t.origin} ${t.destination} ${t.nextStop}`);
     if (!terms.every((w) => hay.includes(w))) continue;
@@ -1957,7 +2117,7 @@ function renderResults() {
   matches.sort((x, y) => x.score - y.score || String(x.t.number).localeCompare(String(y.t.number), undefined, { numeric: true }));
   const stationHits = [];
   for (const st of state.stations.values()) {
-    if (!st.agencies.some(agencyShown)) continue;
+    if (!st.agencies.some((id) => agencyShown(id) && agencyFiltered(id))) continue;
     const hay = fold(`${st.name} ${st.place} ${st.members.map((m) => `${m.name} ${m.lines.join(" ")} ${AGENCIES[m.agency].short}`).join(" ")}`);
     if (terms.every((w) => hay.includes(w))) stationHits.push(st);
   }
@@ -1971,8 +2131,9 @@ function renderResults() {
 
   // Railroads and lines, opening their pages.
   const has = (hay) => terms.every((w) => fold(hay).includes(w));
-  const railroads = Object.entries(AGENCIES).filter(([, a]) => has(`${a.name} ${a.short} ${a.region}`));
-  const railroadBlock = railroads.length ? `<div class="group-title">${T("Railroads")}</div>` + railroads.slice(0, 4).map(([id, a]) => {
+  const railroads = Object.entries(AGENCIES).filter(([id, a]) => agencyFiltered(id) && has(`${a.name} ${a.short} ${a.region}`))
+    .sort((x, y) => (q ? 0 : byName(x[1].name, y[1].name)));
+  const railroadBlock = railroads.length ? `<div class="group-title">${T("Railroads")}</div>` + railroads.slice(0, q ? 4 : 8).map(([id, a]) => {
     const n = [...state.trains.values()].filter((t) => t.agency === id).length;
     return `<button class="result" data-railroad="${id}">
       <span class="rr-icon" style="--c:${a.color}"></span>
@@ -1980,7 +2141,7 @@ function renderResults() {
       <span class="count">${T("{n} running", { n })} ›</span>
     </button>`;
   }).join("") : "";
-  const lines = allLines().filter((l) => has(`${l.name} ${AGENCIES[l.agency].name} ${AGENCIES[l.agency].short}`))
+  const lines = allLines().filter((l) => agencyFiltered(l.agency) && has(`${l.name} ${AGENCIES[l.agency].name} ${AGENCIES[l.agency].short}`))
     .sort((x, y) => Number(!fold(x.name).startsWith(q)) - Number(!fold(y.name).startsWith(q)) || y.running - x.running);
   const lineBlock = lines.length ? `<div class="group-title">${T("Lines")}</div>` + lines.slice(0, 6).map((l) => {
     const a = AGENCIES[l.agency];
@@ -1995,7 +2156,7 @@ function renderResults() {
   const carHits = [];
   if (/^[a-z0-9]{2,6}$/.test(q)) {
     for (const t of state.trains.values()) {
-      if (!inLists(t)) continue;
+      if (!inLists(t) || !agencyFiltered(t.agency)) continue;
       const nums = (t.cars?.numbers || []).map((n) => String(n ?? "").toLowerCase());
       const i = nums.indexOf(q);
       if (i >= 0) carHits.push({ t, i, of: nums.length });
@@ -2015,7 +2176,7 @@ function renderResults() {
     (later.length > 12 ? `<p class="results-more">${esc(T("{n} more later today", { n: later.length - 12 }))}</p>` : "") : "";
   const before = carBlock + railroadBlock + lineBlock + stationBlock;
   if (!matches.length) {
-    setPane(el, before + laterBlock || `<div class="empty">${esc(T("Nothing matches “{q}”.", { q: state.query }))}</div>`);
+    setPane(el, before + laterBlock || `<div class="empty">${esc(q ? T("Nothing matches “{q}”.", { q: state.query.trim() }) : T("No trains running match these filters."))}</div>`);
     return;
   }
   setPane(el, before + (before ? `<div class="group-title">${T("Trains")}</div>` : "") + matches.slice(0, 60).map(({ t }) => {
@@ -2076,7 +2237,7 @@ function laterToday(terms, q) {
   const running = new Set([...state.trains.values()].filter((t) => t.number).map((t) => `${t.agency}|${t.number}`));
   for (const [id, d] of Object.entries(all)) {
     const a = AGENCIES[id];
-    if (!a || !agencyShown(id) || !d.runs) continue;
+    if (!a || !agencyShown(id) || !agencyFiltered(id) || !d.runs) continue;
     const [y, m, day] = d.start.split("-").map(Number), today = zoneDay(d.tz);
     const first = Math.round((today - Date.UTC(y, m - 1, day)) / 86400000);
     // Today's service day, and yesterday's trains still to leave after midnight.
@@ -4380,6 +4541,23 @@ on("search", "input", (e) => {
   renderResults();
   if (isPhone && state.query) setSheet("expanded");
 });
+on("filters", "change", (e) => {
+  const key = e.target.dataset.filter;
+  if (!key) return;
+  // Filters may be for railroads off screen, as a search may.
+  if (!filtersOn()) {
+    wakeSources(true);
+    dataRegions()?.then((m) => m?.loadAll());
+  }
+  state.filters[key] = e.target.value;
+  renderResults();
+  if (isPhone) setSheet("expanded");
+});
+on("filters", "click", (e) => {
+  if (!e.target.closest("[data-filters-clear]")) return;
+  state.filters = { kind: "", country: "", region: "", agency: "" };
+  renderResults();
+});
 on("search", "keydown", (e) => {
   if (e.key === "Enter") $("results").querySelector("[data-select]")?.click();
   if (e.key === "Escape") {
@@ -4443,8 +4621,21 @@ on("agencies", "click", (e) => {
   }
   const near = e.target.closest("[data-select]");
   if (near) return select(near.dataset.select);
+  // Your trips: one opens (its train, when it's out today), a new one, a tab.
+  if (e.target.closest("[data-home-signin]")) return loadAccount().then((a) => a?.open());
+  if (e.target.closest("[data-trip-add]")) return loadAccount().then((a) => a?.addTrip());
+  const tab = e.target.closest("[data-trips-tab]");
+  if (tab) return loadAccount().then((a) => a?.openTrips(tab.dataset.tripsTab));
+  const trip = e.target.closest("[data-trip]");
+  if (trip) return loadAccount().then((a) => a?.editTrip(trip.dataset.trip));
+  if (e.target.closest("[data-all-railroads]")) {
+    openCountry = "*";
+    renderAgencies();
+    $("agencies").scrollTop = 0;
+    return $("agencies").querySelector(".country-back")?.scrollIntoView({ block: "nearest" });
+  }
   const country = e.target.closest("[data-country]");
-  if (country) return openCountryList(country.dataset.country);
+  if (country) return frameCountry(country.dataset.country);
   if (e.target.closest("[data-country-back]")) {
     openCountry = null;
     return renderAgencies();
@@ -4851,9 +5042,6 @@ const loadingWait = setInterval(() => {
 // (js/account.js, with Supabase). Only where config.js names a project, and
 // loaded only when a rider opens it or is already signed in here.
 
-const ACCOUNTS = window.TRAINSHEET_ACCOUNTS || {};
-let account = null;        // js/account.js once loaded
-let accountLoading = null;
 function loadAccount() {
   accountLoading ??= import("./account.js?v=dev").then((m) => m.init({
     agencies: AGENCIES, maxTracked: MAX_TRACKED, toast, fmtTime, plate,
@@ -4879,7 +5067,14 @@ function loadAccount() {
     defaultAgency: () => state.railroad || state.trains.get(state.selected)?.agency || null,
     liveTrain: (agency, number) => (number ? [...state.trains.values()].find((t) => t.agency === agency && String(t.number) === String(number)) : null) || null,
     openTrain: (id) => select(id),
-    accountChanged: renderAccountButton,
+    accountChanged(user) {
+      renderAccountButton(user);
+      renderAgencies();
+    },
+    tripsChanged() {
+      trackPlanned();
+      renderAgencies();
+    },
   })).then((a) => (account = a)).catch((e) => {
     console.warn("Trainsheet: accounts unavailable", e);
     accountLoading = null;

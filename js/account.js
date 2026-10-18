@@ -89,6 +89,7 @@ async function authChanged(event, session) {
     if (!["signup", "reset"].includes(view)) view = "signin";
   }
   render();
+  ctx.tripsChanged?.();
 }
 
 // ---------- Tracked trains, on every device ----------
@@ -176,6 +177,7 @@ async function loadTrips() {
     trips = [];
   } else trips = data;
   render();
+  ctx.tripsChanged?.();
 }
 
 // A tracked train reached the stop it was tracked to (js/app.js): logged as
@@ -207,6 +209,7 @@ async function logRide(rec, arrivedAt) {
 // Upcoming: planned for today or later. History: taken, cancelled, or a
 // planned day that has gone by.
 const isUpcoming = (r) => r.status === "planned" && r.service_date >= today();
+const byWhen = (a, b) => (a.service_date + (a.depart_at || "")).localeCompare(b.service_date + (b.depart_at || ""));
 
 // ---------- The sheet ----------
 
@@ -289,7 +292,7 @@ let shown = null; // the view last drawn
 
 function tripsView() {
   const all = trips || [];
-  const upcoming = all.filter(isUpcoming).sort((a, b) => (a.service_date + (a.depart_at || "")).localeCompare(b.service_date + (b.depart_at || "")));
+  const upcoming = all.filter(isUpcoming).sort(byWhen);
   const past = all.filter((r) => !isUpcoming(r));
   const list = tab === "upcoming" ? upcoming : past;
   const taken = past.filter((r) => r.status === "taken");
@@ -553,4 +556,28 @@ const api = {
   },
   trackedChanged,
   logRide,
+  today,
+  // For the home screen (js/app.js): null until the trips are in.
+  upcoming: () => (trips ? trips.filter(isUpcoming).sort(byWhen) : null),
+  taken: () => (trips ? trips.filter((r) => r.status === "taken") : null),
+  // Your trips, on one tab; a trip's form; a new trip's.
+  openTrips(which = "upcoming") {
+    tab = which;
+    api.open();
+  },
+  editTrip(id) {
+    const r = trips?.find((x) => x.id === id);
+    if (!r) return api.open();
+    editing = r;
+    view = "form";
+    notice = "";
+    openSheet();
+  },
+  addTrip() {
+    if (!user) return api.open();
+    editing = null;
+    view = "form";
+    notice = "";
+    openSheet();
+  },
 };
