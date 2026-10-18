@@ -4,7 +4,8 @@
 
 import { train, valid, loadSchedule, runNow, runStops } from "../sources.js?v=dev";
 
-const STALE = 10 * 60; // the feed runs about two minutes behind
+const STALE = 10 * 60; // behind the newest row in the answer: the train has left the feed
+const LAG = 30 * 60; // behind now: Stride itself has stopped loading (it often runs 10-20 minutes late)
 const FROZEN = 3 * 60; // moving, by its speed, but at one spot this long: a GPS that stopped updating
 const AT_STATION = 400; // metres
 
@@ -43,11 +44,14 @@ export const parse = {
       if (!rows.has(number)) rows.set(number, []);
       rows.get(number).push({ snapshot, at: Date.parse(time) / 1000, lat, lon, bearing, kmh: kmh || 0 });
     }
+    // Stride lags by a varying 2-20 minutes, so a row's age counts from the
+    // newest row it sent, not from now.
+    const newest = Math.max(0, ...[...rows.values()].flat().map((r) => r.at || 0));
     const out = [];
     for (const [number, list] of rows) {
       list.sort((a, b) => a.snapshot - b.snapshot);
       const last = list[list.length - 1];
-      if (!last.at || now - last.at > STALE) continue;
+      if (!last.at || newest - last.at > STALE || now - last.at > LAG) continue;
       // Since when it's been at this exact spot: a moving train that hasn't
       // moved is a frozen position, not a train.
       let since = last.at;
