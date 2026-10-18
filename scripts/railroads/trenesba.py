@@ -24,8 +24,9 @@ AGENCIES = {
                  "license": "CC BY 2.5 AR (timetable, Buenos Aires Data)", "bbox": [-59.45, -35.6, -57.9, -34.05]},
 }
 # SOFSE's arrivals come at most every 10 s or so per station; one shared copy
-# a minute keeps the relay to len(STATIONS) requests a minute however many
-# viewers there are, and the page asks no more often than that.
+# a minute keeps the relay to len(STATIONS) requests a minute for each Worker
+# instance serving viewers (one per busy Cloudflare location), however many
+# viewers each has, and the page asks no more often than that.
 SOURCES = [{"id": "trenesba", "agencies": ["trenesba"], "format": "json", "interval": 60, "relay": True, "needsKey": False,
             "scope": "view"}]
 RELAY = {"trenesba": {"ua": True, "ttl": 60}}

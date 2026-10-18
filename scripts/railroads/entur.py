@@ -8,7 +8,8 @@ position (the full feeds carry two weeks of trips, 300 KB). Their trip
 updates give delays only, so stops and times come from the timetable
 (data/schedules/<railroad>.json), as Finland's do. SJ Nord sends no
 positions: its trains are placed from the timetable, shifted by Bane NOR's
-trip updates where they have them. The parser is js/railroads/entur.js."""
+trip updates where they have them, which so far is never (below). The
+parser is js/railroads/entur.js."""
 import re, unicodedata
 
 ENTUR = {"label": "Entur", "href": "https://developer.entur.org"}
@@ -24,9 +25,10 @@ AGENCIES = {
                "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "bbox": [7.6, 59.9, 14.5, 67.3], "after": "flytoget"},
 }
 # Entur refreshes the feeds every 15 seconds; a poll every 30 and the relay
-# keeping each answer as long serves any number of viewers with four upstream
-# requests a minute per operator (positions, then trip updates, twice), and
-# one for SJ Nord's: 13 a minute in all.
+# keeping each answer as long serves all of a Worker instance's viewers with
+# four upstream requests a minute per operator (positions, then trip
+# updates, twice), and one every ten minutes for SJ Nord's: about 12 a
+# minute for each instance (one per busy Cloudflare location).
 SOURCES = [{"id": "vy", "agencies": ["vy"], "format": "pb", "interval": 30, "relay": True, "needsKey": False},
            {"id": "goaheadnorge", "agencies": ["goaheadnorge"], "format": "pb", "interval": 30, "relay": True, "needsKey": False,
             "after": "vy"},
@@ -41,10 +43,14 @@ RELAY = {sid: {"url": RT.format("vehicle-positions", ds), "also": [RT.format("tr
          for sid, ds in (("vy", "VYG"), ("goaheadnorge", "GOA"), ("flytoget", "FLT"))}
 # SJ Nord's trip updates come through Bane NOR (datasource BNR), with other
 # operators' trains crossing its lines: only SJ Nord's routes go on, by their
-# timetable ids or the line codes Bane NOR's SIRI feed names them by. Once a
-# minute is enough for a train placed by its times.
+# timetable ids or the line codes Bane NOR's SIRI feed names them by. On
+# 18 October 2026 Entur's GTFS-realtime carried no SJ Nord trip at all
+# (datasource BNR and SJN gave an empty feed, the whole country's 5 MB no
+# "SJN:" trip; only its 50 MB SIRI ET has them), so its trains show as
+# "Scheduled", with no delay. The feed still drives their placing, and is
+# kept for the day Bane NOR's fills; the relay asks for it every ten minutes.
 SJN_LINES = {"21": "F6", "22": "R65", "25": "R60", "26": "R70", "71": "F7", "72": "R71", "79": "R75"}
-RELAY["sjnord"] = {"url": RT.format("trip-updates", "BNR"), "headers": CLIENT, "ua": True, "ttl": 60,
+RELAY["sjnord"] = {"url": RT.format("trip-updates", "BNR"), "headers": CLIENT, "ua": True, "ttl": 600,
                    "routes": sorted(f"SJN:Line:{x}" for pair in SJN_LINES.items() for x in pair)}
 
 # Each operator's own timetable (Entur's codespace files: rail routes only,

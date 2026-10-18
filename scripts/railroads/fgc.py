@@ -14,12 +14,13 @@ AGENCIES = {
             "license": "CC BY 4.0", "bbox": [0.6, 41.3, 2.2, 42.26]},
 }
 # Geotren's dataset is processed every two minutes or so: a poll a minute, and
-# a minute's caching at the relay, which then asks the portal twice a minute
-# at most (2,880 of the 5,000 calls a day it allows an address) however many
-# are watching.
+# two minutes' caching at the relay, which then asks the portal twice every
+# two minutes at most: 1,440 of the 5,000 calls a day it allows an address
+# for each Worker instance serving viewers (one per busy Cloudflare location,
+# sometimes more), so three can share an address.
 SOURCES = [{"id": "fgc", "agencies": ["fgc"], "format": "json", "interval": 60, "relay": True, "needsKey": False,
             "scope": "view"}]
-RELAY = {"fgc": {"ua": True, "ttl": 60}}
+RELAY = {"fgc": {"ua": True, "ttl": 120}}
 
 PORTAL = "https://dadesobertes.fgc.cat/api/explore/v2.1/catalog/datasets"
 TRAINS = (PORTAL + "/posicionament-dels-trens/exports/json?select="

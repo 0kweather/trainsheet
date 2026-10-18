@@ -50,7 +50,7 @@ Grouped by country. The only keys are the free ones marked "free key" (Metra, 51
 
 ### Elsewhere
 
-Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads/<id>.js`), and its stations, departures, first trains and track live in `data/regions/<region>/` and `data/rail/<region>.geojson`, fetched only when the map, a search or a shared link reaches that country. Its feed is polled only while the railroad is in view (or one of its trains is open), so a viewer elsewhere asks for none of it.
+Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads/<id>.js`), and its stations, departures, first trains and track live in `data/regions/<region>/` and `data/rail/<region>.geojson`, fetched only when the map, a search or a shared link reaches that country. Its feed is polled while the area its stations cover (padded by a quarter) is in view, or one of its trains is open or tracked; a search or a shared link fetches every such feed once, and every region's stations and timetables. A railroad whose trains run abroad covers a wide area, so its feed is polled from next door too: ZSSK's reaches Vienna, Berlin and Hamburg, Vy's Copenhagen and Gothenburg. A viewer who neither searches nor looks outside the US and Canada asks for none of it.
 
 | Country | Railroad | Region | Feed | Needs |
 | --- | --- | --- | --- | --- |
@@ -65,12 +65,12 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | Israel | Israel Railways | Israel | The Ministry of Transport's SIRI positions as Hasadna's Open Bus Stride API keeps them (about two minutes behind) | relay |
 | Latvia | Vivi | Latvia | The Pieturas app's Baltic GTFS-realtime (Vivi's trains only), plus Vivi's timetable | relay |
 | Malaysia | KTMB (ETS, Intercity), KTM Komuter | Peninsular Malaysia | data.gov.my GTFS-realtime (positions only; fetched by each browser, since the API allows 4 requests a minute per address) | direct |
-| Norway | Vy, Go-Ahead Norge, Flytoget, SJ Nord | Norway | Entur GTFS-realtime (SJ Nord sends no positions: placed from its timetable, with Bane NOR's delays) | relay |
+| Norway | Vy, Go-Ahead Norge, Flytoget, SJ Nord | Norway | Entur GTFS-realtime (SJ Nord sends no positions, and Entur's GTFS-realtime has none of its delays yet: placed from its timetable, shown as scheduled) | relay |
 | Slovakia | ZSSK, RegioJet, Leo Express | Slovakia | Community GTFS-realtime (jbb.ghsq.de, station reports), plus ŽSR's timetable | relay |
 | Spain | Renfe (AVE, Avlo, Alvia, Avant, Euromed, regional), Renfe Cercanías and Rodalies | Spain | Renfe's open GTFS-realtime | relay |
 | Spain | FGC (Barcelona–Vallès, Llobregat–Anoia) | Catalonia | FGC's Geotren positions on its open-data portal | relay |
 
-"Relay" feeds don't send the CORS headers a browser needs, and keyed feeds can't put their key in a public web page, so both go through a tiny Cloudflare Worker (below). Without it, the site still shows everything marked "—" (and KTMB, which each browser fetches itself).
+"Relay" feeds don't send the CORS headers a browser needs, and keyed feeds can't put their key in a public web page, so both go through a tiny Cloudflare Worker (below). Without it, the site still shows everything marked "—" or "direct" (fetched by each browser itself, as KTMB is, or placed from the timetable).
 
 Northstar (Minneapolis) ended rail service; its route is now a bus, so it isn't shown. Ontario Northland's Northlander is in its timetable file ahead of its return but isn't carrying passengers yet, so only the Polar Bear Express is shown. Trains that Amtrak runs or that share Amtrak's feed (e.g., Amtrak's own Hartford Line and Valley Flyer trips) do show up.
 
@@ -125,7 +125,7 @@ then open http://localhost:8000. To try the relay feeds locally, run `python3 sc
    No railroad outside the US and Canada needs one.
 4. Put the Worker's URL in `config.js` (`window.TRAINSHEET_RELAY = "https://trainsheet-relay.<you>.workers.dev"`) and push.
 
-The relay only serves the feeds listed in `relay/worker.js` and `relay/feeds/index.js` (it is not an open proxy) and caches each one for 15 seconds, or for the time a plug-in's `RELAY` entry sets (`ttl`, 15 to 60 seconds), so a feed's server sees the same few requests however many people watch. Plug-in feeds send an identifying User-Agent. A Cron Trigger (every five minutes, in `wrangler.toml`) records the tracks posted at the big terminals in the Worker's Durable Object, for usual tracks; it keeps three weeks.
+The relay only serves the feeds listed in `relay/worker.js` and `relay/feeds/index.js` (it is not an open proxy) and caches each one for 15 seconds, or for the time a plug-in's `RELAY` entry sets (`ttl`, 15 seconds to ten minutes). That copy is kept in the memory of one Worker instance (the edge cache does nothing on workers.dev), so a feed's server sees a few requests per ttl for each instance serving viewers: about one per busy Cloudflare location, sometimes more, however many people each serves. Plug-in feeds send an identifying User-Agent. A Cron Trigger (every five minutes, in `wrangler.toml`) records the tracks posted at the big terminals in the Worker's Durable Object, for usual tracks; it keeps three weeks.
 
 ## Project layout
 
