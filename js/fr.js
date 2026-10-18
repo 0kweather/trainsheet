@@ -84,7 +84,6 @@ export default {
   "none running": "aucun en service",
   "Loading": "Chargement",
   "offline": "hors ligne",
-  "Off screen": "Hors de la carte",
   "Show {name} trains": "Afficher les trains de {name}",
   "Hide {name} trains": "Masquer les trains de {name}",
   "Show its trains": "Afficher ses trains",

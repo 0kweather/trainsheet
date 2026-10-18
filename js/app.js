@@ -1654,7 +1654,8 @@ function agencyRows() {
       let count = `<span class="count">${T("{n} running", { n: counts[id] || 0 })} ›</span>`;
       if (st?.status === "loading") count = `<span class="count"><span class="sk sk-count" aria-label="${T("Loading")}"></span></span>`;
       else if (st?.status === "error" && !counts[id]) count = `<span class="count err" title="${esc(st.error)}">${T("offline")} ›</span>`;
-      else if (st?.status === "idle") count = `<span class="count">${T("Off screen")} ›</span>`;
+      // Not fetched yet (its area hasn't been in view): no count, as on its country's row.
+      else if (st?.status === "idle") count = `<span class="count">›</span>`;
       g[a.kind].push(`
         <div class="agency ${off ? "off" : ""}" style="--swatch:${a.color}">
           <button type="button" class="check-hit" data-toggle="${id}" aria-pressed="${!off}" aria-label="${esc(T(off ? "Show {name} trains" : "Hide {name} trains", { name: a.name }))}" title="${T(off ? "Show its trains" : "Hide its trains")}"><span class="check">${CHECK}</span></button>
@@ -1683,7 +1684,7 @@ function renderAgencies() {
       const count = g.idle && !g.running ? "" : `${T("{n} running", { n: g.running })} `;
       return `
         <button type="button" class="agency country-row" data-country="${c}" aria-label="${esc(T("{country}: its railroads", { country: countryName(c) }))}">
-          <span class="cc" aria-hidden="true">${c}</span>
+          <span class="country-cc" aria-hidden="true">${c}</span>
           <span class="agency-open"><span class="name">${esc(countryName(c))}<span class="sub">${esc(Tn(n, "{n} railroad", "{n} railroads"))}</span></span><span class="count">${count}›</span></span>
         </button>`;
     }).join(""));
