@@ -3424,7 +3424,10 @@ const LOST_MS = 30 * 60 * 1000;  // gone from its feed this long: trip finished 
 const PAGE_OPENED = Date.now(); // trips that ended while the page was closed are dropped quietly
 
 const trainLabel = (rec) => `${AGENCIES[rec.agency]?.short || ""} ${rec.number || ""}`.trim();
-const saveTracked = () => store.set("tt-tracked", state.tracked);
+const saveTracked = () => {
+  store.set("tt-tracked", state.tracked);
+  account?.trackedChanged(state.tracked); // to the rider's other devices, when signed in
+};
 
 // The live train for a tracked record, if it's reporting. A feed can reuse a
 // vehicle id for a different train, so the number has to match too.
@@ -3463,12 +3466,14 @@ function checkTracked() {
         rec.stopName = stop.name;
       }
       if (stop && hasArrived(t, stop)) {
+        account?.logRide(rec, Date.parse(stop.time) || now);
         untrack(rec.id, T("{train} arrived at {place}.", { train: trainLabel(rec), place: stop.name }));
         continue;
       }
       changed = true;
     } else if (rec.eta && rec.eta < now) {
       // Vanished after its arrival time: it got there and the trip ended.
+      account?.logRide(rec, rec.eta);
       untrack(rec.id, rec.lastSeen < PAGE_OPENED ? null : T("{train} arrived at {place}.", { train: trainLabel(rec), place: rec.stopName }));
     } else if (now - (rec.lastSeen || 0) > LOST_MS) {
       untrack(rec.id, rec.lastSeen < PAGE_OPENED ? null
@@ -3482,10 +3487,16 @@ function startTracking(t, stopKey) {
   if (state.tracked.some((r) => r.id === t.id)) return;
   if (state.tracked.length >= MAX_TRACKED) return toast(T("You can track up to three trains at once."));
   const stop = stopKey ? t.stops?.find((s) => s.key === stopKey) : null;
+  // Where the ride began, for the account's trip log: the stop the train is
+  // at or last left, or its first if it hasn't left yet.
+  const stops = t.stops || [];
+  const from = [...stops].reverse().find((s) => s.here || s.status === "past") || stops[0];
   state.tracked.push({
     id: t.id, agency: t.agency, number: t.number, route: t.route,
     stopKey: stop?.key || null, stopName: stop?.name || null,
     eta: stop ? Date.parse(stop.time) : null, lastSeen: Date.now(),
+    fromKey: from && from !== stop ? from.key || null : null, fromName: from && from !== stop ? from.name || null : null,
+    departAt: from && from !== stop ? Date.parse(from.dep || from.time) || null : null,
   });
   saveTracked();
   checkTracked();
@@ -4833,6 +4844,66 @@ const loadingWait = setInterval(() => {
   $("loading").classList.add("done");
   setTimeout(() => $("loading").remove(), 500);
 }, 200);
+
+// ---------- Account ----------
+// Signing in, a rider's trips, and their tracked trains on every device
+// (js/account.js, with Supabase). Only where config.js names a project, and
+// loaded only when a rider opens it or is already signed in here.
+
+const ACCOUNTS = window.TRAINSHEET_ACCOUNTS || {};
+let account = null;        // js/account.js once loaded
+let accountLoading = null;
+function loadAccount() {
+  accountLoading ??= import("./account.js?v=dev").then((m) => m.init({
+    agencies: AGENCIES, maxTracked: MAX_TRACKED, toast, fmtTime, plate,
+    getTracked: () => state.tracked,
+    setTracked(list) {
+      state.tracked = list;
+      saveTracked();
+      checkTracked();
+      applySelectionFilter();
+      renderAll();
+    },
+    needData: (agency) => needData(agency) || Promise.resolve(),
+    // A railroad's stations, by name, for the trip form.
+    stationsOf(agency) {
+      const seen = new Map();
+      for (const s of state.stations.values()) for (const m of s.members) if (m.agency === agency && !seen.has(m.key)) seen.set(m.key, { key: m.key, name: m.name, place: m.place || "" });
+      return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+    },
+    stopTz(key) {
+      const s = key && state.stations.get(state.stationOfKey?.get(key));
+      return s ? s.members.find((m) => m.key === key)?.tz || s.tz : null;
+    },
+    defaultAgency: () => state.railroad || state.trains.get(state.selected)?.agency || null,
+    liveTrain: (agency, number) => (number ? [...state.trains.values()].find((t) => t.agency === agency && String(t.number) === String(number)) : null) || null,
+    openTrain: (id) => select(id),
+    accountChanged: renderAccountButton,
+  })).then((a) => (account = a)).catch((e) => {
+    console.warn("Trainsheet: accounts unavailable", e);
+    accountLoading = null;
+    toast(T("Couldn't reach the sign-in service. Try again in a moment."));
+    return null;
+  });
+  return accountLoading;
+}
+function renderAccountButton(user = account?.user) {
+  const el = $("account-btn");
+  if (!el) return;
+  el.hidden = !(ACCOUNTS.url && ACCOUNTS.key);
+  el.querySelector("[data-account-label]").textContent = user ? T("Your trips") : T("Sign in");
+}
+on("account-btn", "click", async () => {
+  toggleMenu(false);
+  (await loadAccount())?.open();
+});
+renderAccountButton();
+if (ACCOUNTS.url && ACCOUNTS.key) {
+  // Signed in on this device already, or back from Google, Facebook or a
+  // link in an email (?code=): load it now. Otherwise only when asked.
+  const q = new URL(location.href).searchParams;
+  if (store.get("tt-auth", null) || q.has("code") || q.has("error_description")) loadAccount();
+}
 
 // Handy for poking at the live state from the browser console.
 // For debugging and audits from the console.
