@@ -25,6 +25,14 @@ America and every region; one railroad's region alone, with the other
 railroads' track in it as last fetched (data/rail/src/<id>.json):
 
     python3 scripts/build_rail.py --only digitraffic
+
+Each region's railroads' timetables then route their trains between stops
+over that track (and OpenStreetMap's other mainline track where it's
+missing), which adds the missing stretches and tags shared track with every
+railroad on it. To rebuild the regions from the track on file and the route
+tiles already fetched, with no downloads:
+
+    python3 scripts/build_rail.py --offline
 """
 import hashlib, json, math, os, pathlib, re, socket, ssl, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import defaultdict
@@ -1195,6 +1203,224 @@ def write_region(region, features):
     print(f"wrote {path} ({path.stat().st_size // 1024} KB, {len(features)} lines)")
 
 
+# ---------- Track abroad, from the railroads' timetables ----------
+# A plug-in's own query misses track: route relations aren't mapped for every
+# line (a third of Spain's stations), stretches of a line often lack a usage
+# tag (so "main or branch" leaves it in pieces), metre-gauge lines are
+# railway=narrow_gauge, and trains run on into countries with no plug-in.
+# So each pair of stops its trains call at one after the other is routed along
+# OpenStreetMap's mainline track (any usage but industrial, military, tourist
+# or test, no sidings or yards), fetched in one-degree tiles along the pairs;
+# a route's stretches not drawn yet are added, and every piece of track takes
+# the railroads whose routes run along it (as North America's track takes the
+# railroads whose route shapes it follows), intercity ones first, at most three.
+ROUTE_TILE = 1.0          # degrees, the tiles candidate track is fetched in
+ROUTE_SNAP_M = 1500       # a stop this close to track is on it
+ROUTE_DETOUR = 2.5        # a route may be this many times the straight distance (plus 5 km)
+ROUTE_MAX_KM = 400        # longer hops between stops aren't routed
+ROUTE_ALONG_M = 60        # track this close to a railroad's routes is on them
+ROUTE_WAYS = ('way["railway"~"^(rail|narrow_gauge)$"][!"service"]'
+              '["usage"!~"^(industrial|military|tourism|test)$"]({bbox});')
+
+
+ROUTE_ABROAD = 0.5         # degrees past a plug-in's box that its hops are still routed
+
+
+def timetable_pairs(mods):
+    """{agency: {(stop, stop)}}: the consecutive stops of every trip in the
+    railroads' timetables (data/schedules/<agency>.json), as (lon, lat): the
+    hops with a stop in or near the plug-in's box, so a train running on
+    abroad gets its track over the border but not all the way to Kiel."""
+    out = {}
+    for m in mods:
+        w, s_, e, n = m.RAIL["bbox"]
+        near = lambda p: w - ROUTE_ABROAD <= p[0] <= e + ROUTE_ABROAD and s_ - ROUTE_ABROAD <= p[1] <= n + ROUTE_ABROAD
+        for agency in m.AGENCIES:
+            path = ROOT / "data" / "schedules" / f"{agency}.json"
+            if not path.exists():
+                continue
+            tt = json.loads(path.read_text())
+            at = {k: (round(v[2], 5), round(v[1], 5)) for k, v in tt["stops"].items()}
+            pairs = set()
+            for runs in tt["trips"].values():
+                for run in runs:
+                    seq = [at[s[0]] for s in run[2] if s[0] in at]
+                    for a, b in zip(seq, seq[1:]):
+                        if a != b and meters(a, b) <= ROUTE_MAX_KM * 1000 and (near(a) or near(b)):
+                            pairs.add((a, b) if a < b else (b, a))
+            out[agency] = pairs
+    return out
+
+
+def route_tiles(pairs):
+    """The tiles a straight line between each pair of stops passes through,
+    with the next tile over where it runs within a quarter tile of the edge."""
+    tiles = set()
+    for a, b in pairs:
+        n = max(1, int(meters(a, b) / 10000))
+        for i in range(n + 1):
+            x, y = a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n
+            tx, ty = math.floor(x / ROUTE_TILE), math.floor(y / ROUTE_TILE)
+            fx, fy = x / ROUTE_TILE - tx, y / ROUTE_TILE - ty
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    if (dx == -1 and fx > 0.25) or (dx == 1 and fx < 0.75) or (dy == -1 and fy > 0.25) or (dy == 1 and fy < 0.75):
+                        continue
+                    tiles.add((tx + dx, ty + dy))
+    return sorted(tiles)
+
+
+# OSM_ROUTE_FETCH=0: use only the tiles already fetched (scripts/.osm-cache),
+# routing the other hops over the railroads' own track alone.
+# --offline does the same for the plug-ins' own track (data/rail/src) and
+# builds the regions only, without North America.
+OFFLINE = "--offline" in sys.argv
+# (OSM_ROUTE_FETCH=1 with --offline fetches the route tiles still missing.)
+ROUTE_FETCH = os.environ.get("OSM_ROUTE_FETCH", "0" if OFFLINE else "1") != "0"
+
+
+def candidate_track(tiles):
+    """OpenStreetMap's mainline track in those tiles, as lists of (lon, lat), or None
+    if a tile can't be fetched."""
+    ways = {}
+    skipped = 0
+    for tx, ty in tiles:
+        w, s = tx * ROUTE_TILE, ty * ROUTE_TILE
+        box = f"{s},{w},{s + ROUTE_TILE},{w + ROUTE_TILE}"
+        q = f"[out:json][timeout:600][maxsize:1073741824];\n({ROUTE_WAYS.replace('{bbox}', box)});\nout geom;"
+        if not ROUTE_FETCH and not (OSM_CACHE / f"route-tile-{tx}-{ty}.json").exists():
+            skipped += 1
+            continue
+        elements = overpass(q, f"route-tile-{tx}-{ty}", box=box)
+        if elements is None:
+            print(f"  tile {tx},{ty}: OpenStreetMap unavailable")
+            return None
+        for e in elements:
+            if e.get("type") == "way" and e.get("geometry"):
+                # Four decimals, as the plug-ins' own track is kept, so the two join up.
+                ways[e["id"]] = [(round(g["lon"], 4), round(g["lat"], 4)) for g in e["geometry"]]
+    if skipped:
+        print(f"  {skipped} of {len(tiles)} tiles not fetched yet (OSM_ROUTE_FETCH=0)")
+    return list(ways.values())
+
+
+class RailGraph:
+    """Track as a graph of OSM nodes, for routing between stops."""
+    CELL = 0.01
+
+    def __init__(self, ways):
+        self.adj = defaultdict(list)
+        for w in ways:
+            for a, b in zip(w, w[1:]):
+                if a != b:
+                    d = meters(a, b)
+                    self.adj[a].append((b, d))
+                    self.adj[b].append((a, d))
+        self.grid = defaultdict(list)
+        for n in self.adj:
+            self.grid[(int(n[0] // self.CELL), int(n[1] // self.CELL))].append(n)
+
+    def snap(self, p):
+        best, bd = None, ROUTE_SNAP_M
+        gx, gy = int(p[0] // self.CELL), int(p[1] // self.CELL)
+        r = int(ROUTE_SNAP_M / 700) + 1
+        for dx in range(-r, r + 1):
+            for dy in range(-r, r + 1):
+                for n in self.grid.get((gx + dx, gy + dy), ()):
+                    d = meters(p, n)
+                    if d < bd:
+                        best, bd = n, d
+        return best
+
+    def route(self, a, b):
+        """The nodes from the track nearest a to the track nearest b (A*), or None."""
+        import heapq
+        s, t = self.snap(a), self.snap(b)
+        if not s or not t:
+            return None
+        limit = ROUTE_DETOUR * meters(a, b) + 5000
+        best = {s: 0.0}
+        prev = {}
+        heap = [(meters(s, t), 0.0, s)]
+        while heap:
+            _f, g, n = heapq.heappop(heap)
+            if n == t:
+                path = [n]
+                while n in prev:
+                    n = prev[n]
+                    path.append(n)
+                return path[::-1]
+            if g > best.get(n, math.inf):
+                continue
+            for m, d in self.adj[n]:
+                ng = g + d
+                if ng < best.get(m, math.inf) and ng + meters(m, t) <= limit:
+                    best[m] = ng
+                    prev[m] = n
+                    heapq.heappush(heap, (ng + meters(m, t), ng, m))
+        return None
+
+
+def route_timetables(segments, mods):
+    """Adds the stretches of the railroads' routes between stops not drawn yet,
+    and tags each piece of track with the railroads whose routes run along it."""
+    pairs = timetable_pairs(mods)
+    every = set().union(*pairs.values()) if pairs else set()
+    if not every:
+        return
+    # Over the railroads' own track first; OpenStreetMap's other track is
+    # fetched only along the hops that can't be routed on it.
+    own = [tuple(map(tuple, c)) for _n, c in segments]
+    graph = RailGraph(own)
+    routed, paths = {pair: graph.route(*pair) for pair in sorted(every)}, defaultdict(list)
+    missing = [p for p in sorted(every) if not routed[p]]
+    tiles = route_tiles(missing)
+    print(f"  {len(every) - len(missing)} of {len(every)} hops routed on the railroads' own track; "
+          f"the other {len(missing)} over {len(tiles)} tiles of OpenStreetMap track")
+    ways = candidate_track(tiles) if missing else []
+    if ways is None:
+        print("  those skipped, OpenStreetMap unavailable (the railroads' own track stays)")
+        ways = []
+    if ways:
+        graph = RailGraph(own + ways)
+        for pair in missing:
+            routed[pair] = graph.route(*pair)
+    for agency, ps in pairs.items():
+        got = [routed[p] for p in ps if routed[p] and len(routed[p]) > 1]
+        paths[agency] = got
+        print(f"  {agency}: {len(got)} of {len(ps)} hops routed")
+    kind = {a: m.AGENCIES[a].get("kind") for m in mods for a in m.AGENCIES}
+    rank = lambda n: (0 if kind.get(n) == "intercity" else 1, n)
+    # Stretches nobody has drawn: each railroad's, as it first needs them.
+    for agency in sorted(paths, key=rank):
+        elements = [{"geometry": [{"lon": x, "lat": y} for x, y in p]} for p in paths[agency]]
+        before = len(segments)
+        added = add_uncovered(segments, agency, elements)
+        for k in range(before, len(segments)):
+            nets, line = segments[k]
+            pts = []
+            for x, y in line:
+                q = [round(x, 4), round(y, 4)]
+                if not pts or q != pts[-1]:
+                    pts.append(q)
+            segments[k] = (nets, simplify(pts) if len(pts) >= 2 else pts)
+        print(f"  {agency}: +{added / 1000:.0f} km along its routes")
+    segments[:] = [(n, c) for n, c in segments if len(c) >= 2]
+    # Every piece of track: the railroads whose routes run along it.
+    guides = {a: Coverage([((a,), densify(p, 50)) for p in ps]) for a, ps in paths.items() if ps}
+    retagged = 0
+    for k, (nets, line) in enumerate(segments):
+        pts = densify(line, 100)
+        users = [a for a, g in guides.items() if sum(1 for q in pts if g.nearest(q, ROUTE_ALONG_M)) >= 0.7 * len(pts)]
+        if users:
+            new = tuple(sorted(users, key=rank)[:3])
+            if new != nets:
+                retagged += 1
+            segments[k] = (new, line)
+    shared = sum(1 for n, _ in segments if len(n) > 1)
+    print(f"  {retagged} pieces retagged, {shared} shared by more than one railroad")
+
+
 def build_regions(only=None):
     """Each region's track from its railroads' plug-ins; with only, just that
     railroad's region, the others in it taken from their files."""
@@ -1205,15 +1431,16 @@ def build_regions(only=None):
     for region in regions:
         print(f"track in region {region}")
         segments = []
-        for m in mods:
-            if m.RAIL["region"] == region:
-                segments += plugin_track(m, fetch=not only or plugin_id(m) == only)
+        here = [m for m in mods if m.RAIL["region"] == region]
+        for m in here:
+            segments += plugin_track(m, fetch=not OFFLINE and (not only or plugin_id(m) == only))
         if segments:
+            route_timetables(segments, here)
             write_region(region, finish(segments))
 
 
 only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
-if not only:
+if not only and not OFFLINE:
     segments = north_america()
     print("railroads' route shapes")
     apply_shapes(segments)
