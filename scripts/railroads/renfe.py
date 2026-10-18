@@ -13,11 +13,11 @@ AGENCIES = {
     "renfe": {"name": "Renfe AVE, Larga y Media Distancia", "short": "Renfe", "region": "Spain", "country": "ES",
               "color": "#8a1a5e", "kind": "intercity", "tz": "Europe/Madrid",
               "credit": {"label": "Renfe", "href": "https://data.renfe.com"}, "license": "CC BY 4.0",
-              "bbox": [-8.75, 36.1, 4.85, 45.77]},
+              "bbox": [-8.75, 36.1, 4.85, 45.77], "cars": True},
     "cercanias": {"name": "Renfe Cercanías and Rodalies", "short": "Cercanías", "region": "Spain", "country": "ES",
                   "color": "#d6001c", "kind": "commuter", "tz": "Europe/Madrid",
                   "credit": {"label": "Renfe", "href": "https://data.renfe.com"}, "license": "CC BY 4.0",
-                  "bbox": [-8.45, 36.45, 2.95, 43.6], "after": "renfe"},
+                  "bbox": [-8.45, 36.45, 2.95, 43.6], "after": "renfe", "cars": True},
 }
 # Renfe's feeds refresh every 20-30 s (served with max-age=30): polled at
 # that pace, and the relay keeps each answer as long, so its upstream load is

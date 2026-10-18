@@ -12,7 +12,7 @@ AGENCIES = {
     "israelrail": {"name": "Israel Railways", "short": "Israel Rail", "region": "Israel", "country": "IL", "color": "#1d4f91",
                    "kind": "intercity", "tz": "Asia/Jerusalem",
                    "credit": {"label": "Ministry of Transport, Hasadna Open Bus", "href": "https://open-bus-stride-api.hasadna.org.il/docs"},
-                   "license": None, "bbox": [34.57, 31.06, 35.49, 33.01]},
+                   "license": None, "bbox": [34.57, 31.06, 35.49, 33.01], "cars": True},
 }
 # Stride loads one snapshot of the SIRI feed a minute, so polling more often
 # finds nothing new, and every viewer shares the relay's minute-old copy:
