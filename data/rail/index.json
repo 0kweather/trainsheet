@@ -1,0 +1,15 @@
+[
+{"region": "ar", "bbox": [-59.49, -35.66, -57.91, -34.04], "file": "data/rail/ar.geojson", "bytes": 71704},
+{"region": "au", "bbox": [138.48, -35.19, 153.4, -26.14], "file": "data/rail/au.geojson", "bytes": 78755},
+{"region": "cz", "bbox": [12.15, 48.58, 18.77, 51.05], "file": "data/rail/cz.geojson", "bytes": 628167},
+{"region": "ee", "bbox": [24.06, 57.77, 28.2, 59.45], "file": "data/rail/ee.geojson", "bytes": 19736},
+{"region": "es", "bbox": [-8.88, 36.45, 3.44, 43.59], "file": "data/rail/es.geojson", "bytes": 510846},
+{"region": "fi", "bbox": [21.35, 59.82, 30.96, 67.36], "file": "data/rail/fi.geojson", "bytes": 186190},
+{"region": "gr", "bbox": [21.41, 37.9, 26.63, 41.73], "file": "data/rail/gr.geojson", "bytes": 69376},
+{"region": "ie", "bbox": [-9.7, 51.84, -5.93, 54.6], "file": "data/rail/ie.geojson", "bytes": 93264},
+{"region": "il", "bbox": [34.55, 31.06, 35.5, 33.01], "file": "data/rail/il.geojson", "bytes": 50558},
+{"region": "lv", "bbox": [21.01, 55.75, 28.18, 57.78], "file": "data/rail/lv.geojson", "bytes": 55645},
+{"region": "my", "bbox": [100.25, 1.36, 103.93, 7.06], "file": "data/rail/my.geojson", "bytes": 109932},
+{"region": "no", "bbox": [5.33, 57.7, 15.49, 67.34], "file": "data/rail/no.geojson", "bytes": 291698},
+{"region": "sk", "bbox": [16.74, 47.53, 22.68, 49.67], "file": "data/rail/sk.geojson", "bytes": 352875}
+]
