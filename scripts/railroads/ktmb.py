@@ -12,11 +12,11 @@ AGENCIES = {
     "ktmb": {"name": "KTMB", "short": "KTMB", "region": "Malaysia", "country": "MY", "color": "#ffc72c",
              "kind": "intercity", "tz": "Asia/Kuala_Lumpur",
              "credit": {"label": "data.gov.my", "href": "https://developer.data.gov.my/realtime-api/gtfs-realtime"},
-             "license": "CC BY 4.0", "bbox": [100.1, 1.25, 104.0, 7.05]},
+             "license": "CC BY 4.0", "bbox": [100.1, 1.25, 104.0, 7.05], "cars": True},
     "ktmkomuter": {"name": "KTM Komuter", "short": "Komuter", "region": "Malaysia", "country": "MY", "color": "#3c5a9f",
                    "kind": "commuter", "tz": "Asia/Kuala_Lumpur",
                    "credit": {"label": "data.gov.my", "href": "https://developer.data.gov.my/realtime-api/gtfs-realtime"},
-                   "license": "CC BY 4.0", "bbox": [100.2, 1.45, 103.8, 6.7], "after": "ktmb"},
+                   "license": "CC BY 4.0", "bbox": [100.2, 1.45, 103.8, 6.7], "after": "ktmb", "cars": True},
 }
 # The API allows 4 requests a minute from each address (more get a 429) and
 # refreshes the feed every 30 seconds, but each train's position in it moves

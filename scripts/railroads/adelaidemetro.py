@@ -10,7 +10,7 @@ AGENCIES = {
                       "color": "#c23b33", "kind": "commuter", "tz": "Australia/Adelaide",
                       "credit": {"label": "Adelaide Metro – Department for Infrastructure and Transport, South Australia",
                                  "href": "https://www.adelaidemetro.com.au/developer-info"},
-                      "license": "CC BY 3.0 AU", "bbox": [138.48, -35.20, 138.75, -34.59]},
+                      "license": "CC BY 3.0 AU", "bbox": [138.48, -35.20, 138.75, -34.59], "cars": True},
 }
 
 # Every train route in routes.txt (agency 2, route_type 2): Salisbury and
