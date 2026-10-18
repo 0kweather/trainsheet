@@ -14,14 +14,14 @@ import re, unicodedata
 ENTUR = {"label": "Entur", "href": "https://developer.entur.org"}
 AGENCIES = {
     "vy": {"name": "Vy", "short": "Vy", "region": "Norway", "country": "NO", "color": "#00866e", "kind": "commuter",
-           "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "bbox": [5.2, 57.6, 13.6, 61.2]},
+           "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "cars": True, "bbox": [5.2, 57.6, 13.6, 61.2]},
     "goaheadnorge": {"name": "Go-Ahead Norge", "short": "Go-Ahead", "region": "Norway", "country": "NO", "color": "#d6001c",
-                     "kind": "commuter", "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "bbox": [5.6, 58.1, 10.8, 59.95],
+                     "kind": "commuter", "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "cars": True, "bbox": [5.6, 58.1, 10.8, 59.95],
                      "after": "vy"},
     "flytoget": {"name": "Flytoget", "short": "Flytoget", "region": "Oslo", "country": "NO", "color": "#6d6e71", "kind": "commuter",
-                 "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "bbox": [10.15, 59.7, 11.15, 60.25], "after": "goaheadnorge"},
+                 "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "cars": True, "bbox": [10.15, 59.7, 11.15, 60.25], "after": "goaheadnorge"},
     "sjnord": {"name": "SJ Nord", "short": "SJ Nord", "region": "Norway", "country": "NO", "color": "#2b2d42", "kind": "commuter",
-               "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "bbox": [7.6, 59.9, 14.5, 67.3], "after": "flytoget"},
+               "tz": "Europe/Oslo", "credit": ENTUR, "license": "NLOD", "cars": True, "bbox": [7.6, 59.9, 14.5, 67.3], "after": "flytoget"},
 }
 # Entur refreshes the feeds every 15 seconds; a poll every 30 and the relay
 # keeping each answer as long serves any number of viewers with four upstream

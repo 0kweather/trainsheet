@@ -15,10 +15,10 @@ import base64, gzip, re, urllib.request
 CREDIT = {"label": "Fintraffic / digitraffic.fi", "href": "https://www.digitraffic.fi/en/railway-traffic/"}
 AGENCIES = {
     "vr": {"name": "VR", "short": "VR", "region": "Finland", "country": "FI", "color": "#3fa535", "kind": "intercity",
-           "tz": "Europe/Helsinki", "credit": CREDIT, "license": "CC BY 4.0", "bbox": [21.3, 59.8, 30.2, 68.0]},
+           "tz": "Europe/Helsinki", "credit": CREDIT, "license": "CC BY 4.0", "bbox": [21.3, 59.8, 30.2, 68.0], "cars": True},
     "hsl": {"name": "Commuter trains (HSL and VR)", "short": "Commuter", "region": "Southern Finland", "country": "FI",
             "color": "#8c4799", "kind": "commuter", "tz": "Europe/Helsinki", "credit": CREDIT, "license": "CC BY 4.0",
-            "bbox": [22.9, 59.8, 27.0, 61.6], "after": "vr"},
+            "bbox": [22.9, 59.8, 27.0, 61.6], "after": "vr", "cars": True},
 }
 SOURCES = [{"id": "digitraffic", "agencies": ["vr", "hsl"], "format": "json", "interval": 20, "relay": True,
             "needsKey": False, "scope": "view"}]
