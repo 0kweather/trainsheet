@@ -9,7 +9,7 @@ AGENCIES = {
     "irishrail": {"name": "Irish Rail", "short": "Irish Rail", "region": "Ireland", "country": "IE", "color": "#00845a",
                   "kind": "intercity", "tz": "Europe/Dublin",
                   "credit": {"label": "Iarnród Éireann, NTA", "href": "https://api.irishrail.ie/realtime/"},
-                  "license": "CC BY 4.0 (timetable)", "bbox": [-10.0, 51.8, -5.9, 54.7]},
+                  "license": "CC BY 4.0 (timetable)", "bbox": [-10.0, 51.8, -5.9, 54.7], "cars": True},
 }
 # The API's positions are its signalling's (a train jumps from one signal or
 # station to the next) and move about once a minute, so a poll every 30 s, and

@@ -99,6 +99,8 @@ export const parse = {
         delayMin: onTime ? 0 : null,
         statusText: here ? `At ${name(nextId)}` : onTime ? delayText(0) : onTime === false ? "Running late" : null,
         stops, updated,
+        // The unit's series ("112", "113", "213"...), which fgc.cars.js draws.
+        series: g.tipus_unitat || null,
       }));
     }
     return out;

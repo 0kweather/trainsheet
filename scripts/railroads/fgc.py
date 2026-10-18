@@ -11,7 +11,7 @@ AGENCIES = {
     "fgc": {"name": "Ferrocarrils de la Generalitat de Catalunya", "short": "FGC", "region": "Catalonia", "country": "ES",
             "color": "#f26722", "kind": "commuter", "tz": "Europe/Madrid",
             "credit": {"label": "FGC Open Data", "href": "https://dadesobertes.fgc.cat"},
-            "license": "CC BY 4.0", "bbox": [0.6, 41.3, 2.2, 42.26]},
+            "license": "CC BY 4.0", "bbox": [0.6, 41.3, 2.2, 42.26], "cars": True},
 }
 # Geotren's dataset is processed every two minutes or so: a poll a minute, and
 # a minute's caching at the relay, which then asks the portal twice a minute
