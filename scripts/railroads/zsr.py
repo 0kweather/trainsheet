@@ -13,15 +13,15 @@ AGENCIES = {
     "zssk": {"name": "Železničná spoločnosť Slovensko", "short": "ZSSK", "region": "Slovakia", "country": "SK", "color": "#ff671f",
              "kind": "intercity", "tz": "Europe/Bratislava",
              "credit": {"label": "ŽSR (timetable), jbb.ghsq.de (live)", "href": "https://data.slovensko.sk/datasety/ebeeedf1-aca2-451a-bdc0-35d536714888"},
-             "license": "CC BY 1.0 (timetable)", "bbox": [16.83, 47.73, 22.57, 49.62]},
+             "license": "CC BY 1.0 (timetable)", "bbox": [16.83, 47.73, 22.57, 49.62], "cars": True},
     "regiojetsk": {"name": "RegioJet (Slovakia)", "short": "RegioJet", "region": "Slovakia", "country": "SK", "color": "#fbc400",
                    "kind": "intercity", "tz": "Europe/Bratislava",
                    "credit": {"label": "ŽSR (timetable), jbb.ghsq.de (live)", "href": "https://data.slovensko.sk/datasety/ebeeedf1-aca2-451a-bdc0-35d536714888"},
-                   "license": "CC BY 1.0 (timetable)", "bbox": [17.10, 48.14, 21.27, 49.45], "after": "zssk"},
+                   "license": "CC BY 1.0 (timetable)", "bbox": [17.10, 48.14, 21.27, 49.45], "after": "zssk", "cars": True},
     "leoexpresssk": {"name": "Leo Express (Slovakia)", "short": "Leo Express", "region": "Slovakia", "country": "SK", "color": "#c8a04a",
                      "kind": "intercity", "tz": "Europe/Bratislava",
                      "credit": {"label": "ŽSR (timetable), jbb.ghsq.de (live)", "href": "https://data.slovensko.sk/datasety/ebeeedf1-aca2-451a-bdc0-35d536714888"},
-                     "license": "CC BY 1.0 (timetable)", "bbox": [17.10, 47.75, 21.25, 49.45], "after": "regiojetsk"},
+                     "license": "CC BY 1.0 (timetable)", "bbox": [17.10, 47.75, 21.25, 49.45], "after": "regiojetsk", "cars": True},
 }
 # The feed is rebuilt once a minute, and a train's position changes only when
 # the next station reports it, so a poll a minute; the relay's 60 s cache

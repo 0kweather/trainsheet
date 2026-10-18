@@ -13,7 +13,7 @@ AGENCIES = {
     "hellenictrain": {"name": "Hellenic Train", "short": "Hellenic Train", "region": "Greece", "country": "GR",
                       "color": "#0a6ab4", "kind": "intercity", "tz": "Europe/Athens",
                       "credit": {"label": "railway.gov.gr", "href": "https://railway.gov.gr"},
-                      "license": None, "bbox": [20.7, 36.9, 26.6, 41.8]},
+                      "license": None, "bbox": [20.7, 36.9, 26.6, 41.8], "cars": True},
 }
 # Every 30 s, as the relay keeps it: one short connection to the stream per
 # 30 s however many are watching, and the site's own map shows each fix
