@@ -10,6 +10,18 @@ const TZ = "America/Argentina/Buenos_Aires";
 // or "Confirmado" carries its unit's position while that unit finishes the
 // run before, or waits in the yard.
 const RUNNING = new Set(["Partió", "En Andén"]);
+// The unit ("M15", "RC12", "F134", "B950", "1001", "UTA3"), as the train's
+// one known car, with its class where the line and name say it
+// (js/railroads/trenesba.cars.js): the Mitre's, Sarmiento's and Roca's CSR
+// sets, the San Martín's SDD7 locomotives, the Belgrano Sur's DMUs (1001 on,
+// matched by number), the Tren de la Costa's CAF units.
+const CLASS = { Mitre: [/^M\d+$/, "csrCar"], Sarmiento: [/^RC\d+$/, "csrCar"], Roca: [/^F1\d\d$/, "csrCar"],
+  "San Martín": [/^B\d+$/, "sdd7"], "Tren de la Costa": [/^UTA\d+$/, "cafCar"] };
+function carsOf(line, unit) {
+  if (!unit) return null;
+  const [re, type] = CLASS[line] || [];
+  return { numbers: [unit], types: [re?.test(unit) ? type : null], complete: false };
+}
 
 export const parse = {
   trenesba: (json) => {
@@ -46,7 +58,7 @@ export const parse = {
         delayMin,
         statusText: atPlatform ? `At ${stops[next].name}` : delayMin != null ? delayText(delayMin) : null,
         updated: Math.min((json.at || 0) * 1000 || now, now),
-        stops,
+        stops, cars: carsOf(g.line, g.unit),
       }));
     }
     return out;

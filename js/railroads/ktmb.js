@@ -13,6 +13,18 @@ const isoOf = (sec) => (sec ? new Date(sec * 1000).toISOString() : null);
 const KEEP_MS = 5 * 60 * 1000;
 const lastSeen = new Map(); // train id -> [its last report, when the feed last had it (ms)]
 
+// The vehicle label names the train's set ("ETS202", "SCS21", "EMU23",
+// "DMU06"): its class, which picks the drawing (js/railroads/ktmb.cars.js).
+// EMU 19-40 are the Class 83s; the few Class 81s left aren't drawn.
+function carsOf(set) {
+  const m = /^(ETS|SCS|EMU|DMU)\s*0*(\d+)$/.exec(set || "");
+  if (!m) return null;
+  const n = Number(m[2]);
+  const type = m[1] === "ETS" ? ({ 1: "ets91Car", 2: "ets93Car", 3: "ets94Car" })[Math.floor(n / 100)]
+    : m[1] === "SCS" ? "scs92Car" : m[1] === "DMU" ? "dmu61Car" : n >= 19 ? "emu83Car" : null;
+  return { numbers: [set], types: [type || null], complete: false };
+}
+
 // Metres between two [lat, lon], flat (the stops are kilometres apart).
 function dist(a, b) {
   const k = Math.cos((a[0] * Math.PI) / 180);
@@ -48,13 +60,16 @@ export const parse = {
     const now = Date.now() / 1000;
     // The trip id is the train's number; Komuter's carry their service ("weekday_2203").
     const numberOf = (v) => (v.trip?.tripId || v.vehicle?.id || "").split("_").pop() || null;
-    for (const g of gtfsVehicles("ktmb", buf, { number: numberOf, idOf: numberOf, route: () => null })) {
+    const sets = new Map(); // number -> vehicle label
+    const keep = (v) => (sets.set(numberOf(v), v.vehicle?.label), true);
+    for (const g of gtfsVehicles("ktmb", buf, { keep, number: numberOf, idOf: numberOf, route: () => null })) {
       // Its speeds are in km/h, not the m/s GTFS-realtime asks for. Some sets
       // (ETS302-307 when recorded) report exactly 90 every time, standing at
       // a platform too: a placeholder, not a speed.
       const kmh = g.speedMph != null ? g.speedMph / 2.23694 : null;
       const old = lastSeen.get(g.id)?.[0];
-      lastSeen.set(g.id, [!old || g.updated >= old.updated ? { ...g, speedMph: kmh != null && Math.round(kmh) !== 90 ? kmh / 1.609344 : null } : old, now * 1000]);
+      lastSeen.set(g.id, [!old || g.updated >= old.updated
+        ? { ...g, speedMph: kmh != null && Math.round(kmh) !== 90 ? kmh / 1.609344 : null, cars: carsOf(sets.get(g.number)) || old?.cars || null } : old, now * 1000]);
     }
     for (const [id, [, at]] of lastSeen) if (at < now * 1000 - KEEP_MS) lastSeen.delete(id);
     return [...lastSeen.values()].map(([g]) => {

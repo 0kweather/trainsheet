@@ -11,7 +11,7 @@ AGENCIES = {
     "translinkseq": {"name": "Queensland Rail City network", "short": "Queensland Rail", "region": "Brisbane", "country": "AU",
                      "color": "#d53e45", "kind": "commuter", "tz": "Australia/Brisbane",
                      "credit": {"label": "Translink", "href": "https://translink.com.au/about-translink/open-data"},
-                     "license": "CC BY 4.0", "bbox": [152.55, -28.15, 153.45, -26.15]},
+                     "license": "CC BY 4.0", "bbox": [152.55, -28.15, 153.45, -26.15], "cars": True},
 }
 # Translink refreshes the feeds about every 30 s (its servers cache them for
 # 10 s). The Worker's 15 s edge cache keeps it to two upstream requests per
