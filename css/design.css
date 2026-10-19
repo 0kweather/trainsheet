@@ -1211,3 +1211,40 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .results .result-row .result .sub { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .result-row .result .title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .result-row .result br { display: none; }
+
+/* ---------- The rider's monogram ----------
+ * Initials on a gray circle, as Apple's apps show an account (a person's
+ * outline when signed out), in place of the Settings gear (app.js). */
+.avatar {
+  display: inline-grid; place-items: center; flex: none; overflow: hidden;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(180deg, #a6abb6, #858a94); color: #fff;
+  font-family: var(--font-rounded); font-size: 13px; font-weight: 600; letter-spacing: 0.01em; line-height: 1;
+}
+:root[data-theme="dark"] .avatar { background: linear-gradient(180deg, #8e8e93, #636366); }
+.avatar svg { width: 72%; height: 72%; margin-top: 28%; }
+.avatar.lg { width: 50px; height: 50px; font-size: 20px; }
+.icon-btn.avatar-btn, .tab.avatar-btn { background: none; padding: 0; }
+.icon-btn.avatar-btn .avatar { width: 34px; height: 34px; font-size: 14px; }
+.icon-btn.avatar-btn:hover { background: none; }
+.avatar-btn:hover .avatar, .avatar-btn[aria-expanded="true"] .avatar { filter: brightness(1.08); }
+.avatar-btn:focus-visible { outline: none; }
+.avatar-btn:focus-visible .avatar { box-shadow: 0 0 0 2px var(--panel-solid), 0 0 0 4px var(--accent); }
+@media (min-width: 721px) {
+  body.has-tabs .tab-settings.avatar-btn { width: auto; padding: 8px 0 4px; background: none; }
+  body.has-tabs .tab-settings.avatar-btn .avatar { width: 34px; height: 34px; font-size: 14px; }
+}
+
+/* Settings opens on the account: its monogram, name and email. */
+.menu-profile {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 4px; padding: 10px 14px 10px 12px;
+  border: 0; border-radius: var(--r-card); background: var(--group); color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.menu-profile[hidden] { display: none; }
+.menu-profile:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
+.menu-profile:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mp-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.mp-text strong { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-text span { font-size: var(--fs-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-text span:empty { display: none; }
+.mp-go { color: var(--faint); font-size: 20px; line-height: 1; }

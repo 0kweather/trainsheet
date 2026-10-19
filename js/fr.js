@@ -528,4 +528,6 @@ export default {
   "{n} trips": "{n} voyages",
   "{n} trips planned": "{n} voyages prévus",
   "{n} visits": "{n} passages",
+  "Account and settings": "Compte et réglages",
+  "Account and password": "Compte et mot de passe",
 };

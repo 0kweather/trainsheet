@@ -1816,7 +1816,6 @@ function fmtSpan(ms) {
 
 const PLUS_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const TICK_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const GEAR_ICON = $("settings-btn")?.innerHTML || "";
 const TICKET_ICON = $("tabbar")?.querySelector('[data-tab="trips"] svg')?.outerHTML || "";
 const CAL_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4M12 12.5v5M9.5 15h5"/></g></svg>';
 const CHART_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 19.5V13M10 19.5V6.5M15 19.5V10M20 19.5V4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
@@ -1852,7 +1851,7 @@ on("tabbar", "click", (e) => {
 });
 
 // A page's large title, with its buttons (and, on a phone, Settings).
-const pageHead = (title, actions = "") => `<div class="page-head"><h1>${esc(title)}</h1><span class="page-actions">${actions}<button type="button" class="icon-btn page-gear" data-settings aria-label="${esc(T("Settings"))}" title="${esc(T("Settings"))}">${GEAR_ICON}</button></span></div>`;
+const pageHead = (title, actions = "") => `<div class="page-head"><h1>${esc(title)}</h1><span class="page-actions">${actions}<button type="button" class="icon-btn page-gear avatar-btn" data-settings aria-label="${esc(T("Account and settings"))}" title="${esc(T("Account and settings"))}">${avatarHtml()}</button></span></div>`;
 
 // My trips and History, signed out: what an account gives, and the ways in.
 function signedOutHtml(tab) {
@@ -5911,7 +5910,7 @@ function loadAccount() {
     liveTrain: (agency, number) => (number ? [...state.trains.values()].find((t) => t.agency === agency && String(t.number) === String(number)) : null) || null,
     openTrain: (id) => select(id),
     accountChanged(user) {
-      renderAccountButton(user);
+      renderAccountButton(user, true);
       renderAgencies();
       renderResults();
     },
@@ -5928,11 +5927,39 @@ function loadAccount() {
   });
   return accountLoading;
 }
-function renderAccountButton(user = account?.user) {
+// The rider's monogram, as Apple's apps show an account: their initials on
+// a gray circle (a person's outline when signed out), in place of a gear on
+// the rail, beside the search field and by each page's title; it opens
+// Settings, which starts with the account. Kept on the device ("tt-initials")
+// so it shows from the first paint, before the account is loaded.
+const PERSON_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="4.2" fill="currentColor"/><path d="M3.5 22.5c.8-4.6 4.3-7.4 8.5-7.4s7.7 2.8 8.5 7.4Z" fill="currentColor"/></svg>';
+function initialsOf(user) {
+  const meta = user?.user_metadata || {};
+  const first = (w) => [...w][0] || "";
+  const words = String(meta.full_name || meta.name || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length) return (first(words[0]) + (words.length > 1 ? first(words[words.length - 1]) : "")).toUpperCase();
+  const local = String(user?.email || "").split("@")[0], parts = local.split(/[._+-]+/).filter(Boolean);
+  return (parts.length > 1 ? first(parts[0]) + first(parts[parts.length - 1]) : first(local)).toUpperCase();
+}
+const avatarFace = () => (signedInHere() && esc(store.get("tt-initials", ""))) || PERSON_ICON;
+const avatarHtml = (cls = "") => `<span class="avatar${cls ? ` ${cls}` : ""}" data-avatar aria-hidden="true">${avatarFace()}</span>`;
+function renderAccountButton(user = account?.user, known = Boolean(account)) {
   const el = $("account-btn");
   if (!el) return;
-  el.hidden = !(ACCOUNTS.url && ACCOUNTS.key);
-  el.querySelector("[data-account-label]").textContent = user ? T("Account") : T("Sign in");
+  el.hidden = !accountsOn();
+  if (known) store.set("tt-initials", user ? initialsOf(user) : "");
+  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || "";
+  el.querySelector("[data-account-label]").textContent = user ? name || user.email || T("Account") : signedInHere() ? T("Account") : T("Sign in");
+  el.querySelector("[data-account-sub]").textContent = user ? (name && user.email ? user.email : T("Account and password")) : signedInHere() ? "" : T("Your trips, on every device");
+  if (!accountsOn()) return; // without accounts, Settings keeps its gear
+  for (const a of document.querySelectorAll("[data-avatar]")) a.innerHTML = avatarFace();
+  for (const b of [$("settings-btn"), $("rail-settings")]) {
+    if (!b) continue;
+    if (!b.querySelector("[data-avatar]")) b.innerHTML = avatarHtml();
+    b.classList.add("avatar-btn");
+    b.title = T("Account and settings");
+    b.setAttribute("aria-label", T("Account and settings"));
+  }
 }
 on("account-btn", "click", async () => {
   toggleMenu(false);
