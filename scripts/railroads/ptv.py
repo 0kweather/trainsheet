@@ -26,12 +26,14 @@ AGENCIES = {
               "bbox": [142.4, -38.4, 147.65, -35.3], "cars": True, "after": "metrotrains"},
 }
 # Each feed allows 20 to 27 requests a minute per key (by its size) and is
-# rebuilt every 30 s. A poll every 30 s, with the relay keeping each answer
-# 20 s, asks each of the four (Metro's and V/Line's positions and trip
-# updates) at most three times a minute from each Cloudflare location
-# serving viewers, whatever their number: a handful of locations (Melbourne,
-# Sydney and a few abroad) stays within the limit. Only the trip updates of
-# the trains reporting a position go on (Metro's whole file is about 80 KB).
+# cached upstream for 30 s. A poll every 30 s, with the relay keeping each
+# answer 20 s, asks each of the four (Metro's and V/Line's positions and
+# trip updates) at most three times a minute from each Worker instance
+# (about one per busy Cloudflare location), whatever the number of viewers:
+# up to six locations at once (Melbourne, Sydney and a few abroad) stay
+# within the limit, and an answer is never more than 50 s old. Only the
+# trip updates of the trains reporting a position go on (Metro's whole file
+# is about 80 KB): "^" keeps every vehicle, an empty id too.
 SOURCES = [{"id": "metrotrains", "agencies": ["metrotrains"], "format": "pb", "interval": 30, "relay": True,
             "needsKey": "VIC_OPENDATA_KEY", "untilKey": "timetable", "scope": "view"},
            {"id": "vline", "agencies": ["vline"], "format": "pb", "interval": 30, "relay": True,
