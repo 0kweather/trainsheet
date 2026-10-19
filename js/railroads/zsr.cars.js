@@ -71,7 +71,7 @@ export const FACTS = {
   "czVectron@regiojetsk": { model: "Locomotive", type: "Electric locomotive", builder: "Siemens and others", fleet: "Leased, in RegioJet yellow", source: `${WP}RegioJet`,
     about: "RegioJet's trains between Prague and Košice are hauled by leased multi-system locomotives in its yellow, drawn here as a Vectron." },
   "czCoach@zssk": { model: "Long-distance coach", type: "Passenger coach", builder: "Various", lengthFt: 86.6, source: sk("Železničná_spoločnosť_Slovensko"),
-    about: "ZSSK's express coaches are mostly air-conditioned, with power outlets and vacuum toilets, and increasingly Wi-Fi. They are drawn here in a simplified white and blue." },
+    about: "ZSSK's express coaches are mostly air-conditioned, with power outlets and vacuum toilets, and increasingly Wi-Fi. They are drawn here in its white with a red window band." },
   "czCoach@regiojetsk": { model: "RegioJet coach", type: "Passenger coach", builder: "Various", lengthFt: 86.6, source: `${WP}RegioJet`,
     about: "RegioJet's yellow coaches, with Low Cost, Standard, Relax and Business classes and drinks and snacks served at the seat." },
   "czLint@leoexpresssk": { model: "Alstom Coradia LINT 41 (class 648)", type: "Diesel multiple unit", builder: "Alstom", fleet: "21 leased from Alpha Trains",
