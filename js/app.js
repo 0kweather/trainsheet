@@ -1823,11 +1823,34 @@ const PROVIDER_NAMES = { google: "Google", facebook: "Facebook", apple: "Apple",
 const localDay = (ms = Date.now(), tz) => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: tz || undefined }).format(ms); } catch { return new Intl.DateTimeFormat("en-CA").format(ms); } };
 const addDaysIso = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
+// The panel put away: the page you're on chosen again, or a tap on the map
+// itself, leaves just the map and the rail (on a computer; on a phone the
+// sheet folds down). Any page, train or station opened brings it back.
+let panelAway = false;
+const isAway = () => (isPhone ? sheetMode() === "collapsed" : panelAway);
+function putPanelAway(away = true) {
+  if (!document.body.classList.contains("has-tabs")) return; // no rail to bring it back
+  if (isPhone) {
+    if (away) setSheet("collapsed");
+    else if (sheetMode() === "collapsed") setSheet("");
+    return;
+  }
+  if (panelAway === away) return;
+  panelAway = away;
+  document.body.classList.toggle("panel-away", away);
+  $("panel").inert = away;
+  if (away) toggleMenu(false);
+}
+
 function setTab(tab) {
   if (!["trips", "browse", "history"].includes(tab)) return;
   const again = state.tab === tab;
+  if (again && !isAway()) {
+    if (state.selected || state.station || state.railroad) goHome();
+    return putPanelAway(true);
+  }
+  putPanelAway(false);
   if (state.selected || state.station || state.railroad) goHome();
-  else if (again) $("agencies").scrollTo({ top: 0, behavior: "smooth" });
   state.tab = tab;
   $("view-list").dataset.tab = tab;
   for (const b of $("tabbar").querySelectorAll("[data-tab]")) {
@@ -1839,7 +1862,6 @@ function setTab(tab) {
   renderAgencies();
   renderResults();
   pageIn($("agencies"));
-  if (isPhone && sheetMode() === "collapsed") setSheet("");
 }
 on("tabbar", "click", (e) => {
   const b = e.target.closest("[data-tab]");
@@ -4712,6 +4734,7 @@ function setUrlSelection() {
 }
 
 function showDetailView(open) {
+  if (open) putPanelAway(false);
   if (!open && $("view-list").hidden) pageIn($("agencies"));
   if (!open) pageKeys.delete($("train-detail")); // the next page opened comes in anew
   $("view-list").hidden = open;
@@ -4857,7 +4880,7 @@ function panelPadding() {
     // Clear of the sheet, at the detent it's at (or headed for).
     return { bottom: sheetHeights()[sheetMode()], top: 0, left: 0, right: 0 };
   }
-  return { left: $("panel").getBoundingClientRect().right, top, bottom: 0, right: 0 };
+  return { left: (panelAway ? $("tabbar") : $("panel")).getBoundingClientRect().right, top, bottom: 0, right: 0 };
 }
 
 function setFollow(on) {
@@ -4945,8 +4968,11 @@ map.on("click", (e) => {
     return;
   }
   if (popup._railHover) { popup.remove(); popup._railHover = false; }
-  // A tap on the map itself goes home, from whatever page is open.
+  // A tap on the map itself puts the panel away, from whatever page is open
+  // (unless it's closing Settings, which the same tap does).
+  if (!$("settings-menu").hidden || document.querySelector(".acct-sheet, .keys-sheet")) return;
   if (state.selected || state.station || state.railroad) goHome();
+  putPanelAway(true);
 });
 
 function goHome() {
@@ -5544,7 +5570,7 @@ function toggleMenu(open = $("settings-menu").hidden) {
   const r = btn.getBoundingClientRect();
   menu.style.maxHeight = "";
   const w = menu.offsetWidth, h = menu.offsetHeight;
-  const side = $("panel").getBoundingClientRect();
+  const side = (panelAway ? $("tabbar") : $("panel")).getBoundingClientRect(); // beside the rail while the panel's away
   if (innerWidth - side.right >= w + 24) {
     menu.style.left = `${side.right + 12}px`;
     menu.style.top = `${side.top}px`;
@@ -5613,6 +5639,7 @@ document.addEventListener("keydown", (e) => {
     case "/":
       e.preventDefault();
       if (state.selected || state.station || state.railroad) goHome();
+      putPanelAway(false);
       if (state.tab !== "browse") setTab("browse");
       if (isPhone) setSheet("expanded");
       $("search").focus();
@@ -5986,6 +6013,6 @@ if (ACCOUNTS.url && ACCOUNTS.key) {
 
 // Handy for poking at the live state from the browser console.
 // For debugging and audits from the console.
-window.trainsheet = { state, map, checkTracked, select, selectStation, openRailroad, openLine, closeDetail, modelOf, focusFeatures, orderedLineStations, allLines };
+window.trainsheet = { state, map, checkTracked, setTab, putPanelAway, select, selectStation, openRailroad, openLine, closeDetail, modelOf, focusFeatures, orderedLineStations, allLines };
 
 start();

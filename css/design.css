@@ -1248,3 +1248,21 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .mp-text span { font-size: var(--fs-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mp-text span:empty { display: none; }
 .mp-go { color: var(--faint); font-size: 20px; line-height: 1; }
+
+/* ---------- The panel put away (computers) ----------
+ * The page you're on chosen again, or a tap on the map itself, slides the
+ * panel away under the rail, leaving the map and the rail (app.js). */
+@media (min-width: 721px) {
+  .panel { transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease, visibility 0s linear 0s; }
+  body.panel-away .panel {
+    transform: translateX(calc(-100% - 90px)); opacity: 0; visibility: hidden; pointer-events: none;
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease 0.1s, visibility 0s linear 0.4s;
+  }
+  body.panel-away.has-tabs .tracked { left: calc(86px + 12px); }
+  body.panel-away.has-tabs .maplibregl-ctrl-bottom-left { left: calc(86px + 4px); }
+  .tracked, .maplibregl-ctrl-bottom-left { transition: left 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+  /* No page is open: none of the rail's pages stands out. */
+  body.panel-away.has-tabs .tab[aria-current="page"] { background: none; color: var(--muted); }
+  body.panel-away.has-tabs .tab[aria-current="page"]:hover { background: var(--hover); color: var(--text); }
+}
+@media (prefers-reduced-motion: reduce) { .panel, .tracked, .maplibregl-ctrl-bottom-left { transition: none !important; } }
