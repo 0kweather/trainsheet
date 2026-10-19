@@ -3642,10 +3642,12 @@ const statTile = (n, label, cls = "") => `<div class="rr-stat ${cls}"><strong>${
 function trainStats(trains) {
   const late = trains.filter((t) => t.delayMin > 5).length;
   const onTime = trains.filter((t) => t.delayMin != null && t.delayMin <= 5).length;
+  // A feed that reports no delays (Metra's) can't say what's on time or late.
+  const delays = !trains.length || onTime + late > 0;
   return `<div class="rr-stats">
       ${statTile(trains.length, T(trains.length === 1 ? "train running" : "trains running"))}
-      ${statTile(onTime, T("on time"), "good")}
-      ${statTile(late, T("over 5 min late"), late ? "warn" : "")}
+      ${delays ? `${statTile(onTime, T("on time"), "good")}
+      ${statTile(late, T("over 5 min late"), late ? "warn" : "")}` : statTile("—", T("no delay data"), "wide")}
     </div>`;
 }
 // Placeholder rows, shimmering while a railroad's feed is still loading.
@@ -3693,9 +3695,12 @@ function renderRailroad() {
       for (const l of m.lines || []) if (l && l !== "City Terminal Zone" && !lines.has(lineKey(l))) lines.set(lineKey(l), { name: l, running: 0 });
     }
   }
+  // A railroad whose timetable names one line runs every train on it,
+  // whatever service its trains report (Caltrain's "Local Weekend").
+  const only = lines.size === 1 ? [...lines.keys()][0] : null;
   for (const t of trains) {
     if (!t.route) continue;
-    const k = lineKey(t.route);
+    const k = only || lineKey(t.route);
     if (!lines.has(k)) lines.set(k, { name: t.route, running: 0 });
     lines.get(k).running++;
   }
@@ -5471,7 +5476,7 @@ if (wanted) {
 const LOADING_TRAINS = [
   ["amtrak", "Acela"], ["amtrak", "Northeast Regional"], ["amtrak", "California Zephyr"], ["amtrak", "Pacific Surfliner"],
   ["amtrak", "Amtrak Cascades"], ["amtrak", "Wolverine"], ["amtrak", "Crescent"], ["via", "Corridor"], ["via", "Canadian"],
-  ["brightline"], ["lirr", "Babylon"], ["mnr", "New Haven"], ["mbta"], ["njt"], ["septa"], ["metra", "BNSF"], ["metra", "ME"],
+  ["brightline"], ["lirr", "Babylon"], ["mnr", "New Haven"], ["mbta"], ["njt"], ["septa"], ["metra", "Burlington Northern"], ["metra", "Metra Electric"],
   ["caltrain"], ["metrolink"], ["go"], ["marc", "Penn Line"], ["trirail"], ["frontrunner"], ["smart"], ["capmetro"], ["rtd"],
   ["coaster"], ["sprinter"], ["texrail"], ["silverline"], ["tre"], ["upx"], ["alaska", "Aurora Winter Train"],
 ];

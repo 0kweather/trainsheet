@@ -104,6 +104,20 @@ export function train(fields) {
            routeColor: null, updated: Date.now(), ...fields };
 }
 
+// VIA's timetable names its routes by their ends ("Montréal - Halifax"),
+// its trains by the train's name ("Ocean"): its stations' lines go by the
+// trains' names, so a line is one line whichever named it.
+export const LINE_ALIASES = {
+  via: {
+    "Montréal - Halifax": "Ocean", "Vancouver - Toronto": "Canadian", "Jasper - Prince Rupert": "Skeena",
+    "Montréal - Jonquière": "Saguenay", "Montréal - Senneterre": "Abitibi", "Sudbury - White River": "Lake Superior",
+    "Winnipeg - Churchill": "Hudson Bay", "The Pas - Churchill": "Hudson Bay",
+    "Toronto - London": "Corridor", "Toronto - New York": "Corridor", "Toronto - Windsor": "Corridor", "Toronto - Sarnia": "Corridor",
+    "Montréal - Toronto": "Corridor", "Ottawa - Montréal": "Corridor", "Ottawa - Québec": "Corridor", "Québec - Fallowfield": "Corridor",
+    "Québec - Montréal": "Corridor", "Ottawa - Toronto": "Corridor",
+  },
+};
+
 // data/stations.json, read once for everyone who needs it: the station list
 // (stations.js) and NJ Transit's station lookup below.
 let stationsRaw = null;
@@ -1066,6 +1080,13 @@ async function parseSepta(json) {
 // ---------- Source table ----------
 
 const RTD_LINES = { A: "A Line", "113B": "B Line", "113G": "G Line", "117N": "N Line" };
+// Metra's feed names its lines by route id ("UP-N"); its timetable, its
+// stations and its line colors by their long names.
+const METRA_LINES = { BNSF: "Burlington Northern", HC: "Heritage Corridor", ME: "Metra Electric", "MD-N": "Milwaukee North",
+  "MD-W": "Milwaukee West", NCS: "North Central Service", RI: "Rock Island", SWS: "Southwest Service",
+  "UP-N": "Union Pacific North", "UP-NW": "Union Pacific Northwest", "UP-W": "Union Pacific West" };
+// Metrolink's feed shortens two lines' names; its timetable's are whole.
+const METROLINK_LINES = { "91 Line": "91-Perris Valley Line", "Inland Emp.-Orange Co. Line": "Inland Empire-Orange County Line" };
 
 const BUILT_IN_SOURCES = [
   {
@@ -1139,7 +1160,7 @@ const BUILT_IN_SOURCES = [
     parse: async (buf) => gtfsVehicles("metra", buf, {
       // The feed also lists equipment laid up in the yards, with no trip.
       keep: (v) => !!v.trip?.tripId,
-      route: (v) => v.trip?.routeId,
+      route: (v) => METRA_LINES[v.trip?.routeId] || v.trip?.routeId,
       // Metra trip ids look like "UP-N_UN303_V3_A"; the train number is in the middle.
       number: (v) => (v.trip?.tripId || "").split("_")[1]?.replace(/^\D+/, "") || v.vehicle?.label,
       // Destination from the timetable; stops and times from the trip updates
@@ -1271,7 +1292,7 @@ const BUILT_IN_SOURCES = [
     parse: async (buf) => {
       const west = (await loadTrips()).metrolink;
       const arrow = (v) => /^38\d\d$/.test(west.trips[v.trip?.tripId]?.[0] || v.vehicle?.label || "");
-      return gtfsVehicles("metrolink", buf, { route: (v) => (arrow(v) ? "Arrow" : v.trip?.routeId), west });
+      return gtfsVehicles("metrolink", buf, { route: (v) => (arrow(v) ? "Arrow" : METROLINK_LINES[v.trip?.routeId] || v.trip?.routeId), west });
     },
   },
 ];

@@ -245,6 +245,7 @@ export default {
   "trains running": "trains en service",
   "on time": "à l’heure",
   "over 5 min late": "plus de 5 min de retard",
+  "no delay data": "pas de données de retard",
   "{n} a weekday": "{n} par jour de semaine",
   "{n} stations": "{n} gares",
   "{rr} is asleep": "{rr} dort",

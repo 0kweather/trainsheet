@@ -441,9 +441,9 @@ function typicalFor(t, reported) {
     }
     case "septa": return set("Silverliner IV or V cars, usually 2 to 6", ["silverliner4", 4]);
     case "njt": return set("Electric or dual-mode locomotive with MultiLevel coaches", ["alp46", 1], ["multilevel", 5], ["multilevelCab", 1]);
-    case "metra": return t.route === "ME"
+    case "metra": return t.route === "Metra Electric"
       ? set("Highliner electric cars", ["highliner", 4])
-      : ["MD-N", "MD-W"].includes(t.route)
+      : ["Milwaukee North", "Milwaukee West"].includes(t.route)
         ? set("SD70MACH locomotive with gallery bi-levels", ["sd70mach", 1], ["gallery", 5], ["galleryCab", 1])
         : set("Diesel locomotive with gallery bi-levels", ["mp36", 1], ["gallery", 5], ["galleryCab", 1]);
     case "rtd": return set("Silverliner V electric cars, usually 2 to 4", ["silverliner5", 4]);

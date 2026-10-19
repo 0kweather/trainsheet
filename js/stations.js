@@ -5,7 +5,7 @@
 // and NJ Transit; Boston South Station for Amtrak and the MBTA) are merged so
 // the map shows one stop with everything that serves it.
 
-import { AGENCIES, loadStationsData } from "./sources.js?v=dev";
+import { AGENCIES, LINE_ALIASES, loadStationsData } from "./sources.js?v=dev";
 
 const MERGE_METERS = 450;
 const TOP_INTERCITY = 55; // busiest intercity stations named at every zoom
@@ -47,7 +47,9 @@ export function mergeStations(raw, { region = false } = {}) {
     if (!AGENCIES[agency]) continue;
     // Busyness is counted differently per railroad; compare within each one.
     const maxBusy = Math.max(1, ...list.map((r) => r[7] || 0));
-    for (const [id, name, lat, lon, lines, place, code, busy, daily, access, tz] of list) {
+    const aliases = LINE_ALIASES[agency];
+    for (const [id, name, lat, lon, timetabled, place, code, busy, daily, access, tz] of list) {
+      const lines = aliases && timetabled ? [...new Set(timetabled.map((l) => aliases[l] || l))] : timetabled;
       members.push({ agency, id, key: stopKey(agency, id), name, lat, lon, lines, place, norm: norm(name),
                      code: code || "", busy: (busy || 0) / maxBusy, trips: busy || 0,
                      daily: daily ?? null, access: access ?? null, tz: tz || null });
