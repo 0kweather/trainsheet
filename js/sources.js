@@ -1302,6 +1302,8 @@ const BUILT_IN_SOURCES = [
 export const SOURCES = placed(BUILT_IN_SOURCES, PLUGIN_SOURCES.map((s) => ({ ...s })));
 
 export async function fetchSource(src, relayBase) {
+  // A plug-in railroad with no live data: placed from its timetable.
+  if (src.format === "timetable") return (await Promise.all(src.agencies.map((a) => timetableTrains(a)))).flat();
   // A plug-in's parser file loads alongside its first fetch.
   const parser = src.parse ? null : PARSERS[src.module]().then((m) => (src.parse = m.parse[src.id]));
   parser?.catch(() => {}); // a failed load is reported by the await below
