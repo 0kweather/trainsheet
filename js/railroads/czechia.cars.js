@@ -2,53 +2,159 @@
 // RegioJet, Leo Express, Arriva and GW Train Regio. The feed names no car or
 // unit (a train's vehicle id is a hash), so every train is drawn as what
 // usually runs on its line or kind of train, labeled as typical. The
-// drawings are Trainsheet's own side views from published dimensions, at the
-// shared scale (js/carart.js), each operator's paint simplified to its main
-// bands. Slovakia's (zsr.cars.js) and Greece's (hellenictrain.cars.js)
-// railroads reuse the bodies here (twinEnded, euroLoco, euroCoach, unit)
-// with their own paint.
+// drawings are Trainsheet's own side views from published dimensions and
+// photographs, at the shared scale (js/carart.js), each in its operator's
+// current paint, lettered here (no logo files). Slovakia's (zsr.cars.js)
+// and Greece's (hellenictrain.cars.js) railroads reuse the bodies and
+// details here (twinEnded, euroLoco, euroCoach, unit and the parts below);
+// the paint goes by the car's railroad (c.agency), theirs included.
 
-import { newId, bilevel, coachCar, flirtCar, flirtMid } from "../carmodels.js?v=dev";
-import { C, rect, circle, path, poly, win, truck, pantograph, slats } from "../carart.js?v=dev";
+import { newId, bilevel, coachCar } from "../carmodels.js?v=dev";
+import { C, rect, circle, path, line, lines, poly, truck, pantograph, slats, underframe } from "../carart.js?v=dev";
+
+const n = (v) => Math.round(v * 100) / 100;
+const SANS = "Helvetica Neue, Helvetica, Arial, sans-serif";
+const STROKE = 'vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"';
 
 // ---------- Paint ----------
-// Each operator's side, simplified: a body color, a roof band from the eave,
-// a lower band to `low` with a line on top, a dark skirt under the floor.
-// ČD: Najbrt's white over dark blue with a light blue line; ZSSK: white over
-// blue with a red line; RegioJet: yellow all over; Leo Express: black with a
-// gold line; Arriva: aquamarine under white; GW Train: green under white with
-// a yellow line; Hellenic Train: white with a gray line and a black skirt.
+// The operators' colors, from photographs of their trains.
+// ČD: the 2020s regional blue over a navy skirt, white cab ends and a
+// yellow line; long-distance cars light gray with a sky-blue window band
+// under navy and a yellow line; the 109E silver with blue. RegioJet: yellow,
+// black below; its Ústí-region Elfs lime green. Leo Express: graphite with
+// copper (its LINTs white and black with orange). Arriva: light aqua.
+// GW Train: orange and green. ZSSK: red (Vectrons) and white with a red
+// window band. Hellenic Train: white with blue, red at the cab ends.
+export const CD = { blue: "#2a6ed3", navy: "#13306e", sky: "#4e96df", yellow: "#f8c400", white: "#f2f4f6", gray: "#e2e6ea", silver: "#cfd4d9", red: "#d52b2f", shark: "#1d5fbf" };
+export const RJ = { yellow: "#fbc400", black: "#1c1d1f", gray: "#8e9399", lime: "#8cc63f", green: "#2d6e38" };
+export const LEO = { graphite: "#2a2b2f", roof: "#3b3d42", copper: "#d4782b", white: "#eceef0", orange: "#f08a24" };
+export const ARRIVA = { aqua: "#45b5e5", deep: "#1f6f99", white: "#f4f6f7", skirt: "#2b3a48" };
+export const GW = { orange: "#f07d1d", green: "#1f8443", dark: "#165f31" };
+export const ZS = { red: "#d7212b", dark: "#1d1e20", white: "#f3f4f5", gray: "#9aa1a9" };
+export const HT = { blue: "#0a5aa8", red: "#d71920", violet: "#3b2c85", lilac: "#9184d3", sky: "#56aee2", yellow: "#f5c400", cream: "#f1efe9", white: "#f2f3f4" };
+
+// The plain fallback (kept for other files' use): a body color, a roof band,
+// a lower band with a line on top, a dark skirt.
 export const SCHEME = {
-  czcd: { base: "#f2f3f4", roof: "#a9b0b8", band: "#1f4e9c", line: "#62b5e5", skirt: "#2a2d31", screen: "#1d2026" },
-  zssk: { base: "#f2f3f4", roof: "#a9b0b8", band: "#1d4f9f", line: "#e30613", skirt: "#2a2d31", screen: "#1d2026" },
-  czregiojet: { base: "#fbc400", roof: "#8e9399", band: null, line: "#1d1e20", skirt: "#1d1e20", screen: "#1d1e20" },
-  czleo: { base: "#26272a", roof: "#3c3e42", band: null, line: "#c8a04a", skirt: "#17181a", screen: "#111214" },
-  czarriva: { base: "#eef0ef", roof: "#a9b0b8", band: "#00a3ad", line: null, skirt: "#2a2d31", screen: "#1d2026" },
-  czgwtrain: { base: "#f2f3f4", roof: "#a9b0b8", band: "#2f8a3c", line: "#f0b400", skirt: "#2a2d31", screen: "#1d2026" },
-  hellenictrain: { base: "#f2f3f4", roof: "#a9b0b8", band: null, line: "#8a9097", skirt: "#1d1e20", screen: "#1d2026", accent: ["#0a6ab4", "#e2001a"] },
+  czcd: { base: CD.white, roof: "#a9b0b8", band: CD.blue, line: CD.yellow, skirt: CD.navy, screen: "#1d2026" },
+  zssk: { base: ZS.white, roof: "#a9b0b8", band: null, line: ZS.red, skirt: ZS.dark, screen: "#1d2026" },
+  czregiojet: { base: RJ.yellow, roof: RJ.gray, band: null, line: RJ.black, skirt: RJ.black, screen: RJ.black },
+  czleo: { base: LEO.graphite, roof: LEO.roof, band: null, line: LEO.copper, skirt: "#17181a", screen: "#111214" },
+  czarriva: { base: ARRIVA.aqua, roof: "#c9ced4", band: null, line: ARRIVA.white, skirt: ARRIVA.skirt, screen: "#1d2026" },
+  czgwtrain: { base: GW.orange, roof: "#a9b0b8", band: null, line: GW.green, skirt: "#2a2d31", screen: "#1d2026" },
+  hellenictrain: { base: HT.white, roof: "#a9b0b8", band: null, line: HT.blue, skirt: "#1d1e20", screen: "#1d2026" },
 };
 SCHEME.regiojetsk = SCHEME.czregiojet;
 SCHEME.leoexpresssk = SCHEME.czleo;
 export const scheme = (c) => SCHEME[c.agency] || SCHEME.czcd;
+const isRJ = (c) => c.agency === "czregiojet" || c.agency === "regiojetsk";
+const isLeo = (c) => c.agency === "czleo" || c.agency === "leoexpresssk";
 
-// One side's paint, L long: eave, low (top of the lower band) and skirt in
-// feet above the rail. A cab section's nose (cab: true) carries Hellenic
-// Train's blue and red accents back to the first window.
-export function side(c, L, { eave, low, skirt, cab = false, lineH = 0.32 }) {
+export function side(c, L, { eave, low, skirt, lineH = 0.32 }) {
   const s = scheme(c);
   let p = rect(0, 0, L, 20, s.base) + rect(0, eave, L, 8, s.roof);
   if (s.band) p += rect(0, 0, L, low, s.band);
   if (s.line) p += rect(0, low, L, lineH, s.line);
-  if (cab && s.accent) p += path(`M0 ${skirt}L9.5 ${skirt}Q7.6 ${low + 1.5} 6.4 ${eave}L0 ${eave}Z`, s.accent[0]) + path(`M9.5 ${skirt}L10.3 ${skirt}Q8.4 ${low + 1.5} 7.2 ${eave}L6.4 ${eave}Q7.6 ${low + 1.5} 9.5 ${skirt}Z`, s.accent[1]);
   return p + rect(0, 0, L, skirt, s.skirt);
 }
+// Bands across the whole side: [[y, h, fill], ...].
+const bands = (L, list) => list.map(([y, h, fill]) => rect(-1, y, L + 2, h, fill)).join("");
+
+// ---------- Lettering ----------
+// Lettering and marks are drawn y-down in a box centered at (x, y), so they
+// read left to right on a car drawn mirrored (c.mirrored) too. Drawn outside
+// a twinEnded body's mirrored halves.
+export const mark = (c, x, y, inner) => `<g transform="translate(${n(x)} ${n(y)}) scale(${c.mirrored ? -1 : 1} -1)">${inner}</g>`;
+const txt = (x, y, h, text, fill, { weight = 700, family = SANS, spacing = 0, style = "", anchor = "middle", extra = "" } = {}) =>
+  `<text x="${n(x)}" y="${n(y + h * 0.36)}" font-size="${n(h)}" text-anchor="${anchor}" font-weight="${weight}" letter-spacing="${spacing}" font-family="${family}" fill="${fill}"${style ? ` font-style="${style}"` : ""}${extra ? " " + extra : ""}>${text}</text>`;
+export const letters = (c, x, y, h, text, fill, opts) => mark(c, x, y, txt(0, 0, h, text, fill, opts));
+// ČD's mark, "ČD" in a rounded frame, h tall; with "České dráhy" beside it.
+const cdFrame = (h, color) => `<rect x="${n(-0.82 * h)}" y="${n(-0.5 * h)}" width="${n(1.64 * h)}" height="${n(h)}" rx="${n(0.5 * h)}" fill="none" stroke="${color}" stroke-width="${n(0.12 * h)}"/>` +
+  txt(0, -0.02 * h, 0.68 * h, "ČD", color, { weight: 800, spacing: "-0.03em" });
+export const cdLogo = (c, x, y, h, color, name = true) => mark(c, x, y, cdFrame(h, color) +
+  (name ? txt(1.05 * h, -0.08 * h, 0.5 * h, "České dráhy", color, { weight: 500, anchor: "start" }) : ""));
+// ZSSK's ring (the "Národný dopravca" mark): a white ring open at the right.
+const zsRing = (r, color) => `<path d="M${n(r * 0.7)} ${n(-r * 0.72)}A${n(r)} ${n(r)} 0 1 0 ${n(r * 0.7)} ${n(r * 0.72)}" fill="none" stroke="${color}" stroke-width="${n(r * 0.24)}"/>` +
+  `<path d="M${n(-r * 0.35)} ${n(-r * 0.3)}L${n(r * 0.35)} ${n(-r * 0.3)}L${n(-r * 0.35)} ${n(r * 0.3)}L${n(r * 0.35)} ${n(r * 0.3)}" fill="none" stroke="${color}" stroke-width="${n(r * 0.16)}"/>`;
+export const zsLogo = (c, x, y, r, color, name = true) => mark(c, x, y, zsRing(r, color) +
+  (name ? txt(r * 1.35, 0, r * 0.42, "NÁRODNÝ DOPRAVCA", color, { weight: 600, anchor: "start", spacing: "0.02em" }) : ""));
+// Leo Express: "leo" over "express", lowercase, a copper slash beside them.
+export const leoLogo = (c, x, y, h, color, slash = LEO.copper) => mark(c, x, y,
+  `<path d="M${n(-0.95 * h)} ${n(0.62 * h)}L${n(-0.72 * h)} ${n(0.62 * h)}L${n(-0.38 * h)} ${n(-0.62 * h)}L${n(-0.61 * h)} ${n(-0.62 * h)}Z" fill="${slash}"/>` +
+  txt(-0.25 * h, -0.3 * h, 0.55 * h, "leo", color, { weight: 700, anchor: "start" }) + txt(-0.25 * h, 0.32 * h, 0.55 * h, "express", color, { weight: 500, anchor: "start" }));
+// Hellenic Train: its name in capitals, a small red and blue swash ahead of it.
+export const htLogo = (c, x, y, h, color = HT.blue) => mark(c, x, y,
+  `<path d="M${n(-4.6 * h)} ${n(0.45 * h)}Q${n(-4.0 * h)} ${n(-0.7 * h)} ${n(-3.3 * h)} ${n(-0.45 * h)}Q${n(-3.9 * h)} ${n(-0.35 * h)} ${n(-4.3 * h)} ${n(0.45 * h)}Z" fill="${HT.red}"/>` +
+  `<path d="M${n(-4.1 * h)} ${n(0.45 * h)}Q${n(-3.6 * h)} ${n(-0.3 * h)} ${n(-3.05 * h)} ${n(-0.1 * h)}Q${n(-3.55 * h)} ${n(0.0 * h)} ${n(-3.8 * h)} ${n(0.45 * h)}Z" fill="${color}"/>` +
+  txt(0, 0, h, "HELLENIC TRAIN", color, { weight: 700, spacing: "0.04em" }));
+
+// ---------- Parts ----------
+
+// A lamp lens seen side-on at the front corner.
+const lamp = (x, y, w = 0.45, h = 0.45, color = "#fff4cf") => rect(x, y, w, h, color, 0.35, 'rx="0.15"');
+// Where the nose's front is at height y (the nose's points, bottom up).
+function noseX(nose, y) {
+  const pts = nose.map((p) => (p[0] === "q" ? [p[3], p[4]] : p));
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const [[x0, y0], [x1, y1]] = [pts[i], pts[i + 1]];
+    if (y >= y0 && y <= y1) return x0 + ((x1 - x0) * (y - y0)) / (y1 - y0 || 1);
+  }
+  return pts[0][0];
+}
+// UIC side buffers, the headstock behind them and the screw coupling hung
+// on its hook, at one end: the buffer faces at xFace; side -1 the left end,
+// 1 the right; end: where the body begins.
+export function buffers(xFace, side, { y = 3.45, end = 0.6, beam = 2.5, sill = 4.1 } = {}) {
+  const at = (v) => xFace - side * v;
+  const span = (a, b) => [Math.min(at(a), at(b)), Math.abs(b - a)];
+  const [hx, hw] = span(end - 0.05, end + 0.7), [bx, bw] = span(0.32, end), [fx] = span(0, 0.32);
+  let s = rect(hx, beam, hw, sill - beam, "currentColor", 0, 'opacity="0.88"');
+  s += rect(bx, y - 0.27, bw, 0.54, "currentColor", 0, 'opacity="0.78"') + rect(fx, y - 0.62, 0.32, 1.24, C.steelDark, 0.4, 'rx="0.12"');
+  s += path(`M${n(at(end + 0.3))} ${n(y - 0.55)}Q${n(at(end * 0.5))} ${n(y - 1.25)} ${n(at(0.15))} ${n(y - 0.95)}`, "none", 0, `stroke="#2a2d31" stroke-width="0.9" ${STROKE}`);
+  return s;
+}
+// A Scharfenberg coupler under a multiple unit's nose; head at x0.
+const scharf = (x0, reach, y = 2.85) => rect(x0 + 0.2, y - 0.28, reach, 0.56, "currentColor", 0, 'opacity="0.9"') + rect(x0, y - 0.55, 0.42, 1.1, C.steelDark, 0.4, 'rx="0.14"') +
+  rect(x0 + 0.1, y - 0.12, 0.25, 0.24, "#2a2d31");
+// Roof air-conditioning (or brake-resistor) housing with its grille.
+export const hvac = (x, roof, w, h = 0.75) => rect(x, roof - 0.05, w, h, C.steelDark, 0.4, 'rx="0.32"') + slats(x + 0.6, roof + 0.12, w - 1.2, h - 0.3, 0.5, "rgba(0,0,0,0.24)");
+// The high-voltage line along the roof from a pantograph to the main
+// breaker, on insulators.
+export const hvLine = (a, b, roof) => lines([[a, roof + 0.75, b, roof + 0.75]], "currentColor", 0.9) +
+  [a, (a + b) / 2, b].map((x) => rect(x - 0.18, roof, 0.36, 0.7, C.steelDark, 0.35)).join("") + rect(b - 0.9, roof - 0.05, 1.8, 0.9, C.steelDark, 0.4, 'rx="0.15"');
+// A diesel's exhaust stack and silencer on the roof.
+export const exhaust = (x, roof) => rect(x, roof - 0.05, 2.4, 0.55, C.steelDark, 0.4, 'rx="0.25"') + rect(x + 0.6, roof + 0.45, 0.55, 0.55, "currentColor") + rect(x + 1.35, roof + 0.45, 0.55, 0.4, "currentColor");
+// A fuel tank slung under the floor.
+export const tank = (a, b, top, bot = 1.3) => path(poly([[a, top], [b, top], [b, bot + 0.5], ["q", b, bot, b - 0.5, bot], [a + 0.5, bot], ["q", a, bot, a, bot + 0.5]]), "currentColor", 0, 'opacity="0.82"') +
+  line(a + 0.4, bot + 0.55, b - 0.4, bot + 0.55, "rgba(255,255,255,0.14)", 0.6) + rect((a + b) / 2 - 0.4, top - 0.9, 0.8, 0.5, C.steelDark, 0, 'rx="0.1"');
+// Horns (and a beacon) on the cab roof.
+const horns = (x, roof) => rect(x, roof - 0.05, 1.3, 0.35, "currentColor") + rect(x + 0.15, roof + 0.3, 0.3, 0.3, "currentColor") + rect(x + 0.75, roof + 0.3, 0.3, 0.4, "currentColor");
+// Grab handles beside a cab door.
+const grab = (x, y0, y1) => line(x, y0, x, y1, "currentColor", 0.6);
 
 // A raked windshield seen from the side, set in the cab's dark surround:
-// from p (where the nose's rake begins) to q (where it meets the roof).
-export const screen = (c, [px, py], [qx, qy], depth = 2.6) =>
-  path(poly([[px + 0.15, py - 0.35], [qx + 0.2, qy + 0.25], [qx + depth + 0.6, qy + 0.25], [px + depth + 0.6, py - 0.35]]), scheme(c).screen) +
+// from p (where the nose's rake begins) to q (where it meets the roof); a
+// wiper and the destination display behind the glass.
+export const screen = (c, [px, py], [qx, qy], depth = 2.6, surround = scheme(c).screen) =>
+  path(poly([[px + 0.15, py - 0.35], [qx + 0.2, qy + 0.25], [qx + depth + 0.6, qy + 0.25], [px + depth + 0.6, py - 0.35]]), surround) +
   path(poly([[px + 0.45, py], [qx + 0.25, qy - 0.15], [qx + 0.9, qy - 0.15], [px + 1.3, py]]), C.glass) +
-  path(poly([[px + 1.6, py], [qx + 1.15, qy - 0.15], [qx + depth, qy - 0.15], [px + depth, py]]), C.glass);
+  path(poly([[px + 1.6, py], [qx + 1.15, qy - 0.15], [qx + depth, qy - 0.15], [px + depth, py]]), C.glass) +
+  rect(qx + 1.25, qy - 0.7, Math.max(0.6, depth - 1.45), 0.32, "#f39a26", 0, 'opacity="0.9"') +
+  line(px + 0.75, py + 0.25, px + 0.75 + (qx - px) * 0.35, py + (qy - py) * 0.35, "#0d0f12", 0.7);
+
+// A cab end's front: lamps low on the nose and over the windshield, a red
+// tail lamp, the coupler under the nose (unless coupled to another unit),
+// horns on the roof. o: the body's nose, rake, sill; coupler: "scharf"
+// (multiple units) or "buffers" (locomotives).
+function front(c, o, { coupler = "scharf", lampY = o.sill + 1.75 } = {}) {
+  const { nose, rake, sill } = o;
+  const xl = noseX(nose, lampY);
+  let s = lamp(xl - 0.12, lampY - 0.22, 0.55, 0.5) + rect(noseX(nose, lampY - 0.75) - 0.06, lampY - 0.95, 0.4, 0.32, "#d8262c", 0.3, 'rx="0.1"');
+  s += lamp(rake[1][0] - 0.05, rake[1][1] + 0.12, 0.5, 0.36);
+  if (coupler === "buffers") s += buffers(0, -1, { end: noseX(nose, sill) + 0.3, sill });
+  else if (!c.coupledL) s += scharf(0.05, noseX(nose, 2.85) + 0.6);
+  return s + horns(rake[1][0] + 1.2, nose[nose.length - 1][nose[nose.length - 1][0] === "q" ? 4 : 1]);
+}
 
 // ---------- Bodies ----------
 
@@ -63,187 +169,423 @@ export function twinEnded(c, half) {
 
 // A four-axle European locomotive with a cab at each end. o: roof, sill,
 // nose (points, bottom up), rake ([p, q] of the windshield), centers (truck
-// centers apart), wheel (in), pans (electric), grilles ([x, w] from the
-// middle), paint(c, L) for the side (default: the operator's).
+// centers apart), wheel (in), pans (electric), grilles ([x, w, y0, y1] from
+// the middle), paint(c, L) for each half's side (drawn mirrored, so
+// symmetric), over(c, L) for what is drawn once over the whole side
+// (lettering, the logo), under(c, L) for what hangs between the trucks.
 export function euroLoco(c, o) {
   const L = c.L, { roof, sill } = o;
   const half = (h) => bilevel(h, {
     roof, sill, cornerR: 1.0, end: 0.6, noTrucks: true, nose: o.nose, badge: false, cabLen: 0,
-    paint: () => (o.paint ? o.paint(c, L) : side(c, L, { eave: roof - 1.1, low: sill + 2.2, skirt: sill + 0.55, cab: true })),
+    paint: () => (o.paint ? o.paint(c, L) : side(c, L, { eave: roof - 1.1, low: sill + 2.2, skirt: sill + 0.55 })),
     doors: [{ x: o.door ?? 6.2, w: 1.9, y0: sill + 0.5, y1: roof - 1.7, glassY: 0.62, glassH: 0.25, grabs: false }],
     rows: [{ xs: [o.rake[1][0] + 0.6], y: o.rake[0][1] - 0.4, w: 1.6, h: 2.2, r: 0.3 }],
-    cab: () => screen(c, o.rake[0], o.rake[1], 2.0),
+    cab: () => screen(c, o.rake[0], o.rake[1], 2.0, o.surround),
+    // The cab door's grab handles and step, a plow under the nose, the lamps,
+    // buffers and coupling.
+    extra: () => grab((o.door ?? 6.2) - 0.3, sill + 1.2, roof - 3.0) + grab((o.door ?? 6.2) + 2.2, sill + 1.2, roof - 3.0) +
+      rect((o.door ?? 6.2) - 0.1, sill - 0.6, 2.1, 0.25, "currentColor") +
+      path(poly([[noseX(o.nose, sill) + 0.7, 2.5], [5.6, 2.5], [5.0, 0.6], [noseX(o.nose, sill) + 1.5, 0.55], [noseX(o.nose, sill) + 0.8, 1.5]]), C.black, 0, 'opacity="0.92"') +
+      front(c, o, { coupler: "buffers", lampY: sill + 1.3 }),
   });
   let s = twinEnded(c, half);
-  // Side grilles, louvers either side of the middle; equipment on the roof.
-  for (const [dx, w] of o.grilles || [[-14.5, 9.5], [5.0, 9.5]]) {
+  // Side grilles either side of the middle; equipment on the roof.
+  for (const [dx, w, y0 = sill + 3.1, y1 = roof - 2.1] of o.grilles || [[-14.5, 9.5], [5.0, 9.5]]) {
     const x = L / 2 + dx;
-    s += rect(x, sill + 3.1, w, roof - sill - 5.2, "rgba(20,22,25,0.5)", 0.4) + slats(x, sill + 3.1, w, roof - sill - 5.2, 0.32, "rgba(255,255,255,0.18)");
+    s += rect(x, y0, w, y1 - y0, o.grilleFill ?? "rgba(20,22,25,0.5)", 0.4) + slats(x, y0, w, y1 - y0, 0.32, "rgba(255,255,255,0.18)");
   }
-  s += rect(L / 2 - 9, roof - 0.05, 18, 0.55, C.steelDark, 0.4, 'rx="0.2"');
-  for (const k of [-1, 1]) s += truck(L / 2 + (k * o.centers) / 2, { wb: 8.5, d: o.wheel ?? 49, kind: "loco", top: sill });
-  if (o.pans !== false) s += pantograph(L * 0.29, roof + 0.5, { up: false }) + pantograph(L * 0.71, roof + 0.5, { up: true, facing: -1 });
-  else s += [L / 2 - 5, L / 2 + 1].map((x) => rect(x, roof + 0.45, 4, 0.5, C.steelDark, 0.4, 'rx="0.2"')).join("") + rect(L / 2 - 0.4, roof + 0.95, 0.8, 0.7, "currentColor");
+  const c2 = o.centers / 2;
+  for (const k of [-1, 1]) s += truck(L / 2 + k * c2, { wb: o.wb ?? 8.5, d: o.wheel ?? 49, kind: "loco", top: sill });
+  // Between the trucks: the transformer (a diesel's fuel tank), battery and
+  // air reservoirs.
+  s += o.under ? o.under(c, L) : underframe(L / 2 - c2 + 6.2, L / 2 + c2 - 6.2, sill, { depth: 1.8, boxes: 2, tanks: true });
+  if (o.pans !== false) {
+    s += pantograph(L * 0.29, roof + 0.5, { up: false }) + pantograph(L * 0.71, roof + 0.5, { up: true, facing: -1 });
+    s += rect(L / 2 - 8, roof - 0.05, 16, 0.55, C.steelDark, 0.4, 'rx="0.2"') + hvLine(L * 0.29 + 3.2, L / 2 - 1.0, roof + 0.5) + hvLine(L * 0.71 - 3.2, L / 2 + 1.0, roof + 0.5);
+  } else if (o.roof2) s += o.roof2(c, L);
+  if (o.over) s += o.over(c, L);
   return s;
 }
 
 // A UIC-Z passenger coach, 26.4 m: two trucks 19 m apart, a single plug door
-// at each end, ten big windows between. o: rows, paint, cab (a driving
-// trailer's end), base.
+// at each end, ten big windows between. o: rows, cab (a driving trailer's
+// end). The paint goes by the railroad (coachPaint); the roof carries the
+// air-conditioning unit and vents, the ends buffers and screw couplings.
 export function euroCoach(c, o = {}) {
   const L = c.L, roof = 13.3, sill = 3.9;
+  const p = coachPaint(c);
+  const rows = o.rows ?? [{ a: 6.0, b: L - 6.0, y: 7.3, w: 4.6, h: 3.0, pitch: 6.45, r: 0.45 }];
+  // A driving trailer's door is behind its cab.
+  const dx = c.cabL && o.cab ? 9.0 : 2.0;
   return coachCar(c, {
-    roof, sill, end: 0.6, endR: 1.2, base: o.base ?? scheme(c).base, badge: false, under: true,
-    trucks: { centers: 62.3, wb: 8.2, d: 36 }, diaphragm: [4.25, 11.8],
-    rows: o.rows ?? [{ a: 6.0, b: L - 6.0, y: 7.3, w: 4.6, h: 3.0, pitch: 6.45, r: 0.45 }],
-    doors: [{ x: 2.0, w: 2.6, h: 7.0, glassY: 0.55, glassH: 0.3 }, { x: L - 4.6, w: 2.6, h: 7.0, glassY: 0.55, glassH: 0.3 }],
-    livery: () => (o.paint ? o.paint(c, L) : side(c, L, { eave: 12.25, low: 6.6, skirt: 4.3 })),
+    roof, sill, end: 0.6, endR: 1.2, base: p.base, badge: false, under: true,
+    trucks: { centers: 62.3, wb: 8.2, d: 36 }, diaphragm: [4.25, 11.8], rows,
+    doors: [{ x: dx, w: 2.6, h: 7.0, glassY: 0.55, glassH: 0.3 }, { x: L - 4.6, w: 2.6, h: 7.0, glassY: 0.55, glassH: 0.3 }],
+    livery: (cc) => p.side(cc, L) + [dx, L - 4.6].map((x) => rect(x, sill + 0.15, 2.6, 7.0, p.door)).join("") + (cc.cabL && o.cab && p.cabEnd ? p.cabEnd(cc, L) : ""),
+    extra: (cc) => {
+      let s = hvac(L / 2 - 7, roof, 14, 0.7) + [12, 24, L - 24, L - 12].map((x) => path(`M${x - 1.1} ${roof - 0.05}Q${x} ${roof + 0.7} ${x + 1.1} ${roof - 0.05}Z`, C.steelDark, 0.4)).join("");
+      s += rect(L / 2 - 3.5, sill - 1.9, 7, 0.75, C.steelDark, 0.4, 'rx="0.37"');                       // water tank
+      const cab = cc.cabL && o.cab;
+      s += buffers(0, -1, { sill, end: cab ? 0.9 : 0.6 }) + buffers(L, 1, { sill });
+      if (cab) s += lamp(0.55, 5.6, 0.5, 0.5) + rect(0.6, 5.0, 0.4, 0.32, "#d8262c", 0.3, 'rx="0.1"') + horns(3.6, roof);
+      return s + (p.over ? p.over(cc, L, rows) : "");
+    },
     ...(o.cab ? { cab: o.cab, cabLen: 8, cabR: 3.2 } : {}),
   });
 }
 
+// Each railroad's coach paint: base, side(c, L) inside the body, door
+// color, cabEnd (a driving trailer's), over (lettering).
+function coachPaint(c) {
+  switch (c.agency) {
+    case "czregiojet": case "regiojetsk":
+      return { base: RJ.yellow, door: RJ.yellow,
+        side: (cc, L) => bands(L, [[12.25, 3, RJ.gray], [12.05, 0.2, RJ.black], [0, 4.35, RJ.black]]),
+        over: (cc, L) => letters(cc, L / 2, 5.55, 1.15, "RegioJet", RJ.black, { weight: 700 }) + letters(cc, 6.7, 8.8, 1.4, "2", RJ.black, { weight: 600 }) + letters(cc, L - 6.7, 8.8, 1.4, "2", RJ.black, { weight: 600 }) };
+    case "czleo": case "leoexpresssk":
+      return { base: LEO.graphite, door: "#232427",
+        side: (cc, L) => bands(L, [[12.25, 3, LEO.roof], [6.85, 0.2, LEO.copper], [0, 4.35, "#17181a"]]),
+        over: (cc, L) => leoLogo(cc, L / 2, 5.5, 1.5, "#ffffff") };
+    case "zssk":
+      return { base: ZS.white, door: ZS.red,
+        side: (cc, L) => bands(L, [[12.25, 3, ZS.gray], [6.75, 3.95, ZS.red], [0, 4.35, "#2a2d31"], [6.45, 0.15, ZS.red]]),
+        over: (cc, L) => zsLogo(cc, L / 2 - 8, 5.5, 0.62, ZS.red) + letters(cc, 6.7, 11.35, 0.85, "ZSSK", ZS.red, { weight: 800 }) };
+    case "hellenictrain":
+      return { base: HT.white, door: HT.blue,
+        side: (cc, L) => bands(L, [[12.25, 3, "#aab1b9"], [4.35, 1.75, HT.blue], [6.1, 0.22, HT.sky], [11.45, 0.22, HT.blue], [0, 4.35, "#1d1e20"]]),
+        over: (cc, L) => htLogo(cc, L / 2 + 2, 5.25, 0.75, "#ffffff") };
+    default: // ČD
+      return { base: CD.gray, door: CD.navy,
+        side: (cc, L) => bands(L, [[12.25, 3, "#98a0a9"], [10.9, 1.35, CD.navy], [10.68, 0.22, CD.yellow], [6.75, 3.93, CD.sky], [6.5, 0.25, CD.navy], [0, 4.35, "#2a2d31"]]),
+        cabEnd: (cc, L) => path("M0 4.35L3.2 4.35Q5.0 6.6 5.6 13.3L0 13.3Z", CD.navy) + path("M3.2 4.35L3.75 4.35Q5.5 6.6 6.1 13.3L5.6 13.3Q5.0 6.6 3.2 4.35Z", CD.yellow),
+        over: (cc, L) => cdLogo(cc, L * 0.3, 5.45, 1.05, CD.navy) + letters(cc, 6.7, 8.75, 1.4, cc.firstClass ? "1" : "2", "#ffffff", { weight: 600 }) +
+          letters(cc, L - 6.7, 8.75, 1.4, cc.firstClass ? "1" : "2", "#ffffff", { weight: 600 }) };
+  }
+}
+
 // One section of a multiple unit (low or high floor). o: roof, sill, nose
-// (on a cab section), rake, rows, doors, trucks ([x...] own trucks; "end"
-// for a Jakobs truck shared at the right end), pan (x of a pantograph),
-// roofItems, paint(c, g) for the side.
+// (on a cab section), rake, rows, doors, doorFill(c), trucks ([x...] own
+// trucks; "end"/"start" for a Jakobs truck shared at that end), wheel, pan
+// (x of a pantograph), paint(c, g) for the side, cab(c, g) for more at the
+// cab, extra(c, g) for the rest (roof equipment, underfloor, lettering).
 export function unit(c, o) {
   const { roof, sill } = o;
   const cabbed = !!o.nose;
+  const fill = o.doorFill ? o.doorFill(c) : null;
   return bilevel(cabbed ? { ...c, cabL: true } : { ...c, cabL: false, cabR: false }, {
     roof, sill, cornerR: 1.0, end: 0.6, noTrucks: true, badge: false, nose: o.nose || null,
     drop: o.drop || null, diaphragm: o.diaphragm ?? [sill + 0.2, roof - 1.6], cabLen: cabbed ? o.cabLen ?? 7 : 0,
-    rows: o.rows, doors: o.doors, roofItems: o.roofItems || [],
-    paint: (cc, g) => (o.paint ? o.paint(cc, g) : side(c, g.L, { eave: roof - 1.2, low: o.low ?? sill + 1.6, skirt: sill + 0.2, cab: cabbed })),
-    cab: cabbed ? () => screen(c, o.rake[0], o.rake[1], o.depth ?? 2.6) : null,
+    rows: o.rows, doors: (o.doors || []).map((d) => (fill && !d.fill ? { ...d, fill } : d)), roofItems: o.roofItems || [],
+    paint: (cc, g) => (o.paint ? o.paint(cc, g) : side(c, g.L, { eave: roof - 1.2, low: o.low ?? sill + 1.6, skirt: sill + 0.2 })),
+    cab: cabbed ? (cc, g) => screen(c, o.rake[0], o.rake[1], o.depth ?? 2.6, o.surround) + (o.cab ? o.cab(cc, g) : "") : null,
     extra: (cc, g) => (o.trucks || []).map((x) => (x === "end" ? truck(g.L, { wb: 8.5, d: 30, top: sill }) : x === "start" ? truck(0, { wb: 8.5, d: 30, top: sill })
-      : truck(x, { wb: 8.5, d: o.wheel ?? 33, top: sill }))).join("") + (o.pan != null ? pantograph(o.pan, roof, { up: true, facing: -1 }) : "") + (o.extra ? o.extra(cc, g) : ""),
+      : truck(x, { wb: 8.5, d: o.wheel ?? 33, top: sill }))).join("") +
+      (o.pan != null ? pantograph(o.pan, roof, { up: true, facing: -1 }) + hvLine(o.pan + 3.0, o.pan + 9.0, roof) : "") +
+      (cabbed ? front(cc, o, { lampY: o.lampY ?? sill + 1.75, coupler: o.coupler }) : "") + (o.extra ? o.extra(cc, g) : ""),
   });
 }
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
 const plug = (x, sill, top, w = 4.4) => ({ x, w, y0: sill, y1: top, leaves: 2, glassY: 0.4, glassH: 0.45 });
+// Equipment boxes under a floor, from a to b.
+const boxes = (a, b, top, k = 3, depth = 1.3) => underframe(a, b, top, { depth, boxes: k, tanks: false });
 
 // ---------- Locomotives ----------
 
 // Škoda 109E (ČD 380): 18.0 m, Bo'Bo', 1,250 mm wheels; a rounded nose with
-// a deep raked windshield.
+// a deep raked windshield. ČD's paint: silver, the machine room between the
+// cabs striped in grays like louvers, blue along the bottom and over the
+// roof; ČD's mark in red behind the No. 1 cab.
 const NOSE_109E = [[1.2, 4.1], [1.0, 6.6], ["q", 1.1, 8.0, 2.2, 9.1], [4.0, 12.3], ["q", 4.6, 12.9, 5.8, 12.9]];
-export const loco109E = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_109E, rake: [[2.2, 9.1], [4.0, 12.3]], centers: 30, door: 7.0 });
+function paint109(c, L) {
+  let s = rect(0, 0, L, 20, CD.silver);
+  for (let y = 5.85, k = 0; y < 11.3; y += 0.5, k++) s += rect(9.4, y, L - 18.8, 0.25, k % 2 ? "#aeb5bd" : "#bac1c8");
+  s += bands(L, [[11.55, 3, CD.blue], [11.35, 0.2, "#e9ecef"], [0, 5.55, CD.blue], [5.55, 0.18, "#e9ecef"], [0, sill109 + 0.35, "#1c2a4a"]]);
+  // The blue roof comes down over the cab to the top of the windshield;
+  // under the windshield the nose is blue too.
+  s += path("M0 11.55L0 13L9.0 13L9.0 11.55Q5.6 11.6 4.4 12.5Z", CD.blue) + path("M0 5.55L0 8.3Q1.6 8.4 2.6 7.2Q3.8 5.6 6.2 5.55Z", CD.blue);
+  return s;
+}
+const sill109 = 4.1;
+const over109 = (c, L) => mark(c, 14.2, 9.6, `<rect x="-0.85" y="-0.8" width="1.7" height="1.6" rx="0.2" fill="${CD.red}"/>` + txt(0, -0.02, 0.85, "ČD", "#ffffff", { weight: 800 })) +
+  letters(c, L - 15, 4.8, 0.62, "380", "#ffffff", { weight: 600 });
+export const loco109E = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_109E, rake: [[2.2, 9.1], [4.0, 12.3]], centers: 30, door: 7.0,
+  paint: paint109, over: over109, grilles: [[-10.5, 6.0, 7.6, 10.6], [4.5, 6.0, 7.6, 10.6]], grilleFill: "rgba(20,22,25,0.18)" });
+
 // Siemens Vectron: 18.98 m over buffers, Bo'Bo'; a flat, nearly upright
-// front under a short raked windshield.
+// front under a short raked windshield; louvers high along the middle of
+// the side. RegioJet: yellow, black along the bottom and round the cab
+// glass, its name in black mid-side. ZSSK (383): red, black below, the
+// white ring and "Národný dopravca" behind the No. 1 cab and a panel of
+// folk pattern at the other end. Leo Express: graphite, a copper slash
+// behind each cab, its name mid-side.
 const NOSE_VECTRON = [[1.4, 4.1], [1.4, 7.3], ["q", 1.45, 8.3, 2.1, 9.0], [3.0, 12.3], ["q", 3.3, 12.9, 4.3, 12.9]];
-export const vectron = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_VECTRON, rake: [[2.1, 9.0], [3.0, 12.3]], centers: 32.5, door: 5.6 });
+function vectronPaint(c, L) {
+  if (c.agency === "zssk") return bands(L, [[0, 20, ZS.red], [11.8, 3, "#3a3d42"], [0, 5.4, ZS.dark], [5.4, 0.18, "#f4f5f6"]]) +
+    path("M0 5.4L0 9.2Q1.4 9.4 2.6 9.4L4.6 5.4Z", ZS.dark);
+  if (isLeo(c)) return bands(L, [[0, 20, LEO.graphite], [11.8, 3, LEO.roof], [0, 4.9, "#17181a"]]) +
+    path(poly([[10.6, 4.9], [11.8, 4.9], [14.6, 11.8], [13.4, 11.8]]), LEO.copper) + path("M1.9 9.2L3.0 12.5L3.5 12.5L2.4 9.2Z", LEO.copper);
+  return bands(L, [[0, 20, RJ.yellow], [11.8, 3, RJ.gray], [0, 5.3, RJ.black], [5.3, 0.16, "#f4f4f2"]]) + path("M0 5.3L0 9.0L2.2 9.0L3.4 5.3Z", RJ.black);
+}
+function vectronOver(c, L) {
+  if (c.agency === "zssk") {
+    let s = zsLogo(c, 15.2, 8.3, 2.0, "#ffffff");
+    // The folk-pattern panel: white, a lattice of red diamonds.
+    const x = L - 16.0;
+    s += rect(x, 6.2, 5.0, 4.6, "#f4f5f6", 0, 'rx="0.2"');
+    const segs = [];
+    for (let k = 0; k < 5; k++) segs.push([x + k, 6.2, x + k + 1, 10.8], [x + k + 1, 6.2, x + k, 10.8]);
+    return s + lines(segs, ZS.red, 1.0) + letters(c, L / 2 + 2, 4.75, 0.55, "383", "#ffffff", { weight: 600 });
+  }
+  if (isLeo(c)) return leoLogo(c, L / 2, 8.9, 1.9, "#ffffff");
+  return letters(c, L / 2, 8.95, 1.55, "RegioJet", RJ.black, { weight: 800 }) + letters(c, L / 2, 4.7, 0.55, "193", "#f4f4f2", { weight: 600 });
+}
+export const vectron = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_VECTRON, rake: [[2.1, 9.0], [3.0, 12.3]], centers: 32.5, door: 5.6,
+  paint: vectronPaint, over: vectronOver, surround: c.agency === "zssk" ? ZS.dark : isLeo(c) ? "#111214" : RJ.black,
+  grilles: [[-19.0, 10.0, 9.4, 11.3], [9.0, 10.0, 9.4, 11.3], [-4.0, 8.0, 9.4, 11.3]], grilleFill: "rgba(20,22,25,0.22)" });
 
 // ---------- Coaches ----------
 
-// ČD's railjets: Siemens Viaggio coaches in ČD's railjet paint, dark blue
-// with a light blue line under the windows; the driving trailer's rounded
-// cab end at the back of the train.
-const RJ = { navy: "#1f3264", sky: "#62b5e5" };
-const rjPaint = (c, L) => rect(0, 0, L, 20, RJ.navy) + rect(0, 12.25, L, 8, "#5b6470") + rect(0, 6.55, L, 0.3, RJ.sky) + rect(0, 0, L, 4.3, "#15171a");
+// ČD's railjets: Siemens Viaggio coaches, longer windows; the driving
+// trailer's rounded cab end, navy edged in yellow, at the back of the train.
 const RJ_ROWS = (L) => [{ a: 6.0, b: L - 6.0, y: 7.2, w: 5.2, h: 3.1, pitch: 6.45, r: 0.5 }];
-export const rjCoach = (c) => euroCoach(c, { base: RJ.navy, paint: rjPaint, rows: RJ_ROWS(c.L) });
-export const rjCab = (c) => euroCoach(c, { base: RJ.navy, paint: rjPaint, rows: RJ_ROWS(c.L),
-  cab: () => path(poly([[1.0, 8.6], [2.6, 11.6], [5.4, 11.6], [5.4, 8.6]]), C.glass) + path(poly([[0.75, 8.3], [0.75, 11.9], [2.4, 12.2], ["q", 1.0, 11.6, 0.75, 8.3]]), "#111214") });
+export const rjCoach = (c) => euroCoach({ ...c, agency: "czcd", firstClass: c.index === 1 }, { rows: RJ_ROWS(c.L) });
+export const rjCab = (c) => euroCoach({ ...c, agency: "czcd" }, { rows: RJ_ROWS(c.L),
+  cab: () => path(poly([[1.0, 8.6], [2.6, 11.6], [5.4, 11.6], [5.4, 8.6]]), C.glass) + path(poly([[0.75, 8.3], [0.75, 11.9], [2.4, 12.2], ["q", 1.0, 11.6, 0.75, 8.3]]), "#111214") +
+    rect(3.2, 11.1, 1.9, 0.3, "#f39a26", 0, 'opacity="0.9"') + line(1.6, 8.8, 2.3, 10.4, "#0d0f12", 0.7) });
 
 // ---------- Multiple units ----------
 
 // Pendolino (ČD 680): seven cars, 185.3 m; a long tapered nose; a narrow
-// body for tilting; small paired windows.
+// body for tilting; small windows in a dark band. Silver, a turquoise band
+// low on the side over navy, yellow round the lamps at the nose; ČD's mark
+// in teal.
 const NOSE_680 = [[1.0, 3.6], [0.8, 5.4], ["q", 0.9, 7.0, 2.6, 8.3], [8.8, 11.9], ["q", 10.4, 12.7, 12.8, 12.7]];
-const pendoPaint = (c, g) => side(c, g.L, { eave: 11.6, low: 6.2, skirt: 3.9 }) + rect(0, 7.0, g.L, 2.9, "#141619");
-export const pendolinoCab = (c) => unit(c, { roof: 12.7, sill: 3.6, nose: NOSE_680, rake: [[2.6, 8.3], [8.8, 11.9]], depth: 3.4, cabLen: 14, low: 6.2,
+const pendoPaint = (cab) => (c, g) => bands(g.L, [[0, 20, CD.silver], [11.7, 3, "#e3e6e9"], [6.95, 3.05, "#2e4152"], [4.55, 1.05, "#2fb0d6"], [3.9, 0.65, "#1c3a6a"], [0, 3.9, "#2a2d31"]]) +
+  (cab ? path("M0 5.0L7.6 5.0Q9.8 5.0 11.6 4.55L13.2 4.55L13.2 5.6L11.6 5.6Q9.8 6.15 7.6 6.15L0 6.15Z", CD.yellow) + path("M0 6.95L0 12.7L4 12.7L13.6 6.95Z", CD.silver) : "");
+const pendoRoof = (L, a) => rect(a, 12.65, L - a - 2, 0.35, "#c3c8ce", 0.4, 'rx="0.17"') + hvac(L / 2 - 6, 12.7, 12, 0.6);
+export const pendolinoCab = (c) => unit(c, { roof: 12.7, sill: 3.6, nose: NOSE_680, rake: [[2.6, 8.3], [8.8, 11.9]], depth: 3.4, cabLen: 14, lampY: 5.3,
   rows: [{ xs: seq(17.0, 5.6, 12), y: 7.25, w: 4.2, h: 2.4, r: 0.35 }], doors: [plug(14.2, 3.6, 10.6, 2.4), plug(c.L - 4.2, 3.6, 10.6, 2.4)],
-  trucks: [12.0, c.L - 10.0], wheel: 36, paint: pendoPaint });
-export const pendolinoMid = (c) => unit(c, { roof: 12.7, sill: 3.6, low: 6.2,
+  trucks: [12.0, c.L - 10.0], wheel: 36, paint: pendoPaint(true), doorFill: () => "#d6dade",
+  extra: (cc, g) => pendoRoof(g.L, 14) + boxes(18, g.L - 16, 3.6, 3, 1.2) + cdLogo(cc, 32, 6.2, 0.95, "#1f8fa8") + letters(cc, 70, 6.25, 0.7, "SuperCity", "#1c3a6a", { weight: 700, style: "italic" }) });
+export const pendolinoMid = (c) => unit(c, { roof: 12.7, sill: 3.6,
   rows: [{ xs: seq(6.8, 5.6, 13), y: 7.25, w: 4.2, h: 2.4, r: 0.35 }], doors: [plug(1.6, 3.6, 10.6, 2.4), plug(c.L - 4.0, 3.6, 10.6, 2.4)],
-  trucks: [10.0, c.L - 10.0], wheel: 36, paint: pendoPaint, pan: c.pan ? c.L / 2 : null });
+  trucks: [10.0, c.L - 10.0], wheel: 36, paint: pendoPaint(false), doorFill: () => "#d6dade", pan: c.pan ? c.L / 2 - 6 : null,
+  extra: (cc, g) => pendoRoof(g.L, 2) + boxes(16, g.L - 16, 3.6, 3, 1.2) + (cc.index === 3 ? letters(cc, g.L / 2, 6.25, 0.6, "bistro", "#1c3a6a", { weight: 600 }) : "") });
 
 // CityElefant (ČD 471, ZSSK 671): three double-deck cars of 26.4 m, the
 // power car (471) and cab trailer (971) at the ends; a low floor between
 // the trucks, two double doors a side, windows on both decks and on the
-// intermediate level over each truck.
+// intermediate level over each truck. ČD: silver, the lower deck blue
+// under red, a white line between; at the cab the bands sweep up toward
+// the windshield, the name on the blue; the cab in dark gray round the
+// glass, yellow under the nose. ZSSK (671): white, the lower deck and the
+// cab red.
 const ELE = { roof: 15.2, sill: 3.7, drop: (L) => ({ a: 14.6, b: L - 14.6, y: 1.6 }) };
 const NOSE_471 = [[1.3, 3.7], [1.2, 6.8], ["q", 1.3, 8.2, 2.2, 9.4], [4.6, 14.0], ["q", 5.4, 15.2, 7.2, 15.2]];
-const elePaint = (c, g) => side(c, g.L, { eave: 14.2, low: 4.4, skirt: 1.7 }) + rect(17.0, 10.55, g.L - 34.0, 3.0, "#141619", 0, 'rx="0.4"');
+function elePaint(cab) {
+  return (c, g) => {
+    const L = g.L;
+    if (c.agency === "zssk") {
+      let s = bands(L, [[0, 20, ZS.white], [14.25, 3, ZS.gray], [4.35, 3.15, ZS.red], [7.5, 0.18, ZS.red], [0, 2.4, "#2a2d31"]]) + rect(17.0, 10.55, L - 34.0, 3.0, "#141619", 0, 'rx="0.4"');
+      if (cab) s += path("M0 7.5L0 15.4L9.6 15.4L9.6 10.3Q9.4 8.9 7.6 8.4Z", ZS.red) + rect(0, 3.7, 4.0, 0.8, "#f5c400");
+      return s;
+    }
+    if (!cab) return bands(L, [[0, 20, "#d5d9dd"], [14.25, 3, "#e9ecef"], [2.4, 3.55, "#2b4fa0"], [5.95, 0.24, "#f4f6f8"], [6.19, 2.2, CD.red], [0, 2.4, "#3a3f45"]]) +
+      rect(17.0, 10.55, L - 34.0, 3.0, "#141619", 0, 'rx="0.4"');
+    // At the cab the red and the blue under it sweep up toward the
+    // windshield, the white line between them, a pale blue streak over the red.
+    const top = `L18 8.39C12 8.39 8.5 10.5 6.4 13.6`, mid = `C7.0 7.6 11.0 5.95 18 5.95L${L + 1} 5.95`;
+    let s = bands(L, [[0, 20, "#d5d9dd"], [14.25, 3, "#e9ecef"], [0, 2.4, "#3a3f45"]]) + rect(17.0, 10.55, L - 34.0, 3.0, "#141619", 0, 'rx="0.4"');
+    s += path(`M${L + 1} 8.39${top}L4.4 10.2${mid}Z`, CD.red) + path(`M${L + 1} 5.95L18 5.95C11.0 5.95 7.0 7.6 4.4 10.2L1.6 6.2L2.6 2.4L${L + 1} 2.4Z`, "#2b4fa0");
+    s += path(`M4.4 10.2${mid}`, "none", 0, 'stroke="#f4f6f8" stroke-width="0.26"') + path("M6.9 13.9C9.0 11.0 12.0 9.05 19.5 8.9", "none", 0, 'stroke="#9cc4ea" stroke-width="0.45"');
+    s += path("M0 6.4L0 14.6L5.4 14.6L5.4 9.0Q4.0 7.0 2.4 6.4Z", "#4a4f57") + rect(0, 3.7, 4.2, 0.75, CD.yellow);
+    return s;
+  };
+}
 const eleRows = (L, a = 6.2) => [{ xs: seq(17.6, 5.4, Math.floor((L - 35.2) / 5.4) + 1), y: 10.75, w: 4.4, h: 2.6, r: 0.4 },
   { xs: seq(22.6, 5.5, Math.floor((L - 45.2) / 5.5) + 1), y: 4.6, w: 4.4, h: 2.6, r: 0.4 }, { xs: [a, L - a - 4.2], y: 7.4, w: 4.2, h: 2.8, r: 0.4 }];
 const eleDoors = (L) => [plug(16.2, 1.7, 9.2, 4.8), plug(L - 21.0, 1.7, 9.2, 4.8)];
 const eleTrucks = (L) => [8.0, L - 8.0];
+// The double-deck roof: air-conditioning over each deck's ends.
+const eleRoof = (L) => hvac(17, 15.2, 10) + hvac(L - 27, 15.2, 10);
+const eleName = (c, x) => (c.agency === "zssk" ? letters(c, x, 3.35, 0.8, "ZSSK", ZS.red, { weight: 800 })
+  : mark(c, x, 3.4, txt(-0.35, 0, 0.95, "city", "#ffffff", { weight: 500, anchor: "end" }) + txt(-0.3, 0, 1.15, "Elefant", "#ffffff", { weight: 700, anchor: "start" })));
+const eleLogo = (c, x) => (c.agency === "zssk" ? zsLogo(c, x, 9.0, 0.6, ZS.red, false) : cdLogo(c, x, 9.0, 0.9, CD.navy, false));
 const elefantCab = (c, pan) => unit(c, { roof: ELE.roof, sill: ELE.sill, drop: ELE.drop(c.L), nose: NOSE_471, rake: [[2.2, 9.4], [4.6, 14.0]], cabLen: 8,
-  rows: eleRows(c.L, 9.4), doors: eleDoors(c.L), trucks: eleTrucks(c.L), wheel: 36, paint: elePaint, diaphragm: [3.9, 13.6],
-  pan: pan ? 22.0 : null, roofItems: [[c.L - 20, 9, 0.6]] });
+  rows: eleRows(c.L, 9.4), doors: eleDoors(c.L), trucks: eleTrucks(c.L), wheel: 36, paint: elePaint(true), diaphragm: [3.9, 13.6], lampY: 5.6,
+  surround: "#1d2024", doorFill: (cc) => (cc.agency === "zssk" ? ZS.red : null),
+  pan: pan ? 22.0 : null,
+  extra: (cc, g) => eleRoof(g.L) + (pan ? rect(32, 15.15, 8, 0.6, C.steelDark, 0.4, 'rx="0.2"') : "") + boxes(2.5, 4.4, 3.7, 1, 0.8) + boxes(g.L - 4.4, g.L - 2.5, 3.7, 1, 0.8) +
+    eleName(cc, 43) + eleLogo(cc, g.L - 26) });
 export const elefant471 = (c) => elefantCab(c, true);
 export const elefant971 = (c) => elefantCab(c, false);
 export const elefant071 = (c) => unit(c, { roof: ELE.roof, sill: ELE.sill, drop: ELE.drop(c.L), rows: eleRows(c.L), doors: eleDoors(c.L),
-  trucks: eleTrucks(c.L), wheel: 36, paint: elePaint, diaphragm: [3.9, 13.6] });
+  trucks: eleTrucks(c.L), wheel: 36, paint: elePaint(false), diaphragm: [3.9, 13.6], doorFill: (cc) => (cc.agency === "zssk" ? ZS.red : null),
+  extra: (cc, g) => eleRoof(g.L) + eleName(cc, 43) + eleLogo(cc, 11.5) });
 
 // RegioPanter (Škoda 7Ev: ČD 640 and 650, Arriva's 650s, ZSSK 661): cars of
 // 26.45 m on their own trucks, low floor at the doors; a blunt nose under a
-// big windshield; two double doors a side.
+// big windshield; two double doors a side; air-conditioning and the
+// traction equipment on the roof. ČD: white cab ends and roof, the side
+// blue from just behind the cab under a yellow line, a navy skirt, yellow
+// under the nose; ČD's mark and the name in white below the windows.
+// Arriva: aqua, white at the cab and two white lines low. ZSSK (661):
+// white, a red window band, the cab and doors red.
 const NOSE_PANTER = [[1.2, 3.0], [1.0, 5.8], ["q", 1.1, 7.2, 2.0, 8.3], [4.2, 12.9], ["q", 4.9, 13.9, 6.6, 13.9]];
-const panterPaint = (cab) => (c, g) => side(c, g.L, { eave: 12.7, low: 5.4, skirt: 3.3, cab }) + rect(0, 6.2, g.L, 4.2, "#141619");
+// ČD's regional blue on a section: blue from low to top behind a white cab
+// (cab: the x where the blue begins), a yellow line on top, a navy skirt.
+function cdBlue(L, { cab = null, low, top, skirt, sill, roofY }) {
+  let s = bands(L, [[0, 20, CD.white], [roofY, 3, "#c9ced4"]]);
+  s += cab == null ? rect(-1, low, L + 2, top - low, CD.blue) + rect(-1, top, L + 2, 0.22, CD.yellow)
+    : path(`M${cab + 1.4} ${low}L${L + 1} ${low}L${L + 1} ${top}L${cab - 0.5} ${top}Q${cab - 0.4} ${(low + top) / 2} ${cab + 1.4} ${low}Z`, CD.blue) + rect(cab - 0.5, top, L - cab + 1.5, 0.22, CD.yellow);
+  s += rect(-1, 0, L + 2, skirt, CD.navy) + rect(-1, skirt, L + 2, 0.2, "#dfe5ec");
+  if (cab != null) s += rect(-1, sill - 0.1, 5.2, 0.7, CD.yellow);
+  return s;
+}
+function panterPaint(cab) {
+  return (c, g) => {
+    const L = g.L;
+    if (c.agency === "zssk") return bands(L, [[0, 20, ZS.white], [12.9, 3, ZS.gray], [5.9, 4.8, ZS.red], [0, 3.9, "#2a2d31"], [3.9, 0.15, ZS.red]]) +
+      (cab ? path("M0 5.9L0 14L8.4 14L8.4 6.4Q8.0 5.9 7.0 5.9Z", ZS.red) : "");
+    if (c.agency === "czarriva") return bands(L, [[0, 20, ARRIVA.aqua], [12.9, 3, "#c9ced4"], [0, 3.9, ARRIVA.skirt], [4.2, 0.22, ARRIVA.white], [4.65, 0.22, ARRIVA.white]]) +
+      (cab ? path("M0 3.9L0 14L6.2 14Q8.6 9 6.4 3.9Z", ARRIVA.white) : "");
+    return cdBlue(L, { cab: cab ? 8.0 : null, low: 4.35, top: 11.25, skirt: 4.1, sill: 3.0, roofY: 12.9 });
+  };
+}
+const panterFill = (c) => (c.agency === "zssk" ? ZS.red : null);
+const panterName = (c, x) => (c.agency === "czcd" || !c.agency ? cdLogo(c, x, 5.35, 1.1, "#ffffff") : c.agency === "czarriva" ? letters(c, x, 5.6, 1.3, "arriva", "#ffffff", { weight: 700 })
+  : zsLogo(c, x, 11.6, 0.55, ZS.red, false) + letters(c, x + 1.0, 11.65, 0.7, "ZSSK", ZS.red, { anchor: "start", weight: 800 }));
+const panterRoof = (L, items) => items.map(([x, w]) => hvac(x, 13.9, w)).join("");
 export const panterCab = (c) => unit(c, { roof: 13.9, sill: 3.0, nose: NOSE_PANTER, rake: [[2.0, 8.3], [4.2, 12.9]], cabLen: 8,
   rows: [{ xs: seq(19.0, 6.4, 5), y: 6.4, w: 5.6, h: 3.8, r: 0.45 }, { xs: [9.6, c.L - 7.4], y: 6.4, w: 3.6, h: 3.8, r: 0.45 }],
-  doors: [plug(13.8, 3.0, 10.5), plug(c.L - 13.2, 3.0, 10.5)], trucks: [9.5, c.L - 8.0], paint: panterPaint(true),
-  pan: c.index === 0 && c.count === 2 ? 40 : null, roofItems: [[20, 14, 0.55], [c.L - 26, 10, 0.55]] });
+  doors: [plug(13.8, 3.0, 10.5), plug(c.L - 13.2, 3.0, 10.5)], trucks: [9.5, c.L - 8.0], paint: panterPaint(true), doorFill: panterFill,
+  surround: c.agency === "zssk" ? "#1d1e20" : undefined,
+  pan: c.index === 0 && c.count === 2 ? 44 : null,
+  extra: (cc, g) => panterRoof(g.L, [[18, 13], [g.L - 26, 10]]) + boxes(25, g.L - 18, 3.0, 2, 0.6) + panterName(cc, 30) +
+    (cc.agency === "czcd" || !cc.agency ? letters(cc, 58, 5.35, 0.85, "RegioPanter", "#ffffff", { weight: 600 }) : "") });
 export const panterMid = (c) => unit(c, { roof: 13.9, sill: 3.0,
   rows: [{ xs: seq(17.6, 6.4, 7), y: 6.4, w: 5.6, h: 3.8, r: 0.45 }, { xs: [3.0, c.L - 6.6], y: 6.4, w: 3.6, h: 3.8, r: 0.45 }],
-  doors: [plug(9.4, 3.0, 10.5), plug(c.L - 13.8, 3.0, 10.5)], trucks: [8.0, c.L - 8.0], paint: panterPaint(false), pan: c.L / 2, roofItems: [[8, 10, 0.55]] });
+  doors: [plug(9.4, 3.0, 10.5), plug(c.L - 13.8, 3.0, 10.5)], trucks: [8.0, c.L - 8.0], paint: panterPaint(false), doorFill: panterFill, pan: c.L / 2 - 8,
+  extra: (cc, g) => panterRoof(g.L, [[3.5, 10], [g.L - 14, 10]]) + boxes(18, g.L - 18, 3.0, 2, 0.6) + panterName(cc, 40) });
 
 // RegioShark (Pesa Link, ČD 844): two cars, 43.73 m, a diesel under each;
 // a rounded nose; one double door a side in each car, near the coupling.
+// Blue over the windows and roof edge, a pale gray band under them with the
+// name in blue, navy below; the lower nose white up to the windshield.
 const NOSE_LINK = [[1.3, 2.9], [1.1, 5.5], ["q", 1.2, 7.3, 2.4, 8.6], [4.6, 12.3], ["q", 5.3, 13.3, 7.0, 13.3]];
-export const linkCar = (c) => unit(c, { roof: 13.3, sill: 2.9, nose: NOSE_LINK, rake: [[2.4, 8.6], [4.6, 12.3]], cabLen: 8,
+const sharkPaint = (c, g) => bands(g.L, [[0, 20, CD.shark], [12.35, 3, "#b9c0c8"], [3.75, 2.05, "#e7eaed"], [0, 3.75, CD.navy]]) +
+  path("M0 0L0 8.9Q3.4 8.9 6.0 7.2Q8.2 5.8 11.5 5.8L11.5 0Z", "#e7eaed") + rect(-1, 2.9, 4.6, 0.6, CD.yellow);
+export const linkCar = (c) => unit(c, { roof: 13.3, sill: 2.9, nose: NOSE_LINK, rake: [[2.4, 8.6], [4.6, 12.3]], cabLen: 8, lampY: 5.0,
   rows: [{ xs: seq(10.0, 6.1, 6), y: 6.2, w: 5.0, h: 3.6, r: 0.45 }, { xs: [c.L - 6.4], y: 6.2, w: 3.4, h: 3.6, r: 0.45 }],
-  doors: [plug(c.L - 13.6, 2.9, 10.2)], trucks: [10.0, c.L - 9.0], paint: panterPaint(true), roofItems: [[14, 12, 0.7], [36, 8, 0.7]] });
+  doors: [plug(c.L - 13.6, 2.9, 10.2)], trucks: [10.0, c.L - 9.0], paint: sharkPaint,
+  extra: (cc, g) => hvac(14, 13.3, 12) + exhaust(34, 13.3) + rect(38, 13.25, 6, 0.6, C.steelDark, 0.4, 'rx="0.25"') +
+    boxes(16, 30, 2.9, 2, 1.1) + tank(31, 38, 2.9, 1.4) + boxes(39, g.L - 15, 2.9, 1, 1.0) +
+    mark(cc, 27, 4.78, txt(0, 0, 1.15, "RegioShark", CD.shark, { weight: 700 })) + cdLogo(cc, 47, 11.1, 0.85, "#ffffff", false) });
 
 // Regionova (ČD 814): two-axle railbus cars of 14.22 m rebuilt from class
-// 810 railbuses; an upright new cab, a folding door behind it.
+// 810 railbuses; an upright new cab, a folding door behind it. ČD's
+// regional yellow and green: green below a wave that rises to the cab, the
+// name in white on the green.
 function axle(x, sill) {
-  return rect(x - 2.6, 1.6, 5.2, 0.32, "currentColor", 0, 'opacity="0.8"') + circle(x, 1.25, 1.25, "currentColor") + circle(x, 1.25, 1.02, "none", 0, `stroke="${C.steelDark}" stroke-width="0.5" vector-effect="non-scaling-stroke"`) +
-    circle(x, 1.25, 0.33, C.steelDark) + rect(x - 0.55, 0.85, 1.1, 0.8, C.steelDark, 0, 'rx="0.14"') + rect(x - 1.2, 1.95, 2.4, sill - 1.95, "currentColor", 0, 'opacity="0.8"');
+  return rect(x - 2.6, 1.6, 5.2, 0.32, "currentColor", 0, 'opacity="0.8"') + circle(x, 1.25, 1.25, "currentColor") + circle(x, 1.25, 1.02, "none", 0, `stroke="${C.steelDark}" stroke-width="0.5" ${STROKE}`) +
+    circle(x, 1.25, 0.33, C.steelDark) + rect(x - 0.55, 0.85, 1.1, 0.8, C.steelDark, 0, 'rx="0.14"') + rect(x - 1.2, 1.95, 2.4, sill - 1.95, "currentColor", 0, 'opacity="0.8"') +
+    // The leaf spring over the axle box, hung from brackets at each end.
+    path(`M${n(x - 2.4)} 2.35Q${n(x)} 1.55 ${n(x + 2.4)} 2.35L${n(x + 2.4)} 2.6Q${n(x)} 1.85 ${n(x - 2.4)} 2.6Z`, C.steelDark) +
+    rect(x - 2.7, 2.3, 0.35, sill - 2.3, "currentColor") + rect(x + 2.35, 2.3, 0.35, sill - 2.3, "currentColor");
 }
 const NOSE_814 = [[0.9, 3.9], [0.8, 6.8], ["q", 0.9, 7.9, 1.6, 8.6], [2.4, 10.9], ["q", 2.8, 11.6, 3.8, 11.6]];
-export const regionova = (c) => unit(c, { roof: 11.6, sill: 3.9, nose: NOSE_814, rake: [[1.6, 8.6], [2.4, 10.9]], depth: 2.0, cabLen: 5, low: 5.9,
+const novaPaint = (c, g) => bands(g.L, [[0, 20, "#f6c400"], [10.75, 3, "#a9b0b8"], [0, 4.2, "#2a2d31"]]) +
+  path(`M-1 4.2L-1 8.0C4.6 8.0 8.4 5.8 14.6 5.8L${g.L + 1} 5.8L${g.L + 1} 4.2Z`, "#2f8f3a") + path(`M-1 8.0C4.6 8.0 8.4 5.8 14.6 5.8L${g.L + 1} 5.8L${g.L + 1} 6.0L14.6 6.0C8.4 6.0 4.6 8.2 -1 8.2Z`, "#ffffff");
+export const regionova = (c) => unit(c, { roof: 11.6, sill: 3.9, nose: NOSE_814, rake: [[1.6, 8.6], [2.4, 10.9]], depth: 2.0, cabLen: 5, lampY: 5.4,
   rows: [{ xs: seq(10.6, 4.6, 7), y: 6.9, w: 3.8, h: 2.6, r: 0.35 }], doors: [{ x: 5.4, w: 3.2, y0: 3.4, y1: 10.2, leaves: 2, glassY: 0.5, glassH: 0.35 }],
-  extra: (cc, g) => axle(12.5, 3.9) + axle(g.L - 12.5, 3.9) + rect(18, 11.55, 9, 0.5, C.steelDark, 0.4, 'rx="0.2"'), diaphragm: [4.2, 10.4] });
+  paint: novaPaint, diaphragm: [4.2, 10.4], coupler: "buffers",
+  // Buffers and screw couplings at both ends (the cars run as 810s did);
+  // the door's folding step; the engine, fuel tank and battery box between
+  // the axles; air-conditioning, exhaust and a rain gutter over the side.
+  extra: (cc, g) => axle(12.5, 3.9) + axle(g.L - 12.5, 3.9) + hvac(18, 11.6, 9, 0.55) + exhaust(29, 11.6) + buffers(g.L, 1, { sill: 3.9 }) +
+    rect(5.2, 2.9, 3.6, 0.3, "currentColor") + rect(5.6, 2.3, 2.8, 0.25, "currentColor", 0, 'opacity="0.8"') + line(4.4, 11.15, g.L - 0.8, 11.15, "rgba(0,0,0,0.25)", 0.6) +
+    boxes(16.4, 20.6, 3.9, 1, 1.1) + tank(21.0, 26.0, 3.9, 2.2) + boxes(26.4, g.L - 16.4, 3.9, 1, 1.0) + rect(g.L - 9.2, 2.7, 2.6, 1.2, "currentColor", 0, 'opacity="0.75" rx="0.1"') +
+    letters(cc, 26, 4.95, 0.95, "Regionova", "#ffffff", { weight: 700, style: "italic" }) + cdLogo(cc, g.L - 8, 10.25, 0.65, CD.navy, false) });
 
 // Regio-Shuttle RS1 (ČD 840 and 841, GW Train 841.2): one car of 25.5 m with
 // a cab at each end, a low floor between the motor trucks, two double doors
-// a side beside it.
+// a side beside it; the engines under the floor at the ends. ČD: blue over
+// a pale gray band and navy skirt, white at the lower nose. GW Train:
+// orange, the cab ends green back past the first window, GWTRAIN big in
+// white low on the side, green doors.
 const NOSE_RS1 = [[1.1, 3.6], [1.0, 6.0], ["q", 1.1, 7.6, 2.2, 8.6], [4.0, 12.2], ["q", 4.7, 13.1, 6.4, 13.1]];
+const rs1Paint = (c, g) => (c.agency === "czgwtrain"
+  ? bands(g.L, [[0, 20, GW.orange], [12.1, 3, "#8e959d"], [6.1, 4.1, "#1d1f22"], [0, 2.5, "#2a2d31"]]) + path("M-1 0L15.2 0L13.2 14L-1 14Z", GW.green) + path("M15.2 0L15.8 0L13.8 14L13.2 14Z", GW.dark)
+  : bands(g.L, [[0, 20, CD.shark], [12.1, 3, "#b9c0c8"], [3.9, 1.7, "#e7eaed"], [0, 3.9, CD.navy]]) + path("M0 0L0 8.4Q3.0 8.4 5.0 6.8Q6.6 5.6 9.0 5.6L9.0 0Z", "#e7eaed") + rect(-1, 3.6, 4.4, 0.55, CD.yellow));
 export const rs1 = (c) => twinEnded(c, (h) => unit(h, { roof: 13.1, sill: 3.6, drop: { a: 16.8, b: c.L - 16.8, y: 2.0 }, nose: NOSE_RS1, rake: [[2.2, 8.6], [4.0, 12.2]],
   rows: [{ xs: [9.4, 23.6, 29.4, 35.2, c.L / 2 - 2.3], y: 6.3, w: 4.6, h: 3.7, r: 0.45 }], doors: [plug(17.6, 2.1, 10.3), plug(c.L - 22.0, 2.1, 10.3)],
-  trucks: [8.4, c.L - 8.4], roofItems: [[12, 10, 0.6]], low: 4.6 }));
+  trucks: [8.4, c.L - 8.4], low: 4.6, paint: rs1Paint, lampY: 5.2, doorFill: (cc) => (cc.agency === "czgwtrain" ? GW.green : null),
+  extra: (cc, g) => hvac(10, 13.1, 9) + exhaust(20.5, 13.1) + boxes(13.0, 16.3, 3.6, 1, 1.2) })) +
+  (c.agency === "czgwtrain" ? letters(c, c.L / 2, 4.15, 1.65, "GWTRAIN", "#ffffff", { weight: 800, style: "italic", spacing: "-0.02em" }) : cdLogo(c, c.L / 2, 11.15, 0.9, "#ffffff"));
 
 // DB class 628 (Arriva 845, GW Train's 628s): two cars of 22.9 m, a diesel
 // under the motor car; a wedge cab; single folding doors near each end.
+// Arriva: aqua, two white lines low, "arriva" in white. GW Train: green
+// over orange, GWTRAIN in white on the orange.
 const NOSE_628 = [[1.0, 3.9], [0.9, 6.6], ["q", 1.0, 7.6, 1.9, 8.4], [3.4, 12.4], ["q", 3.9, 13.2, 5.2, 13.2]];
-export const vt628 = (c) => unit(c, { roof: 13.2, sill: 3.9, nose: NOSE_628, rake: [[1.9, 8.4], [3.4, 12.4]], depth: 2.2, cabLen: 6, low: 6.0,
+const vt628Paint = (c, g) => (c.agency === "czgwtrain"
+  ? bands(g.L, [[0, 20, GW.green], [12.0, 3, "#8e959d"], [0, 6.75, GW.orange], [6.75, 0.2, "#ffffff"], [0, 4.4, "#2a2d31"]])
+  : bands(g.L, [[0, 20, ARRIVA.aqua], [12.0, 3, "#c9ced4"], [0, 4.5, ARRIVA.skirt], [4.85, 0.22, ARRIVA.white], [5.3, 0.22, ARRIVA.white]]) + path("M-1 4.5L-1 13.2L1.6 13.2L1.6 4.5Z", ARRIVA.white));
+export const vt628 = (c) => unit(c, { roof: 13.2, sill: 3.9, nose: NOSE_628, rake: [[1.9, 8.4], [3.4, 12.4]], depth: 2.2, cabLen: 6, low: 6.0, lampY: 5.5,
   rows: [{ xs: seq(13.4, 5.0, 11), y: 7.3, w: 4.2, h: 2.9, r: 0.35 }], doors: [{ x: 8.4, w: 3.2, y0: 3.4, y1: 11.0, leaves: 2, glassY: 0.5, glassH: 0.35 },
-    { x: c.L - 5.4, w: 3.2, y0: 3.4, y1: 11.0, leaves: 2, glassY: 0.5, glassH: 0.35 }], trucks: [9.0, c.L - 9.0], roofItems: [[16, 10, 0.6]], diaphragm: [4.2, 11.8] });
+    { x: c.L - 5.4, w: 3.2, y0: 3.4, y1: 11.0, leaves: 2, glassY: 0.5, glassH: 0.35 }], trucks: [9.0, c.L - 9.0], diaphragm: [4.2, 11.8],
+  paint: vt628Paint, doorFill: (cc) => (cc.agency === "czgwtrain" ? GW.green : null),
+  extra: (cc, g) => hvac(16, 13.2, 10) + (cc.index === 0 ? exhaust(30, 13.2) + tank(28, 36, 3.9, 1.5) : boxes(28, 36, 3.9, 1, 0.9)) + boxes(15, 27, 3.9, 2, 1.3) + boxes(37, g.L - 15, 3.9, 2, 1.2) +
+    (cc.agency === "czgwtrain" ? letters(cc, 38, 5.55, 1.35, "GWTRAIN", "#ffffff", { weight: 800, style: "italic" }) : letters(cc, 38, 6.1, 1.25, "arriva", "#ffffff", { weight: 700 })) });
 
 // Alstom Coradia LINT 41 (Leo Express's, CZ and SK): two sections, 41.89 m,
-// on a shared Jakobs truck; a raked nose; one double door a side in each.
+// on a shared Jakobs truck; a raked nose; one double door a side in each;
+// the power pack under each section's high floor. White, the windows in a
+// black band, the cab black round the glass, orange under the nose and on
+// the doors; Leo Express's name beside the door.
 const NOSE_LINT = [[1.0, 2.8], [1.0, 5.6], ["q", 1.1, 7.0, 2.0, 8.0], [4.6, 12.4], ["q", 5.4, 13.4, 7.2, 13.4]];
-export const lintCar = (c) => unit(c, { roof: 13.4, sill: 2.8, nose: NOSE_LINT, rake: [[2.0, 8.0], [4.6, 12.4]], cabLen: 8,
+const lintPaint = (c, g) => bands(g.L, [[0, 20, LEO.white], [12.3, 3, "#a9b0b8"], [6.1, 4.3, "#1d1e20"], [0, 3.3, "#2a2d31"]]) +
+  path("M-1 5.8L6.4 5.8Q9.0 5.8 9.0 8.0L9.0 13.4L-1 13.4Z", "#1d1e20") + rect(-1, 2.8, 5.0, 0.75, LEO.orange) + rect(-1, 3.3, g.L + 2, 0.18, LEO.orange);
+export const lintCar = (c) => unit(c, { roof: 13.4, sill: 2.8, nose: NOSE_LINT, rake: [[2.0, 8.0], [4.6, 12.4]], cabLen: 8, lampY: 4.6,
   rows: [{ xs: [9.6], y: 6.4, w: 3.0, h: 3.8, r: 0.45 }, { xs: seq(20.6, 5.6, 8), y: 6.4, w: 4.8, h: 3.8, r: 0.45 }],
-  doors: [plug(14.2, 2.8, 10.4)], trucks: [10.5, "end"], roofItems: [[22, 12, 0.6], [44, 8, 0.6]] });
+  doors: [plug(14.2, 2.8, 10.4)], trucks: [10.5, "end"], paint: lintPaint, doorFill: () => LEO.orange, surround: "#111214",
+  extra: (cc, g) => hvac(22, 13.4, 12) + hvac(44, 13.4, 8) + exhaust(37, 13.4) + boxes(25, 40, 2.8, 2, 1.0) + tank(41, 48, 2.8, 1.2) + leoLogo(cc, 23, 4.65, 1.25, "#1d1e20") });
 
 // Pesa Elf.eu (RegioJet 654): two cars of about 21.8 m, a pantograph on the
-// first; a rounded nose; two double doors a side in each car.
+// first; a rounded nose; two double doors a side in each car. In the Ústí
+// region's lime green over dark green, yellow round the windshield, a dark
+// roof; RegioJet's name in white.
 const NOSE_ELF = [[1.4, 3.4], [1.0, 6.0], ["q", 1.1, 7.8, 2.6, 9.2], [5.0, 12.9], ["q", 5.8, 13.8, 7.6, 13.8]];
-export const elfCar = (c) => unit(c, { roof: 13.8, sill: 3.4, nose: NOSE_ELF, rake: [[2.6, 9.2], [5.0, 12.9]], cabLen: 8,
+const elfPaint = (c, g) => bands(g.L, [[0, 20, RJ.lime], [12.9, 3, "#4a5056"], [0, 4.7, RJ.green], [4.7, 0.2, "#ffffff"]]) +
+  path("M0 8.2L0 14L9.2 14L9.2 12.0Q6.8 12.0 5.0 9.6Q3.4 8.2 0 8.2Z", RJ.yellow) + rect(-1, 3.4, 4.8, 0.7, RJ.yellow);
+export const elfCar = (c) => unit(c, { roof: 13.8, sill: 3.4, nose: NOSE_ELF, rake: [[2.6, 9.2], [5.0, 12.9]], cabLen: 8, lampY: 5.4,
   rows: [{ xs: seq(15.6, 6.0, 3), y: 6.6, w: 5.0, h: 3.7, r: 0.45 }, { xs: seq(40.4, 6.0, 4), y: 6.6, w: 5.0, h: 3.7, r: 0.45 }],
-  doors: [plug(9.8, 3.4, 10.6), plug(34.4, 3.4, 10.6)], trucks: [9.0, c.L - 8.0], pan: c.index === 0 ? 50 : null, roofItems: [[16, 12, 0.6]] });
+  doors: [plug(9.8, 3.4, 10.6), plug(34.4, 3.4, 10.6)], trucks: [9.0, c.L - 8.0], pan: c.index === 0 ? 50 : null, paint: elfPaint, doorFill: () => "#7ab534",
+  extra: (cc, g) => hvac(15, 13.8, 12) + (cc.index === 0 ? rect(37, 13.75, 6, 0.6, C.steelDark, 0.4, 'rx="0.2"') : hvac(44, 13.8, 10)) + boxes(18, 33, 3.4, 2, 0.7) +
+    letters(cc, 26, 5.65, 0.95, "RegioJet", "#ffffff", { weight: 700 }) + letters(cc, g.L - 18, 5.65, 0.6, "DOPRAVA ÚSTECKÉHO KRAJE", "#ffffff", { weight: 600, spacing: "0.03em" }) });
 
-// Stadler FLIRT (Leo Express 480): the built-in FLIRT sections, repainted in
-// Leo Express black with its gold line (the built-in white, blue and green
-// swapped out), and a pantograph on the middle section.
-const LEO_FLIRT = { "#f4f5f6": "#26272a", "#2a62d4": "#3c3e42", "#3fb54a": "#c8a04a" };
+// Stadler FLIRT (Leo Express 480): sections of the built-in FLIRT's
+// dimensions (js/carmodels.js), cab sections 21.5 m to the joint, the
+// intermediates 15.7 m, on Jakobs trucks; a motor truck under each cab.
+// Graphite all over, copper round the windshield and in a slash behind the
+// cab, the name in white; a pantograph on the middle section.
+const NOSE_FLIRT = [[1.0, 3.0], [1.0, 5.8], ["q", 1.1, 7.0, 2.0, 8.0], [5.6, 12.9], ["q", 6.4, 14.06, 8.2, 14.06]];
+const leoFlirtPaint = (cab) => (c, g) => bands(g.L, [[0, 20, LEO.graphite], [13.2, 3, LEO.roof], [0, 3.6, "#17181a"], [3.6, 0.14, LEO.copper]]) +
+  (cab ? path(poly([[19.6, 3.6], [20.9, 3.6], [23.6, 13.2], [22.3, 13.2]]), LEO.copper) + path("M1.4 7.6Q3.6 10.6 5.2 13.2L9.6 13.2L9.6 13.6L4.9 13.6Q3.2 11.0 1.0 7.9Z", LEO.copper) : "");
+const flirtDoor = (x) => ({ x, w: 4.27, y0: 3.0, y1: 10.4, leaves: 2, glassY: 0.4, glassH: 0.45, fill: "#202124" });
+export const leoFlirtCab = (c) => unit(c, { roof: 14.06, sill: 3.0, nose: NOSE_FLIRT, rake: [[2.0, 8.0], [5.6, 12.9]], depth: 3.1, cabLen: 9, lampY: 4.9,
+  rows: [{ xs: [12.4, 16.2], y: 6.6, w: 3.0, h: 3.6, r: 0.4 }, { xs: seq(29.6, 5.25, 7), y: 6.6, w: 4.6, h: 3.6, r: 0.4 }],
+  doors: [{ x: 9.0, w: 2.3, y0: 4.0, y1: 11.2, glassY: 0.55, glassH: 0.32, grabs: false }, flirtDoor(24.0)], diaphragm: [3.2, 12.2],
+  paint: leoFlirtPaint(true), surround: "#111214",
+  extra: (cc, g) => truck(g.L - 51.8, { wb: 8.2, d: 36, top: 3.0 }) + truck(g.L, { wb: 8.86, d: 30, top: 3.0 }) + hvac(21, 14.06, 10) + hvac(44, 14.06, 8) +
+    boxes(29, 40, 3.0, 2, 0.6) + leoLogo(cc, 22.6, 5.0, 2.1, "#ffffff") });
+export const leoFlirtMid = (c) => unit(c, { roof: 14.06, sill: 3.0,
+  rows: [{ xs: seq(2.6, 5.25, 3), y: 6.6, w: 4.6, h: 3.6, r: 0.4 }, { xs: seq(24.7, 5.25, 5), y: 6.6, w: 4.6, h: 3.6, r: 0.4 }],
+  doors: [flirtDoor(18.5)], diaphragm: [3.2, 12.2], paint: leoFlirtPaint(false), pan: c.index === 2 ? c.L / 2 - 4 : null,
+  extra: (cc, g) => truck(0, { wb: 8.86, d: 30, top: 3.0 }) + truck(g.L, { wb: 8.86, d: 30, top: 3.0 }) + (cc.index === 2 ? "" : hvac(4, 14.06, 9) + hvac(30, 14.06, 9)) +
+    boxes(26, 44, 3.0, 2, 0.6) + (cc.index === 1 ? leoLogo(cc, 11.5, 5.3, 1.1, "#ffffff") : "") });
+// The built-in FLIRT's colors swapped (kept for other files' use).
 export const repaint = (svg, map) => svg.replace(/#[0-9a-f]{6}\b/gi, (m) => map[m.toLowerCase()] || m);
-export const leoFlirtCab = (c) => repaint(flirtCar(c), LEO_FLIRT);
-export const leoFlirtMid = (c) => repaint(flirtMid(c), LEO_FLIRT) + (c.index === 2 ? pantograph(c.L / 2, 14.06, { up: true, facing: -1 }) : "");
 
 // ---------- Tables ----------
 
@@ -272,14 +614,17 @@ export const TYPES = {
 };
 
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
+// Drawings that differ by the car's place in the train (consist.js draws
+// identical cars once).
+const byIndex = (ctx) => ctx.index;
 export const MODELS = {
   cz380: M(loco109E, 59.06),
   czVectron: M(vectron, 62.27),
   czCoach: M((c) => euroCoach(c), 86.6),
-  czRjCoach: M(rjCoach, 86.9),
+  czRjCoach: M(rjCoach, 86.9, false, byIndex),
   czRjCab: M(rjCab, 86.9, true),
   czPendoCab: M(pendolinoCab, 91.5, true),
-  czPendoMid: M(pendolinoMid, 85.0),
+  czPendoMid: M(pendolinoMid, 85.0, false, byIndex),
   czElefant471: M(elefant471, 86.6, true),
   czElefant071: M(elefant071, 86.6),
   czElefant971: M(elefant971, 86.6, true),
@@ -293,7 +638,7 @@ export const MODELS = {
   czLint: M(lintCar, 68.7, true),
   czElf: M(elfCar, 71.5, true),
   czFlirtCab: M(leoFlirtCab, 70.5, true),
-  czFlirtMid: M(leoFlirtMid, 51.5),
+  czFlirtMid: M(leoFlirtMid, 51.5, false, byIndex),
 };
 
 // [first, last, type], by UIC number (class and serial run together).
@@ -394,7 +739,7 @@ export const FACTS = {
     topSpeedMph: 124, powerHp: 8583, lengthFt: 62.3, source: cs("Leo_Express"),
     about: "Leo Express leases Vectrons for its locomotive-hauled international trains, such as the Przemyśl–Frankfurt service." },
   "czCoach@czcd": { model: "Long-distance coach", type: "Passenger coach", builder: "Various", fleet: "Hundreds", lengthFt: 86.6, source: cs("České_dráhy"),
-    about: "ČD's InterCity, EuroCity and Rychlík trains are made up of standard 26.4 m coaches, many rebuilt with air conditioning, power outlets and Wi-Fi. They are drawn here in ČD's white and blue." },
+    about: "ČD's InterCity, EuroCity and Rychlík trains are made up of standard 26.4 m coaches, many rebuilt with air conditioning, power outlets and Wi-Fi. They are drawn here in ČD's long-distance paint: light gray, a sky-blue window band under navy and a yellow line." },
   "czCoach@czregiojet": { model: "RegioJet coach", type: "Passenger coach", builder: "Various (rebuilt ex-ÖBB and new coaches)", lengthFt: 86.6, source: cs("RegioJet"),
     about: "RegioJet's yellow coaches offer Low Cost, Standard, Relax and Business classes, with stewards serving drinks and snacks at the seat." },
   "czCoach@czleo": { model: "Coach", type: "Passenger coach", builder: "Various (former Deutsche Bahn)", lengthFt: 86.6, source: cs("Leo_Express"),
@@ -452,7 +797,7 @@ export const FACTS = {
     source: `${WP}Pesa_Elf`, about: "RegioJet's low-floor electric units for its Ústí-region lines, in service since December 2022; three-car class 655s joined in 2025." },
   czFlirtCab: { model: "Stadler FLIRT (class 480)", type: "Electric multiple unit", builder: "Stadler Rail", built: "2012", fleet: "5 five-car units, 480 001–005",
     topSpeedMph: 99.4, source: `${WP}Leo_Express`,
-    about: "Leo Express's black and gold FLIRTs, fitted for long distance with Economy, Business and Premium classes, run its Prague–Ostrava trains." },
+    about: "Leo Express's dark FLIRTs, trimmed in copper and fitted for long distance with Economy, Business and Premium classes, run its Prague–Ostrava trains." },
   czFlirtMid: { model: "Stadler FLIRT (class 480)", type: "Electric multiple unit", builder: "Stadler Rail", built: "2012", fleet: "5 five-car units", topSpeedMph: 99.4,
     source: `${WP}Leo_Express`, about: "An intermediate section of a Leo Express FLIRT; sections share trucks at each joint." },
 };
