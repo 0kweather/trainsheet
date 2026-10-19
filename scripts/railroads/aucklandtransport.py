@@ -161,14 +161,26 @@ def number(t):
 # AT Metro's (agency AM) and Te Huia's (WRC). Each station is filed with its
 # platforms as stops of their own ("Waitemata Train Station 4"); their ids
 # change with every timetable ("133-08da14b5"), so the platforms fold by
-# name into one station each ("Waitemata", signed Waitematā).
-FOLD = {"strip": r"\s+Train Station(\s+\d+)?$"}
+# name into one station each ("Waitemata", signed Waitematā), placed at the
+# first of them. Only "... Train Station" names fold: bus stops named after
+# a station's suburb ("Ellerslie", "The Strand" on Waiheke Island) keep
+# names of their own, or the first of them would place the station.
+PLATFORM = re.compile(r"^(.+?)\s+Train Station(\s+\d+)?$")
+
+
+def station(name):
+    m = PLATFORM.match(name.strip())
+    if not m:
+        return "~" + name, name
+    return re.sub(r"[^a-z0-9]+", "-", m.group(1).lower()).strip("-"), m.group(1)
+
+
 NAMES = {"Waitemata": "Waitematā"}
 GTFS = {
     "atmetro": ("https://gtfs.at.govt.nz/gtfs.zip", lambda r: r.get("route_type") == "2" and r.get("agency_id") == "AM", line,
-                {"fold": FOLD, "names": NAMES, "number": number}),
+                station, {"names": NAMES, "number": number}),
     "tehuia": ("https://gtfs.at.govt.nz/gtfs.zip", lambda r: r.get("route_type") == "2" and r.get("agency_id") == "WRC", line,
-               {"fold": FOLD, "names": NAMES, "number": number, "colors": {"Te Huia": "#5b6770"}}),
+               station, {"names": NAMES, "number": number, "colors": {"Te Huia": "#5b6770"}}),
 }
 # Auckland's suburban lines and the North Island Main Trunk to Hamilton, as
 # OpenStreetMap's route relations of AT Metro's and Te Huia's trains.
