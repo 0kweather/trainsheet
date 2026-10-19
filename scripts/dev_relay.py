@@ -5,7 +5,7 @@
 
 then set window.TRAINSHEET_RELAY = "http://127.0.0.1:8787" in config.js.
 Keyed feeds read the same environment variables as the Worker's secrets
-(METRA_API_TOKEN, API_511_KEY, METROLINK_API_KEY). NJ Transit and GO Transit (scraped from their websites) are Worker-only.
+(METRA_API_TOKEN, API_511_KEY, METROLINK_API_KEY, SWIFTLY_NCTD_KEY, SWIFTLY_DCTA_KEY). NJ Transit and GO Transit (scraped from their websites) are Worker-only.
 The railroad plug-ins' feeds (scripts/railroads/*.py) are read from their
 RELAY specs and relay_fetch handlers directly, each kept for its own ttl.
 """
@@ -29,6 +29,21 @@ FEEDS = {
         "url": "https://metrolink-gtfsrt.gbsdigital.us/feed/gtfsrt-vehicles",
         "headers": {"X-Api-Key": e["METROLINK_API_KEY"]}},
 }
+
+
+def swiftly(agency, key, routes):
+    """Swiftly's positions and predicted stop times for one agency, cut to
+    its rail routes, as relay/worker.js's swiftly()."""
+    base = f"https://api.goswift.ly/real-time/{agency}"
+    return {"url": f"{base}/gtfs-rt-vehicle-positions", "also": [f"{base}/gtfs-rt-trip-updates"],
+            "headers": {"Authorization": key}, "routes": routes, "ttl": 30}
+
+
+FEEDS.update({
+    "coaster": lambda e: e.get("SWIFTLY_NCTD_KEY") and swiftly("nctd", e["SWIFTLY_NCTD_KEY"], ["398", "498"]),
+    "sprinter": lambda e: e.get("SWIFTLY_NCTD_KEY") and swiftly("nctd", e["SWIFTLY_NCTD_KEY"], ["399"]),
+    "atrain": lambda e: e.get("SWIFTLY_DCTA_KEY") and swiftly("dcta", e["SWIFTLY_DCTA_KEY"], ["4911"]),
+})
 CACHE_SECONDS = 15
 IDENTIFYING_UA = "Trainsheet/1.0 (+https://trainsheet.com)"
 cache = {}

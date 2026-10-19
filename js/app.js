@@ -1,4 +1,4 @@
-import { AGENCIES, SOURCES, fetchSource, advanceEstimated } from "./sources.js?v=dev";
+import { AGENCIES, SOURCES, fetchSource, creditOf, advanceEstimated } from "./sources.js?v=dev";
 import { loadStations, mergeStations, trainsDue, mbtaPredictions, mbtaFacilities, amtrakAddress, meters, norm, fold, stopKey } from "./stations.js?v=dev";
 import { RailIndex, snapToTrack } from "./estimate.js?v=dev";
 import { RAIL_REGIONS, DATA_REGIONS } from "./railroads/index.js?v=dev";
@@ -1387,14 +1387,22 @@ function applyInference() {
 
 // ---------- Feeds ----------
 
+// Whether a source's trains can be shown ({ ok }), and if not, why. A
+// source whose feed waits on a key (untilKey "timetable") shows its
+// railroads' trains from their timetables meanwhile ({ ok, timetable,
+// reason }): with no relay, a relay that can't be reached, or one that
+// reports its feed off. Once the relay has the key, the feed is read.
 function sourceAvailability(src) {
   if (!src.relay || (window.TRAINSHEET_FEEDS || {})[src.id]) return { ok: true };
-  if (!RELAY) return { ok: false, reason: T("Needs the relay (see README)") };
-  if (state.relayFeeds && !state.relayFeeds[src.id]) {
-    return { ok: false, reason: src.needsKey ? T("Needs a free API key") : T("Not enabled on relay") };
-  }
-  return { ok: true };
+  const off = !RELAY ? T("Needs the relay (see README)")
+    : state.relayFeeds && !state.relayFeeds[src.id] ? (src.needsKey ? T("Needs a free API key") : T("Not enabled on relay"))
+    : null;
+  if (!off) return { ok: true };
+  if (src.untilKey === "timetable") return { ok: true, timetable: true, reason: T("Placed from the timetable until its API key is set") };
+  return { ok: false, reason: off };
 }
+// A source's trains, from its feed or (waiting on its key) its timetables.
+const fetchTrains = (src) => fetchSource(src, RELAY, Boolean(sourceAvailability(src).timetable));
 
 // A plug-in source scoped to the view (scope "view") is polled only while
 // one of its railroads is wanted: its stations' area (padded by a quarter)
@@ -1441,7 +1449,7 @@ async function poll(src, attempt = 0, once = false) {
   if ((once || sourceWanted(src)) && (!document.hidden || !state.sourceStatus[src.id]?.at)) {
     polling.add(src.id);
     try {
-      state.bySource[src.id] = await fetchSource(src, RELAY);
+      state.bySource[src.id] = await fetchTrains(src);
       state.sourceStatus[src.id] = { status: "ok", at: Date.now() };
       attempt = 0;
     } catch (err) {
@@ -1536,6 +1544,9 @@ async function start() {
     }
     for (const src of SOURCES) if (!direct(src) && !sourceAvailability(src).ok) delete state.sourceStatus[src.id];
     startPolls((src) => !direct(src));
+  } else {
+    // No relay: the railroads whose feeds wait on a key, from their timetables.
+    startPolls((src) => !direct(src));
   }
   // A shared link to a train: its railroad may be anywhere.
   if (wanted) wakeSources(true);
@@ -1546,7 +1557,7 @@ map.on("moveend", () => wakeSources());
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     // Refresh soon after returning to the tab; regular polling resumes itself.
-    for (const src of SOURCES) if (sourceAvailability(src).ok && sourceWanted(src)) fetchSource(src, RELAY).then((l) => {
+    for (const src of SOURCES) if (sourceAvailability(src).ok && sourceWanted(src)) fetchTrains(src).then((l) => {
       state.bySource[src.id] = l;
       state.sourceStatus[src.id] = { status: "ok", at: Date.now() };
       mergeTrains();
@@ -1677,9 +1688,11 @@ function agencyRows() {
     const avail = sourceAvailability(src);
     const st = state.sourceStatus[src.id];
     for (const id of src.agencies) {
-      const a = AGENCIES[id], g = of(a.country), region = regionOf(a);
+      const a = AGENCIES[id], g = of(a.country);
+      // A railroad waiting on its key says its trains are the timetable's.
+      const region = [regionOf(a), avail.timetable ? T("timetable") : ""].filter(Boolean).join(" · ");
       g.agencies.push(id);
-      const name = `<span class="name">${esc(a.name)}${region ? ` <span class="rgn">${esc(region)}</span>` : ""}</span>`;
+      const name = `<span class="name"${avail.timetable ? ` title="${esc(avail.reason)}"` : ""}>${esc(a.name)}${region ? ` <span class="rgn">${esc(region)}</span>` : ""}</span>`;
       if (!avail.ok) {
         g.off = true;
         g.rows.push({ name: a.name, html: `
@@ -2024,7 +2037,10 @@ const creditHtml = ({ label, href, license }) => `<a href="${esc(href)}" target=
 function renderCredits() {
   const seen = new Map();
   // A view-scoped source is credited once its data has been shown.
-  for (const s of SOURCES) if (sourceAvailability(s).ok && (!viewScoped(s) || state.sourceStatus[s.id]?.at)) seen.set(s.credit.label, s.credit);
+  for (const s of SOURCES) {
+    const avail = sourceAvailability(s), credit = creditOf(s, avail.timetable);
+    if (avail.ok && (!viewScoped(s) || state.sourceStatus[s.id]?.at)) seen.set(credit.label, credit);
+  }
   // A railroad abroad, once its region's stations and timetables are in,
   // though its feed may be off or down.
   for (const id of regionAgencies) {
@@ -3720,6 +3736,7 @@ function renderRailroad() {
   const fleet = equipmentList(id, lineList.map((l) => l.name), trains, true);
 
   const source = !avail.ok ? avail.reason || T("Not connected")
+    : avail.timetable ? avail.reason
     : estimated && estimated === trains.length ? T("Positions estimated from predicted times")
     : trains.length ? T("Live GPS positions") : T("No trains reporting right now");
   const updated = status?.at ? ` · ${T("updated {ago}", { ago: fmtAgo(status.at) })}` : "";
@@ -3735,7 +3752,7 @@ function renderRailroad() {
     lineList.length > 1 ? plainSection(T("Lines"), lineList.length,
       `<ul class="rr-lines">${lineList.map((l) => `<li><button type="button" class="rr-line" data-line="${esc(l.name)}"><span class="served-name">${lineMark(id, l.name)}<span>${esc(l.name)}</span></span><span class="sub">${l.running ? T("{n} running", { n: l.running }) : T("none running")} ›</span></button></li>`).join("")}</ul>`) : "",
     fleet.count ? rrSection("fleet", T("Fleet"), fleet.count, `<p class="rr-hint">${T("Tap one to read about it.")}</p><div class="rr-cars">${fleet.html}</div>`) : "",
-    src ? `<p class="estimate-note">${T("Data:")} ${creditHtml(src.credit)}</p>` : ""]);
+    src ? `<p class="estimate-note">${T("Data:")} ${creditHtml(creditOf(src, avail.timetable))}</p>` : ""]);
 }
 
 // Quiet hours: nothing of a railroad's is running, so its page says when

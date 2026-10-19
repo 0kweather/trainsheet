@@ -79,6 +79,8 @@ export default {
   "Needs the relay (see README)": "Nécessite le relais (voir le README)",
   "Needs a free API key": "Nécessite une clé d’API gratuite",
   "Not enabled on relay": "Non activé sur le relais",
+  "Placed from the timetable until its API key is set": "Placés selon l’horaire en attendant sa clé d’API",
+  "timetable": "horaire",
   "Couldn't reach the relay — showing directly available railroads only.": "Relais injoignable — seuls les réseaux accessibles directement s’affichent.",
   "{n} running": "{n} en service",
   "none running": "aucun en service",
