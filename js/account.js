@@ -30,11 +30,10 @@ let ctx;          // what js/app.js lends this module (init())
 let sb;           // the Supabase client
 let user = null;  // the signed-in user, or null
 let trips = null; // the account's trips once fetched: [row]
-let view = "signin"; // what the sheet shows: signin, signup, reset, code, newpass, trips, plan, form
+let view = "signin"; // what the sheet shows: signin, signup, reset, code, newpass, account, plan, form
 let plan = null;     // the planner: { from, to, typed, day, trains, exact, loading } (stations as { id, name, sub })
 let prefill = null;  // a new trip filled in from a train the planner found
 let resetEmail = ""; // where the reset email went (the code view)
-let tab = "upcoming";
 let editing = null;  // the trip being edited in the form (null: a new one)
 let notice = "";     // a line over the form: "Check your email…", or an error
 let busy = false;
@@ -81,7 +80,8 @@ async function authChanged(event, session) {
   ctx.accountChanged(user);
   if (user && user.id !== was) {
     trips = null;
-    if (view !== "newpass") view = "trips";
+    // Signed in from the sheet: it has done its job.
+    if (view !== "newpass") { view = "account"; if (sheet()) closeSheet(); }
     await joinTracked();
     loadTrips();
   }
@@ -253,7 +253,7 @@ function openSheet() {
 function closeSheet() {
   sheet()?.remove();
   shown = null;
-  if (view === "form") view = "trips";
+  if (view === "form" || view === "plan") view = "account";
   notice = "";
 }
 
@@ -295,15 +295,15 @@ function render() {
         <button class="btn primary" type="submit"${dis}>${T("Continue")}</button></form>
       <div class="acct-links"><button type="button" class="acct-link" data-resend>${T("Send it again")}</button></div>`;
   } else if (view === "newpass") {
-    body = head(T("Choose a new password"), changing ? "trips" : null) + note +
+    body = head(T("Choose a new password"), changing ? "account" : null) + note +
       `<form class="acct-form" data-form="newpass"><label class="acct-field"><span>${T("New password")}</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
         <button class="btn primary" type="submit"${dis}>${T("Save password")}</button></form>`;
   } else if (view === "plan") {
-    body = head(T("Plan a trip"), "trips") + note + planView();
+    body = head(T("Plan a trip")) + note + planView();
   } else if (view === "form") {
-    body = head(editing ? T("Edit trip") : T("Add a trip"), editing ? "trips" : "plan") + note + tripForm(editing || prefill);
+    body = head(editing ? T("Edit trip") : T("Add a trip"), editing || !plan ? null : "plan") + note + tripForm(editing || prefill);
   } else {
-    body = head(T("Your trips")) + note + tripsView();
+    body = head(T("Account")) + note + accountView();
   }
   // Redrawn on the same view (a notice, a button busy), what was typed stays.
   const typed = view === shown ? [...card.querySelectorAll("input, select, textarea")].filter((el) => el.name)
@@ -319,60 +319,20 @@ function render() {
 }
 let shown = null; // the view last drawn
 
-function tripsView() {
-  const all = trips || [];
-  const upcoming = all.filter(isUpcoming).sort(byWhen);
-  const past = all.filter((r) => !isUpcoming(r));
-  const list = tab === "upcoming" ? upcoming : past;
-  const taken = past.filter((r) => r.status === "taken");
-  const stats = taken.length ? `<p class="acct-stats">${esc([
-    Tn(taken.length, "1 trip taken", "{n} trips taken"),
-    Tn(new Set(taken.map((r) => r.agency)).size, "1 railroad", "{n} railroads"),
-    Tn(new Set(taken.map((r) => ctx.agencies[r.agency]?.country).filter(Boolean)).size, "1 country", "{n} countries"),
-  ].join(" · "))}</p>` : "";
+// The account: who's signed in, signing out, the password, and deleting it.
+// (Trips are on the panel's My trips and History pages, in js/app.js.)
+function accountView() {
+  const taken = (trips || []).filter((r) => r.status === "taken").length;
   return `<div class="acct-who"><span>${esc(T("Signed in as {who}", { who: user.email || user.user_metadata?.full_name || "" }))}</span>
       <button type="button" class="acct-link" data-signout>${T("Sign out")}</button></div>
-    <div class="acct-bar">
-      <div class="segmented two sm"><button data-tab="upcoming" aria-pressed="${tab === "upcoming"}">${T("Upcoming")} <span class="rr-count">${upcoming.length}</span></button>
-        <button data-tab="history" aria-pressed="${tab === "history"}">${T("History")} <span class="rr-count">${past.length}</span></button></div>
-      <button type="button" class="btn primary small" data-add>+ ${T("Add a trip")}</button>
+    ${trips ? `<p class="acct-stats">${esc([Tn((trips || []).filter(isUpcoming).length, "1 trip planned", "{n} trips planned"), Tn(taken, "1 trip taken", "{n} trips taken")].join(" · "))}</p>` : ""}
+    <div class="acct-menu">
+      <button type="button" class="menu-link" data-change-password><span>${T("Change password")}</span><span aria-hidden="true">›</span></button>
+      <a class="menu-link" href="privacy.html"><span>${T("Privacy policy")}</span><span aria-hidden="true">›</span></a>
     </div>
-    ${tab === "history" ? stats : ""}
-    <div class="acct-trips">${trips === null ? `<p class="empty">${T("Loading…")}</p>`
-      : list.length ? list.map(tripRow).join("")
-      : `<p class="empty">${tab === "upcoming" ? T("No trips planned. Add the trains you're going to take, and they'll show here.")
-        : T("No trips yet. Trains you track to your stop are added here when you arrive, or add a trip yourself.")}</p>`}</div>
-    <details class="acct-danger"><summary>${T("Account")}</summary>
-      <p><button type="button" class="acct-link" data-change-password>${T("Change password")}</button></p>
+    <details class="acct-danger"><summary>${T("Delete my account")}</summary>
       <p>${T("Deleting your account deletes your trips and tracked trains from Trainsheet's servers. It can't be undone.")}</p>
-      <button type="button" class="btn small acct-delete" data-delete-account>${T("Delete my account")}</button>
-      <p><a href="privacy.html">${T("Privacy policy")}</a></p></details>`;
-}
-
-function tripRow(r) {
-  const a = ctx.agencies[r.agency] || { color: "#888", short: r.agency, name: r.agency };
-  const date = dateFormat({ weekday: "short", month: "short", day: "numeric", year: r.service_date.slice(0, 4) === today().slice(0, 4) ? undefined : "numeric", timeZone: "UTC" })
-    .format(new Date(`${r.service_date}T12:00:00Z`));
-  const time = (iso, key) => (iso ? ` ${ctx.fmtTime(iso, ctx.stopTz(key))}` : "");
-  // An arrival a day or more after the trip's day: "+1".
-  const later = r.arrive_at ? Math.round((Date.parse(dayOf(Date.parse(r.arrive_at), ctx.stopTz(r.to_key) || a.tz)) - Date.parse(r.service_date)) / 86400000) : 0;
-  const leg = [r.from_name && `${esc(r.from_name)}${time(r.depart_at, r.from_key)}`,
-    r.to_name && `${esc(r.to_name)}${time(r.arrive_at, r.to_key)}${later > 0 ? ` <sup>+${later}</sup>` : ""}`].filter(Boolean).join(" → ");
-  const live = r.service_date === today() && r.status === "planned" && ctx.liveTrain(r.agency, r.number);
-  const badge = r.status === "cancelled" ? `<span class="status bad">${T("Cancelled")}</span>`
-    : r.status === "planned" && !isUpcoming(r) ? `<span class="status">${T("Planned")}</span>` : "";
-  return `<div class="acct-trip" style="--c:${a.color}">
-      <div class="acct-trip-main">
-        <div class="acct-trip-top">${ctx.plate(r.number || a.short, a.color, "xs")}<span class="acct-trip-route">${esc(r.route || a.name)}</span>${badge}</div>
-        <div class="acct-trip-when">${esc(date)} · ${esc(a.short || a.name)}${leg ? `<br>${leg}` : ""}</div>
-        ${r.notes ? `<div class="acct-trip-notes">${esc(r.notes)}</div>` : ""}
-      </div>
-      <div class="acct-trip-actions">
-        ${live ? `<button type="button" class="btn primary small" data-open-train="${esc(live.id)}">${T("On the map")}</button>` : ""}
-        ${r.status === "planned" && !isUpcoming(r) ? `<button type="button" class="btn small" data-taken="${r.id}">${T("I took it")}</button>` : ""}
-        <button type="button" class="acct-link" data-edit="${r.id}">${T("Edit")}</button>
-      </div>
-    </div>`;
+      <button type="button" class="btn small acct-delete" data-delete-account>${T("Delete my account")}</button></details>`;
 }
 
 // ---------- Planning a trip ----------
@@ -616,7 +576,6 @@ function onClick(e) {
   if (!b) return;
   const d = b.dataset;
   if (d.go) { view = d.go; notice = ""; editing = d.go === "form" ? editing : null; return render(); }
-  if (d.tab) { tab = d.tab; return render(); }
   if (d.add != null) { editing = null; prefill = null; startPlan(); view = "plan"; notice = ""; return render(); }
   if (d.suggestPick) {
     const which = b.closest("[data-suggest]").dataset.suggest;
@@ -634,8 +593,6 @@ function onClick(e) {
   if (d.planDay) { plan.day = d.planDay; return searchPlan(); }
   if (d.pick) return pickTrain(plan.trains[Number(d.pick)]);
   if (d.manual != null) { prefill = null; editing = null; view = "form"; notice = ""; return render(); }
-  if (d.edit) { editing = trips.find((r) => r.id === d.edit); view = "form"; notice = ""; return render(); }
-  if (d.openTrain) { closeSheet(); return ctx.openTrain(d.openTrain); }
   if (d.provider) {
     return run(async () => {
       const { error } = await sb.auth.signInWithOAuth({ provider: d.provider, options: { redirectTo: here() } });
@@ -645,21 +602,15 @@ function onClick(e) {
   if (d.changePassword != null) { view = "newpass"; changing = true; notice = ""; return render(); }
   if (d.resend != null) return run(() => sendReset(resetEmail));
   if (d.signout != null) return run(async () => { await sb.auth.signOut(); view = "signin"; });
-  if (d.taken) {
-    return run(async () => {
-      const { error } = await sb.from("trips").update({ status: "taken" }).eq("id", d.taken);
-      if (error) throw error;
-      await loadTrips();
-    });
-  }
   if (d.deleteTrip) {
     if (!confirm(T("Delete this trip?"))) return;
     return run(async () => {
       const { error } = await sb.from("trips").delete().eq("id", d.deleteTrip);
       if (error) throw error;
-      view = "trips";
       editing = null;
       await loadTrips();
+      closeSheet();
+      ctx.toast(T("Trip deleted."));
     });
   }
   if (d.deleteAccount != null) {
@@ -728,7 +679,7 @@ function onSubmit(e) {
     } else if (kind === "newpass") {
       const { error } = await sb.auth.updateUser({ password: f.password });
       if (error) throw error;
-      view = "trips";
+      view = "account";
       changing = false;
       ctx.toast(T("Your password has been changed."));
       if (trips === null) loadTrips();
@@ -746,11 +697,13 @@ function onSubmit(e) {
       if (row.depart_at && row.arrive_at && row.arrive_at < row.depart_at) row.arrive_at = new Date(Date.parse(row.arrive_at) + 86400000).toISOString();
       const { error } = editing ? await sb.from("trips").update(row).eq("id", editing.id) : await sb.from("trips").insert(row);
       if (error) throw error;
-      tab = isUpcoming(row) ? "upcoming" : "history";
-      view = "trips";
+      const was = editing;
       editing = null;
       prefill = null;
+      plan = null;
       await loadTrips();
+      closeSheet();
+      ctx.toast(was ? T("Trip saved.") : isUpcoming(row) ? T("Added to My trips.") : T("Added to your history."));
     }
   });
 }
@@ -759,26 +712,60 @@ function onSubmit(e) {
 
 const api = {
   get user() { return user; },
-  open() {
-    if (user && view !== "newpass") view = "trips";
+  // The sheet: signing in (or creating an account), or, signed in, the account.
+  open(mode = "signin") {
+    if (user && view !== "newpass") view = "account";
     if (!user && !["signin", "signup", "reset", "code"].includes(view)) view = "signin";
+    if (!user && (mode === "signin" || mode === "signup")) view = mode;
     openSheet();
+  },
+  // Straight to Google (or another provider) from the panel's sign-in page.
+  signInWith(provider) {
+    if (!PROVIDERS[provider]) return api.open();
+    return sb.auth.signInWithOAuth({ provider, options: { redirectTo: here() } }).then(({ error }) => { if (error) ctx.toast(error.message); });
   },
   trackedChanged,
   logRide,
   today,
-  // For the home screen (js/app.js): null until the trips are in.
+  // For the panel's pages (js/app.js): null until the trips are in.
+  trips: () => trips,
+  isUpcoming,
   upcoming: () => (trips ? trips.filter(isUpcoming).sort(byWhen) : null),
   taken: () => (trips ? trips.filter((r) => r.status === "taken") : null),
-  // Your trips, on one tab; a trip's form; a new trip's.
-  openTrips(which = "upcoming") {
-    tab = which;
-    api.open();
+  // A trip of this train that day already (planned or taken).
+  has: (agency, number, day) => Boolean(number && trips?.some((r) => r.agency === agency && String(r.number) === String(number) && r.service_date === day && r.status !== "cancelled")),
+  // A train found in Browse, from one station to another: added at once.
+  async add(r) {
+    if (!user) return api.open();
+    const row = { notes: null, ...r, status: r.status || (r.service_date < today() ? "taken" : "planned") };
+    const { error } = await sb.from("trips").insert(row);
+    if (error) { ctx.toast(T("Couldn't add the trip: {why}", { why: error.message })); return false; }
+    await loadTrips();
+    ctx.toast(isUpcoming(row) ? T("Added to My trips.") : T("Added to your history."));
+    return true;
+  },
+  // A train found in Browse without the rider's stops: the form, filled in.
+  addFrom(r) {
+    if (!user) return api.open();
+    editing = null;
+    plan = null;
+    prefill = r;
+    view = "form";
+    notice = "";
+    openSheet();
+  },
+  markTaken(id) {
+    return sb.from("trips").update({ status: "taken" }).eq("id", id).then(({ error }) => {
+      if (error) return ctx.toast(error.message);
+      ctx.toast(T("Added to your history."));
+      return loadTrips();
+    });
   },
   editTrip(id) {
     const r = trips?.find((x) => x.id === id);
     if (!r) return api.open();
     editing = r;
+    plan = null;
     view = "form";
     notice = "";
     openSheet();

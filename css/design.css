@@ -894,6 +894,8 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .home-row .count { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
 .trip-row { padding: 10px 14px; }
 .trip-row .plate { flex: none; min-width: 34px; }
+/* Trip lists: the plates in a column of one width, so every row's text starts in the same place. */
+.trip-row .plate, .confirm-open .plate { min-width: 50px; }
 .trip-row .title { font-size: var(--fs-base); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-row .sub { font-size: var(--fs-sm); letter-spacing: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-date { flex: none; display: flex; flex-direction: column; align-items: center; width: 34px; line-height: 1.1; }
@@ -1073,3 +1075,139 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 @keyframes flap {
   from { opacity: 0; transform: perspective(160px) translateY(-55%) rotateX(80deg); }
 }
+
+/* ---------- Pages: My trips, Browse, History ----------
+ * Switched by a tab bar at the foot of the sheet on phones and by an icon
+ * rail beside the panel on computers, as Apple's apps have it (app.js,
+ * Pages). Search, recents and their results are Browse's alone. */
+
+.tabbar[hidden] { display: none; }
+.tabbar { display: flex; }
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0;
+  padding: 7px 0 5px; border: 0; background: none; color: var(--muted);
+  font: inherit; font-size: 10.5px; font-weight: 500; letter-spacing: 0; cursor: pointer;
+}
+.tab > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab[aria-current="page"] { color: var(--accent); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 10px; }
+.tab-settings { display: none; }
+
+#view-list:not([data-tab="browse"]) > :is(.search-area, #results, #recents) { display: none !important; }
+#view-list:not([data-tab="browse"]) > #agencies { display: block !important; }
+
+@media (max-width: 720px) {
+  .panel .tabbar { flex: none; order: 99; padding: 0 8px; border-top: 0.5px solid var(--line); }
+  body.has-tabs .panel.collapsed { height: calc(132px + 52px + var(--tracked-h, 0px)); }
+  body.has-tabs .panel.collapsed:has(> #view-list:not([hidden])) { height: calc(96px + 52px + env(safe-area-inset-bottom, 0px) + var(--tracked-h, 0px)); }
+}
+@media (min-width: 721px) {
+  body.has-tabs .tabbar {
+    position: fixed; z-index: 2; top: 12px; bottom: 12px; left: 12px; width: 66px;
+    flex-direction: column; align-items: center; gap: 4px; padding: 10px 0;
+    border-radius: var(--r-lg); background: var(--panel); border: 0.5px solid var(--glass-edge); box-shadow: var(--shadow);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  }
+  body.has-tabs .tab { flex: none; width: 60px; padding: 8px 2px 6px; border-radius: 12px; font-size: 10px; }
+  /* Longer names ("Mes voyages") take two lines rather than being cut. */
+  body.has-tabs .tab > span { white-space: normal; text-align: center; line-height: 1.15; }
+  body.has-tabs .tab:hover { background: var(--hover); color: var(--text); }
+  body.has-tabs .tab[aria-current="page"] { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+  body.has-tabs .tab-settings { display: flex; margin-top: auto; padding: 10px 2px; }
+  body.has-tabs .tab-settings[aria-expanded="true"] { background: var(--hover); color: var(--text); }
+  body.has-tabs .panel { left: 86px; }
+  body.has-tabs .tracked { left: calc(86px + 372px + 12px); }
+  body.has-tabs .maplibregl-ctrl-bottom-left { left: calc(86px + 372px + 4px); }
+  body.has-tabs .search-row #settings-btn, body.has-tabs .page-gear { display: none; }
+}
+
+/* A page's large title, its buttons beside it. */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 2px 12px; }
+.page-head h1 { margin: 0; font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.page-actions { display: flex; align-items: center; gap: 8px; }
+
+/* My trips: the next trip, large. */
+.trip-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 14px; border-radius: 20px; background: var(--group); }
+.tk-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tk-train { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-base); font-weight: 600; }
+.tk-train > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-label { margin-top: 8px; font-size: var(--fs-sm); color: var(--muted); }
+.tk-big { font-family: var(--font-rounded); line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tk-big strong { font-size: 42px; font-weight: 700; }
+.tk-big small { margin: 0 8px 0 3px; font-size: 17px; font-weight: 600; color: var(--muted); }
+.tk-day { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+.tk-leg { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 10px; margin-top: 8px; }
+.tk-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.tk-actions .btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; font-size: var(--fs-sm); }
+.tk-note { flex: 1; display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-xs); font-weight: 600; color: var(--accent); }
+.tk-note + .btn { flex: none; }
+.trips-empty { padding: 16px; border-radius: var(--r-card); background: var(--group); font-size: var(--fs-sm); color: var(--muted); }
+.trips-empty p { margin: 0 0 12px; }
+.trips-empty div { display: flex; align-items: center; gap: 16px; }
+.trips-empty .link-btn { margin: 0; }
+.confirm-row { padding-right: 12px; cursor: default; }
+.confirm-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.home-row .home-row-text .title { font-size: var(--fs-base); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-row .home-row-text .sub { font-size: var(--fs-sm); letter-spacing: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-row:has(.sub) { padding-top: 9px; padding-bottom: 9px; }
+
+/* History: the numbers, the train ridden most, favorites, every trip. */
+.hist-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }
+.rr-stat strong small { margin: 0 3px 0 2px; font-size: 15px; font-weight: 600; color: var(--muted); }
+.hist-most { margin-top: 10px; padding: 12px 14px 13px; border-radius: 18px; background: var(--group); }
+.hm-label { font-size: var(--fs-sm); color: var(--muted); }
+.hm-cars {
+  display: flex; align-items: flex-end; margin: 10px 0 8px; overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent);
+}
+.hm-cars .car { margin: 0; flex: none; }
+.hm-cars .car svg { display: block; height: 36px; width: auto; color: var(--car-ink); }
+.hm-cars .car image { filter: brightness(var(--car-logo-dim)); }
+.hm-cars figcaption { display: none; }
+.hm-name { font-size: var(--fs-base); font-weight: 600; }
+.hm-sub { font-size: var(--fs-sm); color: var(--muted); }
+
+/* Signed out: what an account gives, and the ways in. */
+.so-hero { padding: 14px 12px 2px; text-align: center; }
+.so-icon { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.so-icon svg { width: 34px; height: 34px; }
+.so-hero h2 { margin: 14px 0 6px; font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.so-hero p { max-width: 290px; margin: 0 auto; font-size: var(--fs-base); color: var(--muted); }
+.so-list { margin-top: 18px; overflow: hidden; border-radius: var(--r-card); background: var(--group); }
+.so-row { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
+.so-row + .so-row::before { content: ""; position: absolute; top: 0; left: 52px; right: 0; height: 0.5px; background: var(--line); }
+.so-row svg { flex: none; width: 24px; height: 24px; color: var(--accent); }
+.so-row > span { display: flex; flex-direction: column; min-width: 0; font-size: var(--fs-sm); color: var(--muted); }
+.so-row strong { font-size: var(--fs-base); font-weight: 600; color: var(--text); }
+.so-actions { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 8px; }
+.so-btn { padding: 12px; font-size: var(--fs-md); font-weight: 600; }
+.so-skip { align-self: center; margin: 2px 0 0; font-size: var(--fs-base); font-weight: 500; }
+
+/* Browse: a train's add button; from one station to another, the day. */
+.results .result-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding-right: 12px; background: var(--group); }
+.results .result-row:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
+.results .result-row > .result { background: transparent; border-radius: 0; }
+.results .result-row > .result:hover, .results .result-row > .result:focus-visible { background: transparent; }
+.results .result-row > .result::before { display: none; }
+.results :is(.result, .result-row) + .result-row::before, .results .result-row + .result::before { content: ""; position: absolute; top: 0; left: 58px; right: 0; height: 0.5px; background: var(--line); }
+.results :is(.group-title, .route-days) + .result-row, .results > .result-row:first-child { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
+.results .result-row:has(+ :is(.group-title, .results-more, p, .upcoming-stops)), .results .result-row:last-child { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
+.add-btn {
+  display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); cursor: pointer;
+}
+.add-btn:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.add-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.add-btn.added { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); cursor: default; }
+.route-days { display: flex; gap: 6px; margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; }
+.route-days::-webkit-scrollbar { display: none; }
+.route-days .filter { border: 0; font: inherit; font-size: var(--fs-sm); font-weight: 500; }
+.route-days label.filter input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.route-days + .sk-row { border-radius: var(--r-card) var(--r-card) 0 0; }
+.acct-menu { overflow: hidden; border-radius: var(--r-card); }
+/* Search's trains: plates in a column of one width; each line one line. */
+.results .result > .plate.sm { min-width: 58px; }
+.results .result-row .result > span:nth-child(2) { min-width: 0; }
+.results .result-row .result .sub { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results .result-row .result .title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results .result-row .result br { display: none; }

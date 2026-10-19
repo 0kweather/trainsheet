@@ -114,6 +114,11 @@ const state = {
   // Statuses told apart by shape as well as color, in colors that work
   // with red-green colorblindness (css/design.css).
   colorblind: store.get("tt-colorblind", false),
+  // The panel's page: "trips" (My trips), "browse" or "history" (Pages,
+  // below). Signed in, it opens on My trips; otherwise on Browse.
+  tab: "browse",
+  historyYear: "",       // History's year ("" for every year)
+  routeDay: null,        // Browse's day for the trains from one station to another (YYYY-MM-DD; null for today)
 };
 const pastOpen = new Set(); // trains whose passed stops are unfolded
 let goingBack = false; // going back doesn't count as opening something (for Recents)
@@ -1713,8 +1718,11 @@ function agencyRows() {
 const byName = (x, y) => x.localeCompare(y, lang, { sensitivity: "base" });
 
 function renderAgencies() {
-  if (openCountry) return setPane($("agencies"), allRailroadsHtml());
-  setPane($("agencies"), homeHtml() + nearbyHtml() + `<div class="group-title">${T("Browse")}</div>
+  const el = $("agencies");
+  if (state.tab === "trips") return setPane(el, myTripsHtml());
+  if (state.tab === "history") return setPane(el, historyHtml());
+  if (openCountry) return setPane(el, allRailroadsHtml());
+  setPane(el, nearbyHtml() + `<div class="group-title">${T("Railroads")}</div>
     <button type="button" class="home-row" data-all-railroads>
       <span class="home-row-icon" aria-hidden="true">${TRAIN_ICON}</span>
       <span class="home-row-text">${T("All railroads")}</span>
@@ -1729,7 +1737,7 @@ function allRailroadsHtml() {
   const home = ((navigator.language || "").match(/-([a-z]{2})\b/i)?.[1] || "US").toUpperCase();
   const order = [...countries.keys()].sort((x, y) => (y === home) - (x === home) || byName(countryName(x), countryName(y)));
   const anyOff = order.some((c) => countries.get(c).off);
-  return `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${T("Home")}</button>` +
+  return `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${T(accountsOn() ? "Browse" : "Home")}</button>` +
     `<div class="group-title country-title">${T("All railroads")}</div>` +
     order.map((c) => {
       const g = countries.get(c);
@@ -1798,64 +1806,254 @@ function fmtSpan(ms) {
   return h ? (m % 60 ? `${h} h ${m % 60} min` : `${h} h`) : `${m} min`;
 }
 
-function homeHtml() {
-  if (!accountsOn()) return "";
-  if (!signedInHere()) {
-    return `<div class="home-signin">
-      <div class="home-signin-title">${T("Your trips, on every device")}</div>
-      <p>${T("Sign in to plan the trains you'll take, have them tracked on the day, and keep a log of every ride.")}</p>
-      <div class="home-signin-actions"><button type="button" class="btn primary small" data-home-signin>${T("Sign in")}</button>
-        <button type="button" class="link-btn" data-home-signin>${T("Create an account")}</button></div>
-    </div>`;
+// ---------- Pages: My trips, Browse, History ----------
+// Three pages, switched by a tab bar at the foot of the sheet on phones and
+// an icon rail beside the panel on computers (index.html, design.css). Browse
+// is search, trains near you and every railroad, for everyone; My trips and
+// History are the rider's trips (js/account.js), and ask them to sign in
+// when they haven't. A train's, station's or line's page opens over any of
+// them, and Back (or the page's tab again) returns to it.
+
+const PLUS_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const TICK_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const GEAR_ICON = $("settings-btn")?.innerHTML || "";
+const TICKET_ICON = $("tabbar")?.querySelector('[data-tab="trips"] svg')?.outerHTML || "";
+const CAL_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4M12 12.5v5M9.5 15h5"/></g></svg>';
+const CHART_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 19.5V13M10 19.5V6.5M15 19.5V10M20 19.5V4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const PROVIDER_NAMES = { google: "Google", facebook: "Facebook", apple: "Apple", github: "GitHub", azure: "Microsoft", discord: "Discord" };
+const localDay = (ms = Date.now(), tz) => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: tz || undefined }).format(ms); } catch { return new Intl.DateTimeFormat("en-CA").format(ms); } };
+const addDaysIso = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+
+function setTab(tab) {
+  if (!["trips", "browse", "history"].includes(tab)) return;
+  const again = state.tab === tab;
+  if (state.selected || state.station || state.railroad) goHome();
+  else if (again) $("agencies").scrollTo({ top: 0, behavior: "smooth" });
+  state.tab = tab;
+  $("view-list").dataset.tab = tab;
+  for (const b of $("tabbar").querySelectorAll("[data-tab]")) {
+    if (b.dataset.tab === tab) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
   }
-  const upcoming = account?.upcoming?.(), taken = account?.taken?.();
-  if (!upcoming) {
-    return `<div class="group-title">${T("Next trip")}</div><div class="next-trip"><span class="sk sk-line"></span><span class="sk sk-line short"></span></div>`;
+  if (again) return;
+  $("agencies").scrollTop = 0;
+  renderAgencies();
+  renderResults();
+  pageIn($("agencies"));
+  if (isPhone && sheetMode() === "collapsed") setSheet("");
+}
+on("tabbar", "click", (e) => {
+  const b = e.target.closest("[data-tab]");
+  if (b) return setTab(b.dataset.tab);
+  if (e.target.closest("#rail-settings")) {
+    e.stopPropagation();
+    toggleMenu();
   }
-  const [next, ...later] = upcoming;
-  let html = "";
-  if (next) {
-    const a = AGENCIES[next.agency] || { short: next.agency, name: next.agency, color: "#888" };
-    const live = next.service_date === account.today() ? tripTrain(next) : null;
-    const tracked = live && state.tracked.some((x) => x.id === live.id);
-    const dep = tripTime(next.depart_at, next.from_key, next.agency), arr = tripTime(next.arrive_at, next.to_key, next.agency);
-    const span = next.depart_at && next.arrive_at ? fmtSpan(Date.parse(next.arrive_at) - Date.parse(next.depart_at)) : "";
-    // How late this train usually gets to the rider's stop (Likely delays).
-    const toKey = next.to_key || (next.to_name && [...(loadDelays(next.agency, next.number)?.stops.keys() || [])].find((k) => stationNameOf(k) && fold(stationNameOf(k)) === fold(next.to_name)));
-    const usual = toKey && !live ? usualDelay(next.agency, next.number, toKey) : null;
-    const state_ = live ? (tracked ? `<span class="nt-flag">${BELL_ICON}${T("Tracking")}</span>` : `<span class="nt-flag">${T("On the map")} ›</span>`)
-      : `<span class="nt-flag">${BELL_ICON}${T("Tracked on the day")}</span>`;
-    html += `<div class="group-title">${esc(T("Next trip · {when}", { when: tripWhen(next.service_date) }))}</div>
-      <button type="button" class="next-trip" ${live ? `data-select="${esc(live.id)}"` : `data-trip="${esc(next.id)}"`}>
-        <span class="nt-top"><span>${plate(next.number || a.short, a.color, "xs")}<span class="nt-name">${esc(next.route || a.name)}</span></span>${state_}</span>
-        <span class="nt-date">${esc(tripDate(next.service_date, { weekday: "long", month: "long", day: "numeric" }))} · ${esc(a.short)}${live ? ` · ${statusSpan(live, "status")}` : ""}</span>
-        ${usual ? `<span class="nt-usual ${lateText(usual.median).cls}">${esc(usualText(usual))}${next.to_name ? ` ${esc(T("at {place}", { place: next.to_name }))}` : ""}</span>` : ""}
-        ${next.from_name || next.to_name ? `<span class="nt-leg">
-          <span class="nt-end"><strong>${esc(dep || "—")}</strong><span>${esc(next.from_name || "")}</span></span>
-          <span class="nt-span">${esc(span)}</span>
-          <span class="nt-end right"><strong>${esc(arr || "—")}</strong><span>${esc(next.to_name || "")}</span></span>
-        </span>` : ""}
-        ${next.notes ? `<span class="nt-notes">${esc(next.notes)}</span>` : ""}
-      </button>`;
+});
+
+// A page's large title, with its buttons (and, on a phone, Settings).
+const pageHead = (title, actions = "") => `<div class="page-head"><h1>${esc(title)}</h1><span class="page-actions">${actions}<button type="button" class="icon-btn page-gear" data-settings aria-label="${esc(T("Settings"))}" title="${esc(T("Settings"))}">${GEAR_ICON}</button></span></div>`;
+
+// My trips and History, signed out: what an account gives, and the ways in.
+function signedOutHtml(tab) {
+  const providers = (ACCOUNTS.providers || []).filter((p) => PROVIDER_NAMES[p]);
+  return `<div class="so">
+    <div class="so-hero"><span class="so-icon">${TICKET_ICON}</span>
+      <h2>${T("Your trips, on every device")}</h2>
+      <p>${T(tab === "history" ? "Keep a log of every ride: how many trips, how long on board, how far, and where." : "Plan the trains you'll take and keep a log of every ride.")}</p></div>
+    <div class="so-list">
+      <div class="so-row">${CAL_ICON}<span><strong>${T("Plan ahead")}</strong><span>${T("Add trains from Browse in one tap")}</span></span></div>
+      <div class="so-row">${BELL_ICON}<span><strong>${T("Tracked on the day")}</strong><span>${T("Live status and track, with nothing to set up")}</span></span></div>
+      <div class="so-row">${CHART_ICON}<span><strong>${T("Your history")}</strong><span>${T("Trips, time on board, distance and stations")}</span></span></div>
+    </div>
+    <div class="so-actions">
+      ${providers.map((p) => `<button type="button" class="btn primary so-btn" data-signin-provider="${p}">${esc(T("Continue with {provider}", { provider: PROVIDER_NAMES[p] }))}</button>`).join("")}
+      <button type="button" class="btn so-btn${providers.length ? "" : " primary"}" data-signin-email>${T("Continue with email")}</button>
+      <button type="button" class="link-btn so-skip" data-tab-go="browse">${T("Browse trains without an account")}</button>
+    </div>
+  </div>`;
+}
+
+// A count of minutes or hours ahead, large: "42 min", "3 h 10 min".
+function countdown(ms) {
+  const m = Math.max(0, Math.round(ms / 60000));
+  if (m < 1) return `<strong>${esc(T("now"))}</strong>`;
+  if (m < 60) return `<strong>${m}</strong><small>${T("min")}</small>`;
+  const h = Math.floor(m / 60), r = m % 60;
+  return `<strong>${h}</strong><small>${T("h")}</small>${r ? `<strong>${r}</strong><small>${T("min")}</small>` : ""}`;
+}
+
+// The next trip, large: when it leaves (a countdown on the day), from where
+// and on which track, where it gets in, and its train once it's out.
+function nextTripCard(r) {
+  const a = AGENCIES[r.agency] || { short: r.agency, name: r.agency, color: "#888" };
+  const live = r.service_date === account.today() ? tripTrain(r) : null;
+  const tracked = live && state.tracked.some((x) => x.id === live.id);
+  const from = live && stopOfTrip(live, r.from_key, r.from_name), to = live && stopOfTrip(live, r.to_key, r.to_name);
+  const depMs = Date.parse(from?.dep || from?.time || r.depart_at), arrMs = Date.parse(to?.time || r.arrive_at), now = Date.now();
+  const onWay = from?.status === "past" || (depMs && now >= depMs);
+  const when = tripWhen(r.service_date);
+  let label, big;
+  if (onWay && arrMs > now) {
+    label = r.to_name ? T("On its way · gets to {place} in", { place: r.to_name }) : T("On its way · arrives in");
+    big = countdown(arrMs - now);
+  } else if (depMs && depMs > now && depMs - now < 24 * 3600000) {
+    label = `${when[0].toUpperCase()}${when.slice(1)} · ${r.from_name ? T("leaves {place} in", { place: r.from_name }) : T("leaves in")}`;
+    big = countdown(depMs - now);
   } else {
-    html += `<div class="group-title">${T("Next trip")}</div>
-      <div class="next-trip empty-trip"><span>${T("No trips planned. Add the trains you're going to take: they're tracked for you on the day.")}</span>
-        <button type="button" class="btn primary small" data-trip-add>${T("Plan a trip")}</button></div>`;
+    label = r.from_name ? T("Leaves {place}", { place: r.from_name }) : T("Leaves");
+    big = `<span class="tk-day">${esc(tripDate(r.service_date, { weekday: "long", month: "long", day: "numeric" }))}</span>`;
   }
-  if (next) {
-    html += `<div class="group-title home-title"><span>${T("Coming up")}</span><button type="button" class="link-btn" data-trip-add>+ ${T("Plan a trip")}</button></div>`;
-    html += later.length ? later.slice(0, 5).map(tripRowHome).join("") +
-      (later.length > 5 ? `<button type="button" class="home-row" data-trips-tab="upcoming"><span class="home-row-text">${esc(T("{n} more planned", { n: later.length - 5 }))}</span><span class="count">›</span></button>` : "")
-      : `<p class="note home-note">${T("Nothing else planned yet.")}</p>`;
-  }
-  if (taken?.length) {
-    const ids = new Set(taken.map((r) => r.agency));
-    const countries = new Set(taken.map((r) => AGENCIES[r.agency]?.country).filter(Boolean));
-    html += `<div class="group-title home-title"><span>${T("Your history")}</span><button type="button" class="link-btn" data-trips-tab="history">${T("All")} ›</button></div>
-      <div class="rr-stats home-stats">${statTile(taken.length, esc(Tn(taken.length, "trip", "trips")))}${statTile(ids.size, esc(Tn(ids.size, "railroad", "railroads")))}${statTile(countries.size, esc(Tn(countries.size, "country", "countries")))}</div>` +
-      taken.slice(0, 2).map(tripRowHome).join("");
-  }
+  const dep = tripTime(r.depart_at, r.from_key, r.agency), arr = tripTime(r.arrive_at, r.to_key, r.agency);
+  const span = r.depart_at && r.arrive_at ? fmtSpan(Date.parse(r.arrive_at) - Date.parse(r.depart_at)) : "";
+  const track = from?.track ? T("Track {track}", { track: from.track }) : "";
+  const toKey = r.to_key || (r.to_name && [...(loadDelays(r.agency, r.number)?.stops.keys() || [])].find((k) => stationNameOf(k) && fold(stationNameOf(k)) === fold(r.to_name)));
+  const usual = toKey && !live ? usualDelay(r.agency, r.number, toKey) : null;
+  const status = live ? statusSpan(live, "status") : usual ? `<span class="nt-usual ${lateText(usual.median).cls}">${esc(lateText(usual.median).cls === "good" ? T("Usually on time") : T("Usually {late}", { late: lateText(usual.median).text.toLowerCase() }))}</span>` : "";
+  return `<div class="trip-card">
+    <div class="tk-top"><span class="tk-train">${plate(r.number || a.short, a.color, "xs")}<span>${esc(r.route || a.name)}</span></span>${status}</div>
+    <div class="tk-label">${esc(label)}</div>
+    <div class="tk-big">${big}</div>
+    ${r.from_name || r.to_name ? `<div class="tk-leg">
+      <span class="nt-end"><strong>${esc(dep || "—")}</strong><span>${esc([r.from_name, track].filter(Boolean).join(" · "))}</span></span>
+      <span class="nt-span">${esc(span)}</span>
+      <span class="nt-end right"><strong>${esc(arr || "—")}</strong><span>${esc(r.to_name || "")}</span></span></div>` : ""}
+    ${r.notes ? `<div class="nt-notes">${esc(r.notes)}</div>` : ""}
+    <div class="tk-actions">${live
+      ? (tracked ? `<button type="button" class="btn small tracking-btn" data-select="${esc(live.id)}">${BELL_ICON}${T("Tracking")}</button>`
+        : `<button type="button" class="btn primary small track-btn" data-near-track="${esc(live.id)}">${BELL_ICON}${T("Track")}</button>`) +
+        `<button type="button" class="btn small" data-select="${esc(live.id)}">${T("On the map")}</button>`
+      : `<span class="tk-note">${BELL_ICON}${T("Tracked for you on the day")}</span><button type="button" class="btn small" data-trip="${esc(r.id)}">${T("Details")}</button>`}</div>
+  </div>`;
+}
+
+// A planned trip that has gone by: did the rider take it?
+const confirmRow = (r) => {
+  const a = AGENCIES[r.agency] || { short: r.agency, name: r.agency, color: "#888" };
+  const leg = [r.from_name, r.to_name].filter(Boolean).join(" → ");
+  return `<div class="home-row trip-row confirm-row">
+    <button type="button" class="confirm-open" data-trip="${esc(r.id)}">${plate(r.number || a.short, a.color, "xs")}
+      <span class="home-row-text"><span class="title">${esc(r.route || a.name)}</span><span class="sub">${esc([leg, tripDate(r.service_date)].filter(Boolean).join(" · "))}</span></span></button>
+    <button type="button" class="btn small" data-trip-taken="${esc(r.id)}">${T("I took it")}</button>
+  </div>`;
+};
+
+function myTripsHtml() {
+  const head = pageHead(T("My trips"), signedInHere()
+    ? `<button type="button" class="icon-btn page-add" data-trip-add aria-label="${esc(T("Plan a trip"))}" title="${esc(T("Plan a trip"))}">${PLUS_ICON}</button>` : "");
+  if (!signedInHere()) return head + signedOutHtml("trips");
+  const all = account?.trips?.();
+  if (!all) return head + `<div class="trip-card"><span class="sk sk-line"></span><span class="sk sk-line short"></span></div>`;
+  const day = account.today();
+  const [next, ...rest] = account.upcoming();
+  const unsure = all.filter((r) => r.status === "planned" && !account.isUpcoming(r) && r.service_date >= addDaysIso(day, -3));
+  let html = head;
+  html += next ? nextTripCard(next) : `<div class="trips-empty"><p>${T("No trips planned. Find your train in Browse and add it: it's tracked for you on the day.")}</p>
+    <div><button type="button" class="btn primary small" data-tab-go="browse">${T("Find a train")}</button><button type="button" class="link-btn" data-trip-add>${T("Plan a trip")}</button></div></div>`;
+  if (unsure.length) html += `<div class="group-title">${T("Did you take these?")}</div>` + unsure.map(confirmRow).join("");
+  const week = addDaysIso(day, 6);
+  const soon = rest.filter((r) => r.service_date <= week), later = rest.filter((r) => r.service_date > week);
+  if (soon.length) html += `<div class="group-title">${T("This week")}</div>` + soon.map(tripRowHome).join("");
+  if (later.length) html += `<div class="group-title">${T("Later")}</div>` + later.map(tripRowHome).join("");
   return html;
+}
+
+// ---------- History ----------
+// Trips taken: how many, how many stations, how long on board and how far
+// (along the track where Trainsheet has it), the train ridden most (its
+// usual cars, drawn), the top railroad and station, and every trip by month.
+
+const tripPlace = (key, name, agency) => (key && state.stopPos.get(key)) || (name && state.stopByName.get(`${agency}:${norm(name)}`)) || null;
+const tripMetersCache = new Map();
+function tripMeters(r) {
+  const a = tripPlace(r.from_key, r.from_name, r.agency), b = tripPlace(r.to_key, r.to_name, r.agency);
+  if (!a || !b) return 0;
+  const key = `${r.agency}|${a.lat},${a.lon}|${b.lat},${b.lon}`;
+  if (tripMetersCache.has(key)) return tripMetersCache.get(key);
+  if (!state.rail) return meters(a, b);
+  const coords = traceLeg(a, b, r.agency);
+  let m = 0;
+  for (let i = 1; i < coords.length; i++) m += meters({ lon: coords[i - 1][0], lat: coords[i - 1][1] }, { lon: coords[i][0], lat: coords[i][1] });
+  tripMetersCache.set(key, m);
+  return m;
+}
+// A train's cars as their models: "ACS-64 + Amfleet I".
+function modelsLine(c) {
+  const names = [...new Set(c.cars.map((x) => x.type?.name).filter(Boolean))];
+  return names.length > 3 ? `${names.slice(0, 2).join(" + ")} ${T("+ {n} more", { n: names.length - 2 })}` : names.join(" + ");
+}
+const stationOfTrip = (key, name, agency) => (key && state.stationOfKey?.get(key)) || (name ? `${agency}:${fold(name)}` : null);
+const stationLabel = (id) => state.stations.get(id)?.name || null;
+
+function historyHtml() {
+  if (!signedInHere()) return pageHead(T("History")) + signedOutHtml("history");
+  const all = account?.taken?.();
+  if (!all) return pageHead(T("History")) + `<div class="trip-card"><span class="sk sk-line"></span><span class="sk sk-line short"></span></div>`;
+  const years = [...new Set(all.map((r) => r.service_date.slice(0, 4)))].sort().reverse();
+  if (state.historyYear && !years.includes(state.historyYear)) state.historyYear = "";
+  const yearPick = years.length > 1 ? `<label class="filter${state.historyYear ? " on" : ""}"><span>${esc(state.historyYear || T("All time"))}</span><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M7 9.5 12 14.5 17 9.5Z"/></svg>
+      <select data-history-year aria-label="${esc(T("Year"))}"><option value="">${esc(T("All time"))}</option>${years.map((y) => `<option value="${y}"${y === state.historyYear ? " selected" : ""}>${y}</option>`).join("")}</select></label>` : "";
+  const head = pageHead(T("History"), yearPick);
+  const list = all.filter((r) => !state.historyYear || r.service_date.startsWith(state.historyYear))
+    .sort((x, y) => (y.service_date + (y.depart_at || "")).localeCompare(x.service_date + (x.depart_at || "")));
+  if (!list.length) {
+    return head + `<div class="trips-empty"><p>${T("No trips yet. Trains you track to your stop while riding are added here when you arrive, and trips you planned once you say you took them.")}</p>
+      <div><button type="button" class="btn primary small" data-tab-go="browse">${T("Find a train")}</button></div></div>`;
+  }
+  // The numbers.
+  const stations = new Set(list.flatMap((r) => [stationOfTrip(r.from_key, r.from_name, r.agency), stationOfTrip(r.to_key, r.to_name, r.agency)]).filter(Boolean));
+  let onBoard = 0;
+  for (const r of list) {
+    const ms = Date.parse(r.arrive_at) - Date.parse(r.depart_at);
+    if (ms > 0 && ms < 4 * 86400000) onBoard += ms;
+  }
+  const dist = list.reduce((m, r) => m + tripMeters(r), 0);
+  const mins = Math.round(onBoard / 60000), hours = Math.floor(mins / 60);
+  const time = hours ? `${hours.toLocaleString(locale)}<small>${T("h")}</small> ${mins % 60}<small>${T("min")}</small>` : `${mins}<small>${T("min")}</small>`;
+  const km = state.units === "km", d = dist / (km ? 1000 : 1609.344);
+  const stats = `<div class="rr-stats hist-stats">
+    ${statTile(list.length.toLocaleString(locale), esc(Tn(list.length, "trip taken", "trips taken")))}
+    ${statTile(stations.size.toLocaleString(locale), esc(Tn(stations.size, "station", "stations")))}
+    ${statTile(time, esc(T("on board")))}
+    ${statTile(`${Math.round(d).toLocaleString(locale)}<small>${km ? "km" : "mi"}</small>`, esc(T(km ? "kilometers ridden" : "miles ridden")))}
+  </div>`;
+  // The train ridden most: the usual cars of each trip's train, counted.
+  const consists = new Map();
+  for (const r of list) {
+    const c = consistOf({ id: `hist:${r.id}`, agency: r.agency, route: r.route || undefined, number: r.number || undefined });
+    if (!c?.cars?.length) continue;
+    const sig = `${r.agency}|${c.cars.map((x) => x.type?.name || "").join(",")}`;
+    const e = consists.get(sig) || { n: 0, c, agency: r.agency };
+    e.n++;
+    consists.set(sig, e);
+  }
+  const most = [...consists.values()].sort((x, y) => y.n - x.n)[0];
+  const mostHtml = most ? `<div class="hist-most">
+      <div class="hm-label">${T("Ridden most")}</div>
+      <div class="hm-cars">${consistHtml(most.c, AGENCIES[most.agency]?.color, "histmost")}</div>
+      <div class="hm-name">${esc(modelsLine(most.c))}</div>
+      <div class="hm-sub">${esc(`${AGENCIES[most.agency]?.short || most.agency} · ${T("{k} of your {n} trips", { k: most.n, n: list.length })}`)}</div>
+    </div>` : "";
+  // The top railroad and station.
+  const tally = (keys) => { const m = new Map(); for (const k of keys) if (k) m.set(k, (m.get(k) || 0) + 1); return [...m].sort((x, y) => y[1] - x[1])[0]; };
+  const topRr = tally(list.map((r) => r.agency));
+  const topSt = tally(list.flatMap((r) => [stationOfTrip(r.from_key, r.from_name, r.agency), stationOfTrip(r.to_key, r.to_name, r.agency)]));
+  const topName = topSt && (stationLabel(topSt[0]) || list.flatMap((r) => [[stationOfTrip(r.from_key, r.from_name, r.agency), r.from_name], [stationOfTrip(r.to_key, r.to_name, r.agency), r.to_name]]).find(([id]) => id === topSt[0])?.[1]);
+  const tops = `<div class="group-title">${T("Favorites")}</div>
+    ${topRr ? `<button type="button" class="home-row" data-railroad="${esc(topRr[0])}"><span class="home-row-text"><span class="title">${esc(AGENCIES[topRr[0]]?.name || topRr[0])}</span><span class="sub">${esc(T("Top railroad · {n}", { n: Tn(topRr[1], "1 trip", "{n} trips") }))}</span></span><span class="count">›</span></button>` : ""}
+    ${topName ? `<button type="button" class="home-row"${state.stations.has(topSt[0]) ? ` data-station="${esc(topSt[0])}"` : ""}><span class="home-row-text"><span class="title">${esc(topName)}</span><span class="sub">${esc(T("Top station · {n}", { n: Tn(topSt[1], "1 visit", "{n} visits") }))}</span></span><span class="count">›</span></button>` : ""}`;
+  // Every trip, by month.
+  let month = "", rows = "";
+  const thisYear = String(new Date().getFullYear());
+  for (const r of list) {
+    const m = r.service_date.slice(0, 7);
+    if (m !== month) {
+      month = m;
+      rows += `<div class="group-title">${esc(dateFormat({ month: "long", year: m.startsWith(thisYear) ? undefined : "numeric", timeZone: "UTC" }).format(new Date(`${m}-15T12:00:00Z`)))}</div>`;
+    }
+    rows += tripRowHome(r);
+  }
+  return head + stats + mostHtml + tops + rows;
 }
 
 function tripRowHome(r) {
@@ -1864,7 +2062,9 @@ function tripRowHome(r) {
   const month = dateFormat({ month: "short", timeZone: "UTC" }).format(d), day = d.getUTCDate();
   const leg = [r.from_name, r.to_name].filter(Boolean).join(" → ");
   const past = r.status !== "planned";
-  const when = past ? tripDate(r.service_date) : [tripTime(r.depart_at, r.from_key, r.agency), r.service_date.slice(0, 4) !== String(new Date().getFullYear()) ? r.service_date.slice(0, 4) : ""].filter(Boolean).join(" · ");
+  const took = Date.parse(r.arrive_at) - Date.parse(r.depart_at);
+  const when = past ? [tripDate(r.service_date), took > 0 && took < 4 * 86400000 ? fmtSpan(took) : ""].filter(Boolean).join(" · ")
+    : [tripTime(r.depart_at, r.from_key, r.agency), r.service_date.slice(0, 4) !== String(new Date().getFullYear()) ? r.service_date.slice(0, 4) : ""].filter(Boolean).join(" · ");
   return `<button type="button" class="home-row trip-row" data-trip="${esc(r.id)}">
       ${past ? plate(r.number || a.short, a.color, "xs") : `<span class="tr-date"><span>${esc(month)}</span><strong>${day}</strong></span>`}
       <span class="home-row-text"><span class="title">${esc([past ? "" : a.short, r.route || (past ? a.name : ""), r.number && !past ? r.number : ""].filter(Boolean).join(" "))}</span>
@@ -2139,10 +2339,66 @@ function renderFilters() {
   }).join("") + (filtersOn() ? `<button type="button" class="link-btn filter-clear" data-filters-clear>${T("Clear")}</button>` : ""));
 }
 
+// Browse: a train's add button, or its tick once it's in My trips (where
+// accounts are on; signed out, it asks to sign in).
+const addBtn = (added, attrs, name) => !accountsOn() ? ""
+  : added ? `<span class="add-btn added" role="img" title="${esc(T("In My trips"))}" aria-label="${esc(T("In My trips"))}">${TICK_ICON}</span>`
+  : `<button type="button" class="add-btn" ${attrs} title="${esc(T("Add to My trips"))}" aria-label="${esc(T("Add {train} to My trips", { train: name }))}">${PLUS_ICON}</button>`;
+const hasTrip = (agency, number, day) => Boolean(account?.has?.(agency, number, day));
+
+// Browse, from one station to another: "penn to philadelphia", "Boston →
+// New York": the trains between them on the day picked (today, tomorrow or
+// any date), from the railroads' timetables, each added in one tap.
+function routeQuery(text) {
+  const parts = text.split(/\s*(?:→|->|⇒|>)\s*|\s+(?:to|à|vers)\s+/i).map((x) => x.trim()).filter(Boolean);
+  if (parts.length !== 2 || parts.some((x) => x.length < 3)) return null;
+  const [from] = searchStations(parts[0], 1), [to] = searchStations(parts[1], 1);
+  return from && to && from.id !== to.id ? { from, to } : null;
+}
+const routeTrains = new Map(); // "from|to|day" -> { trains, exact }, or "loading"
+let routeShown = null;          // { day, trains } as Browse lists them
+function routeHtml({ from, to }) {
+  const day = state.routeDay || localDay(), t0 = localDay(), t1 = addDaysIso(t0, 1);
+  const key = `${from.id}|${to.id}|${day}`;
+  if (!routeTrains.has(key)) {
+    routeTrains.set(key, "loading");
+    findTrains(from.id, to.id, day).catch(() => ({ trains: [], exact: true }))
+      .then((r) => { routeTrains.set(key, r); renderResults(); });
+  }
+  const got = routeTrains.get(key);
+  const other = day !== t0 && day !== t1;
+  const chip = (d, label) => `<button type="button" class="filter${day === d ? " on" : ""}" data-route-day="${d}" aria-pressed="${day === d}">${label}</button>`;
+  const head = `<div class="group-title route-title">${esc(from.name)} → ${esc(to.name)}</div>
+    <div class="route-days">${chip(t0, T("Today"))}${chip(t1, T("Tomorrow"))}<label class="filter${other ? " on" : ""}"><span>${esc(other ? tripDate(day) : T("Pick a date"))}</span><input type="date" data-route-date value="${esc(day)}" aria-label="${esc(T("Another day"))}"></label></div>`;
+  if (got === "loading") return head + skeletonRows(3);
+  // Today's from a quarter of an hour ago on.
+  const trains = got.trains.filter((r) => day !== t0 || Date.parse(r.departAt) > Date.now() - 15 * 60000);
+  routeShown = { day, trains };
+  if (!trains.length) return head + `<p class="empty">${T("No trains between these stations that day.")}</p>`;
+  return head + trains.slice(0, 40).map((r, i) => {
+    const a = AGENCIES[r.agency] || { color: "#888", short: r.agency };
+    const live = day === t0 && r.number ? [...state.trains.values()].find((t) => t.agency === r.agency && String(t.number) === String(r.number)) : null;
+    const name = [a.short, r.number].filter(Boolean).join(" ");
+    return `<div class="result-row">
+      <button type="button" class="result" ${live ? `data-select="${esc(live.id)}"` : `data-route-pick="${i}"`}>
+        ${plate(r.number || a.short, a.color, "sm")}
+        <span><span class="title">${esc(fmtTime(r.departAt, r.fromTz))} – ${esc(fmtTime(r.arriveAt, r.toTz))}</span><br><span class="sub">${esc([r.route, a.short, fmtSpan(Date.parse(r.arriveAt) - Date.parse(r.departAt))].filter(Boolean).join(" · "))}</span></span>
+        ${live ? statusSpan(live, "status") : "<span></span>"}
+      </button>${addBtn(hasTrip(r.agency, r.number, day), `data-add-route="${i}"`, name)}</div>`;
+  }).join("") + (got.exact ? "" : `<p class="results-more">${T("That day is past the timetable Trainsheet has, so these are the trains on that weekday now. Check again closer to the day.")}</p>`);
+}
+let laterShown = new Map(); // a train later today's key -> the train, as Browse lists them
+
 function renderResults() {
   // Matched with accents dropped, in any script: "hameenlinna" finds Hämeenlinna.
   const q = fold(state.query.trim());
   const el = $("results");
+  // Search is Browse's: the other pages show their own.
+  if (state.tab !== "browse") {
+    el.hidden = true;
+    $("agencies").hidden = false;
+    return;
+  }
   renderFilters();
   if (!q && !filtersOn()) {
     el.hidden = true;
@@ -2220,10 +2476,13 @@ function renderResults() {
       <span></span>
     </button>`;
   }).join("") : "";
+  const route = routeQuery(state.query.trim());
+  const routeBlock = route ? routeHtml(route) : "";
   const later = q.length >= 2 ? laterToday(terms, q) : [];
+  laterShown = new Map(later.slice(0, 12).map((u) => [upcomingKey(u), u]));
   const laterBlock = later.length ? `<div class="group-title">${T("Later today")}</div>` + upcomingHtml(later.slice(0, 12)) +
     (later.length > 12 ? `<p class="results-more">${esc(T("{n} more later today", { n: later.length - 12 }))}</p>` : "") : "";
-  const before = carBlock + railroadBlock + lineBlock + stationBlock;
+  const before = routeBlock + carBlock + railroadBlock + lineBlock + stationBlock;
   if (!matches.length) {
     setPane(el, before + laterBlock || `<div class="empty">${esc(q ? T("Nothing matches “{q}”.", { q: state.query.trim() }) : T("No trains running match these filters."))}</div>`);
     return;
@@ -2232,11 +2491,11 @@ function renderResults() {
     const a = AGENCIES[t.agency];
     const sub = [t.destination && T("to {place}", { place: t.destination }), t.nextStop && !t.destination && T("next {place}", { place: t.nextStop })]
       .filter(Boolean).join(" · ") || T(a.region);
-    return `<button class="result" data-select="${esc(t.id)}">
+    return `<div class="result-row"><button class="result" data-select="${esc(t.id)}">
       ${plate(t.number || a.short, a.color, "sm")}
       <span><span class="title">${esc(trainTitle(t))}</span><br><span class="sub">${esc(a.short)} · ${esc(sub)}</span></span>
       ${statusSpan(t, "status")}
-    </button>`;
+    </button>${t.number ? addBtn(hasTrip(t.agency, t.number, localDay()), `data-add-train="${esc(t.id)}"`, `${a.short} ${t.number}`) : ""}</div>`;
   }).join("") + laterBlock);
 }
 
@@ -2411,11 +2670,11 @@ function upcomingHtml(list) {
   return list.map((u) => {
     const a = AGENCIES[u.id], k = upcomingKey(u), open = state.upcomingOpen === k;
     const leaves = T("leaves {place} at {time}", { place: u.origin, time: fmtTime(new Date(u.at).toISOString(), u.tz) });
-    return `<button type="button" class="result upcoming" data-upcoming="${esc(k)}" aria-expanded="${open}">
+    return `<div class="result-row"><button type="button" class="result upcoming" data-upcoming="${esc(k)}" aria-expanded="${open}">
       ${plate(u.number || a.short, a.color, "sm")}
       <span><span class="title">${esc(u.dest ? T("{line} to {place}", { line: u.line, place: u.dest }) : u.line)}</span><br><span class="sub">${esc(a.short)} · ${esc(leaves)}</span></span>
       <span class="status neutral">${esc(u.at - Date.now() < 30000 ? T("now") : T("in {time}", { time: fmtIn(u.at) }))}</span>
-    </button>${open ? upcomingStops(u) : ""}`;
+    </button>${u.number ? addBtn(hasTrip(u.id, u.number, localDay(u.at, u.tz)), `data-add-later="${esc(k)}"`, `${a.short} ${u.number}`) : ""}</div>${open ? upcomingStops(u) : ""}`;
   }).join("");
 }
 
@@ -2937,7 +3196,10 @@ function modelOf(c, i) {
 }
 // A plug-in railroad's cars come in their own file (consist.js): once in,
 // the train or railroad showing redraws with them.
-onCars(() => { if (state.selected || state.railroad) renderDetail(); });
+onCars(() => {
+  if (state.selected || state.railroad) renderDetail();
+  if (state.tab === "history") renderAgencies(); // the train ridden most, drawn
+});
 
 const factText = {
   topSpeedMph: (v, units) => (units === "km" ? `${Math.round(v * KM_PER_MI)} km/h` : `${v} ${T("mph")}`),
@@ -4333,6 +4595,7 @@ setInterval(() => {
   if (document.hidden) return;
   checkTracked();
   renderTracked(); // ETAs count down between feed updates
+  if (state.tab === "trips" && !state.selected && !state.station && !state.railroad) renderAgencies(); // and the next trip's
 }, 30000);
 
 function renderAll() {
@@ -4595,7 +4858,7 @@ function panelPadding() {
     // Clear of the sheet, at the detent it's at (or headed for).
     return { bottom: sheetHeights()[sheetMode()], top: 0, left: 0, right: 0 };
   }
-  return { left: 12 + $("panel").offsetWidth, top, bottom: 0, right: 0 };
+  return { left: $("panel").getBoundingClientRect().right, top, bottom: 0, right: 0 };
 }
 
 function setFollow(on) {
@@ -4969,7 +5232,52 @@ on("search", "keydown", (e) => {
   }
 });
 
+// Adding a train found in Browse to My trips: from one station to another,
+// at once; a train running now or later today, by its trip's form, filled
+// in from its first stop to its last, for the rider to set their own.
+const withAccount = (fn) => loadAccount().then((a) => a && (a.user ? fn(a) : a.open("signin")));
+function addFound(e) {
+  const route = e.target.closest("[data-add-route], [data-route-pick]");
+  if (route) {
+    const r = routeShown?.trains[Number(route.dataset.addRoute ?? route.dataset.routePick)];
+    if (!r) return true;
+    const row = { agency: r.agency, number: r.number, route: r.route, service_date: routeShown.day,
+      from_name: r.fromName, from_key: r.fromKey, to_name: r.toName, to_key: r.toKey, depart_at: r.departAt, arrive_at: r.arriveAt };
+    withAccount((a) => (route.dataset.addRoute != null ? a.add(row) : a.addFrom(row)));
+    return true;
+  }
+  const live = e.target.closest("[data-add-train]");
+  if (live) {
+    const t = state.trains.get(live.dataset.addTrain);
+    if (!t) return true;
+    const first = t.stops?.[0], last = t.stops?.[t.stops.length - 1];
+    withAccount((a) => a.addFrom({ agency: t.agency, number: t.number, route: t.route || null, service_date: localDay(),
+      from_name: first?.name || t.origin || null, from_key: first?.key || null, to_name: last?.name || t.destination || null, to_key: last?.key || null,
+      depart_at: first?.scheduled || first?.time || null, arrive_at: last?.scheduled || last?.time || null }));
+    return true;
+  }
+  const later = e.target.closest("[data-add-later]");
+  if (later) {
+    const u = laterShown.get(later.dataset.addLater);
+    if (!u) return true;
+    withAccount((a) => a.addFrom({ agency: u.id, number: u.number, route: u.line || null, service_date: localDay(u.at, u.tz),
+      from_name: u.origin || null, to_name: u.dest || null, depart_at: new Date(u.at).toISOString() }));
+    return true;
+  }
+  return false;
+}
+on("results", "change", (e) => {
+  if (!e.target.matches("[data-route-date]") || !e.target.value) return;
+  state.routeDay = e.target.value;
+  renderResults();
+});
 on("results", "click", (e) => {
+  if (addFound(e)) return;
+  const day = e.target.closest("[data-route-day]");
+  if (day) {
+    state.routeDay = day.dataset.routeDay === localDay() ? null : day.dataset.routeDay;
+    return renderResults();
+  }
   // A train later today: show or hide its stops.
   const up = e.target.closest("[data-upcoming]");
   if (up) {
@@ -5011,6 +5319,11 @@ on("recents", "click", (e) => {
   else openLine(id.slice(0, id.indexOf("|")), id.slice(id.indexOf("|") + 1));
 });
 
+on("agencies", "change", (e) => {
+  if (!e.target.matches("[data-history-year]")) return;
+  state.historyYear = e.target.value;
+  renderAgencies();
+});
 on("agencies", "click", (e) => {
   // Near you: find them, track a train, or open one.
   if (e.target.closest("[data-near-locate]")) return locateNear();
@@ -5023,13 +5336,25 @@ on("agencies", "click", (e) => {
   }
   const near = e.target.closest("[data-select]");
   if (near) return select(near.dataset.select);
-  // Your trips: one opens (its train, when it's out today), a new one, a tab.
-  if (e.target.closest("[data-home-signin]")) return loadAccount().then((a) => a?.open());
+  // The pages: Settings (phones), signing in, a trip (its form), a new one,
+  // one taken, another page, History's year.
+  if (e.target.closest("[data-settings]")) {
+    e.stopPropagation();
+    return toggleMenu();
+  }
+  const provider = e.target.closest("[data-signin-provider]");
+  if (provider) return loadAccount().then((a) => a?.signInWith(provider.dataset.signinProvider));
+  if (e.target.closest("[data-signin-email]")) return loadAccount().then((a) => a?.open("signin"));
+  const go = e.target.closest("[data-tab-go]");
+  if (go) return setTab(go.dataset.tabGo);
   if (e.target.closest("[data-trip-add]")) return loadAccount().then((a) => a?.addTrip());
-  const tab = e.target.closest("[data-trips-tab]");
-  if (tab) return loadAccount().then((a) => a?.openTrips(tab.dataset.tripsTab));
+  const taken = e.target.closest("[data-trip-taken]");
+  if (taken) return account?.markTaken(taken.dataset.tripTaken);
   const trip = e.target.closest("[data-trip]");
   if (trip) return loadAccount().then((a) => a?.editTrip(trip.dataset.trip));
+  if (e.target.closest("[data-history-year]")) return;
+  const histStation = e.target.closest("[data-station]");
+  if (histStation) return selectStation(histStation.dataset.station);
   if (e.target.closest("[data-all-railroads]")) {
     openCountry = "*";
     renderAgencies();
@@ -5206,6 +5531,7 @@ function toggleMenu(open = $("settings-menu").hidden) {
   const menu = $("settings-menu"), btn = $("settings-btn");
   menu.hidden = !open;
   btn.setAttribute("aria-expanded", String(open));
+  $("rail-settings")?.setAttribute("aria-expanded", String(open));
   document.body.classList.toggle("menu-open", open);
   if (!open) return;
   // On a phone, a sheet up from the bottom (design.css), with Done.
@@ -5241,13 +5567,14 @@ on("settings-btn", "click", (e) => {
 });
 on("menu-done", "click", () => toggleMenu(false));
 document.addEventListener("click", (e) => {
-  if (!$("settings-menu").hidden && !e.target.closest("#settings-menu")) toggleMenu(false);
+  if (!$("settings-menu").hidden && !e.target.closest("#settings-menu, #rail-settings, [data-settings]")) toggleMenu(false);
 });
 document.addEventListener("keydown", (e) => e.key === "Escape" && toggleMenu(false));
 
 // ---------- Keyboard shortcuts (on a computer) ----------
 
 const SHORTCUTS = [
+  ["1 2 3", "My trips, Browse, History"],
   ["/", "Search"],
   ["Esc", "Back to the home page"],
   ["B", "Back one page"],
@@ -5280,9 +5607,14 @@ document.addEventListener("keydown", (e) => {
   if (typing) return;
   const open = state.selected && state.trains.get(state.selected);
   switch (e.key) {
+    case "1": case "2": case "3":
+      if (!document.body.classList.contains("has-tabs")) return;
+      setTab(["trips", "browse", "history"][Number(e.key) - 1]);
+      break;
     case "/":
       e.preventDefault();
       if (state.selected || state.station || state.railroad) goHome();
+      if (state.tab !== "browse") setTab("browse");
       if (isPhone) setSheet("expanded");
       $("search").focus();
       $("search").select();
@@ -5386,7 +5718,7 @@ let sheetDragged = false;
   const panel = $("panel");
   let drag = null;
   panel?.addEventListener("pointerdown", (e) => {
-    if (!isPhone || e.button > 0 || !e.target.closest(".sheet-handle, .search-row, .detail-top")) return;
+    if (!isPhone || e.button > 0 || !e.target.closest(".sheet-handle, .search-row, .detail-top, .page-head")) return;
     if (e.target.closest("input, select, textarea")) return;
     drag = { y: e.clientY, id: e.pointerId, h: panel.getBoundingClientRect().height, moving: false, samples: [] };
     sheetDragged = false;
@@ -5581,10 +5913,12 @@ function loadAccount() {
     accountChanged(user) {
       renderAccountButton(user);
       renderAgencies();
+      renderResults();
     },
     tripsChanged() {
       trackPlanned();
       renderAgencies();
+      renderResults(); // Browse's ticks on the trains added
     },
   })).then((a) => (account = a)).catch((e) => {
     console.warn("Trainsheet: accounts unavailable", e);
@@ -5598,13 +5932,24 @@ function renderAccountButton(user = account?.user) {
   const el = $("account-btn");
   if (!el) return;
   el.hidden = !(ACCOUNTS.url && ACCOUNTS.key);
-  el.querySelector("[data-account-label]").textContent = user ? T("Your trips") : T("Sign in");
+  el.querySelector("[data-account-label]").textContent = user ? T("Account") : T("Sign in");
 }
 on("account-btn", "click", async () => {
   toggleMenu(false);
   (await loadAccount())?.open();
 });
 renderAccountButton();
+// The pages (Pages, above): where accounts are on, the tab bar at the foot of
+// the sheet (phones) or the rail beside the panel (computers), opening on My
+// trips for a rider signed in on this device and on Browse otherwise.
+if (accountsOn() && $("tabbar")) {
+  document.body.classList.add("has-tabs");
+  $("tabbar").hidden = false;
+  if (isPhone) $("panel").append($("tabbar"));
+  state.tab = signedInHere() ? "trips" : "browse";
+  $("tabbar").querySelector(`[data-tab="${state.tab}"]`)?.setAttribute("aria-current", "page");
+}
+$("view-list").dataset.tab = state.tab;
 if (ACCOUNTS.url && ACCOUNTS.key) {
   // Signed in on this device already, or back from Google, Facebook or a
   // link in an email (?code=): load it now. Otherwise only when asked.
