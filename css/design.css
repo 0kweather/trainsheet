@@ -1061,3 +1061,15 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
   @keyframes menu-pop { from { opacity: 0; transform: scale(0.97); } }
   @media (prefers-reduced-motion: reduce) { .menu { animation: none; } }
 }
+
+/* ---------- A train's number flipping into its plate ----------
+ * As its page opens (app.js, flipPlate): each character drops in from above,
+ * turning down like a split-flap board's leaf, one after another. */
+.plate .flap {
+  display: inline-block; white-space: pre;
+  animation: flap 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--c) * 60ms + 120ms);
+}
+@keyframes flap {
+  from { opacity: 0; transform: perspective(160px) translateY(-55%) rotateX(80deg); }
+}

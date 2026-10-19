@@ -2691,11 +2691,20 @@ function renderDetail() {
       </div>
       ${consistSection(t)}
     </div>`;
+  const opened = pageKeys.get(el) !== `train:${t.id}`;
   renderParts(el, `train:${t.id}`, [hero, tiles, crowdSection(t), noticesHtml(t), stops, onBoardFor(t), historySection(t)]);
+  if (opened) flipPlate(el.querySelector(".hero-title .plate > span"));
   el.scrollTop = keepScroll;
   const strip = el.querySelector(".consist-strip"), list = el.querySelector(".stops-scroll");
   if (strip) strip.scrollLeft = stripScroll.get(t.id) || 0;
   if (list) list.scrollTop = keepStops;
+}
+
+// The train's number flips into its plate character by character, like a
+// station's split-flap board, as its page opens (not when it's drawn again).
+function flipPlate(el) {
+  if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  el.innerHTML = [...el.textContent].map((ch, i) => `<span class="flap" style="--c:${i}">${esc(ch)}</span>`).join("");
 }
 
 // A wifi-style signal mark beside the time of the train's last GPS report.
