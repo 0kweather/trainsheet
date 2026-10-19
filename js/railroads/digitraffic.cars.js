@@ -1,15 +1,107 @@
 // Finland's passenger cars (VR and the commuter trains, scripts/railroads/digitraffic.py):
 // Trainsheet's own side views, built like carmodels.js's from each model's
-// published dimensions, in VR's white and green (the capital region's FLIRTs
-// in HSL's purple). Digitraffic's train locations name no vehicles, so each
-// train is drawn as what typically runs on its line.
+// published dimensions, in VR's current white and green (the capital
+// region's FLIRTs in HSL's white and purple). Digitraffic's train locations
+// name no vehicles, so each train is drawn as what typically runs on its
+// line. The detail helpers here (lettering, roof gear, fronts, buffers,
+// underfloor boxes, a Stadler FLIRT built to any railroad's paint) are
+// shared with the Baltic and Norwegian railroads' files (entur.cars.js,
+// vivi.cars.js, elron.cars.js).
 
-import { newId, bilevel, cabUnit, married, flirtCar, flirtMid } from "../carmodels.js?v=dev";
-import { rect, path, poly, win, pantograph, C } from "../carart.js?v=dev";
+import { newId, bilevel, cabUnit, married } from "../carmodels.js?v=dev";
+import { rect, circle, path, line, lines, poly, slats, win, truck, pantograph, C } from "../carart.js?v=dev";
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
-const VR = { white: "#eef0f1", green: "#3fa535", deep: "#2b7a28", roof: "#9aa1a9", band: "#24282d", skirt: "#2a2d31" };
-const HSL_PURPLE = "#8c4799";
+const r2 = (v) => Math.round(v * 100) / 100;
+// VR since 2009: white, a bright green, a lighter green in its leaf graphics.
+const VR = { white: "#f1f2f3", green: "#45b02c", light: "#8fd14f", deep: "#2c7f1d", roof: "#a3aab2", band: "#24282d", skirt: "#3a3f45" };
+const HSL = { purple: "#8c4799", coral: "#e5484d", white: "#f3f4f5" };
+
+// ===================== Shared detail =====================
+
+const SANS = "Helvetica Neue, Helvetica, Arial, sans-serif";
+// Lettering on a car side, h ft tall and centered at (x, y), reading left to
+// right on a mirrored car too.
+export function letters(c, x, y, h, text, fill, { weight = 700, spacing = 0, italic = false, family = SANS, anchor = "middle", stretch = 1 } = {}) {
+  return `<text transform="translate(${r2(x)} ${r2(y)}) scale(${r2((c.mirrored ? -1 : 1) * stretch)} -1)" y="${r2(h * 0.36)}" font-size="${r2(h)}" text-anchor="${anchor}" ` +
+    `font-weight="${weight}"${italic ? ' font-style="italic"' : ""} letter-spacing="${spacing}" font-family="${family}" fill="${fill}">${text}</text>`;
+}
+// VR's mark: the two letters, bold and leaning.
+export const vrMark = (c, x, y, h, fill) => letters(c, x, y, h, "VR", fill, { weight: 800, italic: true, spacing: -0.04 * h, stretch: 1.15 });
+
+// An air-conditioning housing on the roof: a low hood with sloped ends,
+// louvered sides and a light top edge.
+export function hvac(x, roof, w, h = 0.75, fill = "#a7aeb6") {
+  return path(`M${r2(x)} ${r2(roof - 0.05)}L${r2(x + 0.45)} ${r2(roof + h)}L${r2(x + w - 0.45)} ${r2(roof + h)}L${r2(x + w)} ${r2(roof - 0.05)}Z`, fill, 0.4) +
+    slats(x + 0.9, roof + 0.1, Math.max(0.5, w * 0.35), h - 0.25, 0.4, "rgba(0,0,0,0.32)") +
+    slats(x + w - 0.9 - Math.max(0.5, w * 0.35), roof + 0.1, Math.max(0.5, w * 0.35), h - 0.25, 0.4, "rgba(0,0,0,0.32)") +
+    line(x + 0.5, roof + h - 0.12, x + w - 0.5, roof + h - 0.12, "rgba(255,255,255,0.4)", 0.5);
+}
+// A smooth roof cover over equipment (converters, resistors, breakers), its
+// panels' seams marked.
+export function roofCover(x, roof, w, h = 0.55, fill = "#9aa1a9", seams = 2) {
+  let s = path(`M${r2(x)} ${r2(roof - 0.05)}Q${r2(x)} ${r2(roof + h)} ${r2(x + 0.6)} ${r2(roof + h)}L${r2(x + w - 0.6)} ${r2(roof + h)}Q${r2(x + w)} ${r2(roof + h)} ${r2(x + w)} ${r2(roof - 0.05)}Z`, fill, 0.4);
+  const segs = [];
+  for (let k = 1; k <= seams; k++) segs.push([x + (w * k) / (seams + 1), roof + 0.05, x + (w * k) / (seams + 1), roof + h - 0.05]);
+  return s + lines(segs, "rgba(0,0,0,0.28)", 0.4);
+}
+// Behind a pantograph: the main breaker and a roof line, on insulators.
+export function panGear(x, roof, dir = 1) {
+  return rect(x + dir * 3.4 - (dir < 0 ? 1.4 : 0), roof - 0.05, 1.4, 0.75, C.steelDark, 0.4, 'rx="0.15"') +
+    rect(x + dir * 3.7 - (dir < 0 ? 0.3 : 0), roof + 0.7, 0.3, 0.45, "#b9874a", 0.3) +
+    line(x + dir * 2.8, roof + 0.95, x + dir * 6.2, roof + 0.95, "#5a6068", 0.9) +
+    rect(x + dir * 6.0 - 0.15, roof - 0.05, 0.3, 1.0, "#b9874a", 0.3);
+}
+// A pair of horns on the roof.
+export const horns = (x, roof) => rect(x, roof - 0.05, 1.0, 0.25, "currentColor") + rect(x + 0.05, roof + 0.2, 0.32, 0.3, "currentColor", 0, 'rx="0.1"') +
+  rect(x + 0.55, roof + 0.2, 0.38, 0.38, "currentColor", 0, 'rx="0.1"');
+// A lamp: lens in a dark surround (white headlight, red marker).
+export const lamp = (x, y, w = 0.55, h = 0.38, color = "#f6f2dc") =>
+  rect(x - 0.08, y - 0.08, w + 0.16, h + 0.16, "#1b1d20", 0, 'rx="0.12"') + rect(x, y, w, h, color, 0, 'rx="0.1"');
+export const RED_LAMP = "#d8262f";
+// A windshield wiper resting on the glass.
+export const wiper = (x0, y0, x1, y1) => line(x0, y0, x1, y1, "#0d0f11", 0.9);
+// The front of a multiple unit at the left end, under the nose: the
+// automatic coupler on its drawbar, its electrical head, and the obstacle
+// deflector under the front. noseX: the nose's foot.
+export function emuFront(noseX, sill, { coupler = 2.75, deflector = "#2a2d31" } = {}) {
+  let s = path(poly([[noseX - 0.25, sill + 0.05], [noseX + 3.4, sill + 0.05], [noseX + 3.0, 0.8], [noseX + 0.7, 0.55], [noseX - 0.05, 1.3]]), deflector);
+  s += line(noseX + 0.45, 1.0, noseX + 2.9, 1.15, "rgba(255,255,255,0.18)", 0.6);
+  s += rect(0.45, coupler - 0.3, noseX + 0.6, 0.6, "currentColor", 0, 'opacity="0.9"');
+  s += rect(0, coupler - 0.72, 0.55, 1.44, "currentColor", 0, 'rx="0.15"') + rect(0.15, coupler + 0.8, 0.5, 0.35, C.steelDark, 0.3);
+  return s;
+}
+// Side buffers on a buffer beam, xFace the buffers' face: side -1 at the
+// left end, 1 at the right.
+export function buffers(xFace, side, { y = 3.45, reach = 1.6 } = {}) {
+  const a = side < 0 ? xFace + 0.32 : xFace - reach, b = side < 0 ? xFace : xFace - 0.32;
+  return rect(a, y - 0.32, reach - 0.32, 0.64, C.steelDark, 0.4) + rect(b, y - 0.62, 0.32, 1.24, "currentColor", 0, 'rx="0.12"') +
+    rect(side < 0 ? xFace + reach - 0.2 : xFace - reach - 0.25, y - 0.75, 0.45, 1.5, "#2a2d31");
+}
+// Underfloor equipment between x0 and x1 hung from top: n boxes, alternately
+// deeper and shallower, with a hinge line and a latch each.
+export function boxes(x0, x1, top, n = 3, depth = 1.3, fill = "#3a3e44") {
+  let s = "";
+  const w = (x1 - x0) / n;
+  for (let i = 0; i < n; i++) {
+    const a = x0 + i * w + 0.3, b = a + w - 0.6, d = depth * (i % 2 ? 0.78 : 1);
+    s += rect(a, top - d, b - a, d, fill, 0.4, 'rx="0.12"') + line(a + 0.2, top - 0.2, b - 0.2, top - 0.2, "rgba(255,255,255,0.14)", 0.5) +
+      rect((a + b) / 2 - 0.25, top - d + 0.25, 0.5, 0.18, C.steelDark);
+  }
+  return s;
+}
+// A window's frame: a dark rounded surround a little larger than the glass.
+export const frames = (xs, y, w, h, pad = 0.18, fill = "#1d2024") => xs.map((x) => rect(x - pad, y - pad, w + 2 * pad, h + 2 * pad, fill, 0, 'rx="0.45"')).join("");
+// Slanted strokes (a leaf or speed graphic): n parallelograms from (x, y0)
+// leaning ahead by lean over their height.
+export function strokes(x, y0, y1, n, { w = 0.45, gap = 0.75, lean = 1.4, fills = [VR.green] } = {}) {
+  let s = "";
+  for (let k = 0; k < n; k++) {
+    const a = x + k * gap;
+    s += path(poly([[a, y0], [a + w, y0], [a + w + lean, y1], [a + lean, y1]]), fills[k % fills.length]);
+  }
+  return s;
+}
 
 // A unit with a driving cab at each end, drawn as its left half and the same
 // half mirrored onto the right: draw(c) draws the whole body with its cab on
@@ -32,83 +124,203 @@ export function bothEnds(c, draw) {
 export const flirtIn = (svg, { body, top, line }) =>
   svg.replace(/#(f4f5f6|2a62d4|3fb54a)\b/g, (m, h) => ({ f4f5f6: body, "2a62d4": top, "3fb54a": line })[h]);
 
+// --- Stadler FLIRT, as the Nordic and Baltic railroads run it: the cab
+// section (21.5 m to the joint, a motor bogie under the cab's raised floor,
+// the nose's crash structure ahead of it), the intermediate sections (15.7
+// m) on Jakobs bogies shared at every joint, and the Norwegian bimodal
+// units' short generator car. Each section: a double plug door a side;
+// the cab's crew door and two small windows over the motor bogie; the
+// windshield in a black mask, the coupler under a deflector, headlights low
+// on the nose and one over the windshield. On the roof: an air-conditioning
+// unit per section, a converter cover, the pantograph with its breaker.
+// k: the railroad's paint, { body, roof, skirt, door, mask, paint(c, g,
+// part) (clipped to the body), over(c, g, part) (lettering and the like on
+// top), diesel (roof radiators and exhausts in place of a pantograph) }.
+const FL = { roof: 14.06, sill: 3.0, cornerR: 1.0, end: 0.6, noTrucks: true, diaphragm: [3.2, 12.2], badge: false };
+const FL_NOSE = [[1.0, 3.0], [1.0, 5.8], ["q", 1.1, 7.0, 2.0, 8.0], [5.6, 12.9], ["q", 6.4, 14.06, 8.2, 14.06]];
+const flJakobs = (x) => truck(x, { wb: 8.86, d: 30, top: 3.0 });
+const FL_CAB_WINS = [{ xs: [12.4, 16.2], y: 6.6, w: 3.0, h: 3.6, r: 0.4 }, { xs: seq(29.6, 5.25, 7), y: 6.6, w: 4.6, h: 3.6, r: 0.4 }];
+const FL_MID_WINS = [{ xs: seq(2.6, 5.25, 3), y: 6.6, w: 4.6, h: 3.6, r: 0.4 }, { xs: seq(24.7, 5.25, 5), y: 6.6, w: 4.6, h: 3.6, r: 0.4 }];
+export function flirt(c, part, k) {
+  const L = c.L, roof = FL.roof;
+  if (part === "power") return flirtGenerator(c, k);
+  const cab = part === "cab";
+  const dx = cab ? 24.0 : 18.5, rows = cab ? FL_CAB_WINS : FL_MID_WINS;
+  return bilevel({ ...c, cabL: cab, cabR: false }, { ...FL, base: k.body,
+    nose: cab ? FL_NOSE : null, cabLen: cab ? 9 : 0, rows,
+    doors: [...(cab ? [{ x: 9.0, w: 2.3, y0: 4.0, y1: 11.2, glassY: 0.55, glassH: 0.32, grabs: false }] : []),
+      { x: dx, w: 4.27, y0: 3.0, y1: 10.4, leaves: 2, glassY: 0.4, glassH: 0.45, grabs: false }],
+    paint: (c, g) => {
+      let s = rect(0, 0, L, 17, k.body) + rect(0, 12.95, L, 3, k.roof) + line(0, 12.95, L, 12.95, "rgba(0,0,0,0.18)", 0.5) + rect(0, 0, L, 3.55, k.skirt);
+      if (k.door) s += rect(dx - 0.15, 2.9, 4.57, 7.65, k.door) + (cab ? rect(8.85, 3.9, 2.6, 7.45, k.door) : "");
+      if (k.paint) s += k.paint(c, g, part);
+      s += rows.map((r) => frames(r.xs, r.y, r.w, r.h)).join("");
+      if (cab) s += path(poly([[1.25, 7.5], ["q", 3.4, 10.6, 5.2, 13.15], [9.2, 13.15], [9.2, 7.75], ["q", 5.0, 7.3, 1.25, 7.5]]), k.mask ?? "#1d2024");
+      return s;
+    },
+    extra: (c, g) => {
+      let s = cab ? truck(L - 51.8, { wb: 8.2, d: 36, top: 3.0 }) + flJakobs(L) : flJakobs(0) + flJakobs(L);
+      // Underfloor: the converter and brake boxes under the raised end,
+      // shallow tanks under the low floor.
+      s += cab ? boxes(10.8, 15.4, 3.0, 1, 0.45) + boxes(25.5, 44.0, 3.0, 2, 0.55) : boxes(6.0, 13.5, 3.0, 2, 0.55) + boxes(30.0, 44.5, 3.0, 2, 0.5);
+      // Roof: air conditioning, a converter cover, and the pantograph (or,
+      // on a diesel unit, radiators and exhausts) on the intermediate section.
+      if (cab) s += hvac(20.5, roof, 10.5) + roofCover(43.0, roof, 9.5) + rect(10.6, roof - 0.05, 3.2, 0.4, C.steelDark, 0.4, 'rx="0.15"') + rect(12.0, roof + 0.35, 0.2, 0.7, "currentColor");
+      else s += hvac(3.5, roof, 10.0) + roofCover(31.0, roof, 9.0);
+      if (!cab && k.diesel) s += roofCover(15.2, roof, 14.0, 0.85, "#8d949c", 3) + slats(16.0, roof + 0.15, 12.4, 0.6, 0.4, "rgba(0,0,0,0.35)") + rect(21.5, roof + 0.8, 0.5, 0.75, "currentColor") + rect(23.5, roof + 0.8, 0.5, 0.75, "currentColor");
+      else if (!cab && c.pan) s += pantograph(L / 2, roof) + panGear(L / 2 - 1.0, roof, -1);
+      if (k.over) s += k.over(c, g, part);
+      return s;
+    },
+    cab: () => emuFront(1.0, 3.0) +
+      path(poly([[1.9, 8.1], [5.3, 12.5], [6.0, 12.5], [3.0, 8.1]]), C.glass) + path(poly([[2.3, 8.4], [3.6, 10.1], [4.0, 10.1], [2.9, 8.4]]), C.glassLight) +
+      path(poly([[5.3, 8.5], [6.6, 11.8], [8.5, 11.8], [8.5, 8.5]]), C.glass) + wiper(2.4, 8.3, 3.9, 10.6) +
+      lamp(1.05, 5.75, 0.5, 0.42) + lamp(1.12, 5.05, 0.38, 0.3, RED_LAMP) + lamp(6.3, 13.35, 0.7, 0.28) + rect(6.6, 12.62, 1.7, 0.3, "#f4a321", 0, 'rx="0.08"'),
+  });
+}
+// The bimodal FLIRT's generator car: a short, tall box on Jakobs bogies, a
+// corridor through it between louvered engine rooms, radiators and
+// exhausts on the roof.
+function flirtGenerator(c, k) {
+  const { L } = c, roof = 14.06, sill = 3.4;
+  const d = poly([[0.4, sill], [L - 0.4, sill], [L - 0.4, roof - 0.6], ["q", L - 0.4, roof, L - 1.0, roof], [1.0, roof], ["q", 0.4, roof, 0.4, roof - 0.6]]);
+  const id = newId();
+  let s = flJakobs(0) + flJakobs(L) + boxes(3.0, L - 3.0, sill, 2, 0.9);
+  let liv = rect(0, 0, L, 17, k.body) + rect(0, 12.95, L, 3, k.roof) + rect(0, 0, L, 3.95, k.skirt) + (k.paint ? k.paint(c, { L }, "power") : "");
+  s += path(d, k.body) + `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})">${liv}</g>`;
+  for (const x of [1.6, L / 2 + 0.6]) s += rect(x, 5.4, L / 2 - 2.2, 5.6, "rgba(20,22,25,0.55)", 0.4, 'rx="0.15"') + slats(x + 0.2, 5.6, L / 2 - 2.6, 5.2, 0.35, "rgba(255,255,255,0.2)");
+  s += roofCover(1.4, roof, L - 2.8, 0.8, "#8d949c", 4) + slats(2.2, roof + 0.12, L - 4.4, 0.55, 0.4, "rgba(0,0,0,0.35)");
+  s += rect(L / 2 - 1.6, roof + 0.75, 0.55, 0.9, "currentColor") + rect(L / 2 + 1.0, roof + 0.75, 0.55, 0.9, "currentColor");
+  // Fuel tank and filler, the corridor's end doors, the exhaust silencers.
+  s += rect(4.0, 1.5, L - 8.0, 1.0, "#2a2d31", 0.4, 'rx="0.45"') + rect(L / 2 - 0.4, 2.0, 0.8, 0.4, C.steelDark) +
+    lines([[L / 2, 5.0, L / 2, 11.6], [1.2, 11.6, L - 1.2, 11.6]], "rgba(0,0,0,0.25)", 0.5) + lamp(L / 2 - 0.3, 11.9, 0.6, 0.3, "#f4a321") +
+    roofCover(3.0, roof + 0.75, 4.0, 0.35, "#6f767e") + roofCover(L - 7.0, roof + 0.75, 4.0, 0.35, "#6f767e");
+  if (k.over) s += k.over(c, { L }, "power");
+  return s + path(d, "none", 0.8);
+}
+
+// ===================== VR locomotives =====================
+
 // --- SLM/ABB Sr2 (VR 3201-3246, 1995-2003; Norway's El 18 is the same
 // locomotive): the Swiss Re 460 "Lok 2000", 19.0 m (El 18 18.5 m), a cab
-// at each end under a steeply raked, rounded windshield, smooth sides with a
-// crew door behind each cab and a row of small louvers under the roof,
-// bogies about 10 m apart on 1.1 m wheels, a pantograph over each end.
-// Drawn in VR's scheme: white, green from the sill to the waist, rising
-// over the nose under the windshield, a gray roof. paint(c) gives the
-// colors { body, low, roof } for another railroad's.
-export function lok2000(c, paint = () => ({ body: VR.white, low: VR.green, roof: VR.roof })) {
+// at each end under a steeply raked, rounded windshield, smooth sides with
+// a crew door behind each cab, two big louvered panels high on each side
+// and the machine room's access panels below them; bogies about 10 m apart
+// on 1.1 m wheels, a pantograph over each end with the main breaker and
+// roof line between, the transformer slung between the bogies; side
+// buffers and a screw coupler at each end. VR's scheme: white, the green
+// from the sill to the waist rising over the nose under the windshield, a
+// gray roof, VR on the side. paint(c) gives another railroad's: { body,
+// low, roof } colors, or with livery(h, L) drawing its own side and
+// mark(h, L) its lettering.
+export function lok2000(c, paint = () => ({ body: VR.white, low: VR.green, roof: VR.roof, mark: (h) => vrMark(h, 22.5, 6.0, 2.0, VR.white) })) {
   return bothEnds(c, (h) => {
-    const { body, low, roof: top } = paint(h);
+    const p = paint(h);
+    const { body, low, roof: top } = p;
     const L = h.L, sill = 4.1, roof = 12.9;
     return cabUnit(h, {
       roof, sill, rearR: 1.0,
       nose: [[1.7, sill], [1.05, 5.3], ["q", 0.85, 7.3, 1.7, 8.7], [4.1, 11.7], ["q", 5.0, roof, 6.9, roof]],
       base: body, trucks: { centers: 33.0, wb: 9.2, d: 43 },
-      paint: () => rect(0, 0, L, 7.0, low) + path("M0 7.0L1.6 7.0Q4.2 7.4 6.4 8.4L6.4 0L0 0Z", low) + rect(0, roof - 0.55, L, 1, top) +
-        rect(0, sill, L, 0.45, VR.skirt),
+      tank: [17.5, L - 17.5, 1.7],
+      paint: () => (p.livery ? p.livery(h, L) : rect(0, 0, L, 7.0, low) + path("M0 7.0L1.6 7.0Q4.2 7.4 6.4 8.4L6.4 0L0 0Z", low)) +
+        rect(0, roof - 0.55, L, 1, top) + line(0, roof - 0.55, L, roof - 0.55, "rgba(0,0,0,0.2)", 0.5) + rect(0, sill, L, 0.45, VR.skirt) +
+        // The windshield's black surround, and the lettering.
+        path(poly([[1.75, 8.7], [4.05, 11.6], [5.85, 11.6], [5.85, 8.65]]), "#1d2024") + (p.mark ? p.mark(h, L) : ""),
       glass: [[[1.95, 8.95], [4.15, 11.35], [5.55, 11.35], [5.55, 8.95]]],
       sideWin: [[6.3, 9.0, 1.7, 1.9]],
       doors: [[8.4, 2.3, sill + 0.35, 11.4]],
-      grilles: [[12.0, 10.6, 18.0, 1.15, 0.3]],
+      grilles: [[12.0, 10.3, 7.6, 1.5, 0.3], [21.6, 10.3, 7.6, 1.5, 0.3]],
       roofItems: [[L / 2 - 8, 16, 0.5]],
-      extra: () => pantograph(16.0, roof, { up: h.half === 1, facing: -1 }),
+      extra: () => pantograph(16.0, roof, { up: h.half === 1, facing: -1 }) + panGear(16.0, roof, 1) + horns(7.4, roof) +
+        lamp(1.15, 5.25, 0.42, 0.5) + lamp(1.0, 4.55, 0.32, 0.32, RED_LAMP) + lamp(5.6, 12.45, 0.5, 0.25) + wiper(2.4, 9.1, 3.8, 10.9) +
+        buffers(0, -1) + rect(12.0, 1.75, 2.6, 1.0, "#3a3e44", 0.4, 'rx="0.1"') +
+        lines([[11.4, 9.9, 30.6, 9.9], [11.4, 9.9, 11.4, 5.2], [20.8, 9.9, 20.8, 5.2]], "rgba(0,0,0,0.16)", 0.5) + rect(7.0, sill + 0.55, 0.9, 0.5, "#e8eaec", 0.3),
     });
   });
 }
 
 // --- Siemens Vectron, VR Sr3 (3301-3380, 2016-2026): 19.05 m, a cab at
 // each end behind a near-upright nose with a wide windshield, three big
-// side panels between the crew doors, bogies 9.9 m apart on 1.25 m wheels.
-// VR's white, the green rising in a broad sweep behind each cab.
+// side panels between the crew doors with louvers along their tops,
+// bogies 9.9 m apart on 1.25 m wheels, two pantographs. VR's scheme: light
+// gray over the bright green, which fills the lower two thirds of the side
+// and the nose; two broad white slashes lean across the green, and VR in
+// white, big, toward the No. 2 end; a gray roof.
 const sr3 = (c) => bothEnds(c, (h) => {
   const L = h.L, sill = 4.0, roof = 12.8;
   return cabUnit(h, {
     roof, sill, rearR: 1.0,
     nose: [[1.5, sill], [1.25, 6.4], [1.55, 8.6], [2.7, 11.9], ["q", 3.0, roof, 4.0, roof]],
-    base: VR.white, trucks: { centers: 32.5, wb: 9.4, d: 49 },
-    paint: () => path(`M0 0L0 8.4L3.0 8.4Q9.0 8.4 13.5 6.2L${L} 5.6L${L} 0Z`, VR.green) + path("M13.5 6.2Q9.0 8.4 3.0 8.4L3.0 8.75Q9.4 8.75 14.2 6.45Z", VR.deep) +
-      rect(0, roof - 0.55, L, 1, VR.roof) + rect(0, sill, L, 0.45, VR.skirt),
+    base: "#dfe3e6", trucks: { centers: 32.5, wb: 9.4, d: 49 },
+    tank: [18.0, L - 18.0, 1.8],
+    paint: () => {
+      let s = rect(0, 0, L, 9.0, VR.green) + path("M0 9.0L0 6.4L2.2 6.4Q3.6 8.6 6.0 9.0Z", VR.green) +
+        rect(0, roof - 0.55, L, 1, VR.roof) + rect(0, sill, L, 0.4, VR.skirt) + line(0, 9.0, L, 9.0, VR.deep, 0.5);
+      // The cab front's black band and the slashes: the white ones and VR
+      // at the No. 2 end (the half drawn mirrored), a pale one by each cab.
+      s += path(poly([[1.6, 8.6], [2.6, 11.7], [6.0, 11.7], [6.0, 8.6]]), "#1d2024");
+      s += path(poly([[11.0, sill], [11.9, sill], [14.2, 9.0], [13.3, 9.0]]), "#e8ebed");
+      if (h.half === 1) s += path(poly([[19.0, sill], [22.5, sill], [27.0, 11.4], [23.5, 11.4]]), "#ffffff") + path(poly([[24.0, sill], [25.4, sill], [29.9, 11.4], [28.5, 11.4]]), "#ffffff") +
+        vrMark(h, 14.8, 6.6, 3.6, "#ffffff");
+      else s += vrMark(h, 4.0, 5.5, 1.2, "#ffffff");
+      return s;
+    },
     glass: [[[1.75, 8.9], [2.75, 11.5], [5.6, 11.5], [5.6, 8.9]]],
     sideWin: [[6.3, 9.1, 1.6, 1.8]],
     doors: [[8.2, 2.3, sill + 0.35, 11.3]],
-    panels: [[12.0, 6.6, 7.6, 4.9], [20.0, 6.6, 7.6, 4.9]],
-    grilles: [[12.6, 9.6, 6.4, 1.4, 0.3], [20.6, 9.6, 6.4, 1.4, 0.3]],
+    panels: [[14.6, 5.2, 5.0, 6.3], [20.0, 5.2, 7.6, 6.3]],
+    grilles: [[12.6, 10.1, 6.4, 1.1, 0.3], [20.6, 10.1, 6.4, 1.1, 0.3]],
     roofItems: [[L / 2 - 9, 18, 0.55]],
-    extra: () => pantograph(15.5, roof, { up: h.half === 1, facing: -1 }),
+    extra: () => pantograph(15.5, roof, { up: h.half === 1, facing: -1 }) + panGear(15.5, roof, 1) + horns(5.6, roof) +
+      lamp(1.35, 6.9, 0.45, 0.42) + lamp(1.28, 6.1, 0.32, 0.3, RED_LAMP) + lamp(3.0, 12.15, 0.5, 0.28) + wiper(2.2, 9.0, 3.0, 11.1) +
+      buffers(0, -1, { y: 3.45 }) + rect(11.5, 1.9, 2.4, 1.0, "#3a3e44", 0.4, 'rx="0.1"'),
   });
 });
 
+// ===================== VR multiple units =====================
+
 // --- Fiat/Alstom Sm3 Pendolino (VR, 18 six-car units 1995-2006, 14 in
-// service): 158.9 m, each car about 26.5 m, a low tilting body (about 3.7 m
-// to the roof, narrowing toward it); the end cars' long, pointed noses with
-// the windshield far back; one plug door a side near the end of each car,
-// small windows close together in a dark band. VR's colors: white, a green
-// skirt sweeping up the nose under the windshield; the pantographs on the
-// second and fifth cars.
+// service): 158.9 m, each car about 26.5 m, a low tilting body; the end
+// cars' long, pointed noses with the windshield far back over a hinged
+// nose cover; one plug door a side near the end of each car, small windows
+// close together in a dark band. VR's colors: white, a green stripe under
+// the window band, the green swept up the nose under the windshield and a
+// leaf of green strokes by each door; a gray skirt over the running gear.
+// Air conditioning on every car, the pantographs on the second and fifth.
 const SM3 = { roof: 12.3, sill: 3.5, cornerR: 0.9, end: 0.6, trucks: { centers: 62.3, wb: 8.9, d: 35 }, diaphragm: [3.8, 11.2] };
 const sm3Paint = (nose) => (c, g) => {
   const L = g.L;
-  let s = rect(0, 0, L, 17, VR.white) + rect(0, 11.5, L, 2, VR.roof) + rect(0, 6.1, L, 3.55, VR.band) + rect(0, 0, L, 4.6, VR.green);
-  // The nose: white over the band, the green swept up under the windshield.
-  if (nose) s += rect(0, 6.1, 11.0, 3.55, VR.white) + path("M0 4.6L0 9.4L4.4 9.4Q8.0 8.4 11.0 6.1L11.0 4.6Z", VR.green);
+  let s = rect(0, 0, L, 17, VR.white) + rect(0, 11.5, L, 2, "#b6bcc3") + line(0, 11.5, L, 11.5, "rgba(0,0,0,0.15)", 0.5) +
+    rect(0, 6.1, L, 3.55, VR.band) + rect(0, 4.7, L, 0.85, VR.green) + rect(0, 0, L, 4.1, "#646b73") + rect(0, 4.1, L, 0.12, "#2f3338");
+  // The leaf by the door: green strokes leaning ahead, across the band.
+  s += strokes(L - 3.35, 4.25, 10.9, 3, { w: 0.32, gap: 0.62, lean: 0.9, fills: [VR.green, VR.light, VR.green] });
+  if (nose) {
+    // The nose: white over the band, the green swept up under the windshield.
+    s += rect(0, 6.1, 11.6, 3.55, VR.white) + path("M0 4.1L0 9.0L3.6 9.0Q8.2 7.9 12.6 5.55L12.6 4.7L0 4.7Z", VR.green) +
+      path("M3.6 9.0Q8.2 7.9 12.6 5.55L12.6 5.85Q8.4 8.25 3.8 9.3Z", VR.deep) + rect(11.6, 6.1, 0.25, 3.55, VR.band) +
+      line(1.5, 4.4, 5.0, 4.1, "rgba(0,0,0,0.25)", 0.5) + vrMark(c, 6.6, 5.3, 1.05, "#ffffff");
+  }
   return s;
 };
 const sm3Door = (x) => ({ x, w: 2.9, y0: 3.7, y1: 10.6, glassY: 0.55, glassH: 0.3, grabs: false });
+const sm3Under = (L, sill) => boxes(L / 2 - 22, L / 2 + 22, sill, 4, 0.95) + path(`M${L / 2 - 26.5} ${sill}L${L / 2 + 26.5} ${sill}L${L / 2 + 26.0} ${sill - 0.5}L${L / 2 - 26.0} ${sill - 0.5}Z`, "#4a5057");
 const sm3Cab = (c) => bilevel({ ...c, cabL: true }, { ...SM3,
   nose: [[2.6, 3.5], [1.0, 4.5], ["q", 0.35, 5.6, 1.7, 6.9], [8.0, 11.2], ["q", 9.8, 12.3, 12.6, 12.3]],
   rows: [{ xs: seq(14.6, 3.85, 17), y: 6.55, w: 2.75, h: 2.65, r: 0.35 }], doors: [sm3Door(c.L - 6.8)], cabLen: 12, badge: false,
   paint: sm3Paint(true),
+  extra: (c, g) => sm3Under(g.L, g.roof - 8.8) + hvac(30, g.roof, 13) + roofCover(56, g.roof, 9, 0.45) + horns(13.4, g.roof - 0.02),
   cab: () => path(poly([[3.0, 7.4], [8.0, 10.95], [10.6, 10.95], [10.6, 8.8], [6.0, 7.4]]), C.glass) +
-    path(poly([[3.4, 7.65], [6.2, 9.6], [6.9, 9.6], [4.3, 7.65]]), C.glassLight),
+    path(poly([[3.4, 7.65], [6.2, 9.6], [6.9, 9.6], [4.3, 7.65]]), C.glassLight) + wiper(4.3, 7.9, 6.6, 9.9) +
+    lamp(1.1, 4.65, 0.75, 0.4) + lamp(1.95, 5.3, 0.5, 0.3, RED_LAMP) + line(2.4, 3.6, 3.2, 6.8, "rgba(0,0,0,0.35)", 0.5) +
+    path(poly([[2.4, 3.5], [6.0, 3.5], [5.6, 1.0], [3.0, 0.9]]), "#2a2d31"),
 });
 const sm3Mid = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...SM3,
   rows: [{ xs: seq(5.8, 3.85, 19), y: 6.55, w: 2.75, h: 2.65, r: 0.35 }], doors: [sm3Door(c.L - 6.8)], badge: false,
-  paint: sm3Paint(false), roofItems: [[20, 14, 0.45]],
-  extra: (c, g) => (c.pan ? pantograph(14.0, g.roof) : ""),
+  paint: sm3Paint(false),
+  extra: (c, g) => sm3Under(g.L, g.roof - 8.8) + hvac(40, g.roof, 13) +
+    (c.pan ? pantograph(14.0, g.roof) + panGear(14.0, g.roof, 1) + roofCover(22.5, g.roof, 8, 0.5) : roofCover(18, g.roof, 9, 0.45)) +
+    letters(c, 44.0, 10.25, 0.55, "VR", VR.green, { weight: 800, italic: true }),
 });
 
 // --- Transtech double-deck InterCity cars (VR, since 1998): 26.4 m over
@@ -117,77 +329,144 @@ const sm3Mid = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...SM3,
 // at each end. Coaches carry eleven windows upstairs and ten downstairs;
 // the sleeping cars (CEmt) a smaller window to each compartment on both
 // decks. The driving trailers lead push-pull trains with a sloping cab in
-// the upper end. VR's white with a green band low on the side and a gray
-// roof.
-const DD = { roof: 16.9, sill: 4.0, cornerR: 1.1, end: 0.6, trucks: { centers: 63.0, wb: 8.2, d: 33 }, diaphragm: [4.3, 11.6] };
-const ddPaint = (c, g) => rect(0, 0, g.L, 18, VR.white) + rect(0, 15.6, g.L, 2, "#c3c8ce") + rect(0, 0, g.L, 4.75, VR.green) + rect(0, 4.75, g.L, 0.2, VR.deep);
+// the upper end. VR's white over a green band along the bottom, a leaf of
+// green strokes and VR over each end section, green doors, a gray roof
+// with the air conditioning at the ends; side buffers.
+const DD = { roof: 16.9, sill: 4.0, cornerR: 1.1, end: 0.6, trucks: { centers: 63.0, wb: 8.2, d: 33 }, diaphragm: [4.3, 11.6], badge: false };
+const ddEndArt = (c, x, dir) => strokes(dir > 0 ? x : x - 3.3, 11.3, 15.2, 3, dir > 0 ? { w: 0.5, gap: 0.85, lean: 1.6, fills: [VR.green, VR.light, VR.green] }
+  : { w: 0.5, gap: 0.85, lean: -1.6, fills: [VR.green, VR.light, VR.green] }) + vrMark(c, x + dir * 6.4, 13.1, 1.7, VR.green);
+const ddPaint = (c, g) => {
+  const L = g.L;
+  let s = rect(0, 0, L, 18, VR.white) + rect(0, 15.6, L, 2, "#c3c8ce") + line(0, 15.6, L, 15.6, "rgba(0,0,0,0.15)", 0.5) +
+    rect(0, 0, L, 4.75, VR.green) + rect(0, 4.75, L, 0.2, VR.deep) + rect(0, 0, L, 2.4, VR.deep);
+  // The decks' window bands and the doors' green.
+  s += rect(17.0, 11.6, L - 34.0, 3.15, "#d9dde1", 0, 'rx="0.4"') + rect(19.4, 4.7, L - 38.8, 3.15, "#d9dde1", 0, 'rx="0.4"');
+  for (const x of [1.45, L - 4.75]) s += rect(x, 4.0, 3.3, 7.45, VR.green);
+  return s;
+};
 const ddDoor = (x) => ({ x, w: 3.0, y0: 4.15, y1: 11.3, glassY: 0.55, glassH: 0.3 });
 const ddRows = (up, low) => [{ xs: up, y: 11.9, w: 4.0, h: 2.55, r: 0.4 }, { xs: low, y: 5.0, w: 4.0, h: 2.55, r: 0.4 }];
 const ddEnds = (L) => [{ xs: [6.4, L - 10.0], y: 8.0, w: 3.6, h: 2.4, r: 0.4 }];
-const ddCoach = (c) => bilevel(c, { ...DD, drop: { a: 15.5, b: c.L - 15.5, y: 1.6 }, paint: ddPaint, badge: false,
-  rows: [...ddRows(seq(17.6, 4.85, 11), seq(20.0, 4.85, 10)), ...ddEnds(c.L)], doors: [ddDoor(1.6), ddDoor(c.L - 4.6)] });
-const ddSleeper = (c) => bilevel(c, { ...DD, drop: { a: 15.5, b: c.L - 15.5, y: 1.6 }, paint: ddPaint, badge: false,
+const ddExtra = (c, g, cab = false) => {
+  const L = g.L;
+  let s = hvac(cab ? 9.0 : 3.0, g.roof, 9.5) + hvac(L - 12.5, g.roof, 9.5) + ddEndArt(c, L - 6.0, -1) + (cab ? "" : ddEndArt(c, 6.2, 1));
+  s += boxes(L / 2 - 20, L / 2 + 20, 1.65, 3, 0.4) + buffers(L, 1, { y: 3.5 }) + (cab ? "" : buffers(0, -1, { y: 3.5 }));
+  // The destination display over the B-end door.
+  return s + rect(L - 4.9, 11.75, 3.6, 0.8, "#1d2024", 0, 'rx="0.12"') + rect(L - 4.7, 11.9, 2.2, 0.5, "#f4a321", 0, 'rx="0.06"');
+};
+const ddCoach = (c) => bilevel(c, { ...DD, drop: { a: 15.5, b: c.L - 15.5, y: 1.6 }, paint: ddPaint,
+  rows: [...ddRows(seq(17.6, 4.85, 11), seq(20.0, 4.85, 10)), ...ddEnds(c.L)], doors: [ddDoor(1.6), ddDoor(c.L - 4.6)],
+  extra: (c, g) => ddExtra(c, g) });
+const ddSleeper = (c) => bilevel(c, { ...DD, drop: { a: 15.5, b: c.L - 15.5, y: 1.6 }, paint: ddPaint,
   rows: [{ xs: seq(18.4, 6.4, 8), y: 12.2, w: 3.1, h: 2.2, r: 0.35 }, { xs: seq(18.4, 6.4, 8), y: 5.3, w: 3.1, h: 2.2, r: 0.35 }, ...ddEnds(c.L)],
-  doors: [ddDoor(1.6), ddDoor(c.L - 4.6)] });
-const ddCab = (c) => bilevel({ ...c, cabL: true }, { ...DD, drop: { a: 17.5, b: c.L - 15.5, y: 1.6 }, badge: false,
+  doors: [ddDoor(1.6), ddDoor(c.L - 4.6)],
+  extra: (c, g) => ddExtra(c, g) + lines(seq(17.9, 6.4, 9).map((x) => [x, 5.0, x, 15.0]), "rgba(0,0,0,0.1)", 0.5) });
+const ddCab = (c) => bilevel({ ...c, cabL: true }, { ...DD, drop: { a: 17.5, b: c.L - 15.5, y: 1.6 },
   nose: [[1.3, 4.0], [1.05, 7.4], ["q", 1.05, 9.6, 2.1, 11.0], [3.9, 15.2], ["q", 4.6, 16.9, 6.6, 16.9]],
-  paint: (c, g) => ddPaint(c, g) + path("M0 3.9L0 11.0L2.3 11.0Q5.6 10.4 8.2 8.0L8.2 3.9Z", VR.green),
+  paint: (c, g) => ddPaint(c, g) + path("M0 3.9L0 11.0L2.3 11.0Q5.6 10.4 8.2 8.0L8.2 3.9Z", VR.green) +
+    path(poly([[2.2, 11.3], [3.95, 15.75], [8.2, 15.75], [8.2, 11.3]]), "#1d2024") + vrMark(c, 3.9, 6.6, 1.2, "#ffffff"),
   rows: [...ddRows(seq(19.4, 4.85, 10), seq(21.6, 4.85, 9)), { xs: [c.L - 10.0], y: 8.0, w: 3.6, h: 2.4, r: 0.4 }],
   doors: [ddDoor(10.6), ddDoor(c.L - 4.6)], cabLen: 9,
-  cab: () => path(poly([[2.5, 11.6], [4.1, 15.5], [7.6, 15.5], [7.6, 11.6]]), C.glass) + win(7.9, 8.2, 2.0, 2.2, 0.3),
+  extra: (c, g) => ddExtra(c, g, true),
+  cab: () => path(poly([[2.5, 11.6], [4.1, 15.5], [7.6, 15.5], [7.6, 11.6]]), C.glass) + path(poly([[2.9, 11.9], [3.7, 13.8], [4.4, 13.8], [3.6, 11.9]]), C.glassLight) +
+    win(7.9, 8.2, 2.0, 2.2, 0.3) + wiper(3.0, 11.9, 4.0, 14.6) + lamp(1.1, 7.6, 0.45, 0.5) + lamp(1.15, 6.8, 0.35, 0.32, RED_LAMP) +
+    lamp(5.4, 16.3, 0.6, 0.25) + buffers(0, -1, { y: 3.5 }) + path(poly([[1.2, 4.0], [4.6, 4.0], [4.2, 1.2], [1.8, 1.0]]), "#2a2d31"),
 });
 
 // --- CAF Sm4 (VR, 30 two-car units, 1998-2005): two motor cars of 26.45 m,
 // each with a pantograph, a rounded cab nose at the outer ends; two double
-// doors a side on each car, toward its ends. VR's white, green below the
-// windows and over the nose, a dark window band.
+// doors a side on each car, toward its ends. VR's scheme: white, the
+// windshield in a black mask over a green nose with VR in white, a green
+// band below the windows, green doors with a leaf of lighter strokes
+// beside them; a gray roof, air conditioning at the ends, the pantograph
+// and its breaker toward the inner end.
 const SM4 = { roof: 12.8, sill: 3.8, cornerR: 1.0, end: 0.6, trucks: { centers: 61.0, wb: 8.9, d: 33 }, diaphragm: [4.0, 11.6], badge: false,
   nose: [[1.2, 3.8], [0.9, 5.6], ["q", 0.9, 7.4, 1.9, 8.6], [4.4, 11.8], ["q", 5.4, 12.8, 7.2, 12.8]], cabLen: 7,
-  cab: () => path(poly([[2.1, 8.9], [4.5, 11.6], [6.4, 11.6], [6.4, 8.9]]), C.glass) + win(6.9, 7.4, 1.7, 2.6, 0.3) };
+  cab: () => path(poly([[2.1, 8.9], [4.5, 11.6], [6.4, 11.6], [6.4, 8.9]]), C.glass) + path(poly([[2.5, 9.15], [3.6, 10.4], [4.2, 10.4], [3.2, 9.15]]), C.glassLight) +
+    win(6.9, 7.4, 1.7, 2.6, 0.3) + wiper(2.6, 9.0, 3.9, 10.9) + lamp(1.0, 6.0, 0.45, 0.45) + lamp(0.98, 5.25, 0.35, 0.3, RED_LAMP) + lamp(5.4, 12.25, 0.55, 0.25) +
+    emuFront(1.2, 3.8, { coupler: 3.0 }) };
+const sm4Doors = (L) => [14.0, L - 16.4];
 const sm4 = married((c) => bilevel(c, { ...SM4,
-  paint: (c, g) => rect(0, 0, g.L, 17, VR.white) + rect(0, 12.0, g.L, 2, VR.roof) + rect(0, 6.9, g.L, 3.25, VR.band) + rect(0, 0, g.L, 5.6, VR.green) +
-    path("M0 5.6L0 8.9L2.4 8.9Q4.6 7.4 6.2 6.9L6.2 5.6Z", VR.green),
+  paint: (c, g) => {
+    const L = g.L;
+    let s = rect(0, 0, L, 17, VR.white) + rect(0, 12.0, L, 2, VR.roof) + line(0, 12.0, L, 12.0, "rgba(0,0,0,0.15)", 0.5) +
+      rect(0, 5.0, L, 1.25, VR.green) + rect(0, 0, L, 4.25, VR.skirt);
+    for (const x of sm4Doors(L)) s += rect(x - 0.15, 3.8, 4.9, 7.25, VR.green) + strokes(x + 5.0, 6.4, 10.6, 2, { w: 0.35, gap: 0.7, lean: 1.0, fills: [VR.light, VR.green] });
+    s += path(poly([[1.65, 8.5], [4.35, 11.85], [6.65, 11.85], [6.65, 8.5]]), "#1d2024") + path("M0 4.25L0 8.4L2.0 8.4Q4.0 7.0 7.0 6.25L7.0 5.0Z", VR.green) +
+      vrMark(c, 3.4, 6.4, 1.15, "#ffffff");
+    return s;
+  },
   rows: [{ xs: [9.8], y: 7.1, w: 2.6, h: 2.85, r: 0.35 }, { xs: seq(22.5, 5.05, 8), y: 7.1, w: 4.1, h: 2.85, r: 0.35 }, { xs: [c.L - 9.3], y: 7.1, w: 4.1, h: 2.85, r: 0.35 }],
-  doors: [{ x: 14.0, w: 4.6, y0: 3.9, y1: 10.9, leaves: 2, glassY: 0.4, glassH: 0.45 }, { x: c.L - 16.4, w: 4.6, y0: 3.9, y1: 10.9, leaves: 2, glassY: 0.4, glassH: 0.45 }],
-  roofItems: [[24, 10, 0.4]],
-  extra: (c, g) => (c.pan ? pantograph(g.L - 20, g.roof, { facing: -1 }) : ""),
+  doors: sm4Doors(c.L).map((x) => ({ x, w: 4.6, y0: 3.9, y1: 10.9, leaves: 2, glassY: 0.4, glassH: 0.45 })),
+  extra: (c, g) => hvac(9.0, g.roof, 9.0) + roofCover(32, g.roof, 12, 0.5) + boxes(20, g.L - 20, g.sill, 4, 1.1) +
+    (c.pan ? pantograph(g.L - 20, g.roof, { facing: -1 }) + panGear(g.L - 20, g.roof, -1) : rect(g.L - 22.8, g.roof - 0.05, 5.6, 0.35, C.steelDark, 0.4)),
 }));
 
 // --- Valmet Sm2 (VR, 1975-81, 50 built, about 34 left): a motor car with a
 // pantograph and an unpowered driving trailer (Eioc), each 26.6 m, flat
-// cab ends with two windshield panes; two double doors a side. White with
-// a green band below the windows (refurbished cars).
+// cab ends with two windshield panes, the headlights under them; two
+// double doors a side. Refurbished: white, a green band below the windows
+// over a dark skirt, green doors, VR beside the front door; the motor
+// car's resistor box and pantograph on the roof.
+const sm2Doors = (L) => [13.4, L - 17.0];
 const sm2 = married((c) => bilevel(c, {
   roof: 12.5, sill: 3.9, cornerR: 1.0, end: 0.6, trucks: { centers: 61.5, wb: 8.5, d: 36 }, diaphragm: [4.1, 11.4], badge: false,
   nose: [[0.8, 3.9], [0.7, 8.4], ["q", 0.75, 11.8, 1.4, 12.2], ["q", 1.8, 12.5, 2.8, 12.5]], cabLen: 5,
-  paint: (c, g) => rect(0, 0, g.L, 17, VR.white) + rect(0, 11.6, g.L, 2, VR.roof) + rect(0, 4.3, g.L, 2.3, VR.green) + rect(0, 0, g.L, 4.3, VR.skirt),
+  paint: (c, g) => {
+    const L = g.L;
+    let s = rect(0, 0, L, 17, VR.white) + rect(0, 11.6, L, 2, VR.roof) + rect(0, 4.3, L, 2.3, VR.green) + rect(0, 6.6, L, 0.15, VR.deep) + rect(0, 0, L, 4.3, VR.skirt);
+    for (const x of sm2Doors(L)) s += rect(x - 0.15, 3.9, 5.1, 7.15, VR.green);
+    return s + rect(0, 7.8, 0.9, 3.4, "#1d2024") + vrMark(c, 21.6, 5.45, 1.4, "#ffffff");
+  },
   rows: [{ xs: [6.2], y: 7.3, w: 2.2, h: 2.6, r: 0.3 }, { xs: seq(21.0, 5.2, 9), y: 7.3, w: 4.3, h: 2.6, r: 0.3 }, { xs: [c.L - 8.6], y: 7.3, w: 4.3, h: 2.6, r: 0.3 }],
-  doors: [{ x: 13.4, w: 4.8, y0: 4.0, y1: 10.9, leaves: 2, glassY: 0.4, glassH: 0.45 }, { x: c.L - 17.0, w: 4.8, y0: 4.0, y1: 10.9, leaves: 2, glassY: 0.4, glassH: 0.45 }],
-  cab: () => win(1.0, 8.2, 1.5, 2.5, 0.3) + win(2.9, 7.6, 1.6, 2.6, 0.3),
-  extra: (c, g) => (c.pan ? pantograph(g.L - 18, g.roof, { facing: -1 }) : ""),
+  doors: sm2Doors(c.L).map((x) => ({ x, w: 4.8, y0: 4.0, y1: 10.9, leaves: 2, glassY: 0.4, glassH: 0.45 })),
+  cab: () => win(1.0, 8.2, 1.5, 2.5, 0.3) + win(2.9, 7.6, 1.6, 2.6, 0.3) + lamp(0.75, 5.4, 0.35, 0.5) + lamp(0.75, 4.75, 0.3, 0.3, RED_LAMP) +
+    lamp(1.2, 11.9, 0.6, 0.25) + horns(2.2, 12.45) + emuFront(0.8, 3.9, { coupler: 3.0 }),
+  extra: (c, g) => boxes(18, g.L - 18, g.sill, 4, 1.25) + hvac(g.L - 16, g.roof, 8.0) +
+    (c.pan ? pantograph(g.L - 18, g.roof, { facing: -1 }) + roofCover(22, g.roof, 30, 0.7, "#8d949c", 5) + slats(23, g.roof + 0.1, 28, 0.5, 0.45, "rgba(0,0,0,0.3)") : roofCover(24, g.roof, 10, 0.4)),
 }));
 
 // --- ČKD Dm12 (VR 4401-4416, 2004-06): a 25.2 m diesel railcar with a cab
-// at each end, two MAN engines under the floor; a double door a side behind
-// each cab. White with a green skirt rising over the noses.
+// at each end, two MAN engines under the floor, their exhausts and
+// radiators on the roof; a double door a side behind each cab. White, a
+// green skirt rising over the noses, green doors, a dark window band, VR
+// on the side.
 const dm12 = (c) => bothEnds(c, (h) => bilevel(h, {
   roof: 12.6, sill: 3.9, cornerR: 1.0, end: 0.6, trucks: { centers: 55.0, wb: 7.9, d: 33 }, diaphragm: [4.1, 11.4], badge: false,
   nose: [[1.2, 3.9], [1.0, 6.0], ["q", 1.0, 8.0, 2.0, 9.0], [3.5, 11.8], ["q", 4.1, 12.6, 5.6, 12.6]], cabLen: 6,
-  paint: (c, g) => rect(0, 0, g.L, 17, VR.white) + rect(0, 11.8, g.L, 2, VR.roof) + rect(0, 0, g.L, 5.0, VR.green) +
-    path("M0 5.0L0 8.6L2.2 8.6Q4.0 6.4 6.0 5.0Z", VR.green),
+  paint: (c, g) => rect(0, 0, g.L, 17, VR.white) + rect(0, 11.8, g.L, 2, VR.roof) + rect(0, 0, g.L, 5.0, VR.green) + rect(0, 5.0, g.L, 0.15, VR.deep) +
+    rect(0, 0, g.L, 3.0, VR.skirt) + path("M0 5.0L0 8.6L2.2 8.6Q4.0 6.4 6.0 5.0Z", VR.green) + rect(13.8, 6.7, g.L, 3.6, "#2a2e33", 0, 'rx="0.3"') +
+    rect(7.85, 3.9, 4.7, 7.15, VR.green) + path(poly([[1.85, 8.95], [3.4, 11.8], [5.7, 11.8], [5.7, 8.95]]), "#1d2024") +
+    (h.half === 0 ? vrMark(c, 32.0, 5.9, 1.3, "#ffffff") : ""),
   rows: [{ xs: seq(14.6, 5.2, 6), y: 7.0, w: 4.2, h: 3.0, r: 0.35 }],
   doors: [{ x: 8.0, w: 4.4, y0: 3.9, y1: 10.9, leaves: 2, glassY: 0.4, glassH: 0.45 }],
-  roofItems: [[16, 9, 0.45], [36, 4, 0.7]],
-  cab: () => path(poly([[2.1, 9.2], [3.6, 11.5], [5.4, 11.5], [5.4, 9.2]]), C.glass),
+  extra: (c, g) => roofCover(15, g.roof, 9, 0.6, "#8d949c") + slats(15.8, g.roof + 0.1, 7.4, 0.4, 0.4, "rgba(0,0,0,0.35)") + rect(25.6, g.roof, 0.5, 1.0, "currentColor") +
+    hvac(33.5, g.roof, 8.0) + boxes(16, 40, 3.0, 2, 1.0) + rect(19.0, 1.4, 6.5, 0.55, "#2a2d31", 0.4, 'rx="0.25"'),
+  cab: () => path(poly([[2.1, 9.2], [3.6, 11.5], [5.4, 11.5], [5.4, 9.2]]), C.glass) + wiper(2.6, 9.3, 3.5, 11.0) +
+    lamp(1.05, 6.3, 0.45, 0.45) + lamp(1.0, 5.55, 0.35, 0.3, RED_LAMP) + lamp(4.0, 12.15, 0.55, 0.25) + horns(5.8, 12.6) + emuFront(1.2, 3.9, { coupler: 3.0 }),
 }));
 
 // --- Stadler FLIRT, Sm5 (81 four-car units, 2008-17, owned by the capital
 // region's Pääkaupunkiseudun Junakalusto): 75.2 m, two cab sections and
-// two intermediate ones on shared bogies, as carmodels.js draws the FLIRT;
-// in HSL's purple, a pantograph on the third section.
-const SM5 = { body: "#f2f3f4", top: HSL_PURPLE, line: HSL_PURPLE };
-const sm5Cab = (c) => flirtIn(flirtCar(c), SM5);
-const sm5Mid = (c) => flirtIn(flirtMid(c), SM5) + (c.pan ? pantograph(c.L / 2, 14.06) : "");
+// two intermediate ones on shared bogies. HSL's scheme: white, a purple
+// line along the top of the side that drops down the nose; behind the cab
+// a big purple disc over the crew door, HSL in white on it; the nose's
+// lower face in coral; a dark skirt; the pantograph on the third section.
+const SM5 = { body: HSL.white, roof: "#a9afb6", skirt: "#3a3f45", door: null, mask: "#1d2024",
+  paint: (c, g, part) => {
+    const L = g.L;
+    let s = rect(0, 12.1, L, 0.42, HSL.purple) + rect(0, 3.55, L, 0.18, "#8d949c");
+    if (part === "cab") {
+      s += path("M0 3.0L0 7.2L1.2 7.2Q2.6 6.6 3.4 5.0L3.4 3.0Z", HSL.coral) +
+        path("M1.3 7.6Q4.6 9.2 6.4 12.1L9.6 12.1L9.6 12.52L6.1 12.52Q4.3 9.6 1.1 8.0Z", HSL.purple);
+      s += `<ellipse cx="10.2" cy="7.9" rx="4.6" ry="4.4" fill="${HSL.purple}"/>` + letters(c, 10.6, 5.6, 0.95, "HSL", "#ffffff", { weight: 800 });
+      s += letters(c, 26.5, 4.55, 0.5, "VR", "#8d949c", { weight: 800, italic: true });
+    }
+    return s;
+  },
+};
+const sm5Cab = (c) => flirt(c, "cab", SM5);
+const sm5Mid = (c) => flirt(c, "mid", SM5);
 
 export const TYPES = {
   vrSr2: { name: "Sr2 electric locomotive", kind: "electric", pan: true },
@@ -272,6 +551,7 @@ export const TYPICAL = {
     return SM5_SET;
   },
 };
+
 
 // Fact sheets, in data/models.json's units (mph, hp, ft), converted from the
 // published km/h, kW and m closely enough to show as published in metric.
