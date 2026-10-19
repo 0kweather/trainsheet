@@ -389,9 +389,10 @@ function planView() {
       const mins = Math.round((Date.parse(r.arriveAt) - Date.parse(r.departAt)) / 60000);
       const span = mins >= 60 ? `${Math.floor(mins / 60)} h${mins % 60 ? ` ${mins % 60} min` : ""}` : `${mins} min`;
       return `<button type="button" class="plan-train" data-pick="${i}">
+        <span class="pt-plate">${ctx.plate(r.number || a.short, a.color, "xs")}</span>
         <span class="pt-times">${esc(ctx.fmtTime(r.departAt, r.fromTz))} – ${esc(ctx.fmtTime(r.arriveAt, r.toTz))}</span>
         <span class="pt-span">${esc(span)}</span>
-        <span class="pt-train">${ctx.plate(r.number || a.short, a.color, "xs")}<span>${esc([r.route, a.short].filter(Boolean).join(" · "))}</span></span>
+        <span class="pt-train">${esc([r.route, a.short].filter(Boolean).join(" · "))}</span>
       </button>`;
     }).join("")}</div>` + (plan.exact ? "" : `<p class="plan-hint">${T("That day is past the timetable Trainsheet has, so these are the trains on that weekday now. Check again closer to the day.")}</p>`);
   }
