@@ -381,7 +381,13 @@ html, body {
 .menu .toggle { margin: 0; border-radius: 0; background: var(--group); position: relative; padding: 10px 12px; }
 .menu .menu-title + .toggle, .menu .segmented + .toggle { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
 .menu .toggle:has(+ .menu-title), .menu .toggle:last-child { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
-.menu .toggle + .toggle::before { content: ""; position: absolute; top: 0; left: 66px; right: 0; height: 0.5px; background: var(--line); }
+.menu .toggle + .toggle::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 0.5px; background: var(--line); }
+/* The label, then its switch at the right, as in Settings. */
+.menu .toggle { grid-template-columns: minmax(0, 1fr) auto; gap: 14px; padding: 11px 14px; }
+.menu .toggle .switch { order: 2; }
+.menu .toggle-text strong { font-size: var(--fs-base); font-weight: 400; letter-spacing: -0.01em; }
+.menu .toggle-text span { margin-top: 2px; font-size: var(--fs-xs); line-height: 1.3; }
+.menu-head { display: none; }
 .menu .toggle:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
 .menu .segmented { margin: 0 0 4px; }
 /* The time zone picker heads the card the 24-hour clock toggle finishes. */
@@ -397,12 +403,13 @@ html, body {
   -webkit-backdrop-filter: blur(24px) saturate(1.8);
 }
 
-/* The loading screen: a train passing across the middle, on the map's own
- * land color (the light and dark map styles' backgrounds), so it hands over
- * to the map without a change of color. */
-.loading { background: rgb(242, 243, 240); }
-:root[data-theme="dark"] .loading { background: rgb(12, 12, 12); }
+/* Loading: a train passing across the map's place, on the map's own land
+ * color, so it hands over to the map without a change of color. */
+:root { --map-land: rgb(242, 243, 240); }
+:root[data-theme="dark"] { --map-land: rgb(12, 12, 12); }
 .loading .loading-track::after { height: 1.5px; }
+/* French: the panel's text waits for its translation (index.html). */
+.i18n-wait :is(#panel, #settings-menu) > * { visibility: hidden; }
 
 /* ---------- Phones ---------- */
 
@@ -411,10 +418,23 @@ html, body {
   /* In the sheet, at its top (moved there by app.js). */
   .panel .tracked { position: static; flex: none; padding: 4px 14px 6px; pointer-events: auto; }
   .panel .tracked .live { width: 100%; }
-  .maplibregl-ctrl-bottom-left { left: 0; bottom: calc(46vh + 4px); transition: bottom 0.25s ease; }
-  body.sheet-collapsed .maplibregl-ctrl-bottom-left { bottom: calc(136px + var(--tracked-h, 0px)); }
-  body.sheet-expanded .maplibregl-ctrl-bottom-left { bottom: calc(86vh + 4px); }
   .sheet-handle::after { width: 36px; height: 5px; border-radius: 3px; top: 7px; }
+  /* Folded down on the home page, just the search field shows (a page keeps
+   * its title in view). */
+  .panel.collapsed:has(> #view-list:not([hidden])) { height: calc(96px + env(safe-area-inset-bottom, 0px) + var(--tracked-h, 0px)); }
+  /* The sheet is dragged by its grabber and its top bar (app.js). */
+  .sheet-handle, .search-row, .detail-top { touch-action: none; }
+  .sheet-handle { cursor: grab; }
+  /* The map's buttons at the top right, as in Maps, clear of the sheet at
+   * every height; the scale at the top left. Fingers pinch to zoom, so the
+   * zoom buttons stay on computers. */
+  .maplibregl-ctrl-bottom-right { top: env(safe-area-inset-top, 0px); bottom: auto; display: flex; flex-direction: column; align-items: flex-end; }
+  .maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 12px 12px 0 0; }
+  .maplibregl-ctrl-bottom-right .maplibregl-ctrl:last-child { margin-bottom: 0; }
+  .maplibregl-ctrl-bottom-left { top: env(safe-area-inset-top, 0px); bottom: auto; left: 0; }
+  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-scale { margin: 14px 0 0 14px !important; }
+  /* A slow map's loading train runs across the part of it above the sheet. */
+  .loading { padding-bottom: 46vh; }
 }
 
 /* ---------- Recents (under the search box) ---------- */
@@ -890,7 +910,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
    searching, or while one is set. */
 .filters { display: none; gap: 6px; margin: 10px 16px 0; overflow-x: auto; scrollbar-width: none; }
 .filters::-webkit-scrollbar { display: none; }
-.search-area:focus-within .filters, .search-area.active .filters { display: flex; }
+.search-area:has(.search:focus-within, .filters:focus-within) .filters, .search-area.active .filters { display: flex; }
 .filter {
   position: relative; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px 0 12px;
   border-radius: var(--r-pill); background: var(--fill); font-size: var(--fs-sm); font-weight: 500; color: var(--text); white-space: nowrap; cursor: pointer;
@@ -972,3 +992,67 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .pt-span { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
 .pt-train { grid-column: 2 / -1; font-size: var(--fs-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-manual { align-self: center; }
+
+/* ---------- Touch screens ---------- */
+@media (pointer: coarse) {
+  .maplibregl-ctrl-group:has(.maplibregl-ctrl-zoom-in) { display: none; }
+}
+
+/* ---------- Phones: search's Cancel, Settings as a sheet ---------- */
+
+.search-cancel { display: none; }
+@media (max-width: 720px) {
+  /* While searching, Cancel stands where the gear was. */
+  .search-cancel {
+    flex: none; padding: 0 2px 0 4px; border: 0; background: none; color: var(--accent);
+    font: inherit; font-size: 17px; letter-spacing: -0.02em; cursor: pointer;
+  }
+  .search-area:is(.active, :has(.search:focus-within, .filters:focus-within)) .search-cancel { display: block; }
+  .search-area:is(.active, :has(.search:focus-within, .filters:focus-within)) #settings-btn { display: none; }
+
+  .menu {
+    left: 0 !important; right: 0; bottom: 0; top: auto !important; width: auto; max-width: none;
+    max-height: 90dvh !important; padding: 0 12px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 24px 24px 0 0; border-bottom: 0; background: var(--bg);
+    animation: menu-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  .menu-head {
+    position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: center;
+    min-height: 56px; margin: 0 -12px 4px; padding: 0 16px; background: var(--bg);
+  }
+  .menu-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+  .menu-done {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    border: 0; background: none; padding: 6px 0; color: var(--accent); font: inherit; font-size: 17px; font-weight: 600; cursor: pointer;
+  }
+  body.menu-open::before { content: ""; position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.3); animation: ts-fade 0.25s ease both; }
+  @keyframes menu-up { from { transform: translateY(100%); } }
+  @media (prefers-reduced-motion: reduce) { .menu, body.menu-open::before { animation: none; } }
+}
+
+/* ---------- Moving between pages ---------- */
+.page-in { animation: page-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .page-in { animation: none; } }
+
+/* ---------- A train's stops: the ones it has passed, folded ---------- */
+.stops li.fold { color: var(--accent); font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+.stops li.fold::before { top: 4px; bottom: 0; background: repeating-linear-gradient(to bottom, var(--faint) 0 2px, transparent 2px 5px); }
+.stops li.fold .stop-dot { display: none; }
+.stops li.fold .time { color: var(--faint); font-size: 17px; line-height: 1; }
+.stops li.fold:hover > span:nth-child(2), .stops li.fold:focus-visible > span:nth-child(2) { text-decoration: underline; text-underline-offset: 2px; }
+.stops li.fold:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: var(--r-sm); }
+
+/* ---------- All railroads: back, as on every page, under a large title ---------- */
+.agencies .country-back { margin: 12px 0 0 -6px; padding: 6px 8px 6px 2px; font-size: 17px; letter-spacing: -0.02em; }
+.agencies .country-back + .country-title { margin: 8px 4px 2px; font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: var(--text); }
+
+/* ---------- Scrolling lists: slim scrollbars on a clear track ---------- */
+.agencies, .results, #train-detail, .menu, .ts-list, .acct-card, .plan-trains { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--text) 22%, transparent) transparent; }
+
+/* Settings on a computer: a popover beside the panel, opening from its corner. */
+@media (min-width: 721px) {
+  .menu { transform-origin: top left; animation: menu-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  @keyframes menu-pop { from { opacity: 0; transform: scale(0.97); } }
+  @media (prefers-reduced-motion: reduce) { .menu { animation: none; } }
+}

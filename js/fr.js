@@ -414,4 +414,8 @@ export default {
   "Your account has been deleted.": "Votre compte a été supprimé.",
   "Privacy": "Confidentialité",
   "Privacy policy": "Politique de confidentialité",
+  "Cancel": "Annuler",
+  "Share": "Partager",
+  "{n} earlier stop": "{n} arrêt précédent",
+  "{n} earlier stops": "{n} arrêts précédents",
 };

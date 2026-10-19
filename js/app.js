@@ -39,6 +39,7 @@ const store = {
 };
 
 translatePage(); // index.html's own text, in French when that's the language
+document.documentElement.classList.remove("i18n-wait"); // ...shown once it is (index.html)
 
 // ---------- State ----------
 
@@ -114,6 +115,7 @@ const state = {
   // with red-green colorblindness (css/design.css).
   colorblind: store.get("tt-colorblind", false),
 };
+const pastOpen = new Set(); // trains whose passed stops are unfolded
 let goingBack = false; // going back doesn't count as opening something (for Recents)
 let islandsShown = new Map(); // tracked train id -> when its island first showed
 // On phones the tracked trains sit at the top of the sheet, as they used to:
@@ -146,6 +148,13 @@ const map = new maplibregl.Map({
   pitchWithRotate: false,
 });
 map.touchZoomRotate.disableRotation();
+// The map's credits show in full at first, as MapLibre has them, then fold
+// to their ⓘ a few seconds in (MapLibre folds them at the first drag).
+map.once("idle", () => setTimeout(() => {
+  const el = document.querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show");
+  el?.classList.remove("maplibregl-compact-show");
+  el?.removeAttribute("open");
+}, 5000));
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
 const geolocate = new maplibregl.GeolocateControl({ fitBoundsOptions: { maxZoom: 10 } });
 map.addControl(geolocate, "bottom-right");
@@ -1500,7 +1509,22 @@ async function start() {
       renderResults();
     })
     .catch((err) => console.warn("stations", err));
+  // Feeds read directly (Amtrak, VIA and Brightline among them) start at
+  // once; the relay's wait for its list of what it serves. Until then its
+  // railroads shimmer in the list as loading.
+  const direct = (src) => !src.relay || (window.TRAINSHEET_FEEDS || {})[src.id];
+  const startPolls = (which) => {
+    for (const src of SOURCES) {
+      if (which(src) && sourceAvailability(src).ok) {
+        state.sourceStatus[src.id] = { status: "loading" };
+        poll(src);
+      }
+    }
+  };
+  startPolls(direct);
   if (RELAY) {
+    for (const src of SOURCES) if (!direct(src)) state.sourceStatus[src.id] = { status: "loading" };
+    renderAll();
     try {
       // Fresh every load, so a railroad just switched on in the relay shows at once.
       const res = await fetch(`${RELAY.replace(/\/$/, "")}/status`, { cache: "no-cache" });
@@ -1510,12 +1534,8 @@ async function start() {
       state.relayFeeds = {};
       toast(T("Couldn't reach the relay — showing directly available railroads only."));
     }
-  }
-  for (const src of SOURCES) {
-    if (sourceAvailability(src).ok) {
-      state.sourceStatus[src.id] = { status: "loading" };
-      poll(src);
-    }
+    for (const src of SOURCES) if (!direct(src) && !sourceAvailability(src).ok) delete state.sourceStatus[src.id];
+    startPolls((src) => !direct(src));
   }
   // A shared link to a train: its railroad may be anywhere.
   if (wanted) wakeSources(true);
@@ -1577,7 +1597,19 @@ const elementOf = (html) => {
   tpl.innerHTML = html;
   return tpl.content.firstElementChild;
 };
+// A page newly opened comes in with a short rise and fade, as a pushed view
+// does (design.css); the same page drawn again doesn't.
+const pageKeys = new WeakMap(); // element -> the page it shows
+function pageIn(el) {
+  el.classList.remove("page-in");
+  void el.offsetWidth;
+  el.classList.add("page-in");
+}
 function renderParts(el, key, parts) {
+  if (pageKeys.get(el) !== key) {
+    pageKeys.set(el, key);
+    pageIn(el);
+  }
   const prev = pageParts.get(el);
   // The same page as before, its pieces still where they were put: swap
   // just the ones that changed. Anything else (another page, or something
@@ -1692,7 +1724,10 @@ function renderAgencies() {
 
 function allRailroadsHtml() {
   const countries = agencyRows();
-  const order = [...countries.keys()].sort((x, y) => byName(countryName(x), countryName(y)));
+  // The viewer's own country first (from the browser's language, en-US's
+  // US), then the rest by name.
+  const home = ((navigator.language || "").match(/-([a-z]{2})\b/i)?.[1] || "US").toUpperCase();
+  const order = [...countries.keys()].sort((x, y) => (y === home) - (x === home) || byName(countryName(x), countryName(y)));
   const anyOff = order.some((c) => countries.get(c).off);
   return `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${T("Home")}</button>` +
     `<div class="group-title country-title">${T("All railroads")}</div>` +
@@ -2614,8 +2649,14 @@ function renderDetail() {
   const leg = (i) => dest < 0 ? ""
     : i === dest ? " dest" : i > dest ? " beyond" : i === from ? " ride-from" : i < from ? " before" : " ride";
   const likely = likelyDelays(t);
+  // The stops it has passed fold into one row, but for the last of them, so
+  // the page opens on where it is and what's ahead; the row unfolds them.
+  const passed = ahead < 0 ? (t.stops?.length || 0) : ahead;
+  const fold = !pastOpen.has(t.id) && passed > 2 ? passed - 1 : 0;
+  const foldRow = fold ? `<li class="past fold" data-fold-past role="button" tabindex="0"><span class="stop-dot" aria-hidden="true"></span><span>${esc(Tn(fold, "{n} earlier stop", "{n} earlier stops"))}</span><span class="time" aria-hidden="true">›</span></li>` : "";
   const stops = t.stops?.length
-    ? rrSection("stops", T("Stops"), t.stops.length, `<div class="stops-scroll"><ol class="stops" style="--line-color:${lineColor}">${t.stops.map((s, i) => {
+    ? rrSection("stops", T("Stops"), t.stops.length, `<div class="stops-scroll"><ol class="stops" style="--line-color:${lineColor}">${foldRow}${t.stops.map((s, i) => {
+        if (i < fold) return "";
         // Late by five minutes or more: the new time, with the timetable's
         // beside it, smaller and struck through.
         const lateMin = s.scheduled && s.time ? Math.round((Date.parse(s.time) - Date.parse(s.scheduled)) / 60000) : 0;
@@ -4395,6 +4436,8 @@ function setUrlSelection() {
 }
 
 function showDetailView(open) {
+  if (!open && $("view-list").hidden) pageIn($("agencies"));
+  if (!open) pageKeys.delete($("train-detail")); // the next page opened comes in anew
   $("view-list").hidden = open;
   $("view-train").hidden = !open;
   $("follow-btn").hidden = !state.selected;
@@ -4534,8 +4577,11 @@ function closeDetailTo() {
 function panelPadding() {
   // Clear of the tracked trains' islands across the top of the map, too.
   const islands = $("tracked"), top = islands && !islands.hidden && !isPhone ? islands.getBoundingClientRect().bottom : 0;
-  if (matchMedia("(max-width: 720px)").matches) return { bottom: window.innerHeight * 0.46, top, left: 0, right: 0 };
-  return { left: 360, top, bottom: 0, right: 0 };
+  if (isPhone) {
+    // Clear of the sheet, at the detent it's at (or headed for).
+    return { bottom: sheetHeights()[sheetMode()], top: 0, left: 0, right: 0 };
+  }
+  return { left: 12 + $("panel").offsetWidth, top, bottom: 0, right: 0 };
 }
 
 function setFollow(on) {
@@ -4722,6 +4768,8 @@ on("train-detail", "keydown", (e) => {
   if (stationLi && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); return stationLi.click(); }
   const stopLink = e.target.closest?.("[data-stop-station]");
   if (stopLink && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); return openStop(stopLink); }
+  const foldRow = e.target.closest?.("[data-fold-past]");
+  if (foldRow && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); return foldRow.click(); }
   const fig = e.target.closest?.("[data-car]");
   if (fig && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openCar(fig); }
 });
@@ -4733,6 +4781,10 @@ function openStop(li) {
   setBack(t.number ? T("Train {n}", { n: t.number }) : T("Train"));
 }
 on("train-detail", "click", (e) => {
+  if (e.target.closest("[data-fold-past]")) {
+    pastOpen.add(state.selected);
+    return renderDetail();
+  }
   const stopLink = e.target.closest("[data-stop-station]");
   if (stopLink) return openStop(stopLink);
   const view = e.target.closest("[data-station-view]");
@@ -4823,13 +4875,27 @@ on("follow-btn", "click", () => {
   if (state.follow && t) map.easeTo({ center: [t.lon, t.lat], padding: panelPadding() });
 });
 
-// Copy a link to the open train; the button shows a tick for a moment.
+// Share the open train: on a phone or tablet, the system's share sheet;
+// on a computer (and with C), a link copied, the button showing a tick for
+// a moment.
 const copyIcon = $("share-btn").innerHTML;
-on("share-btn", "click", async () => {
+const shareSheet = Boolean(navigator.share) && matchMedia("(pointer: coarse)").matches;
+if (shareSheet) {
+  $("share-btn").title = T("Share");
+  $("share-btn").setAttribute("aria-label", T("Share"));
+}
+on("share-btn", "click", async (e) => {
   const t = state.trains.get(state.selected);
   if (!t) return;
   const btn = $("share-btn");
   const url = `${location.origin}${location.pathname}?train=${encodeURIComponent(t.id)}`;
+  if (shareSheet && e.isTrusted) {
+    try {
+      return await navigator.share({ title: `${trainTitle(t)}${t.number ? ` ${t.number}` : ""}`, url });
+    } catch (err) {
+      if (err?.name === "AbortError") return; // closed without sharing
+    }
+  }
   try {
     await navigator.clipboard.writeText(url);
   } catch {
@@ -4869,6 +4935,17 @@ on("filters", "click", (e) => {
   state.filters = { kind: "", country: "", region: "", agency: "" };
   renderResults();
 });
+// Cancel (phones, while searching): the search is let go, and the sheet
+// goes back to where it sits.
+on("search-cancel", "click", () => {
+  $("search").value = "";
+  state.query = "";
+  state.filters = { kind: "", country: "", region: "", agency: "" };
+  $("search").blur();
+  renderResults();
+  if (isPhone) setSheet("");
+});
+on("search", "focus", () => { if (isPhone) setSheet("expanded"); });
 on("search", "keydown", (e) => {
   if (e.key === "Enter") $("results").querySelector("[data-select]")?.click();
   if (e.key === "Escape") {
@@ -5115,12 +5192,28 @@ function toggleMenu(open = $("settings-menu").hidden) {
   const menu = $("settings-menu"), btn = $("settings-btn");
   menu.hidden = !open;
   btn.setAttribute("aria-expanded", String(open));
+  document.body.classList.toggle("menu-open", open);
   if (!open) return;
-  // Pin the menu under the gear (or over it, where there's more room), kept
-  // inside the window; taller than the room it has, it scrolls.
+  // On a phone, a sheet up from the bottom (design.css), with Done.
+  if (isPhone) {
+    menu.removeAttribute("style");
+    menu.scrollTop = 0;
+    return;
+  }
+  // Beside the panel, level with its top, where the window has room for it
+  // (the panel stays in view, as a sidebar's popover leaves it);
   const r = btn.getBoundingClientRect();
   menu.style.maxHeight = "";
   const w = menu.offsetWidth, h = menu.offsetHeight;
+  const side = $("panel").getBoundingClientRect();
+  if (innerWidth - side.right >= w + 24) {
+    menu.style.left = `${side.right + 12}px`;
+    menu.style.top = `${side.top}px`;
+    menu.style.maxHeight = `${innerHeight - side.top - 12}px`;
+    return;
+  }
+  // else pinned under the gear (or over it, where there's more room), kept
+  // inside the window; taller than the room it has, it scrolls.
   const below = innerHeight - r.bottom - 8 - 12, above = r.top - 8 - 12;
   const under = h <= below || below >= above;
   const room = under ? below : above;
@@ -5132,6 +5225,7 @@ on("settings-btn", "click", (e) => {
   e.stopPropagation();
   toggleMenu();
 });
+on("menu-done", "click", () => toggleMenu(false));
 document.addEventListener("click", (e) => {
   if (!$("settings-menu").hidden && !e.target.closest("#settings-menu")) toggleMenu(false);
 });
@@ -5238,7 +5332,12 @@ addEventListener("appinstalled", () => {
 on("install-btn", "click", () => { toggleMenu(false); install(); });
 showInstall();
 
-// Phone bottom sheet: collapsed / normal / expanded.
+// Phone bottom sheet: collapsed / normal / expanded, as iOS's sheets' small,
+// medium and large detents. Dragged by its grabber or its top bar (the
+// search row, a page's back button), it follows the finger, and on letting
+// go settles at the detent the flick was heading for; a tap on the grabber
+// steps through them.
+const sheetMode = () => { const p = $("panel"); return p.classList.contains("collapsed") ? "collapsed" : p.classList.contains("expanded") ? "expanded" : ""; };
 function setSheet(mode) {
   const p = $("panel");
   p.classList.toggle("collapsed", mode === "collapsed");
@@ -5246,10 +5345,79 @@ function setSheet(mode) {
   document.body.classList.toggle("sheet-collapsed", mode === "collapsed");
   document.body.classList.toggle("sheet-expanded", mode === "expanded");
 }
+// Each detent's height, as the stylesheet sets it (design.css).
+function sheetHeights() {
+  const p = $("panel"), cls = p.className, was = p.style.height;
+  p.style.transition = "none";
+  p.style.height = "";
+  const heights = {};
+  for (const mode of ["collapsed", "", "expanded"]) {
+    setSheet(mode);
+    heights[mode] = p.getBoundingClientRect().height;
+  }
+  p.className = cls;
+  setSheet(sheetMode());
+  p.style.height = was;
+  void p.offsetHeight;
+  p.style.transition = "";
+  return heights;
+}
 on("sheet-handle", "click", () => {
-  const p = $("panel");
-  setSheet(p.classList.contains("collapsed") ? "" : p.classList.contains("expanded") ? "collapsed" : "expanded");
+  if (sheetDragged) return;
+  const mode = sheetMode();
+  setSheet(mode === "collapsed" ? "" : mode === "expanded" ? "collapsed" : "expanded");
 });
+let sheetDragged = false;
+{
+  const panel = $("panel");
+  let drag = null;
+  panel?.addEventListener("pointerdown", (e) => {
+    if (!isPhone || e.button > 0 || !e.target.closest(".sheet-handle, .search-row, .detail-top")) return;
+    if (e.target.closest("input, select, textarea")) return;
+    drag = { y: e.clientY, id: e.pointerId, h: panel.getBoundingClientRect().height, moving: false, samples: [] };
+    sheetDragged = false;
+  });
+  // Followed on the window: a mouse leaves the sheet at once (a finger's
+  // events stay with where it went down).
+  addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dy = e.clientY - drag.y;
+    if (!drag.moving) {
+      if (Math.abs(dy) < 6) return;
+      drag.moving = true;
+      drag.heights = sheetHeights();
+      panel.classList.add("dragging");
+    }
+    const { collapsed: lo, expanded: hi } = drag.heights;
+    let h = drag.h - dy;
+    // Past the first and last detents it gives, like a rubber band.
+    if (h > hi) h = hi + (h - hi) / 4;
+    if (h < lo) h = lo - (lo - h) / 4;
+    panel.style.height = `${h}px`;
+    drag.samples.push([e.timeStamp, e.clientY]);
+    if (drag.samples.length > 5) drag.samples.shift();
+  });
+  const end = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag;
+    drag = null;
+    if (!d.moving) return;
+    sheetDragged = true; // the click that follows isn't a tap
+    setTimeout(() => (sheetDragged = false), 0);
+    const [t0, y0] = d.samples[0] || [e.timeStamp, e.clientY];
+    const v = e.timeStamp > t0 ? (y0 - e.clientY) / (e.timeStamp - t0) : 0; // px/ms, upward positive
+    const h = panel.getBoundingClientRect().height + v * 180; // where the flick was heading
+    const [mode] = Object.entries(d.heights).sort((a, b) => Math.abs(a[1] - h) - Math.abs(b[1] - h))[0];
+    panel.classList.remove("dragging");
+    panel.style.height = "";
+    setSheet(mode);
+    if (mode !== "expanded" && document.activeElement?.id === "search") $("search").blur();
+  };
+  addEventListener("pointerup", end);
+  addEventListener("pointercancel", end);
+  // A drag that began on a button isn't a press of it.
+  panel?.addEventListener("click", (e) => { if (sheetDragged) { e.stopPropagation(); e.preventDefault(); } }, true);
+}
 
 let toastTimer;
 function toast(msg) {
@@ -5291,11 +5459,15 @@ if (wanted) {
   setTimeout(() => clearInterval(wait), 30000);
 }
 
-// ---------- Loading screen ----------
-// Until the map, its track and the first round of every railroad's trains
-// are in, railroads' typical trains roll by one after another, each chosen
-// at random (never the same twice in a row), leading end first at a steady
-// speed whatever its length. Gives up waiting after 15 seconds.
+// ---------- Loading ----------
+// The panel is there from the first paint, ready for a search, and trains
+// join the map as each railroad's feed comes in (the list shimmers for the
+// ones still on their way). Only the map is waited for: if it isn't drawn,
+// with its track, half a second into the visit, railroads' typical trains
+// roll by in its place (behind the panel, never over it) until it is, one
+// after another, each chosen at random (never the same twice in a row),
+// leading end first at a steady speed whatever its length. A quick load
+// shows none of it. Gives up waiting after 12 seconds.
 const LOADING_TRAINS = [
   ["amtrak", "Acela"], ["amtrak", "Northeast Regional"], ["amtrak", "California Zephyr"], ["amtrak", "Pacific Surfliner"],
   ["amtrak", "Amtrak Cascades"], ["amtrak", "Wolverine"], ["amtrak", "Crescent"], ["via", "Corridor"], ["via", "Canadian"],
@@ -5309,11 +5481,14 @@ const LOADING_TRAINS = [
 for (const [id, a] of Object.entries(AGENCIES)) {
   if (a.cars) LOADING_TRAINS.push([id, Array.isArray(a.loading) ? a.loading : undefined]);
 }
-const loadingStart = Date.now();
 let mapLoaded = false; // map.loaded() turns false whenever the trains layer updates
 map.once("load", () => (mapLoaded = true));
-{
+let loadingShown = false;
+function showLoadingTrains() {
+  loadingShown = true;
   const el = $("loading-train");
+  if (!el) return;
+  $("loading").classList.add("shown");
   let last = -1, turn = 0;
   const nextTrain = async () => {
     const mine = ++turn;
@@ -5338,22 +5513,20 @@ map.once("load", () => (mapLoaded = true));
     void el.offsetWidth;
     el.style.animation = "";
   };
-  if (el) {
-    nextTrain();
-    el.addEventListener("animationend", nextTrain);
-  }
+  nextTrain();
+  el.addEventListener("animationend", nextTrain);
 }
 const loadingWait = setInterval(() => {
-  const sources = Object.values(state.sourceStatus);
-  const waited = Date.now() - loadingStart;
-  // Up once the map's drawn; feeds still loading after a few seconds shimmer
-  // in the list instead of holding the screen.
-  const ready = mapLoaded && state.railGeo && sources.length && (waited > 3000 || sources.every((x) => x.status !== "loading"));
-  if ((!ready && waited < 15000) || waited < 1200) return; // shown long enough to see the train
+  const since = performance.now(); // since the visit began
+  if (!(mapLoaded && state.railGeo) && since < 12000) {
+    if (!loadingShown && since > 500) showLoadingTrains();
+    return;
+  }
   clearInterval(loadingWait);
-  $("loading").classList.add("done");
-  setTimeout(() => $("loading").remove(), 500);
-}, 200);
+  const el = $("loading");
+  el.classList.add("done");
+  setTimeout(() => el.remove(), loadingShown ? 500 : 0);
+}, 100);
 
 // ---------- Account ----------
 // Signing in, a rider's trips, and their tracked trains on every device
