@@ -2209,16 +2209,113 @@ function renderResults() {
 // the matching trains still to leave today (each railroad's own today), and
 // a tap shows one's stops and times.
 let departuresData = {}, departuresDataAsked = false; // and the regions' (addRegion)
+let departuresLoaded = null; // settles once data/departures.json is in (or failed)
 function departures() {
   if (!departuresDataAsked) {
     departuresDataAsked = true;
-    fetch("data/departures.json?v=dev").then((r) => r.json()).then((d) => {
+    departuresLoaded = fetch("data/departures.json?v=dev").then((r) => r.json()).then((d) => {
       departuresData = { ...decodeDepartures(d), ...departuresData };
       if (state.query) renderResults();
     }).catch((err) => console.warn("departures", err));
   }
   return departuresData;
 }
+
+// ---------- Planning a trip: the trains between two stations ----------
+// From the timetables (data/schedules/, two weeks of each railroad's runs):
+// the trains that call at one station and then the other on a day, for
+// the trip form (js/account.js). A day past the timetable's two weeks is
+// read as the same weekday in its second week: the timetable as it stands.
+const schedulePromises = new Map(); // railroad -> Promise<timetable or null>
+function loadSchedule(id) {
+  if (!schedulePromises.has(id)) {
+    departures();
+    schedulePromises.set(id, Promise.all([departuresLoaded, needData(id)]).catch(() => {})
+      .then(() => fetch(`data/${departures()[id]?.file || `schedules/${id}.json`}?v=dev`))
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null));
+  }
+  return schedulePromises.get(id);
+}
+function timetableDay(tt, day) {
+  const [y, m, d] = tt.start.split("-").map(Number), [Y, M, D] = day.split("-").map(Number);
+  const diff = Math.round((Date.UTC(Y, M - 1, D) - Date.UTC(y, m - 1, d)) / 86400000);
+  const exact = diff >= 0 && diff <= 13;
+  return { idx: exact ? diff : 7 + ((diff % 7) + 7) % 7, exact, base: serviceStart(Date.UTC(Y, M - 1, D), tt.tz) };
+}
+const memberOf = (st, agency) => st?.members.filter((m) => m.agency === agency) || [];
+async function findTrains(fromId, toId, day) {
+  const from = state.stations.get(fromId), to = state.stations.get(toId);
+  if (!from || !to || from === to) return { trains: [], exact: true };
+  const shared = from.agencies.filter((a) => to.agencies.includes(a));
+  const out = [];
+  let exact = true;
+  await Promise.all(shared.map(async (agency) => {
+    const tt = await loadSchedule(agency);
+    if (!tt?.trips) return;
+    const a = memberOf(from, agency), b = memberOf(to, agency);
+    const day_ = timetableDay(tt, day);
+    if (!day_.exact) exact = false;
+    // That day's runs that reach the first station before midnight, and the
+    // day before's that reach it after (an overnight train).
+    const days_ = [[day_.idx, 0], ...(day_.idx > 0 ? [[day_.idx - 1, 1]] : [])];
+    for (const [key, runs] of Object.entries(tt.trips)) {
+      for (const [days, line, stops] of runs) {
+        for (const [idx, before] of days_) {
+          if (!(days & (1 << idx))) continue;
+          const i = stops.findIndex(([sid]) => a.some((m) => m.id === sid));
+          const j = i < 0 ? -1 : stops.findIndex(([sid], k) => k > i && b.some((m) => m.id === sid));
+          if (j < 0) continue;
+          const dep = stops[i][2] ?? stops[i][1], arr = stops[j][1] ?? stops[j][2];
+          if (before ? dep < 1440 : dep >= 1440) continue;
+          const base = day_.base - before * 86400000;
+          const ma = a.find((m) => m.id === stops[i][0]), mb = b.find((m) => m.id === stops[j][0]);
+          out.push({
+            agency, number: tt.unnumbered ? null : key, route: line || null,
+            fromKey: ma.key, fromName: ma.name, toKey: mb.key, toName: mb.name,
+            departAt: new Date(base + dep * 60000).toISOString(), arriveAt: new Date(base + arr * 60000).toISOString(),
+            fromTz: ma.tz || from.tz || tt.tz, toTz: mb.tz || to.tz || tt.tz,
+          });
+        }
+      }
+    }
+  }));
+  const seen = new Set();
+  return {
+    exact,
+    trains: out.sort((x, y) => x.departAt.localeCompare(y.departAt))
+      .filter((r) => { const k = `${r.agency}|${r.number}|${r.departAt}`; return !seen.has(k) && seen.add(k); }),
+  };
+}
+// One train's runs on a day, for the trip form's train number: [{ route,
+// stops: [{ key, name, at, tz }] }].
+async function trainRuns(agency, number, day) {
+  const tt = number && (await loadSchedule(agency));
+  const runs = tt?.trips?.[number];
+  if (!runs) return [];
+  const d = timetableDay(tt, day);
+  return runs.filter(([days]) => days & (1 << d.idx)).map(([, line, stops]) => ({
+    route: line || null,
+    stops: stops.map(([sid, arr, dep], i) => {
+      const st = stationFor(agency, sid), m = st?.members.find((x) => x.agency === agency && x.id === sid);
+      const min = i === stops.length - 1 ? arr ?? dep : dep ?? arr;
+      return { key: m?.key || null, name: m?.name || tt.stops[sid]?.[0] || sid, at: new Date(d.base + min * 60000).toISOString(), tz: m?.tz || st?.tz || tt.tz };
+    }),
+  }));
+}
+// Stations by name or town, busiest first, for the trip form.
+function searchStations(q, limit = 6) {
+  const terms = fold(q.trim()).split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  const hits = [];
+  for (const st of state.stations.values()) {
+    const name = fold(st.name), hay = `${name} ${fold(st.place || "")} ${st.members.map((m) => fold(m.name)).join(" ")}`;
+    if (!terms.every((w) => hay.includes(w))) continue;
+    const trips = st.members.reduce((n, m) => n + (m.trips || 0), 0);
+    hits.push({ st, score: (name.startsWith(terms[0]) ? 0 : 1) - Math.min(0.9, trips / 2000) - (st.major ? 0.3 : 0) });
+  }
+  return hits.sort((a, b) => a.score - b.score).slice(0, limit).map(({ st }) => stationChoice(st));
+}
+const stationChoice = (st) => ({ id: st.id, name: st.name, sub: [st.place !== st.name ? st.place : "", st.agencies.map((a) => AGENCIES[a]?.short).filter(Boolean).join(", ")].filter(Boolean).join(" · ") });
 // The file keeps each railroad's runs as columns, with the line names and
 // stop ids listed once and each departure as minutes after the run before
 // (scripts/build_schedules.py); here they become a row per run again:
@@ -5273,6 +5370,12 @@ function loadAccount() {
     stopTz(key) {
       const s = key && state.stations.get(state.stationOfKey?.get(key));
       return s ? s.members.find((m) => m.key === key)?.tz || s.tz : null;
+    },
+    findTrains, trainRuns, searchStations,
+    loadPlaces: () => { dataRegions()?.then((m) => m?.loadAll()); return stationsReady; },
+    stationOfKey: (key) => {
+      const st = key && state.stations.get(state.stationOfKey?.get(key));
+      return st ? stationChoice(st) : null;
     },
     defaultAgency: () => state.railroad || state.trains.get(state.selected)?.agency || null,
     liveTrain: (agency, number) => (number ? [...state.trains.values()].find((t) => t.agency === agency && String(t.number) === String(number)) : null) || null,

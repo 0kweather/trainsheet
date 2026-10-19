@@ -918,3 +918,46 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .stops small.likely { display: block; font-size: var(--fs-xs); font-weight: 500; line-height: 1.2; }
 .stops small.likely.good { color: var(--muted); }
 .nt-usual { font-size: var(--fs-sm); }
+
+/* Plan a trip: from, to and the day, then the trains between them. */
+.plan { display: flex; flex-direction: column; gap: 12px; }
+.plan-stations { position: relative; display: flex; flex-direction: column; gap: 8px; }
+.plan-field { position: relative; }
+.plan-field input { padding-right: 44px; }
+.plan-swap {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 1; width: 32px; height: 32px; padding: 0;
+  border: 0; border-radius: 50%; background: var(--fill); color: var(--accent); font-size: 16px; cursor: pointer;
+}
+.plan-swap:hover { background: color-mix(in srgb, var(--fill) 100%, var(--text) 6%); }
+.plan-suggest {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 3; margin-top: 4px; overflow: hidden;
+  border-radius: var(--r-card); background: var(--panel-solid); box-shadow: var(--shadow);
+}
+.plan-suggest[hidden] { display: none; }
+.plan-suggest-title { padding: 8px 14px 2px; font-size: var(--fs-xs); color: var(--muted); }
+.plan-option {
+  display: flex; flex-direction: column; justify-content: center; width: 100%; min-height: 44px; padding: 6px 14px;
+  border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.plan-option + .plan-option { box-shadow: inset 0 0.5px 0 var(--line); }
+.plan-option:hover, .plan-option:focus-visible { background: var(--hover); outline: none; }
+.plan-option span { font-size: var(--fs-base); font-weight: 600; }
+.plan-option small { font-size: var(--fs-xs); color: var(--muted); }
+.plan-days { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; }
+.plan-date { position: relative; display: grid; place-items: center; border-radius: 7px; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+.plan-date.on { background: var(--panel-solid); font-weight: 600; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+:root[data-theme="dark"] .plan-date.on { background: #636366; }
+.plan-date input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.plan-hint { margin: 0; padding: 4px 2px; font-size: var(--fs-sm); color: var(--muted); }
+.plan-trains { display: flex; flex-direction: column; max-height: 46vh; overflow-y: auto; border-radius: var(--r-card); background: var(--group); }
+.plan-train {
+  display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; align-items: center; min-height: 44px; padding: 9px 14px;
+  border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.plan-train + .plan-train { box-shadow: inset 0 0.5px 0 var(--line); }
+.plan-train:hover, .plan-train:focus-visible { background: var(--hover); outline: none; }
+.pt-times { font-size: var(--fs-md); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.pt-span { font-size: var(--fs-sm); color: var(--muted); }
+.pt-train { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-sm); color: var(--muted); }
+.pt-train > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-manual { align-self: center; }

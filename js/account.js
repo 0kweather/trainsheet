@@ -30,7 +30,9 @@ let ctx;          // what js/app.js lends this module (init())
 let sb;           // the Supabase client
 let user = null;  // the signed-in user, or null
 let trips = null; // the account's trips once fetched: [row]
-let view = "signin"; // what the sheet shows: signin, signup, reset, code, newpass, trips, form
+let view = "signin"; // what the sheet shows: signin, signup, reset, code, newpass, trips, plan, form
+let plan = null;     // the planner: { from, to, typed, day, trains, exact, loading } (stations as { id, name, sub })
+let prefill = null;  // a new trip filled in from a train the planner found
 let resetEmail = ""; // where the reset email went (the code view)
 let tab = "upcoming";
 let editing = null;  // the trip being edited in the form (null: a new one)
@@ -224,6 +226,8 @@ function openSheet() {
     el.addEventListener("click", onClick);
     el.addEventListener("submit", onSubmit);
     el.addEventListener("change", onChange);
+    el.addEventListener("input", onInput);
+    el.addEventListener("focusin", onFocus);
     el.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); closeSheet(); } });
     document.body.append(el);
   }
@@ -280,8 +284,10 @@ function render() {
     body = head(T("Choose a new password"), changing ? "trips" : null) + note +
       `<form class="acct-form" data-form="newpass"><label class="acct-field"><span>${T("New password")}</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
         <button class="btn primary" type="submit"${dis}>${T("Save password")}</button></form>`;
+  } else if (view === "plan") {
+    body = head(T("Plan a trip"), "trips") + note + planView();
   } else if (view === "form") {
-    body = head(editing ? T("Edit trip") : T("Add a trip"), "trips") + note + tripForm(editing);
+    body = head(editing ? T("Edit trip") : T("Add a trip"), editing ? "trips" : "plan") + note + tripForm(editing || prefill);
   } else {
     body = head(T("Your trips")) + note + tripsView();
   }
@@ -295,7 +301,7 @@ function render() {
       if (el.type === "radio") { if (value) el.checked = el.value === value; } else el.value = value;
     }
   }
-  if (view === "form") fillStations();
+  if (view === "form") fillStations().then(() => autofill());
 }
 let shown = null; // the view last drawn
 
@@ -355,6 +361,127 @@ function tripRow(r) {
     </div>`;
 }
 
+// ---------- Planning a trip ----------
+// Where from, where to, and which day: the trains between them that day
+// (from the railroads' timetables), one tap filling in the whole trip.
+// Stations are offered as you type, the rider's usual ones first.
+
+function startPlan() {
+  plan = { from: null, to: null, typed: { from: "", to: "" }, day: today(), trains: null, exact: true, loading: false };
+  ctx.loadPlaces?.();
+}
+const addDays = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+
+function planView() {
+  const field = (which, label) => `<div class="plan-field">
+      <label class="acct-field"><span>${label}</span><input data-plan="${which}" value="${esc(plan[which]?.name || plan.typed[which])}" placeholder="${T("Station or city")}" autocomplete="off" spellcheck="false"></label>
+      <div class="plan-suggest" data-suggest="${which}" hidden></div></div>`;
+  const t0 = today(), t1 = addDays(t0, 1);
+  const dayBtn = (d, label) => `<button type="button" data-plan-day="${d}" aria-pressed="${plan.day === d}">${label}</button>`;
+  const other = plan.day !== t0 && plan.day !== t1;
+  let results;
+  if (!plan.from || !plan.to) results = `<p class="plan-hint">${T("Choose where you're leaving from and where you're going, and the trains between them show here.")}</p>`;
+  else if (plan.loading) results = `<p class="plan-hint">${T("Finding trains…")}</p>`;
+  else if (!plan.trains?.length) results = `<p class="plan-hint">${T("No trains between these stations that day.")}</p>`;
+  else {
+    results = `<div class="plan-trains">${plan.trains.map((r, i) => {
+      const a = ctx.agencies[r.agency] || { color: "#888", short: r.agency };
+      const mins = Math.round((Date.parse(r.arriveAt) - Date.parse(r.departAt)) / 60000);
+      const span = mins >= 60 ? `${Math.floor(mins / 60)} h${mins % 60 ? ` ${mins % 60} min` : ""}` : `${mins} min`;
+      return `<button type="button" class="plan-train" data-pick="${i}">
+        <span class="pt-times">${esc(ctx.fmtTime(r.departAt, r.fromTz))} – ${esc(ctx.fmtTime(r.arriveAt, r.toTz))}</span>
+        <span class="pt-span">${esc(span)}</span>
+        <span class="pt-train">${ctx.plate(r.number || a.short, a.color, "xs")}<span>${esc([r.route, a.short].filter(Boolean).join(" · "))}</span></span>
+      </button>`;
+    }).join("")}</div>` + (plan.exact ? "" : `<p class="plan-hint">${T("That day is past the timetable Trainsheet has, so these are the trains on that weekday now. Check again closer to the day.")}</p>`);
+  }
+  return `<div class="plan">
+    <div class="plan-stations">${field("from", T("From"))}<button type="button" class="plan-swap" data-plan-swap aria-label="${T("Swap from and to")}" title="${T("Swap from and to")}">⇅</button>${field("to", T("To"))}</div>
+    <div class="segmented plan-days">${dayBtn(t0, T("Today"))}${dayBtn(t1, T("Tomorrow"))}<label class="plan-date${other ? " on" : ""}"><input type="date" data-plan-date value="${esc(plan.day)}" aria-label="${T("Another day")}"><span>${esc(other ? dateFormat({ month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${plan.day}T12:00:00Z`)) : T("Other day"))}</span></label></div>
+    ${results}
+    <button type="button" class="acct-link plan-manual" data-manual>${T("Enter a trip yourself")}</button>
+  </div>`;
+}
+
+// The rider's usual stations (where their trips start and end), most used first.
+function usualStations() {
+  const n = new Map();
+  for (const r of trips || []) for (const k of [r.from_key, r.to_key]) if (k) n.set(k, (n.get(k) || 0) + 1);
+  const out = new Map();
+  for (const [k] of [...n].sort((a, b) => b[1] - a[1])) {
+    const st = ctx.stationOfKey(k);
+    if (st && !out.has(st.id)) out.set(st.id, st);
+  }
+  return [...out.values()].slice(0, 5);
+}
+function showSuggest(which, q) {
+  const box = $(`[data-suggest="${which}"]`, sheet());
+  if (!box) return;
+  for (const other of sheet().querySelectorAll("[data-suggest]")) if (other !== box) other.hidden = true;
+  const list = q.trim() ? ctx.searchStations(q) : usualStations();
+  box.hidden = !list.length;
+  box.innerHTML = (q.trim() ? "" : `<div class="plan-suggest-title">${T("Your stations")}</div>`) + list.map((st) =>
+    `<button type="button" class="plan-option" data-suggest-pick="${esc(st.id)}" data-name="${esc(st.name)}" data-sub="${esc(st.sub)}"><span>${esc(st.name)}</span><small>${esc(st.sub)}</small></button>`).join("");
+}
+let planToken = 0;
+async function searchPlan() {
+  if (!plan.from || !plan.to) return render();
+  const token = ++planToken;
+  plan.loading = true;
+  render();
+  const r = await ctx.findTrains(plan.from.id, plan.to.id, plan.day).catch(() => ({ trains: [], exact: true }));
+  if (token !== planToken || !plan) return;
+  Object.assign(plan, { trains: r.trains, exact: r.exact, loading: false });
+  render();
+}
+function pickTrain(r) {
+  prefill = {
+    agency: r.agency, number: r.number, route: r.route, service_date: plan.day,
+    from_name: r.fromName, from_key: r.fromKey, to_name: r.toName, to_key: r.toKey,
+    depart_at: r.departAt, arrive_at: r.arriveAt, status: plan.day < today() ? "taken" : "planned",
+  };
+  editing = null;
+  view = "form";
+  notice = "";
+  render();
+}
+
+// The form's train number, once the railroad and day are set: its line,
+// its stops offered for From and To (its first and last filled in), and
+// the times at the stops chosen. A field the rider has typed in is left be.
+let formRun = null; // { agency, number, day, run }
+let autofillToken = 0;
+async function autofill() {
+  const f = $('form[data-form="trip"]', sheet() || undefined);
+  if (!f) return;
+  const agency = f.agency.value, number = f.number.value.trim(), day = f.service_date.value;
+  if (!number || !day) { formRun = null; return; }
+  const token = ++autofillToken;
+  const runs = await ctx.trainRuns(agency, number, day).catch(() => []);
+  if (token !== autofillToken || !f.isConnected) return;
+  const run = runs[0];
+  formRun = run ? { agency, run } : null;
+  if (!run) return;
+  const label = (s) => stationShown(agency, s.key, s.name);
+  const set = (el, value) => { if (!el.value || el.value === el.dataset.auto) { el.value = value; el.dataset.auto = value; } };
+  set(f.route, run.route || "");
+  const list = $("#acct-stations");
+  if (list) list.innerHTML = run.stops.map((s) => `<option value="${esc(label(s))}"></option>`).join("");
+  set(f.from_name, label(run.stops[0]));
+  set(f.to_name, label(run.stops[run.stops.length - 1]));
+  fillTimes(f);
+}
+function fillTimes(f) {
+  if (!formRun) return;
+  const hhmm = (s) => new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: s.tz || undefined }).format(new Date(s.at));
+  for (const [name, time] of [["from_name", "depart"], ["to_name", "arrive"]]) {
+    const typed = fold(f[name].value.trim());
+    const s = formRun.run.stops.find((x) => fold(stationShown(formRun.agency, x.key, x.name)) === typed || fold(x.name) === typed);
+    const el = f[time];
+    if (s && (!el.value || el.value === el.dataset.auto)) { el.value = hhmm(s); el.dataset.auto = el.value; }
+  }
+}
+
 // The form for a trip: railroad, train, day, from and to (the railroad's
 // stations offered as you type), times, notes.
 function tripForm(r) {
@@ -388,8 +515,8 @@ function tripForm(r) {
     <div class="segmented acct-status" role="radiogroup">${[["planned", T("Planned")], ["taken", T("Taken")], ["cancelled", T("Cancelled")]].map(([v, label]) =>
       `<label><input type="radio" name="status" value="${v}"${v === status ? " checked" : ""}><span>${label}</span></label>`).join("")}</div>
     <div class="acct-actions">
-      ${r ? `<button type="button" class="btn small acct-delete" data-delete-trip="${r.id}">${T("Delete trip")}</button>` : ""}
-      <button class="btn primary" type="submit"${busy ? " disabled" : ""}>${r ? T("Save") : T("Add trip")}</button>
+      ${r?.id ? `<button type="button" class="btn small acct-delete" data-delete-trip="${r.id}">${T("Delete trip")}</button>` : ""}
+      <button class="btn primary" type="submit"${busy ? " disabled" : ""}>${r?.id ? T("Save") : T("Add trip")}</button>
     </div>
   </form>`;
 }
@@ -397,7 +524,7 @@ function tripForm(r) {
 // The railroad's stations, for the From and To fields (abroad, once its
 // region's data is in).
 async function fillStations() {
-  const select = $('select[name="agency"]', sheet());
+  const select = $('select[name="agency"]', sheet() || undefined);
   if (!select) return;
   const agency = select.value;
   await ctx.needData(agency);
@@ -467,12 +594,30 @@ async function run(fn) {
 
 function onClick(e) {
   const b = e.target.closest("button, [data-close]");
+  // A tap anywhere but a station field closes its suggestions.
+  if (!e.target.closest(".plan-field")) for (const box of sheet()?.querySelectorAll("[data-suggest]") || []) box.hidden = true;
   if (e.target === sheet() || b?.dataset.close != null) return closeSheet();
   if (!b) return;
   const d = b.dataset;
   if (d.go) { view = d.go; notice = ""; editing = d.go === "form" ? editing : null; return render(); }
   if (d.tab) { tab = d.tab; return render(); }
-  if (d.add != null) { editing = null; view = "form"; notice = ""; return render(); }
+  if (d.add != null) { editing = null; prefill = null; startPlan(); view = "plan"; notice = ""; return render(); }
+  if (d.suggestPick) {
+    const which = b.closest("[data-suggest]").dataset.suggest;
+    plan[which] = { id: d.suggestPick, name: d.name, sub: d.sub };
+    plan.typed[which] = "";
+    searchPlan();
+    if (!plan[which === "from" ? "to" : "from"]) $(`[data-plan="${which === "from" ? "to" : "from"}"]`, sheet())?.focus();
+    return;
+  }
+  if (d.planSwap != null) {
+    [plan.from, plan.to] = [plan.to, plan.from];
+    [plan.typed.from, plan.typed.to] = [plan.typed.to, plan.typed.from];
+    return searchPlan();
+  }
+  if (d.planDay) { plan.day = d.planDay; return searchPlan(); }
+  if (d.pick) return pickTrain(plan.trains[Number(d.pick)]);
+  if (d.manual != null) { prefill = null; editing = null; view = "form"; notice = ""; return render(); }
   if (d.edit) { editing = trips.find((r) => r.id === d.edit); view = "form"; notice = ""; return render(); }
   if (d.openTrain) { closeSheet(); return ctx.openTrain(d.openTrain); }
   if (d.provider) {
@@ -515,7 +660,29 @@ function onClick(e) {
 }
 
 function onChange(e) {
-  if (e.target.name === "agency") fillStations();
+  if (e.target.name === "agency") fillStations().then(() => autofill());
+  if (e.target.name === "service_date") autofill();
+  if (e.target.matches("[data-plan-date]") && e.target.value) { plan.day = e.target.value; searchPlan(); }
+}
+let typingTimer;
+function onInput(e) {
+  const which = e.target.dataset?.plan;
+  if (which) {
+    plan.typed[which] = e.target.value;
+    plan[which] = null;
+    plan.trains = null;
+    return showSuggest(which, e.target.value);
+  }
+  const name = e.target.name;
+  if (name === "number") { clearTimeout(typingTimer); typingTimer = setTimeout(autofill, 350); }
+  if (name === "from_name" || name === "to_name") {
+    const f = e.target.form;
+    if (f) fillTimes(f);
+  }
+}
+function onFocus(e) {
+  const which = e.target.dataset?.plan;
+  if (which && !e.target.value) showSuggest(which, "");
 }
 
 // This page's address without its query, where sign-in links come back to
@@ -566,6 +733,7 @@ function onSubmit(e) {
       tab = isUpcoming(row) ? "upcoming" : "history";
       view = "trips";
       editing = null;
+      prefill = null;
       await loadTrips();
     }
   });
@@ -602,7 +770,9 @@ const api = {
   addTrip() {
     if (!user) return api.open();
     editing = null;
-    view = "form";
+    prefill = null;
+    startPlan();
+    view = "plan";
     notice = "";
     openSheet();
   },
