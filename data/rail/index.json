@@ -9,7 +9,7 @@
 {"region": "ie", "bbox": [-9.7, 51.84, -5.93, 54.6], "file": "data/rail/ie.geojson", "bytes": 93264},
 {"region": "il", "bbox": [34.55, 31.06, 35.5, 33.01], "file": "data/rail/il.geojson", "bytes": 51888},
 {"region": "lv", "bbox": [21.01, 55.75, 28.18, 57.78], "file": "data/rail/lv.geojson", "bytes": 55645},
-{"region": "my", "bbox": [100.25, 1.36, 103.93, 7.06], "file": "data/rail/my.geojson", "bytes": 115838},
+{"region": "my", "bbox": [100.25, 1.36, 103.93, 7.06], "file": "data/rail/my.geojson", "bytes": 115365},
 {"region": "no", "bbox": [5.33, 56.66, 16.56, 67.34], "file": "data/rail/no.geojson", "bytes": 313259},
 {"region": "sk", "bbox": [15.62, 47.51, 22.68, 50.28], "file": "data/rail/sk.geojson", "bytes": 380542}
 ]
