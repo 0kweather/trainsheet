@@ -723,6 +723,11 @@ kbd {
  * Manassas"), opening a sheet over the train's page: "Where are you
  * getting off?", the stops ahead, one chosen, and Start tracking. */
 .track-btn, .tracking-btn { display: inline-flex; align-items: center; gap: 6px; }
+/* The status and the Track button side by side: one height, one type size. */
+.hero-actions > :is(.pill, .btn) {
+  display: inline-flex; align-items: center; height: 32px; box-sizing: border-box;
+  padding: 0 14px; font-size: var(--fs-sm); font-weight: 600; line-height: 1; white-space: nowrap;
+}
 .tracking-btn { color: var(--good); }
 .track-sheet { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; justify-content: flex-end; border-radius: inherit; overflow: hidden; }
 /* Closed, it must take no room at all: it sits over the whole panel. */
