@@ -43,12 +43,26 @@ NAMES = {"Kl Sentral": "KL Sentral", "Jb Sentral": "JB Sentral", "Ukm": "UKM", "
          "Kg Berkam": "Kampung Berkam", "Kg Kok Pasir": "Kampung Kok Pasir", "Kg Baru Bukit Abu": "Kampung Baru Bukit Abu",
          "Sg Mengkuang Baru": "Sungai Mengkuang Baru",
          "Perhentian Midvalley": "Mid Valley", "Batu Kentomenn": "Batu Kentonmen"}
+# KTMB's timetable places the East Coast line's halts kilometers from where
+# they are, some off the track (Sri Mahligai 26 km, Kemubu 9), more along it
+# but out of order (Kampung Berkam 18 km down the line), and Seri Setia on
+# Setia Jaya. Each is put where OpenStreetMap's station is.
+POSITIONS = {
+    "84800": [5.99636, 102.14195], "84600": [5.9658, 102.14395], "84400": [5.91762, 102.15632],  # Chicha Tinggi, To Uban, Sungai Keladi
+    "81700": [5.47146, 102.22267], "80700": [5.33025, 102.2034], "79800": [5.39033, 102.06428],  # Pahi, Sungai Mengkuang Baru, Kuala Gris
+    "78900": [5.30008, 102.02012], "78700": [5.26824, 102.00952], "78500": [5.24834, 102.00964],  # Kemubu, Sri Jaya, Sri Mahligai
+    "78400": [5.23068, 102.01027], "78300": [5.21338, 102.01248], "77900": [5.15163, 102.04385],  # Sri Bintang, Sungai Tasin, Bertam
+    "76600": [4.96197, 102.0102], "75000": [4.73064, 102.01066], "74500": [4.64553, 101.99396],  # Pan Malayan, Mentara Baru, Teluk Gunung
+    "73500": [4.48987, 101.94471], "73100": [4.42203, 101.93168], "72700": [4.35838, 101.92157],  # Sungai Temau, Chegar Perah, Aur Gading
+    "72400": [4.29345, 101.92212], "72200": [4.25781, 101.92527], "69600": [4.0753, 102.27157],  # Kampung Berkam, Bukit Betong, Mela
+    "53500": [3.08454, 101.6219],  # Seri Setia
+}
 GTFS = {
     "ktmb": (TIMETABLE, lambda r: r["route_id"] in INTERCITY, lambda r: INTERCITY[r["route_id"]],
-             {"number": number, "names": NAMES}),
+             {"number": number, "names": NAMES, "positions": POSITIONS}),
     "ktmkomuter": (TIMETABLE, lambda r: r["route_id"] not in INTERCITY,
                    lambda r: r["route_short_name"],
-                   {"number": number, "names": NAMES}),
+                   {"number": number, "names": NAMES, "positions": POSITIONS}),
 }
 
 # The peninsula's main lines, the East Coast Line and the causeway, as OSM's
