@@ -76,6 +76,9 @@ function ptMark(c, x, y, h, fill) {
     `font-family="Helvetica Neue, Helvetica, Arial, sans-serif" fill="${fill}">PT</text>` +
     `<path d="M${r2(h * 0.55)} ${r2(-h * 0.42)}L${r2(h * 1.0)} ${r2(-h * 0.05)}L${r2(h * 0.55)} ${r2(h * 0.32)}" fill="none" stroke="${fill}" stroke-width="${r2(h * 0.16)}" stroke-linecap="round" stroke-linejoin="round"/></g>`;
 }
+// METRO in thin capitals across the faceted panel behind a cab, the light
+// showing through (drawn over the doors, as the lettering runs over them).
+const metroWord = (c, x, y, h) => letters(c, x, y, h, "METRO", "rgba(255,255,255,0.4)", { weight: 300, spacing: 0.06 * h });
 // V/Line's name as on its trains: a slash and the word, drawn as type.
 function vlName(c, x, y, h, fill) {
   return letters(c, x + h * 0.55, y, h, "V/Line", fill, { weight: 600, italic: true });
@@ -169,17 +172,16 @@ const COM_WIN = { y: 6.7, w: 4.9, h: 3.25, r: 0.45 };
 function comPaint(c, g, cab, doors, rows) {
   const L = g.L;
   let s = rect(0, 0, L, 17, MT.steel) + flutes(0, L, 3.7, 6.35, 0.26) + flutes(0, L, 10.25, 10.95, 0.26) + rect(0, 11.05, L, 2, MT.blue) + rect(0, 10.95, L, 0.1, "#0a4f96");
-  if (cab) s += facets(5.4, 3.55, 16.4, 11.05, MT_FACETS, 3, { rows: 3 }) + rect(0, 0, 5.4, 17, MT.yellow) + letters(c, 11.0, 6.1, 1.9, "METRO", "rgba(255,255,255,0.32)", { weight: 300, spacing: 0.05 });
+  if (cab) s += facets(1.4, 3.55, 16.4, 11.05, MT_FACETS, 3, { rows: 3 }) + path(poly([[0, 0], [1.5, 0], [1.5, 12.0], ["q", 1.5, 12.6, 2.4, 12.6], [0, 12.6]]), MT.yellow);
   for (const d of doors) s += doorPaint(d, MT.steel) + flutes(d.x, d.x + d.w, 3.8, 6.35, 0.26);
   return s + framed(rows);
 }
 function comCar(c, cab) {
   const L = c.L;
   const doors = cab ? [comDoor(11.4), comDoor(37.6), comDoor(64.2)] : [comDoor(5.8), comDoor(L / 2 - 2.15), comDoor(L - 10.1)];
-  const xs = cab ? [7.6, ...fit(15.7, 37.6, COM_WIN.w, 3), ...fit(41.9, 64.2, COM_WIN.w, 3), 69.8, 74.0] :
-    [1.2, ...fit(10.1, L / 2 - 2.15, COM_WIN.w, 3), ...fit(L / 2 + 2.15, L - 10.1, COM_WIN.w, 3), L - 5.6];
-  const rows = [{ ...COM_WIN, xs: cab ? xs.filter((x) => x < 70) : xs }];
-  if (cab) rows.push({ y: 6.7, w: 3.4, h: 3.25, r: 0.45, xs: [70.3, 74.6] });
+  const end = { y: COM_WIN.y, w: 3.4, h: COM_WIN.h, r: COM_WIN.r };
+  const rows = cab ? [{ ...end, w: 2.9, xs: [7.9] }, { ...COM_WIN, xs: [...fit(15.7, 37.6, COM_WIN.w, 3), ...fit(41.9, 64.2, COM_WIN.w, 3)] }, { ...end, xs: fit(68.5, L - 0.8, 3.4, 2) }] :
+    [{ ...end, xs: [1.4] }, { ...COM_WIN, xs: [...fit(10.1, L / 2 - 2.15, COM_WIN.w, 3), ...fit(L / 2 + 2.15, L - 10.1, COM_WIN.w, 3)] }, { ...end, xs: [L - 5.0] }];
   return unit(c, { ...COM, rows, doors, cabLen: 5,
     nose: cab ? [[0.7, 3.55], [0.6, 4.6], [0.6, 11.2], ["q", 0.65, 12.4, 1.8, 12.58], [2.6, 12.58]] : null,
     paint: (c, g) => comPaint(c, g, cab, doors, rows),
@@ -187,7 +189,8 @@ function comCar(c, cab) {
     onRoof: (c, g) => cab ? hvac(26, g.roof, 12, 0.8) + pantograph(L - 12, g.roof + 0.3, { facing: -1 }) + rect(L - 15.4, g.roof - 0.05, 6.8, 0.35, "#8f969e", 0.4) + panGear(L - 12, g.roof, -1) + horns(3.2, g.roof) :
       hvac(L / 2 - 6, g.roof, 12, 0.8) + aerial(14, g.roof),
     cabArt: () => cabFoot(0.6, 3.55) + rect(0.6, 7.3, 0.35, 3.6, "#111417") + lamp(0.65, 4.7, 0.45, 0.4) + lamp(0.65, 11.6, 0.4, 0.32, RED_LAMP) +
-      rect(5.5, 3.9, 1.9, 7.2, "none", 0.5, 'rx="0.2"') + rect(5.75, 7.6, 1.4, 2.5, C.glass, 0, 'rx="0.2"') + rect(3.0, 7.3, 2.0, 2.9, C.glass, 0, 'rx="0.3"') + ptMark(c, 2.6, 5.1, 0.55, "#ffffff"),
+      rect(5.5, 3.9, 1.9, 7.2, "none", 0.5, 'rx="0.2"') + rect(5.75, 7.6, 1.4, 2.5, C.glass, 0, 'rx="0.2"') + rect(3.0, 7.3, 2.0, 2.9, C.glass, 0, 'rx="0.3"'),
+    more: (c) => (cab ? metroWord(c, 10.4, 5.0, 2.0) : ""),
   });
 }
 const comM = unitCab((c) => comCar(c, true));
@@ -228,7 +231,7 @@ function sieCar(c, cab) {
       roofCover(4, g.roof, 12, 0.6, "#8f969e", 2) + hvac(L / 2 - 6, g.roof, 12, 0.75) + roofCover(L - 16, g.roof, 12, 0.6, "#8f969e", 2),
     cabArt: () => cabFoot(1.0, 3.75, { reach: 3.6 }) + path(poly([[0.75, 7.6], ["q", 0.7, 10.4, 1.3, 11.3], [2.8, 11.3], [2.8, 7.6]]), C.glass) + wiper(1.0, 7.8, 2.2, 10.2) +
       lamp(0.75, 5.0, 0.5, 0.42) + lamp(1.0, 12.0, 0.45, 0.3, RED_LAMP) + rect(7.4, 3.95, 1.9, 7.2, "none", 0.5, 'rx="0.2"') + rect(7.65, 7.6, 1.4, 2.6, C.glass, 0, 'rx="0.2"') +
-      rect(3.8, 7.2, 2.4, 3.4, C.glass, 0, 'rx="0.3"') + ptMark(c, 2.4, 5.6, 0.55, "#ffffff"),
+      rect(3.8, 7.2, 2.4, 3.4, C.glass, 0, 'rx="0.3"'),
   });
 }
 const sieM = unitCab((c) => sieCar(c, true));
@@ -257,9 +260,8 @@ function xtCar(c, cab) {
     nose: cab ? [[1.0, 3.55], [0.75, 4.4], [0.75, 10.9], ["q", 0.8, 12.6, 2.4, 12.95], [3.6, 12.95]] : null,
     paint: (c, g) => {
       let s = rect(0, 0, L, 17, MT.silver) + rect(0, 10.85, L, 2.5, MT.blue) + rect(0, 10.75, L, 0.1, "#0a4f96");
-      if (cab) s += facets(2.2, 3.55, 19.0, 10.85, MT_FACETS, 11, { rows: 3 }) + rect(0, 0, 2.3, 17, MT.yellow) +
-        letters(c, 11.2, 5.9, 2.2, "METRO", "rgba(255,255,255,0.3)", { weight: 300, spacing: 0.04 }) + facets(L - 6.6, 3.55, L, 10.85, MT_FACETS, 12, { rows: 3, cols: 2 });
-      else s += facets(0, 3.55, 10.2, 10.85, MT_FACETS, 13, { rows: 3, cols: 2 }) + facets(L - 10.2, 3.55, L, 10.85, MT_FACETS, 14, { rows: 3, cols: 2 });
+      if (cab) s += facets(2.2, 3.55, 19.0, 11.45, MT_FACETS, 11, { rows: 3 }) + rect(0, 0, 2.3, 17, MT.yellow) + facets(L - 6.6, 3.55, L, 11.45, MT_FACETS, 12, { rows: 3, cols: 2 });
+      else s += facets(0, 3.55, 10.2, 11.45, MT_FACETS, 13, { rows: 3, cols: 2 }) + facets(L - 10.2, 3.55, L, 11.45, MT_FACETS, 14, { rows: 3, cols: 2 });
       for (const d of doors) s += doorPaint(d, MT.blue);
       return s + framed(rows) + ptMark(c, cab ? 46 : L / 2 + 8, 10.25, 0.42, MT.blue);
     },
@@ -269,6 +271,7 @@ function xtCar(c, cab) {
     cabArt: () => cabFoot(0.85, 3.55, { reach: 3.0 }) + path(poly([[0.8, 7.0], [0.8, 11.0], ["q", 0.85, 12.1, 1.6, 12.4], [2.2, 12.4], [2.2, 7.0]]), "#111417") +
       lamp(0.8, 5.0, 0.45, 0.42) + lamp(1.0, 12.55, 0.45, 0.25, RED_LAMP) + rect(3.6, 7.0, 1.8, 3.1, C.glass, 0, 'rx="0.3"') +
       rect(5.9, 3.85, 1.9, 7.2, "none", 0.5, 'rx="0.2"') + rect(6.15, 7.6, 1.4, 2.6, C.glass, 0, 'rx="0.2"'),
+    more: (c) => (cab ? metroWord(c, 12.6, 4.9, 2.3) : ""),
   });
 }
 const xtM = unitCab((c) => xtCar(c, true));
@@ -302,8 +305,11 @@ function xt2Car(c, part) {
       s += rect(0, 0, 4.2, 17, MT.xt2) + rect(L - 4.2, 0, 4.2, 17, MT.xt2);
       if (cab) {
         s += rect(0, 0, 24.2, 17, MT.xt2) + facets(9.0, 3.6, 24.0, 10.6, ["#1d5fb6", "#2a7fd8", "#163f9c", "#2c9ce2", "#3f8fe0", "#1f4fb0"], 21, { rows: 3 });
-        s += path(poly([[0, 13], [6.4, 13], ["q", 5.0, 12.4, 4.4, 11.6], [1.6, 8.0], ["q", 1.0, 7.4, 0, 7.2]]), "#15181c");
-        s += path(poly([[7.6, 13], [6.4, 13], ["q", 5.0, 12.4, 4.4, 11.6], [1.6, 8.0], ["q", 1.0, 7.4, 0.6, 7.0], [0.6, 6.4], ["q", 1.6, 6.8, 2.4, 7.8], [5.2, 11.4], ["q", 6.0, 12.4, 7.6, 12.6]]), MT.yellow);
+        // The black mask over the windshield, wrapping round onto the
+        // side; its yellow outline; the yellow roof cap.
+        s += path(poly([[0, 14], [0, 6.7], ["q", 1.2, 6.8, 2.0, 7.4], [5.4, 10.4], ["q", 6.6, 11.6, 7.2, 14]]), "#15181c");
+        s += path(poly([[7.2, 14], ["q", 6.6, 11.6, 5.4, 10.4], [2.0, 7.4], ["q", 1.2, 6.8, 0, 6.7], [0, 6.0], ["q", 1.5, 6.1, 2.5, 6.9], [6.0, 9.9], ["q", 7.4, 11.3, 8.0, 14]]), MT.yellow);
+        s += path(poly([[3.2, 14], [3.2, 12.3], ["q", 5.6, 12.4, 9.6, 12.5], [9.6, 14]]), MT.yellow);
       } else s += facets(L - 4.2, 3.6, L, 10.6, ["#1d5fb6", "#2a7fd8", "#163f9c", "#2c9ce2"], 22 + c.index, { rows: 3, cols: 1 });
       for (const d of doors) s += doorPaint(d, MT.xt2);
       return s + framed(rows);
@@ -320,8 +326,8 @@ function xt2Car(c, part) {
       } else s += roofCover(L - 20, g.roof, 12, 0.55, "#9aa1a9", 2);
       return s;
     },
-    cabArt: () => cabFoot(1.2, 3.6, { reach: 4.4, skirt: "#22262b" }) + path(poly([[1.9, 8.4], [4.6, 11.9], ["q", 5.2, 12.5, 6.3, 12.6], [7.0, 12.6], [7.0, 8.4]]), C.glass) +
-      path(poly([[2.6, 8.7], [3.9, 10.4], [4.4, 10.4], [3.2, 8.7]]), C.glassLight) + wiper(2.4, 8.6, 3.8, 10.8) +
+    cabArt: () => cabFoot(1.2, 3.6, { reach: 4.4, skirt: "#22262b" }) + path(poly([[1.9, 8.4], [4.4, 11.7], ["q", 4.9, 12.2, 5.6, 12.2], [5.9, 12.2], [3.4, 8.4]]), C.glass) +
+      path(poly([[2.5, 8.7], [3.8, 10.4], [4.2, 10.4], [3.0, 8.7]]), C.glassLight) + wiper(2.3, 8.6, 3.6, 10.6) +
       lamp(0.75, 5.0, 0.45, 0.42) + lamp(0.95, 6.1, 0.4, 0.3, RED_LAMP) + rect(8.6, 3.9, 2.0, 7.2, "none", 0.5, 'rx="0.2"') + rect(8.85, 7.4, 1.5, 2.6, C.glass, 0, 'rx="0.2"'),
   });
 }
@@ -351,14 +357,17 @@ function hcCar(c, part) {
   const xs = cab ? [...fit(19.2, 41.6, HC_WIN.w, 2), ...fit(46.2, 67.6, HC_WIN.w, 2)] : [...fit(11.6, L / 2 - 2.3, HC_WIN.w, 2), ...fit(L / 2 + 2.3, L - 11.6, HC_WIN.w, 2)];
   const rows = [{ ...HC_WIN, xs }, { y: 6.7, w: 3.2, h: 3.5, r: 0.35, xs: cab ? [L - 4.6] : [1.6, L - 4.8] }];
   return unit(c, { ...HC, trucks: { centers: cab ? 56 : 49.5, wb: 8.2, d: 33 }, rows, doors, cabLen: 10,
-    nose: cab ? [[2.4, 3.55], [0.5, 4.2], [0.4, 6.0], ["q", 0.6, 7.6, 1.6, 8.6], [5.0, 12.2], ["q", 6.0, 13.05, 8.0, 13.05]] : null,
+    nose: cab ? [[2.6, 3.55], [0.6, 4.3], [0.4, 5.6], ["q", 0.45, 7.4, 1.5, 8.5], [5.2, 12.4], ["q", 6.0, 13.05, 8.0, 13.05]] : null,
     paint: (c, g) => {
       let s = rect(0, 0, L, 17, MT.hcmt) + rect(0, 11.2, L, 2.5, "#3c9be0") + rect(0, 11.1, L, 0.1, "#1a64ad");
       const blues = ["#173f97", "#1f64c8", "#2f8ae0", "#4aa6ee", "#1a4fb0", "#5ab3ef"];
       if (cab) {
         s += facets(9.0, 3.55, 21.0, 11.2, blues, 31, { rows: 3 });
-        s += path(poly([[0, 0], [9.0, 0], [9.0, 7.4], ["q", 5.0, 7.0, 0, 7.2]]), MT.hcmtNose) + path(poly([[0, 7.2], ["q", 5.0, 7.0, 9.0, 7.4], [9.0, 17], [0, 17]]), "#b5bbc1");
-        s += path(poly([[1.2, 8.0], ["q", 2.2, 8.4, 3.0, 9.4], [6.6, 13.2], [5.6, 13.2], [2.4, 9.6], ["q", 1.8, 8.8, 1.2, 8.6]]), "#3c9be0");
+        // The nose: silver gray around the windshield, charcoal under it
+        // sweeping back low along the cab side, a light blue streak
+        // behind the windshield from the roof down to the headlights.
+        s += rect(0, 0, 9.0, 17, "#b5bbc1") + path(poly([[0, 0], [10.4, 0], [10.4, 4.9], ["q", 4.6, 5.2, 1.2, 8.3], [0, 8.3]]), MT.hcmtNose);
+        s += path(poly([[6.4, 13.2], [7.6, 13.2], [3.1, 8.1], ["q", 2.3, 7.3, 1.0, 7.5], [1.1, 8.1], ["q", 1.9, 8.0, 2.4, 8.6]]), "#3c9be0");
         s += facets(L - 13.0, 3.55, L - 4.6, 11.2, blues, 32, { rows: 3, cols: 2 });
       } else s += facets(1.0, 3.55, 13.0, 11.2, blues, 33 + c.index, { rows: 3, cols: 2 }) + facets(L - 13.0, 3.55, L - 1.0, 11.2, blues, 40 + c.index, { rows: 3, cols: 2 });
       for (const d of doors) s += doorPaint(d, "#2b7bd6");
@@ -376,9 +385,9 @@ function hcCar(c, part) {
       } else s += roofCover(8, g.roof, 12, 0.5, "#9aa1a9", 2) + roofCover(L - 20, g.roof, 12, 0.5, "#9aa1a9", 2);
       return s;
     },
-    cabArt: () => cabFoot(1.0, 3.55, { reach: 4.8, skirt: "#1f2226" }) + path(poly([[2.0, 8.9], [5.1, 12.3], ["q", 5.8, 12.8, 7.0, 12.8], [8.2, 12.8], [8.2, 8.9]]), C.glass) +
-      path(poly([[2.7, 9.2], [4.2, 10.9], [4.7, 10.9], [3.3, 9.2]]), C.glassLight) + wiper(2.5, 9.1, 4.0, 11.2) +
-      lamp(0.55, 5.1, 0.4, 0.45) + rect(1.25, 8.2, 0.25, 2.2, "#f2f4f6", 0, 'rx="0.1"') + rect(9.6, 3.9, 2.0, 7.2, "none", 0.5, 'rx="0.2"'),
+    cabArt: () => cabFoot(1.0, 3.55, { reach: 4.8, skirt: "#1f2226" }) + path(poly([[1.75, 8.75], [5.15, 12.4], ["q", 5.6, 12.8, 6.3, 12.8], [6.6, 12.8], [3.1, 8.75]]), C.glass) +
+      path(poly([[2.3, 9.0], [3.6, 10.4], [4.0, 10.4], [2.8, 9.0]]), C.glassLight) + wiper(2.2, 8.95, 3.5, 10.9) +
+      lamp(0.5, 5.0, 0.4, 0.5) + lamp(0.55, 4.3, 0.35, 0.25, RED_LAMP) + rect(7.3, 9.4, 1.4, 2.4, C.glass, 0.3, 'rx="0.3"'),
   });
 }
 const hcmtTc = (c) => hcCar(c, "tc");
@@ -453,7 +462,8 @@ function vloCar(c, cab) {
     gear: [[cab ? 18 : 14, 10, 1.7, "g"], [cab ? 29 : 25, 7, 1.5, "b"], [cab ? 37 : 33, 6, 1.1, "t"], [cab ? 44 : 40, 5, 1.3, "b"]],
     onRoof: (c, g) => hvac(cab ? 14 : 8, g.roof, 11, 0.75, "#b4bac1") + hvac(L - 21, g.roof, 11, 0.75, "#b4bac1") + exhaust(L / 2 + 2, g.roof) + (cab ? horns(5.6, g.roof) + aerial(30, g.roof) : ""),
     more: (c) => doors.map((d) => vlName(c, d.x + d.w / 2 - 0.3, 6.1, 0.42, VL.purple)).join(""),
-    cabArt: (c) => cabFoot(1.0, 3.95, { reach: 4.4, skirt: "#22262b" }) + path(poly([[1.8, 8.8], [4.1, 11.7], ["q", 4.8, 12.3, 6.0, 12.3], [7.6, 12.3], [7.6, 8.8]]), C.glass) +
+    cabArt: (c) => cabFoot(1.0, 3.95, { reach: 4.4, skirt: "#22262b" }) + path(poly([[1.8, 8.8], [4.1, 11.7], ["q", 4.8, 12.3, 5.8, 12.3], [6.3, 12.3], [3.4, 8.8]]), C.glass) +
+      path(poly([[0.5, 6.9], ["q", 0.62, 8.0, 1.5, 8.9], [1.9, 8.75], ["q", 1.1, 7.8, 1.0, 6.9]]), VL.white) + rect(6.6, 9.1, 1.3, 2.3, C.glass, 0.3, 'rx="0.25"') +
       path(poly([[2.5, 9.1], [3.7, 10.6], [4.2, 10.6], [3.1, 9.1]]), C.glassLight) + wiper(2.3, 9.0, 3.7, 11.2) +
       lamp(0.6, 5.2, 0.45, 0.42) + lamp(0.75, 6.2, 0.4, 0.3, RED_LAMP) + lamp(5.0, 12.65, 0.5, 0.28) + lamp(6.0, 12.75, 0.5, 0.28) + rect(8.2, 4.1, 1.9, 7.2, "none", 0.5, 'rx="0.2"'),
   });
@@ -483,39 +493,43 @@ function shell(d, base, liv, top = 14) {
 // the walkway's edge and the handrails yellow, the front purple with a
 // yellow V and PT on it.
 export function nClass(c) {
-  const L = c.L, deck = 4.55, hood = 12.4, roof = 13.75;
-  const cabA = 4.4, cabB = 10.4;  // the No. 1 cab from its nose's foot
-  // Body: nose, cab, hood, cab, nose, the far end the near one mirrored.
-  const d = poly([[1.0, deck], [L - 1.0, deck], [L - 1.0, 9.2], ["q", L - 1.05, 9.7, L - 1.6, 9.7], [L - cabA, 9.7], [L - cabA, roof - 0.4], ["q", L - cabA, roof, L - cabA - 0.5, roof],
-    [L - cabB + 0.4, roof], ["q", L - cabB, roof, L - cabB, roof - 0.4], [L - cabB, hood], [cabB, hood], [cabB, roof - 0.4], ["q", cabB, roof, cabB - 0.4, roof],
-    [cabA + 0.5, roof], ["q", cabA, roof, cabA, roof - 0.4], [cabA, 9.7], [1.6, 9.7], ["q", 1.05, 9.7, 1.0, 9.2]]);
-  let s = truck(L / 2 - 19.2, { wb: 12.5, d: 40, kind: "loco", top: deck, axles: 3 }) + truck(L / 2 + 19.2, { wb: 12.5, d: 40, kind: "loco", top: deck, axles: 3 });
-  // Fuel tank between the trucks, the air reservoirs and battery box.
-  s += path(poly([[L / 2 - 10.5, deck], [L / 2 + 10.5, deck], [L / 2 + 10.5, 2.3], ["q", L / 2 + 10.5, 1.4, L / 2 + 9.5, 1.4], [L / 2 - 9.5, 1.4], ["q", L / 2 - 10.5, 1.4, L / 2 - 10.5, 2.3]]), "#2c2f34", 0.4) +
+  const L = c.L, deck = 4.55, hood = 12.3, roof = 13.75, cab = 8.2;
+  // Body: a flat-fronted cab at each end (the windshield leaning back a
+  // little), the lower hood between them.
+  const d = poly([[0.9, deck], [L - 0.9, deck], [L - 0.9, 10.3], [L - 1.35, 13.1], ["q", L - 1.45, roof, L - 2.1, roof], [L - cab + 0.4, roof], ["q", L - cab, roof, L - cab, roof - 0.4],
+    [L - cab, hood], [cab, hood], [cab, roof - 0.4], ["q", cab, roof, cab - 0.4, roof], [2.1, roof], ["q", 1.45, roof, 1.35, 13.1], [0.9, 10.3]]);
+  // The underframe's deep side sills; the trucks, fuel tank, reservoirs.
+  let s = rect(0.9, 3.45, L - 1.8, deck - 3.4, "#2a2d31", 0.4) + line(1.1, 3.75, L - 1.1, 3.75, "rgba(255,255,255,0.12)", 0.5);
+  s += truck(L / 2 - 19.2, { wb: 12.5, d: 40, kind: "loco", top: 3.5, axles: 3 }) + truck(L / 2 + 19.2, { wb: 12.5, d: 40, kind: "loco", top: 3.5, axles: 3 });
+  s += path(poly([[L / 2 - 10.5, 3.5], [L / 2 + 10.5, 3.5], [L / 2 + 10.5, 2.3], ["q", L / 2 + 10.5, 1.4, L / 2 + 9.5, 1.4], [L / 2 - 9.5, 1.4], ["q", L / 2 - 10.5, 1.4, L / 2 - 10.5, 2.3]]), "#2c2f34", 0.4) +
     line(L / 2 - 9.6, 2.3, L / 2 + 9.6, 2.3, "rgba(255,255,255,0.14)", 0.6) + rect(L / 2 - 0.4, 2.5, 0.8, 0.8, C.steelDark, 0.3, 'rx="0.4"');
-  // Pilots and couplers at both ends.
-  for (const [a, b] of [[0.6, 4.2], [L - 0.6, L - 4.2]]) s += path(poly([[a, deck], [b, deck], [b, 1.8], [a + (b > a ? 0.5 : -0.5), 0.9]]), "#2a2d31", 0.4);
-  let liv = rect(0, 0, L, 15, VL.purple) + facets(cabB, deck, L - cabB, hood, VL_FACETS, 81, { rows: 3 }) + rect(0, deck - 0.2, L, 0.85, VL.yellow);
-  liv += rect(0, deck, cabB, 10, VL.yellow) + rect(L - cabB, deck, cabB, 10, VL.yellow);
+  // Pilots under the cab fronts.
+  for (const [a, b] of [[0.7, 4.0], [L - 0.7, L - 4.0]]) s += path(poly([[a, 3.5], [b, 3.5], [b, 1.6], [a + (b > a ? 0.5 : -0.5), 0.8]]), "#2a2d31", 0.4);
+  // Paint: the cabs yellow-orange, the hood purple in facets, a yellow line
+  // along the walkway's edge.
+  let liv = rect(0, 0, L, 15, VL.purple) + facets(cab, deck, L - cab, hood, VL_FACETS, 81, { rows: 3 }) + rect(0, 0, cab, 15, VL.yellow) + rect(L - cab, 0, cab, 15, VL.yellow) +
+    rect(0, deck, L, 0.55, VL.yellow);
   s += shell(d, VL.purple, liv);
-  // Cab windows (side and the windshield's edge), crew doors, handrails.
+  // Each cab: the windshield's edge, a side window, the crew door, the
+  // headlights low on the front and the lights and horns over the cab.
   for (const X of [(v) => v, (v) => L - v]) {
-    const xw = Math.min(X(cabA + 0.6), X(cabA + 2.6));
-    s += rect(xw, 10.4, 2.0, 2.2, C.glass, 0.3, 'rx="0.25"') + path(poly([[X(cabA - 0.05), 10.3], [X(cabA + 0.35), 10.3], [X(cabA + 0.35), 12.9], [X(cabA - 0.05), 12.9]]), "#121417");
-    const xd = Math.min(X(cabA + 3.4), X(cabA + 5.4));
-    s += rect(xd, 5.0, 2.0, 7.6, "none", 0.5, 'rx="0.15"') + rect(xd + 0.35, 9.8, 1.3, 1.8, C.glass, 0, 'rx="0.15"');
-    s += lamp(Math.min(X(1.1), X(1.6)), 7.2, 0.5, 0.42) + lamp(Math.min(X(1.1), X(1.6)), 6.3, 0.5, 0.32, RED_LAMP) + horns(Math.min(X(cabA + 0.8), X(cabA + 1.8)), roof);
+    const at = (a, w) => Math.min(X(a), X(a + w));
+    s += path(poly([[X(0.95), 10.4], [X(1.35), 12.9], [X(1.75), 12.9], [X(1.35), 10.4]]), "#121417");
+    s += rect(at(2.2, 2.2), 10.2, 2.2, 2.3, C.glass, 0.3, 'rx="0.25"') + rect(at(5.2, 2.0), 5.1, 2.0, 7.6, "none", 0.5, 'rx="0.15"') + rect(at(5.55, 1.3), 9.9, 1.3, 1.9, C.glass, 0, 'rx="0.15"');
+    s += lamp(at(0.95, 0.4), 6.9, 0.4, 0.45) + lamp(at(0.95, 0.4), 6.1, 0.4, 0.3, RED_LAMP) + lamp(at(1.6, 0.6), roof, 0.6, 0.3) + horns(at(3.0, 1.0), roof);
+    // Steps up to the walkway at each end.
+    s += lines([[at(7.0, 0), 3.6, at(7.0, 0), deck], [at(7.0, 0) - 0.6, 4.05, at(7.0, 0) + 0.6, 4.05]], "#2a2d31", 0.8);
   }
-  // The walkway's handrail along the hood, its stanchions; access doors.
-  const posts = seq(cabB + 1.0, 4.0, Math.floor((L - 2 * cabB - 2) / 4) + 1);
-  s += line(cabB, 8.3, L - cabB, 8.3, VL.yellow, 1.0) + lines(posts.map((x) => [x, deck + 0.6, x, 8.3]), VL.yellow, 0.8);
-  s += lines(seq(cabB + 3.0, 4.8, 8).map((x) => [x, deck + 1.2, x, hood - 0.6]), "rgba(0,0,0,0.25)", 0.45);
-  // Radiator grilles and fans at the No. 2 end, the dynamic brake and
-  // exhaust over the engine.
-  s += rect(L - cabB - 9.5, 9.4, 8.0, 2.4, "rgba(20,22,25,0.45)", 0.4) + slats(L - cabB - 9.5, 9.4, 8.0, 2.4, 0.4, "rgba(255,255,255,0.2)");
-  for (const x of [L - cabB - 7.5, L - cabB - 3.5]) s += path(`M${r2(x - 1.8)} ${hood}Q${r2(x)} ${r2(hood + 0.7)} ${r2(x + 1.8)} ${hood}Z`, C.steelDark, 0.4);
-  s += exhaust(L / 2 - 1, hood) + rect(cabB + 3, hood - 0.05, 6, 0.35, "#7d848c", 0.4, 'rx="0.1"') + vlName(c, cabB + 6.5, 10.6, 0.9, "#ffffff");
-  return s + lines([[1.0, 8.6, 1.0, 9.1], [L - 1.0, 8.6, L - 1.0, 9.1]], "#2a2d31", 0.8);
+  // The walkway's handrail along the hood on its stanchions; the hood's
+  // access doors; the radiator's grilles at the No. 2 end with its fans on
+  // the roof; the exhaust and dynamic brake over the engine.
+  const posts = seq(cab + 0.6, 4.0, Math.floor((L - 2 * cab - 1.2) / 4) + 1);
+  s += line(cab, 8.4, L - cab, 8.4, VL.yellow, 1.0) + lines(posts.map((x) => [x, deck + 0.5, x, 8.4]), VL.yellow, 0.8);
+  s += lines(seq(cab + 3.0, 4.6, 9).map((x) => [x, deck + 1.0, x, hood - 0.6]), "rgba(0,0,0,0.25)", 0.45);
+  s += rect(L - cab - 10.5, 9.3, 9.0, 2.5, "rgba(20,22,25,0.45)", 0.4) + slats(L - cab - 10.5, 9.3, 9.0, 2.5, 0.4, "rgba(255,255,255,0.2)");
+  for (const x of [L - cab - 8.0, L - cab - 3.6]) s += path(`M${r2(x - 1.9)} ${hood}Q${r2(x)} ${r2(hood + 0.75)} ${r2(x + 1.9)} ${hood}Z`, C.steelDark, 0.4);
+  s += exhaust(L / 2 - 1.5, hood) + rect(cab + 2.5, hood - 0.05, 7, 0.35, "#7d848c", 0.4, 'rx="0.1"') + slats(cab + 2.7, hood + 0.02, 6.6, 0.26, 0.4, "rgba(0,0,0,0.35)");
+  return s + vlName(c, cab + 7.5, 10.7, 0.95, "#ffffff");
 }
 
 // --- N type carriages (Commonwealth Engineering, Granville and Dandenong,
