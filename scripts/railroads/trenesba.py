@@ -21,7 +21,8 @@ AGENCIES = {
     "trenesba": {"name": "Trenes Argentinos", "short": "Trenes Arg.", "region": "Buenos Aires", "country": "AR", "color": "#1f4e9a",
                  "kind": "commuter", "tz": "America/Argentina/Buenos_Aires",
                  "credit": {"label": "Trenes Argentinos", "href": "https://www.argentina.gob.ar/transporte/trenes-argentinos"},
-                 "license": "CC BY 2.5 AR (timetable, Buenos Aires Data)", "bbox": [-59.45, -35.6, -57.9, -34.05], "cars": True},
+                 "license": "CC BY 2.5 AR (timetable, Buenos Aires Data)", "bbox": [-59.45, -35.6, -57.9, -34.05], "cars": True,
+                 "loading": ["Roca", "Mitre", "Sarmiento", "San Martín", "Belgrano Sur", "Tren de la Costa"]},
 }
 # SOFSE's arrivals come at most every 10 s or so per station; one shared copy
 # a minute keeps the relay to len(STATIONS) requests a minute for each Worker

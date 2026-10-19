@@ -25,7 +25,7 @@ export const AGENCIES = {
   renfe: {"bbox": [-8.831, 36.127, 5.382, 45.76], "cars": true, "color": "#8a1a5e", "country": "ES", "credit": {"href": "https://data.renfe.com", "label": "Renfe"}, "kind": "intercity", "license": "CC BY 4.0", "name": "Renfe AVE, Larga y Media Distancia", "region": "Spain", "short": "Renfe", "tz": "Europe/Madrid"},
   sjnord: {"after": "flytoget", "bbox": [7.69, 59.91, 15.463, 67.301], "cars": true, "color": "#2b2d42", "country": "NO", "credit": {"href": "https://developer.entur.org", "label": "Entur"}, "kind": "commuter", "license": "NLOD", "name": "SJ Nord", "region": "Norway", "short": "SJ Nord", "tz": "Europe/Oslo"},
   translinkseq: {"bbox": [152.592, -28.097, 153.4, -26.159], "cars": true, "color": "#d53e45", "country": "AU", "credit": {"href": "https://translink.com.au/about-translink/open-data", "label": "Translink"}, "kind": "commuter", "license": "CC BY 4.0", "name": "Queensland Rail City network", "region": "Brisbane", "short": "Queensland Rail", "tz": "Australia/Brisbane"},
-  trenesba: {"bbox": [-59.434, -35.579, -57.919, -34.098], "cars": true, "color": "#1f4e9a", "country": "AR", "credit": {"href": "https://www.argentina.gob.ar/transporte/trenes-argentinos", "label": "Trenes Argentinos"}, "kind": "commuter", "license": "CC BY 2.5 AR (timetable, Buenos Aires Data)", "name": "Trenes Argentinos", "region": "Buenos Aires", "short": "Trenes Arg.", "tz": "America/Argentina/Buenos_Aires"},
+  trenesba: {"bbox": [-59.434, -35.579, -57.919, -34.098], "cars": true, "color": "#1f4e9a", "country": "AR", "credit": {"href": "https://www.argentina.gob.ar/transporte/trenes-argentinos", "label": "Trenes Argentinos"}, "kind": "commuter", "license": "CC BY 2.5 AR (timetable, Buenos Aires Data)", "loading": ["Roca", "Mitre", "Sarmiento", "San Martín", "Belgrano Sur", "Tren de la Costa"], "name": "Trenes Argentinos", "region": "Buenos Aires", "short": "Trenes Arg.", "tz": "America/Argentina/Buenos_Aires"},
   trirail: {"after": "capmetro", "bbox": [-80.26, 25.781, -80.063, 26.759], "color": "#2ba84a", "country": "US", "credit": {"href": "https://www.tri-rail.com", "label": "Tri-Rail"}, "kind": "commuter", "license": null, "logo": {"also": {"trirail-onnavy": {"aspect": 4.4, "file": "img/logos/trirail-onnavy.svg"}}, "aspect": 4.4, "file": "img/logos/trirail.svg"}, "name": "Tri-Rail", "region": "South Florida", "short": "Tri-Rail", "tz": "America/New_York"},
   vivi: {"bbox": [21.017, 55.875, 28.117, 57.775], "cars": true, "color": "#8bc34a", "country": "LV", "credit": {"href": "https://gsvalbe.id.lv/pieturas/avoti.html", "label": "Vivi timetable, Pieturas live data"}, "kind": "commuter", "license": null, "name": "Vivi", "region": "Latvia", "short": "Vivi", "tz": "Europe/Riga"},
   vr: {"bbox": [21.622, 60.069, 30.241, 67.349], "cars": true, "color": "#3fa535", "country": "FI", "credit": {"href": "https://www.digitraffic.fi/en/railway-traffic/", "label": "Fintraffic / digitraffic.fi"}, "kind": "intercity", "license": "CC BY 4.0", "name": "VR", "region": "Finland", "short": "VR", "tz": "Europe/Helsinki"},
@@ -81,18 +81,18 @@ export const PARSERS = {
 // The regional track files (data/rail/index.json).
 export const RAIL_REGIONS = [
   {"bbox": [-59.49, -35.66, -57.91, -34.04], "bytes": 71704, "file": "data/rail/ar.geojson", "region": "ar"},
-  {"bbox": [138.48, -35.19, 153.4, -26.14], "bytes": 78755, "file": "data/rail/au.geojson", "region": "au"},
-  {"bbox": [12.15, 48.58, 18.77, 51.05], "bytes": 628167, "file": "data/rail/cz.geojson", "region": "cz"},
-  {"bbox": [24.06, 57.77, 28.2, 59.45], "bytes": 19736, "file": "data/rail/ee.geojson", "region": "ee"},
-  {"bbox": [-8.88, 36.45, 3.44, 43.59], "bytes": 510846, "file": "data/rail/es.geojson", "region": "es"},
-  {"bbox": [21.35, 59.82, 30.96, 67.36], "bytes": 186190, "file": "data/rail/fi.geojson", "region": "fi"},
-  {"bbox": [21.41, 37.9, 26.63, 41.73], "bytes": 69376, "file": "data/rail/gr.geojson", "region": "gr"},
+  {"bbox": [138.48, -35.19, 153.4, -26.14], "bytes": 81744, "file": "data/rail/au.geojson", "region": "au"},
+  {"bbox": [12.11, 48.55, 18.79, 51.05], "bytes": 651986, "file": "data/rail/cz.geojson", "region": "cz"},
+  {"bbox": [24.06, 56.96, 28.2, 59.45], "bytes": 21801, "file": "data/rail/ee.geojson", "region": "ee"},
+  {"bbox": [-8.88, 36.12, 3.44, 43.75], "bytes": 671266, "file": "data/rail/es.geojson", "region": "es"},
+  {"bbox": [21.35, 59.82, 30.96, 67.36], "bytes": 189378, "file": "data/rail/fi.geojson", "region": "fi"},
+  {"bbox": [21.41, 37.9, 26.63, 41.73], "bytes": 69357, "file": "data/rail/gr.geojson", "region": "gr"},
   {"bbox": [-9.7, 51.84, -5.93, 54.6], "bytes": 93264, "file": "data/rail/ie.geojson", "region": "ie"},
-  {"bbox": [34.55, 31.06, 35.5, 33.01], "bytes": 50558, "file": "data/rail/il.geojson", "region": "il"},
+  {"bbox": [34.55, 31.06, 35.5, 33.01], "bytes": 51888, "file": "data/rail/il.geojson", "region": "il"},
   {"bbox": [21.01, 55.75, 28.18, 57.78], "bytes": 55645, "file": "data/rail/lv.geojson", "region": "lv"},
-  {"bbox": [100.25, 1.36, 103.93, 7.06], "bytes": 109932, "file": "data/rail/my.geojson", "region": "my"},
-  {"bbox": [5.33, 57.7, 15.49, 67.34], "bytes": 291698, "file": "data/rail/no.geojson", "region": "no"},
-  {"bbox": [16.74, 47.53, 22.68, 49.67], "bytes": 352875, "file": "data/rail/sk.geojson", "region": "sk"},
+  {"bbox": [100.25, 1.36, 103.93, 7.06], "bytes": 115838, "file": "data/rail/my.geojson", "region": "my"},
+  {"bbox": [5.33, 56.66, 16.56, 67.34], "bytes": 313259, "file": "data/rail/no.geojson", "region": "no"},
+  {"bbox": [15.62, 47.51, 22.68, 50.28], "bytes": 380542, "file": "data/rail/sk.geojson", "region": "sk"},
 ];
 
 // Station and timetable data outside the US and Canada (data/regions/<region>/), by region.

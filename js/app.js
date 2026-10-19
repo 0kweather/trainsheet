@@ -5299,27 +5299,34 @@ const LOADING_TRAINS = [
   ["caltrain"], ["metrolink"], ["go"], ["marc", "Penn Line"], ["trirail"], ["frontrunner"], ["smart"], ["capmetro"], ["rtd"],
   ["coaster"], ["sprinter"], ["texrail"], ["silverline"], ["tre"], ["upx"], ["alaska", "Aurora Winter Train"],
 ];
-// A plug-in railroad's ("loading": [route or null, ...] in its AGENCIES
-// entry) join for a viewer in its time zone, once its cars are in.
-{
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  for (const [id, a] of Object.entries(AGENCIES)) {
-    if (Array.isArray(a.loading) && a.tz === zone) loadCars(id)?.then((ok) => ok && LOADING_TRAINS.push(...a.loading.map((r) => [id, r ?? undefined])));
-  }
+// Every plug-in railroad with cars joins them, once each, wherever the viewer
+// is: its typical train, or one of the routes its "loading" lists, its cars
+// file loaded only when its turn comes.
+for (const [id, a] of Object.entries(AGENCIES)) {
+  if (a.cars) LOADING_TRAINS.push([id, Array.isArray(a.loading) ? a.loading : undefined]);
 }
 const loadingStart = Date.now();
 let mapLoaded = false; // map.loaded() turns false whenever the trains layer updates
 map.once("load", () => (mapLoaded = true));
 {
   const el = $("loading-train");
-  let last = -1;
-  const nextTrain = () => {
-    let i;
-    do i = Math.floor(Math.random() * LOADING_TRAINS.length); while (i === last);
-    last = i;
-    const [agency, route] = LOADING_TRAINS[i];
-    const c = consistOf({ id: "loading", agency, route });
-    if (!c) return;
+  let last = -1, turn = 0;
+  const nextTrain = async () => {
+    const mine = ++turn;
+    // A few tries: a railroad abroad may have no typical train without a line.
+    for (let tries = 0; tries < 6; tries++) {
+      let i;
+      do i = Math.floor(Math.random() * LOADING_TRAINS.length); while (i === last && LOADING_TRAINS.length > 1);
+      last = i;
+      const [agency, routes] = LOADING_TRAINS[i];
+      const route = Array.isArray(routes) ? routes[Math.floor(Math.random() * routes.length)] ?? undefined : routes;
+      if ((await loadCars(agency)) === false) continue;
+      if (mine !== turn) return;
+      const c = consistOf({ id: "loading", agency, route });
+      if (c) return show(c, agency);
+    }
+  };
+  const show = (c, agency) => {
     el.innerHTML = consistHtml(c, AGENCIES[agency].color);
     el.style.setProperty("--pass", `${((innerWidth + el.scrollWidth) / 450).toFixed(1)}s`);
     // Run the pass again from the start for this train.
