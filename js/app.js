@@ -1941,7 +1941,7 @@ function nearbyHtml() {
     }[nearState] || T("The closest trains, ready to track. Your location stays on this device.");
     return head + `<div class="near-row"><button type="button" class="result near-btn" data-near-locate${nearState === "locating" ? " disabled" : ""}>
       <span class="near-pin">${PIN_ICON}</span>
-      <span><span class="title">${T("Find trains near me")}</span><br><span class="sub">${esc(sub)}</span></span><span></span>
+      <span><span class="title">${T("Find trains near me")}</span><br><span class="sub">${esc(sub)}</span></span>
     </button></div>`;
   }
   const list = nearestTrains();
@@ -1950,13 +1950,17 @@ function nearbyHtml() {
     const a = AGENCIES[t.agency], tracked = state.tracked.some((r) => r.id === t.id);
     const next = t.stops?.find((s) => s.status === "next")?.name || t.nextStop;
     const away = fmtDist(d) + (toward === true ? ` · ${T("coming your way")}` : toward === false ? ` · ${T("heading away")}` : "");
-    const where = next ? T("next {place}", { place: next }) : t.destination ? T("to {place}", { place: t.destination }) : "";
+    // Its status names the stop already ("At Hoboken"): not twice.
+    const status = trainStatus(t).text;
+    const where = next && !(status && status.includes(next)) ? T("next {place}", { place: next })
+      : !next && t.destination ? T("to {place}", { place: t.destination }) : "";
+    // One line each, the plate in a column of its own, as in the home's other
+    // lists; its status first on its line, so a long stop name is what's cut.
     return `<div class="near-row">
-      <button type="button" class="result" data-select="${esc(t.id)}">
-        ${plate(t.number || a.short, a.color, "sm")}
-        <span><span class="title">${esc(trainTitle(t))}</span><br><span class="sub">${esc([a.short, away].join(" · "))}</span>${where || trainStatus(t).text
-          ? `<br><span class="sub">${esc(where)}${where && trainStatus(t).text ? " · " : ""}${statusSpan(t, "status")}</span>` : ""}</span>
-        <span></span>
+      <button type="button" class="result near-train" data-select="${esc(t.id)}">
+        <span class="near-plate">${plate(t.number || a.short, a.color, "xs")}</span>
+        <span class="near-text"><span class="title">${esc(trainTitle(t))}</span><span class="sub">${esc([a.short, away].join(" · "))}</span>${where || status
+          ? `<span class="sub">${statusSpan(t, "status")}${where && status ? " · " : ""}${esc(where)}</span>` : ""}</span>
       </button>
       ${tracked ? `<span class="near-tracking">${BELL_ICON}${T("Tracking")}</span>`
         : `<button type="button" class="btn primary small track-btn" data-near-track="${esc(t.id)}">${BELL_ICON}${T("Track")}</button>`}

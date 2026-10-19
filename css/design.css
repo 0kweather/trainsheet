@@ -210,7 +210,16 @@ html, body {
 .near-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding-right: 12px; background: var(--group); }
 .group-title + .near-row { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
 .near-row:has(+ .group-title) { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
-.near-row + .near-row::before { content: ""; position: absolute; top: 0; left: 58px; right: 0; height: 0.5px; background: var(--line); }
+.near-row + .near-row::before { content: ""; position: absolute; top: 0; left: 80px; right: 0; height: 0.5px; background: var(--line); }
+/* A train near you: its plate centred in a column of its own (so every row's
+   text starts at the same place), then one line each for its name, its
+   railroad and distance, and its next stop and status. */
+.near-row .result.near-train, .near-row .near-btn { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; min-height: 64px; }
+.near-plate, .near-row .near-btn .near-pin { justify-self: center; }
+.near-text { display: flex; flex-direction: column; min-width: 0; }
+.near-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.near-text .title { font-size: var(--fs-base); }
+.near-text .sub { font-size: var(--fs-sm); color: var(--muted); }
 .near-row .result { background: transparent; border-radius: inherit; }
 .near-row .result .status { font-size: inherit; }
 .near-btn { grid-column: 1 / -1; }
