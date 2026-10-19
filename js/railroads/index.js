@@ -90,7 +90,7 @@ export const RAIL_REGIONS = [
   {"bbox": [-9.7, 51.84, -5.93, 54.6], "bytes": 93264, "file": "data/rail/ie.geojson", "region": "ie"},
   {"bbox": [34.55, 31.06, 35.5, 33.01], "bytes": 51888, "file": "data/rail/il.geojson", "region": "il"},
   {"bbox": [21.01, 55.75, 28.18, 57.78], "bytes": 55645, "file": "data/rail/lv.geojson", "region": "lv"},
-  {"bbox": [100.25, 1.36, 103.93, 7.06], "bytes": 115838, "file": "data/rail/my.geojson", "region": "my"},
+  {"bbox": [100.25, 1.36, 103.93, 7.06], "bytes": 115365, "file": "data/rail/my.geojson", "region": "my"},
   {"bbox": [5.33, 56.66, 16.56, 67.34], "bytes": 313259, "file": "data/rail/no.geojson", "region": "no"},
   {"bbox": [15.62, 47.51, 22.68, 50.28], "bytes": 380542, "file": "data/rail/sk.geojson", "region": "sk"},
 ];
