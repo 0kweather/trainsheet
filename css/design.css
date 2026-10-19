@@ -921,18 +921,19 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 /* Plan a trip: from, to and the day, then the trains between them. */
 .plan { display: flex; flex-direction: column; gap: 12px; }
-.plan-stations { position: relative; display: flex; flex-direction: column; gap: 8px; }
+/* The two fields stacked, the swap button beside them, level with the
+   gap between the two inputs (and staying there while suggestions show). */
+.plan-stations { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 8px; }
+.plan-fields { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .plan-field { position: relative; }
-.plan-field input { padding-right: 44px; }
 .plan-swap {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 1; width: 32px; height: 32px; padding: 0;
+  width: 36px; height: 36px; margin-top: 56px; padding: 0;
   border: 0; border-radius: 50%; background: var(--fill); color: var(--accent); font-size: 16px; cursor: pointer;
 }
 .plan-swap:hover { background: color-mix(in srgb, var(--fill) 100%, var(--text) 6%); }
-.plan-suggest {
-  position: absolute; left: 0; right: 0; top: 100%; z-index: 3; margin-top: 4px; overflow: hidden;
-  border-radius: var(--r-card); background: var(--panel-solid); box-shadow: var(--shadow);
-}
+/* Under the field, pushing the rest down (a floating list would be cut
+   off by the card, which scrolls). */
+.plan-suggest { margin-top: 6px; overflow: hidden; border-radius: var(--r-card); background: var(--group); }
 .plan-suggest[hidden] { display: none; }
 .plan-suggest-title { padding: 8px 14px 2px; font-size: var(--fs-xs); color: var(--muted); }
 .plan-option {

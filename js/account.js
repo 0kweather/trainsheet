@@ -396,7 +396,8 @@ function planView() {
     }).join("")}</div>` + (plan.exact ? "" : `<p class="plan-hint">${T("That day is past the timetable Trainsheet has, so these are the trains on that weekday now. Check again closer to the day.")}</p>`);
   }
   return `<div class="plan">
-    <div class="plan-stations">${field("from", T("From"))}<button type="button" class="plan-swap" data-plan-swap aria-label="${T("Swap from and to")}" title="${T("Swap from and to")}">⇅</button>${field("to", T("To"))}</div>
+    <div class="plan-stations"><div class="plan-fields">${field("from", T("From"))}${field("to", T("To"))}</div>
+      <button type="button" class="plan-swap" data-plan-swap aria-label="${T("Swap from and to")}" title="${T("Swap from and to")}">⇅</button></div>
     <div class="segmented plan-days">${dayBtn(t0, T("Today"))}${dayBtn(t1, T("Tomorrow"))}<label class="plan-date${other ? " on" : ""}"><input type="date" data-plan-date value="${esc(plan.day)}" aria-label="${T("Another day")}"><span>${esc(other ? dateFormat({ month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${plan.day}T12:00:00Z`)) : T("Other day"))}</span></label></div>
     ${results}
     <button type="button" class="acct-link plan-manual" data-manual>${T("Enter a trip yourself")}</button>
