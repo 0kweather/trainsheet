@@ -137,6 +137,7 @@ const TYPES = {
   genesis: { name: "P42 Genesis locomotive", kind: "diesel" },
   p40: { name: "P40DC Genesis locomotive", kind: "diesel" },
   alc42: { name: "ALC-42 Charger locomotive", kind: "diesel" },
+  alc42e: { name: "ALC-42E Charger locomotive", kind: "diesel" },
   charger: { name: "Siemens Charger locomotive", kind: "diesel" },
   p32: { name: "P32AC-DM dual-mode locomotive", kind: "diesel" },
   f59: { name: "F59PHI locomotive", kind: "diesel" },
@@ -208,7 +209,16 @@ const TYPES = {
   buddSleeper: { name: "Sleeping car", kind: "coach", rows2: true },
   skyline: { name: "Skyline dome car", kind: "coach", dome: true },
   parkCar: { name: "Park observation car", kind: "coach", dome: true },
-  talgo: { name: "Talgo car", kind: "talgo" },
+  talgo: { name: "Talgo Series 8 coach", kind: "talgo" },
+  talgoBusiness: { name: "Talgo Series 8 business class car", kind: "talgo" },
+  talgoLounge: { name: "Talgo Series 8 lounge car", kind: "talgo" },
+  talgoBistro: { name: "Talgo Series 8 bistro car", kind: "talgo" },
+  talgoBag: { name: "Talgo Series 8 baggage car", kind: "talgo", baggage: true },
+  talgoCab: { name: "Talgo Series 8 cab car", kind: "talgo", cab: true },
+  airoBusiness: { name: "Airo business class car", kind: "coach" },
+  airoCafe: { name: "Airo café car", kind: "coach" },
+  airoCoach: { name: "Airo coach", kind: "coach" },
+  airoCab: { name: "Airo cab car (coach and baggage)", kind: "coach", cab: true },
   renaissanceCoach: { name: "Renaissance coach", kind: "coach" },
   renaissanceSleeper: { name: "Renaissance sleeping car", kind: "coach", rows2: true },
   renaissanceDiner: { name: "Renaissance service car", kind: "coach" },
@@ -331,48 +341,96 @@ function typeOf(agency, number) {
 
 const set = (label, ...units) => ({ label, units });
 
-// Two locomotives rarely match: a new ALC-42 Charger usually leads an older
-// P42 Genesis.
+// Each route's usual train, from its Wikipedia page's equipment section
+// (read October 2026) and Amtrak's and the states' 2025-26 news. Long-
+// distance trains: two locomotives, which rarely match (a new ALC-42 Charger
+// usually leads an older P42 Genesis); the cars from the locomotives back.
 const LD_PAIR = [["alc42", 1], ["genesis", 1]];
-const VIEWLINER_LD = set("ALC-42 and Genesis locomotives with Viewliner and Amfleet cars",
-  ...LD_PAIR, ["viewlinerBaggage", 1], ["viewlinerSleeper", 2], ["viewlinerDiner", 1], ["amfleet2", 3]);
 const SUPERLINER_LD = set("ALC-42 and Genesis locomotives with Superliner cars",
-  ...LD_PAIR, ["viewlinerBaggage", 1], ["superlinerSleeper", 2], ["superlinerDiner", 1], ["superlinerLounge", 1], ["superlinerCoach", 2]);
-const EMPIRE = set("P32AC-DM locomotive with Amfleet coaches", ["p32", 1], ["amfleet", 5]);
-const DIESEL_AMFLEET = set("Genesis or ALC-42 locomotive with Amfleet coaches", ["genesis", 1], ["amfleet", 6]);
-// Midwest Venture sets run with a Charger at each end; only the Hiawatha's
-// have cab cars.
+  ...LD_PAIR, ["viewlinerBaggage", 1], ["superlinerSleeper", 3], ["superlinerDiner", 1], ["superlinerLounge", 1], ["superlinerCoach", 3]);
+// Empire Service, Adirondack, Maple Leaf: a P32AC-DM (a P42 takes over at
+// Albany) with an Amfleet club car (business class and café) and coaches.
+const EMPIRE = set("P32AC-DM locomotive with Amfleet coaches and a club car", ["p32", 1], ["amfleetBusiness", 1], ["amfleet", 4]);
+const NEC_DIESEL = (cars) => set("Genesis or ALC-42 locomotive with Amfleet coaches, business class and café", ["genesis", 1], ...cars);
+// Midwest Venture sets run with a Charger at each end.
 const MIDWEST = set("Charger locomotives with Venture coaches", ["charger", 1], ["venture", 5], ["charger", 1]);
-const HIAWATHA = set("Charger locomotive with Venture coaches and a cab car", ["charger", 1], ["venture", 5], ["ventureCab", 1]);
-const SUPERLINER_SHORT = set("Charger locomotive with Superliner coaches", ["charger", 1], ["superlinerCoach", 3]);
+// Hiawatha: WisDOT's Venture coaches and cab cars arrive September to
+// November 2026 (five coaches and a cab car a set); until then Amfleet
+// coaches and a cab unit.
+const HIAWATHA = set("Charger locomotive with Venture coaches and a cab car (the new cars coming into service fall 2026)", ["charger", 1], ["venture", 5], ["ventureCab", 1]);
+// Missouri and Illinois trains mix Venture and Amfleet coaches behind one
+// Charger, with an Amfleet business class and café car.
+const RIVER = set("Charger locomotive with Amfleet coaches and a business class and café car (some trains Venture coaches)",
+  ["charger", 1], ["amfleetBusiness", 1], ["amfleet", 4]);
+const PRAIRIE = set("Charger locomotive with Venture coaches and an Amfleet business class and café car",
+  ["charger", 1], ["venture", 3], ["amfleetBusiness", 1]);
+// CN keeps single-level cars off its line south of Chicago: seven Superliner
+// coaches, one of them with a café.
+const ILLINI = set("Charger locomotive with Superliner coaches", ["charger", 1], ["superlinerCoach", 7]);
+// Amtrak Cascades: the Airo trainsets run trains 503, 508, 516 and 519
+// (Amtrak, September 2026); the rest have one of Oregon's two Talgo Series 8
+// sets (some an interim set of Amfleet coaches) behind a WSDOT SC-44.
+const CASCADES_AIRO = new Set(["503", "508", "516", "519"]);
+const AIRO_SET = set("ALC-42E or SC-44 Charger with a six-car Airo trainset",
+  ["alc42e", 1], ["airoBusiness", 1], ["airoCafe", 1], ["airoCoach", 3], ["airoCab", 1]);
+const TALGO_SET = set("SC-44 Charger with a Talgo Series 8 trainset, 13 cars (some trains Amfleet coaches)",
+  ["charger", 1], ["talgoBag", 1], ["talgoBusiness", 2], ["talgoLounge", 1], ["talgoBistro", 1], ["talgo", 7], ["talgoCab", 1]);
 
 const AMTRAK = {
   "Acela": set("Avelia Liberty trainset (some trips still use the original Acela Express)", ["acelaPower", 1], ["acelaCoach", 9], ["acelaPower", 1]),
   "Northeast Regional": set("ACS-64 locomotive with an Amfleet business class car, cafe and coaches (diesel south of Washington)", ["acs64", 1], ["amfleetBusiness", 1], ["amfleetCafe", 1], ["amfleet", 6]),
   "Keystone": set("ACS-64 locomotive with Amfleet coaches and a Metroliner cab car", ["acs64", 1], ["amfleet", 4], ["metrolinerCab", 1]),
-  "Empire Service": EMPIRE, "Adirondack": EMPIRE, "Maple Leaf": EMPIRE, "Ethan Allen Express": EMPIRE,
-  "Vermonter": DIESEL_AMFLEET, "Carolinian": DIESEL_AMFLEET, "Pennsylvanian": DIESEL_AMFLEET, "Downeaster": DIESEL_AMFLEET,
-  "Palmetto": set("ALC-42 locomotive with Amfleet coaches", ["alc42", 1], ["amfleet2", 6]),
-  "Piedmont": set("F59PHI or Charger locomotive with NCDOT coaches", ["f59", 1], ["coach", 3]),
-  "Crescent": VIEWLINER_LD, "Cardinal": VIEWLINER_LD, "Floridian": VIEWLINER_LD,
-  "Lake Shore Limited": VIEWLINER_LD, "Silver Meteor": VIEWLINER_LD,
+  "Empire Service": EMPIRE, "Adirondack": EMPIRE, "Maple Leaf": EMPIRE,
+  "Ethan Allen Express": set("P32AC-DM locomotives at each end with Amfleet coaches and a club car", ["p32", 1], ["amfleetBusiness", 1], ["amfleet", 4], ["p32", 1]),
+  // The Springfield shuttles: a P42 pushing or pulling one coach and a
+  // Metroliner cab car.
+  "Amtrak Hartford Line": set("Genesis locomotive with an Amfleet coach and a Metroliner cab car", ["genesis", 1], ["amfleet", 1], ["metrolinerCab", 1]),
+  "Valley Flyer": set("Genesis locomotive with an Amfleet coach and a Metroliner cab car", ["genesis", 1], ["amfleet", 1], ["metrolinerCab", 1]),
+  "Vermonter": NEC_DIESEL([["amfleetBusiness", 1], ["amfleet", 4]]),
+  "Carolinian": NEC_DIESEL([["viewlinerBaggage", 1], ["amfleetBusiness", 1], ["amfleetCafe", 1], ["amfleet", 4]]),
+  "Pennsylvanian": NEC_DIESEL([["viewlinerBaggage", 1], ["amfleetBusiness", 1], ["amfleetCafe", 1], ["amfleet", 4]]),
+  "Downeaster": set("Genesis locomotives with Amfleet coaches and a business class and café car (some trains a cab unit at the south end)",
+    ["genesis", 1], ["amfleetBusiness", 1], ["amfleet", 4], ["genesis", 1]),
+  "Palmetto": set("ALC-42 locomotive with a baggage car, an Amfleet club car and coaches", ["alc42", 1], ["viewlinerBaggage", 1], ["amfleetBusiness", 1], ["amfleet2", 4]),
+  // New Orleans-Mobile since August 2025: an ALC-42 at each end, two
+  // Amfleet II coaches and a business class and café car.
+  "Mardi Gras Service": set("ALC-42 locomotives at each end with Amfleet coaches and a business class and café car",
+    ["alc42", 1], ["amfleetBusiness", 1], ["amfleet2", 2], ["alc42", 1]),
+  // Piedmont (NCDOT): an F59PH or F59PHI at each end of the state's rebuilt
+  // coaches.
+  "Piedmont": set("NCDOT F59PH or F59PHI locomotives at each end with NCDOT coaches", ["f59ph", 1], ["coach", 4], ["f59", 1]),
+  "Crescent": set("ALC-42 and Genesis locomotives with Viewliner and Amfleet cars",
+    ...LD_PAIR, ["viewlinerBaggage", 1], ["viewlinerSleeper", 2], ["viewlinerDiner", 1], ["amfleetCafe", 1], ["amfleet2", 3]),
+  "Silver Meteor": set("ALC-42 and Genesis locomotives with Viewliner and Amfleet cars",
+    ...LD_PAIR, ["viewlinerBaggage", 1], ["viewlinerSleeper", 2], ["viewlinerDiner", 1], ["amfleetCafe", 1], ["amfleet2", 4]),
+  "Floridian": set("ALC-42 and Genesis locomotives with Viewliner and Amfleet cars",
+    ...LD_PAIR, ["viewlinerBaggage", 1], ["viewlinerSleeper", 3], ["viewlinerDiner", 1], ["amfleetCafe", 1], ["amfleet2", 4]),
+  "Lake Shore Limited": set("Genesis locomotives with Viewliner and Amfleet cars",
+    ["genesis", 2], ["viewlinerBaggage", 1], ["viewlinerSleeper", 3], ["viewlinerDiner", 1], ["amfleetBusiness", 1], ["amfleet2", 3]),
+  "Cardinal": set("ALC-42 locomotive with Viewliner and Amfleet cars",
+    ["alc42", 1], ["viewlinerBaggage", 1], ["viewlinerSleeper", 1], ["amfleetCafe", 1], ["amfleet2", 3]),
   "California Zephyr": SUPERLINER_LD, "Southwest Chief": SUPERLINER_LD, "Empire Builder": SUPERLINER_LD,
-  "Coast Starlight": SUPERLINER_LD, "Texas Eagle": SUPERLINER_LD, "Sunset Limited": SUPERLINER_LD,
-  "City of New Orleans": SUPERLINER_LD,
-  "Auto Train": set("ALC-42 and Genesis locomotives with Superliner cars and auto carriers",
-    ...LD_PAIR, ["superlinerSleeper", 2], ["superlinerDiner", 1], ["superlinerLounge", 1], ["superlinerCoach", 2], ["autorack", 3]),
-  "Heartland Flyer": set("Genesis locomotive with Superliner coaches", ["genesis", 1], ["superlinerCoach", 3]),
-  "Borealis": SUPERLINER_SHORT,
-  // CN keeps the Venture cars off its line south of Chicago.
-  "Saluki": set("Charger locomotive with Superliner coaches", ["charger", 1], ["superlinerCoach", 5]),
-  "Illini": set("Charger locomotive with Superliner coaches", ["charger", 1], ["superlinerCoach", 5]),
-  "Wolverine": MIDWEST, "Blue Water": MIDWEST, "Pere Marquette": MIDWEST, "Hiawatha": HIAWATHA,
-  "Lincoln Service": MIDWEST, "Lincoln River Runner": MIDWEST, "Missouri River Runner": MIDWEST,
-  "Carl Sandburg": MIDWEST, "Illinois Zephyr": MIDWEST,
+  "Coast Starlight": SUPERLINER_LD, "Sunset Limited": SUPERLINER_LD, "City of New Orleans": SUPERLINER_LD,
+  "Texas Eagle": set("ALC-42 locomotive with Superliner cars",
+    ["alc42", 1], ["superlinerSleeper", 2], ["superlinerDiner", 1], ["superlinerLounge", 1], ["superlinerCoach", 2]),
+  "Auto Train": set("Charger locomotives with Superliner cars and auto carriers (some 20 behind them)",
+    ["alc42", 2], ["superlinerSleeper", 3], ["superlinerDiner", 1], ["superlinerLounge", 1], ["superlinerCoach", 2], ["autorack", 3]),
+  "Heartland Flyer": set("Genesis locomotives at each end with Superliner coaches", ["genesis", 1], ["superlinerCoach", 3], ["genesis", 1]),
+  "Winter Park Express": set("Genesis locomotive with Superliner coaches and a Sightseer Lounge", ["genesis", 1], ["superlinerCoach", 4], ["superlinerLounge", 1]),
+  // Superliners since March 2025, when the Horizon cars were pulled; a
+  // fourth coach from October 2026.
+  "Borealis": set("Charger locomotive with Superliner coaches", ["charger", 1], ["superlinerCoach", 4]),
+  "Saluki": ILLINI, "Illini": ILLINI,
+  "Wolverine": MIDWEST, "Blue Water": MIDWEST, "Lincoln Service": MIDWEST, "Hiawatha": HIAWATHA,
+  "Pere Marquette": set("Charger locomotive with Venture coaches and an Amfleet business class and café car", ["charger", 1], ["venture", 4], ["amfleetBusiness", 1]),
+  "Lincoln River Runner": RIVER, "Missouri River Runner": RIVER,
+  "Carl Sandburg": PRAIRIE, "Illinois Zephyr": PRAIRIE,
   "Capitol Corridor": set("Charger or F59PHI locomotive with California Cars", ["charger", 1], ["californiaCar", 3], ["californiaCab", 1]),
-  "San Joaquins": set("Charger locomotive with a Caltrans Venture trainset (some trains still use California Cars)", ["charger", 1], ["venture", 5], ["ventureCab", 1]),
+  // Gold Runner (the San Joaquins until 2025): Caltrans' Venture sets, six
+  // coaches between two Chargers until their cab cars enter service.
+  "San Joaquins": set("Charger locomotives with Caltrans Venture coaches (some trains still California Cars)", ["charger", 1], ["venture", 6], ["charger", 1]),
   "Pacific Surfliner": set("Charger or F59PHI locomotive with Surfliner bi-levels", ["charger", 1], ["surfliner", 5], ["surflinerCab", 1]),
-  "Amtrak Cascades": set("ALC-42E locomotive with an Airo trainset", ["alc42", 1], ["venture", 6], ["ventureCab", 1]),
+  "Amtrak Cascades": TALGO_SET,
 };
 
 const VIA_BUDD = set("F40PH locomotive with Budd stainless cars", ["f40", 1], ["buddBaggage", 1], ["buddCoach", 1], ["skyline", 1], ["buddSleeper", 1]);
@@ -387,6 +445,34 @@ const VIA = {
   "Lake Superior": set("Budd Rail Diesel Car", ["rdc", 1]),
 };
 
+// The same routes under the other names they come by. Amtraker (Amtrak's
+// live positions): "Carolinian / Piedmont" for the Alexandria–Raleigh
+// extras, "Silver Service / Palmetto" for the Miami–Jacksonville ones. The
+// timetables (Amtrak's GTFS): "Hiawatha Service", "Keystone Service",
+// "Amtrak Mardi Gras Service", "Lincoln Service Missouri River Runner".
+// VIA's timetable names its trains by their end points; Amtraker by name,
+// and "London-Toronto" for a Corridor train.
+const ROUTE_NAMES = {
+  amtrak: {
+    "Hiawatha Service": "Hiawatha", "Keystone Service": "Keystone", "Amtrak Mardi Gras Service": "Mardi Gras Service",
+    "Lincoln Service Missouri River Runner": "Lincoln River Runner", "Carolinian / Piedmont": "Carolinian", "Silver Service / Palmetto": "Palmetto",
+    "Gold Runner": "San Joaquins", "Hartford Line": "Amtrak Hartford Line",
+  },
+  via: {
+    "Vancouver - Toronto": "Canadian", "Montréal - Halifax": "Ocean", "Jasper - Prince Rupert": "Skeena",
+    "Winnipeg - Churchill": "Hudson Bay", "The Pas - Churchill": "Hudson Bay", "Montréal - Senneterre": "Abitibi",
+    "Montréal - Jonquière": "Saguenay", "Sudbury - White River": "Lake Superior", "Toronto - New York": "Maple Leaf",
+  },
+};
+// The route a train's equipment goes by: its name as the tables below have
+// it. Every VIA train not named there is a Corridor train.
+function routeOf(t) {
+  const r = t.route || "";
+  const named = ROUTE_NAMES[t.agency]?.[r] || r;
+  if (t.agency === "via" && !VIA[named] && named !== "Maple Leaf") return "Corridor";
+  return named || t.route;
+}
+
 // A type if it has a drawing, else a stand-in that does.
 const drawable = (key, instead) => (TYPES[key] && MODELS[key] ? key : instead);
 
@@ -395,10 +481,13 @@ const drawable = (key, instead) => (TYPES[key] && MODELS[key] ? key : instead);
 function typicalFor(t, reported) {
   const dest = t.destination || "";
   switch (t.agency) {
-    case "amtrak": return AMTRAK[t.route] || set("Locomotive with coaches", ["genesis", 1], ["amfleet", 5]);
+    case "amtrak":
+      if (t.route === "Amtrak Cascades" && CASCADES_AIRO.has(String(t.number))) return AIRO_SET;
+      return AMTRAK[t.route] || set("Locomotive with coaches", ["genesis", 1], ["amfleet", 5]);
     case "via": return VIA[t.route] || VIA.Corridor;
-    // Seven coaches since the 2024–25 expansion (five Smart, two Premium).
-    case "brightline": return set("Charger locomotives with 7 Brightline coaches", ["charger", 1], ["venture", 7], ["charger", 1]);
+    // Ten coaches on the Orlando trains since December 2025 (eight Smart,
+    // two Premium), a Charger at each end.
+    case "brightline": return set("Charger locomotives with 10 Brightline coaches", ["charger", 1], ["venture", 10], ["charger", 1]);
     case "lirr": {
       const diesel = reported ? !["m7", "m9", "m3"].includes(reported)
         : /Montauk|Greenport|Oyster Bay/.test(t.route || "") || /Port Jefferson|Oyster Bay|Montauk|Greenport|Speonk/.test(dest);
@@ -592,13 +681,16 @@ export function consistOf(t) {
     const summary = [`${coaches} car${coaches === 1 ? "" : "s"}`, models.length <= 2 ? models.join(" + ") : null].filter(Boolean).join(" · ");
     return { cars, complete: true, typical: false, summary, agency: t.agency, route: t.route };
   }
-  // What usually runs on this route.
-  const typical = typicalFor(t, known[0]?.key);
+  // What usually runs on this route (under the name the tables know it by).
+  const route = routeOf(t);
+  const typical = typicalFor(route === t.route ? t : { ...t, route }, known[0]?.key);
   if (!typical) return null;
   const cars = typical.units.flatMap(([key, count]) => Array.from({ length: count }, () => ({ number: null, type: TYPES[key] })));
   const one = known[0];
   return {
-    cars, complete: true, typical: true, summary: typical.label, agency: t.agency, route: t.route,
+    // A set may be another railroad's equipment (the Maple Leaf on VIA's
+    // timetable is Amtrak's train), drawn in that railroad's colors.
+    cars, complete: true, typical: true, summary: typical.label, agency: typical.agency || t.agency, route,
     reported: one ? { number: one.number, name: TYPES[one.key].name } : null,
   };
 }

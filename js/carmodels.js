@@ -2237,8 +2237,8 @@ export function gtwPower(c) {
 }
 
 // ===================== Siemens Venture =====================
-// Siemens Venture (Brightline, Amtrak Midwest and California, VIA, Amtrak
-// Airo): 85 ft, 14 ft, 51 in floor, trucks 59 ft 6 in apart. Convex sides,
+// Siemens Venture (Brightline, Amtrak Midwest and California, VIA; Amtrak's
+// Airo cars are drawn on their own below): 85 ft, 14 ft, 51 in floor, trucks 59 ft 6 in apart. Convex sides,
 // sealed gangways, single-leaf plug doors at the car ends, nine large
 // windows a side (about 4 ft 10 in wide, 6 ft 10 in apart), air-conditioning
 // under raised roof covers at both ends. Amtrak's cab cars carry a
@@ -2248,12 +2248,11 @@ export function gtwPower(c) {
 // the door end breaking up into a halftone of dots, a wide red band low on
 // the side. San Joaquins (Caltrans): silver, a blue window band, a low band
 // of blues and purple with yellow ends, yellow doors. VIA: light gray, a
-// charcoal window band under a yellow one. Cascades (Airo): evergreen, mocha
-// through the windows over a cream band, brown and white sill stripes.
+// charcoal window band under a yellow one.
 const BRIGHT = ["#1fa64a", "#e5473b", "#5b4fb8", "#38a3dc"]; // green, red, purple, blue
-// Five Smart coaches (green, red, purple in turn) behind the locomotive, then
-// the two blue Premium coaches.
-const brightColor = (c) => ((c.index ?? 1) >= 6 ? 3 : ((c.index ?? 1) + 2) % 3);
+// The Smart coaches (green, red, purple in turn) behind the locomotive, then
+// the two blue Premium coaches before the locomotive at the far end.
+const brightColor = (c) => ((c.index ?? 1) >= (c.count ?? 9) - 3 ? 3 : ((c.index ?? 1) + 2) % 3);
 const VENTURE = {
   roof: 14.0, sill: 3.9, cornerR: 1.4, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6,
   rows: [{ xs: seq(11.5, 6.8, 9), y: 7.3, w: 4.85, h: 2.5, r: 0.45 }],
@@ -2277,15 +2276,6 @@ function venturePaint(c, g) {
       // band; a yellow band above it up to the stainless roof.
       return s + rect(0, 6.42, L, 0.23, "#f5c400") + rect(0, 6.65, L, 3.97, "#2b2e32") + rect(0, 10.62, L, 2.28, "#f5c400");
     case "amtrak":
-      if (c.route === "Amtrak Cascades") {
-        // Airo: white and brown stripes over the skirt, a green strip, a cream
-        // band under the windows, mocha through them, evergreen to the roof;
-        // a small Mount Rainier high by the door.
-        return s + rect(0, 0, L, 4.3, "#2a2e33") + rect(0, 4.3, L, 0.3, "#f4f1ea") + rect(0, 4.6, L, 0.6, "#5a3a2c") + rect(0, 5.2, L, 0.5, "#1f4a40") +
-          rect(0, 5.7, L, 1.3, "#efe9dc") + rect(0, 7.0, L, 3.2, "#5b3b36") + rect(0, 10.2, L, 2.6, "#1f4a40") +
-          path(`M${L - 15} 10.6L${L - 12.6} 11.9L${L - 11.8} 11.6L${L - 10} 10.6Z`, "#e8efe9") +
-          path(`M${L - 13.6} 11.35L${L - 12.6} 11.9L${L - 11.8} 11.6L${L - 11.1} 11.2L${L - 12.2} 11.45Z`, "#7fb3a3");
-      }
       if (c.route === "San Joaquins") {
         // Yellow doors; a blue window band between them; a low band of
         // slanted blues and purple ending in yellow by each door.
@@ -2314,11 +2304,10 @@ const ventureDoor = (x) => ({ x, w: 2.9, y0: 4.25, y1: 11.3, glassY: 0.55, glass
 // before the door at that end; "VIA RAIL CANADA" spaced out in white along
 // the middle of the yellow band, a small VIA logo by the other door.
 const VIA_VENTURE_ROWS = [{ xs: seq(10.95, 6.5, 9), y: 7.15, w: 4.75, h: 2.75, r: 0.45 }];
-// Logos: Cascades on the cream by the door; San Joaquins: its name high in
-// the middle, Caltrans' mark under the windows by a door; Midwest: "Amtrak
-// Midwest" high at the far end from the door.
-const ventureBadge = (c) => (c.route === "Amtrak Cascades" ? { x: c.L - 8.6, y: 6.35, h: 1.1, logo: "cascades-dark" }
-  : c.route === "San Joaquins" ? [{ x: 42.5, y: 11.3, h: 1.1, logo: "san-joaquins" }, { x: 13.4, y: 6.6, h: 0.75, logo: "caltrans" }]
+// Logos: San Joaquins: its name high in the middle, Caltrans' mark under
+// the windows by a door; Midwest: "Amtrak Midwest" high at the far end from
+// the door.
+const ventureBadge = (c) => (c.route === "San Joaquins" ? [{ x: 42.5, y: 11.3, h: 1.1, logo: "san-joaquins" }, { x: 13.4, y: 6.6, h: 0.75, logo: "caltrans" }]
   : c.agency === "amtrak" ? { x: 20, y: 11.6, h: 1.25, logo: "amtrak-midwest" }
   : { via: [{ x: 43.0, y: 11.76, h: 0.75, dark: true, logo: "via-rail-canada" }, { x: 8.1, y: 8.3, h: 0.8, logo: "via-mark" }],
       brightline: { x: 6.5, y: 5.6, h: 0.8, dark: true } }[c.agency]);
@@ -2326,17 +2315,17 @@ export const venture = (c) => bilevel(c, { ...VENTURE, paint: venturePaint, badg
   rows: c.agency === "via" ? VIA_VENTURE_ROWS : VENTURE.rows,
   doors: c.agency === "via" ? [ventureDoor(2.4), ventureDoor(78.0)]
     : c.agency === "brightline" || c.route === "San Joaquins" ? [ventureDoor(1.2), ventureDoor(80.9)] : [ventureDoor(80.9)] });
-// The Venture cab car (VIA's corridor trains, Amtrak Cascades' Airo, Amtrak
-// Midwest, San Joaquins): a Charger-like cab, an upright nose under a steeply
-// raked wraparound windshield, a cab side window behind it, a long blank cab
-// section over the front truck, then the door and seven windows; the coupler
-// and pilot exposed. A cap in the railroad's color edges the windshield and
-// runs back along the roof (VIA yellow, Cascades tan).
+// The Venture cab car (VIA's corridor trains, Amtrak Midwest, San Joaquins):
+// a Charger-like cab, an upright nose under a steeply raked wraparound
+// windshield, a cab side window behind it, a long blank cab section over the
+// front truck, then the door and seven windows; the coupler and pilot
+// exposed. VIA's has a yellow cap that edges the windshield and runs back
+// along the roof.
 // VIA's cab car: a streamlined nose, a rounded tip low down and the
 // windshield raked back in one long slope.
 const VIA_VENTURE_NOSE = [[3.4, 3.9], [1.3, 4.7], [0.9, 5.8], ["q", 0.85, 6.9, 1.6, 7.6], [7.2, 12.9], ["q", 8.6, 14.0, 11.0, 14.0]];
 const VENTURE_NOSE = [[2.2, 3.9], [1.55, 4.9], [1.75, 6.0], [2.15, 9.1], [2.65, 9.35], [5.0, 13.0], ["q", 5.6, 14.0, 7.4, 14.0]];
-const CAP = { via: "#f5c400", "Amtrak Cascades": "#b08a5a" };
+const CAP = { via: "#f5c400" };
 function ventureCabPaint(c, g) {
   const L = g.L;
   let s = venturePaint(c, g);
@@ -2355,10 +2344,6 @@ function ventureCabPaint(c, g) {
       path("M16.3 3.9L17.4 9.2Q18.0 12.2 23.6 12.9", "none", 0, 'stroke="#e2e5e8" stroke-width="1.2" vector-effect="non-scaling-stroke"');
     s += path(poly([[0.9, 7.8], [2.4, 7.8], [7.9, 12.9], [13.0, 12.9], [13.0, 15], [5.0, 15]]), "#f5c400");
     return s;
-  } else if (c.route === "Amtrak Cascades") {
-    // Evergreen cab section; the cream band runs forward past the door and
-    // ends in a rounded tip.
-    s += rect(0, 5.2, 26, 7.6, "#1f4a40") + path("M27 5.7L21.8 5.7Q20.4 5.7 20.6 7.0Q21.4 8.6 24 8.7L27 8.7Z", "#efe9dc");
   } else if (c.route === "San Joaquins") {
     // Blue cab under a silver cap swept back from the windshield.
     s += path(`M0 0L20 0L20 6.1L17 12.8L0 12.8Z`, "#22409a") + path("M5.2 9.2Q7.0 12.4 12.0 12.8L20 12.8L20 15L4 15Z", "#dfe2e5") + rect(23.4, 4.25, 2.9, 7.05, "#f5c21b");
@@ -2367,7 +2352,7 @@ function ventureCabPaint(c, g) {
     s += rect(0, 4.5, 19, 10, "#1c2a4c") + rect(0, 4.5, 19, 1.4, "#d4202c");
     for (let i = 0; i < 10; i++) for (let j = 0; j < 12; j++) s += circle(19.3 + i * 0.62 + (j % 2) * 0.31, 6.4 + j * 0.55, 0.26 * (1 - i / 10), "#1c2a4c");
   }
-  const cap = CAP[c.agency] || CAP[c.route];
+  const cap = CAP[c.agency];
   if (cap) s += path(poly([[1.5, 5.0], [2.15, 9.1], [2.65, 9.35], [3.5, 9.35], [2.7, 5.0]]), cap) + path(poly([[4.9, 12.9], [5.5, 14.5], [14, 14.5], [14, 12.9]]), cap);
   s += path(poly([[2.0, 8.9], [4.9, 12.95], [7.3, 12.95], [6.9, 8.9]]), C.black); // the windshield surround
   return s;
@@ -2379,10 +2364,8 @@ const viaVentureCab = (c) => bilevel({ ...c, cabL: true }, { ...VENTURE, paint: 
   // VIA: nine windows a little closer set than the coaches'.
   rows: [{ xs: seq(23.5, 6.0, 9), y: 7.15, w: 4.4, h: 2.75, r: 0.45 }],
   // VIA: yellow letters on the window band just behind the cab, a big red
-  // maple leaf by the far door. Cascades: the name in white high behind
-  // the cab.
-  badge: (c) => (c.agency === "via" ? [{ x: 21.0, y: 8.8, h: 1.6, logo: "via-word" }, { x: 78.2, y: 7.1, h: 5.4, logo: "via-leaf" }]
-    : c.route === "Amtrak Cascades" ? { x: 21, y: 11.4, h: 1.9, dark: true, logo: "cascades" } : undefined),
+  // maple leaf by the far door.
+  badge: (c) => (c.agency === "via" ? [{ x: 21.0, y: 8.8, h: 1.6, logo: "via-word" }, { x: 78.2, y: 7.1, h: 5.4, logo: "via-leaf" }] : undefined),
   badgeLogo: (c) => (MIDWEST_ROUTES.has(c.route) ? "amtrak-midwest" : c.route === "San Joaquins" ? "amtrak-california" : null),
   nose: VIA_VENTURE_NOSE,
   doors: [ventureDoor(13.2), ventureDoor(80.9)],
@@ -2395,16 +2378,122 @@ const viaVentureCab = (c) => bilevel({ ...c, cabL: true }, { ...VENTURE, paint: 
   } });
 export const ventureCab = (c) => c.agency === "via" ? viaVentureCab(c) : bilevel({ ...c, cabL: true }, { ...VENTURE, paint: ventureCabPaint, cabLen: 0,
   // VIA: its yellow logo on the charcoal behind the cab, the red maple leaf at
-  // the far end. Cascades: its logo in white on the cab section. San Joaquins:
-  // Caltrans' mark behind the cab; Midwest: the logo in white on the navy.
+  // the far end. San Joaquins: Caltrans' mark behind the cab; Midwest: the
+  // logo in white on the navy.
   badge: (c) => (c.agency === "via" ? [{ x: 21, y: 8.6, h: 1.5, logo: "via-mark" }, { x: c.L - 4.6, y: 8.3, h: 4.6, logo: "via-leaf" }]
-    : c.route === "Amtrak Cascades" ? { x: 16.0, y: 10.4, h: 2.4, dark: true, logo: "cascades" }
     : c.route === "San Joaquins" ? [{ x: 42.5, y: 11.3, h: 1.1, logo: "san-joaquins" }, { x: 29, y: 6.6, h: 0.75, logo: "caltrans" }]
     : { x: 13.5, y: 10.6, h: 1.4, dark: true, logo: "amtrak-midwest" }),
   nose: VENTURE_NOSE, roofItems: [[14, 12, 0.3], [67.6, 16, 0.3]],
   rows: [{ xs: seq(30.3, 6.8, 7), y: 7.3, w: 4.85, h: 2.5, r: 0.45 }],
   doors: [ventureDoor(23.4), ventureDoor(80.9)],
   cab: () => path(poly([[2.6, 9.25], [4.8, 12.65], [5.6, 12.65], [5.6, 9.25]]), C.glass) + win(8.2, 9.4, 1.9, 2.4, 0.25) + pilot(1.55, 3.9) });
+
+// ===================== Amtrak Airo =====================
+// Siemens Airo (Amtrak's Venture-derived intercity trainsets; Cascades
+// "D" sets in service from September 30, 2026 on trains 503, 508, 516 and
+// 519): 85 ft cars, 10 ft 6 in wide, 14 ft 7 in to the roof (Wikipedia,
+// "Amtrak Airo"), on Siemens SF5000-type trucks 59 ft 6 in apart with 36 in
+// wheels, the floor at platform height. The cars are joined by drawbars
+// under big rubber gangway bellows. A single-leaf plug door at each end of
+// a car, each in a cream block that rises to the window tops; between the
+// blocks a band of big windows (ten in a coach or the business class car,
+// nine in the café, seven in the cab car, the rest of whose body holds the
+// baggage racks). Stainless roof, air-conditioning housings over each end;
+// a dark gray skirt under the body ends and sloped equipment skirts between
+// the trucks. A Cascades D set is business, café, three coaches and a
+// coach-baggage cab car, with an ALC-42E or one of WSDOT's SC-44s at the
+// other end (Amtrak, "A New Era Arrives", September 2026; Wikipedia).
+// Cascades dress, color by color from photographs (Wikimedia Commons, July
+// to October 2026): evergreen sides; a mocha window band with rounded ends
+// on a cream band; along the bottom a thin evergreen stripe, a mocha one and
+// a stainless strip; above the windows a teal line and a copper one running
+// back from a teal Mount Hood near the door; "AMTRAK CASCADES" in dark
+// letters on the cream block by the door. Measured from the photographs
+// against the published height and length.
+const AIRO = { green: "#1d473e", cream: "#efe9dc", mocha: "#5b3a35", brown: "#5a3a2c", teal: "#5fb5a5", copper: "#b08a5a", skirt: "#3c4044" };
+const AIRO_ROOF = 14.58, AIRO_EAVE = 13.4;
+// spec: { blocks: [[a, b], ...] cream blocks by the doors; band: [a, b] the
+// window band; cab: the cab car (no cream ahead of its door) }.
+function airoPaint(c, g, { blocks, band, cab = false }) {
+  const L = g.L;
+  let s = rect(0, 0, L, 17, AIRO.green);
+  s += rect(0, AIRO_EAVE, L, 2, "#c9ced3") + lines([[0, AIRO_EAVE + 0.45, L, AIRO_EAVE + 0.45], [0, AIRO_EAVE + 0.85, L, AIRO_EAVE + 0.85]], "#b3b9c0", 0.5);
+  s += rect(0, 4.0, L, 0.3, "#d5d9de") + rect(0, 4.3, L, 0.7, AIRO.brown);
+  s += rect(cab ? blocks[0][0] : 0, 5.55, cab ? L - blocks[0][0] : L, 1.75, AIRO.cream);
+  for (const [a, b] of blocks) s += path(`M${a} 5.55L${a} 9.6L${b - 0.8} 9.6Q${b} 9.6 ${b} 8.8L${b} 5.55Z`, AIRO.cream);
+  s += rect(band[0], 7.3, band[1] - band[0], 2.75, AIRO.mocha, 0, 'rx="0.7"');
+  // The lines over the windows, the mountain on them near the door.
+  const m = band[0] + 3.5;
+  s += rect(band[0] - 1.5, 11.15, band[1] - band[0] - 2.0, 0.16, AIRO.teal) + rect(band[0] - 1.0, 10.72, band[1] - band[0] - 3.0, 0.18, AIRO.copper);
+  s += path(poly([[m, 11.2], [m + 2.6, 12.25], [m + 3.3, 12.75], [m + 3.9, 12.45], [m + 4.6, 12.1], [m + 6.6, 11.2]]), AIRO.teal);
+  s += path(poly([[m + 2.9, 12.35], [m + 3.3, 12.75], [m + 3.9, 12.45], [m + 3.6, 12.2], [m + 3.3, 12.4]]), "#e8f0ec");
+  return s;
+}
+// Under the body: the dark gray skirt over each end, past the trucks; the
+// sloped skirts over the equipment between them.
+const airoUnder = (L, { cab = false } = {}) => {
+  const end = (x0, x1) => path(poly([[x0, 4.0], [x1, 4.0], [x1, 2.9], ["q", x1, 2.5, x1 - 0.4, 2.5], [x0 + 0.4, 2.5], ["q", x0, 2.5, x0, 2.9]]), AIRO.skirt);
+  let s = (cab ? "" : end(0.6, 6.4)) + end(L - 6.4, L - 0.6);
+  s += path(poly([[19.0, 4.0], [66.0, 4.0], [65.0, 2.2], [20.0, 2.2]]), "currentColor", 0, 'opacity="0.78"');
+  s += lines([[30.5, 2.35, 30.5, 3.9], [42.5, 2.35, 42.5, 3.9], [54.5, 2.35, 54.5, 3.9]], "rgba(255,255,255,0.18)", 0.5);
+  return s;
+};
+const airoDoor = (x) => ({ x, w: 2.9, y0: 4.15, y1: 11.9, glassY: 0.5, glassH: 0.42, grabs: true, fill: AIRO.green });
+const airoLetters = (c, x, y, h, text, fill = "#f2efe6") => goLetters(c, x, y, h, text, fill, { weight: 600, spacing: h * 0.12 });
+// kind: "coach" (ten windows close together), "business" (ten spaced
+// wider, BUSINESS high on the side), "cafe" (nine, the counter's blank side
+// at the far end).
+const AIRO_CARS = {
+  coach: { n: 10, x: 15.0, pitch: 6.05, w: 5.0, blocks: [[4.3, 14.0], [75.6, 80.8]], band: [14.3, 75.2] },
+  business: { n: 10, x: 12.4, pitch: 6.4, w: 4.7, blocks: [[4.3, 11.4], [75.7, 80.8]], band: [11.7, 75.4] },
+  cafe: { n: 9, x: 15.4, pitch: 6.6, w: 5.0, blocks: [[4.3, 14.4], [74.2, 80.8]], band: [14.7, 73.9] },
+};
+function airoCar(c, kind) {
+  const k = AIRO_CARS[kind];
+  return bilevel(c, {
+    roof: AIRO_ROOF, sill: 4.0, cornerR: 1.3, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6, diaphragm: [4.1, 13.3],
+    paint: (c, g) => airoPaint(c, g, k),
+    rows: [{ xs: seq(k.x, k.pitch, k.n), y: 7.6, w: k.w, h: 2.2, r: 0.4 }],
+    doors: [airoDoor(1.05), airoDoor(c.L - 3.95)],
+    roofItems: [[3.5, 13.5, 0.4, AIRO_ROOF - 0.3], [68.0, 13.5, 0.4, AIRO_ROOF - 0.3]],
+    badge: { x: 9.0, y: 6.45, h: 1.05, logo: "cascades-dark" },
+    extra: (c) => airoUnder(c.L) + (kind === "business" ? airoLetters(c, 45, 12.2, 0.75, "BUSINESS")
+      : airoLetters(c, 6.4, 10.5, 0.42, kind === "cafe" ? "Café" : "Coach")),
+  });
+}
+export const airoCoach = (c) => airoCar(c, "coach");
+export const airoBusiness = (c) => airoCar(c, "business");
+export const airoCafe = (c) => airoCar(c, "cafe");
+// The cab car (Cascades: coach, baggage and cab): the ALC-42's cab and nose
+// on the car body, a mocha cap edged in white framing the windshield and
+// running back over the cab roof; the cab side window and mirror, the flag
+// under it, "AMTRAK CASCADES" in white behind it; then the door, seven
+// windows and the long blank side of the baggage racks.
+const AIRO_NOSE = [[2.2, 4.0], [1.55, 4.9], [1.75, 6.0], [2.15, 9.1], [2.65, 9.35], [5.3, 13.4], ["q", 6.0, AIRO_ROOF, 8.0, AIRO_ROOF]];
+export const airoCab = (c) => bilevel({ ...c, cabL: true }, {
+  roof: AIRO_ROOF, sill: 4.0, cornerR: 1.3, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6, diaphragm: [4.1, 13.3],
+  nose: AIRO_NOSE, cabLen: 0,
+  paint: (c, g) => {
+    let s = airoPaint(c, g, { blocks: [[18.3, 22.4], [66.8, 80.8]], band: [22.6, 66.5], cab: true });
+    // Mocha cap edged in white: up the lower nose, over the windshield.
+    s += path(poly([[1.45, 5.0], [2.05, 9.1], [2.6, 9.4], [3.6, 9.4], [2.75, 5.0]]), AIRO.mocha);
+    s += path(poly([[5.0, 13.0], [5.8, 14.7], [14.5, 14.7], [14.5, 13.4], [6.3, 13.4]]), AIRO.mocha) + rect(6.2, 13.2, 8.3, 0.2, "#f4f1ea");
+    s += path(poly([[2.0, 8.9], [5.0, 13.0], [7.4, 13.0], [6.9, 8.9]]), C.black);
+    s += path(poly([[2.6, 9.25], [4.8, 12.65], [5.6, 12.65], [5.6, 9.25]]), C.glass);
+    return s + usFlag(8.6, 8.4, 1.3);
+  },
+  rows: [{ xs: seq(23.1, 6.3, 7), y: 7.6, w: 5.0, h: 2.2, r: 0.4 }],
+  doors: [airoDoor(15.0), airoDoor(c.L - 3.95)],
+  roofItems: [[16.0, 12.5, 0.4, AIRO_ROOF - 0.3], [68.0, 13.5, 0.4, AIRO_ROOF - 0.3]],
+  badge: { x: 12.6, y: 11.0, h: 1.5, dark: true, logo: "cascades" },
+  cab: () => {
+    // Cab side window in its dark frame, the mirror ahead of it; the plow.
+    let s = rect(7.7, 10.0, 2.9, 2.3, C.black, 0, 'rx="0.45"') + win(7.95, 10.2, 2.4, 1.9, 0.35);
+    s += rect(7.35, 10.3, 0.22, 1.9, "#c9cdd2", 0.4) + pilot(1.55, 4.0);
+    return s + path(poly([[2.2, 4.0], [1.55, 4.9], [1.4, 2.6], ["q", 1.45, 1.6, 2.4, 1.5], [6.4, 1.5], [6.4, 4.0]]), AIRO.skirt);
+  },
+  extra: (c) => airoUnder(c.L, { cab: true }) + airoLetters(c, 20.4, 10.5, 0.42, "Coach"),
+});
 
 // ===================== Alaska Railroad =====================
 // Its passenger cars (Enprotech coaches 205-210, 1990s; the café and dining
@@ -2634,19 +2723,87 @@ export function acelaCoach(c) {
 }
 
 // ===================== Talgo =====================
-// Talgo Series 8 (Amtrak Cascades): short articulated cars, about 43 ft,
-// riding on one wheel pair under each joint instead of trucks; low bodies,
-// one door at one end. Cascades colors: evergreen, copper and cream.
-export function talgo(c) {
-  const { L } = c, sill = 2.6, roof = 11.0, x0 = 0.3, x1 = L - 0.3;
-  const d = bodyOutline(x0, x1, sill, roof, { endR: 1.0 });
-  let s = "";
-  for (const x of [0, L]) s += rect(x - 1.3, 1.8, 2.6, 2.6, "currentColor", 0, 'opacity="0.85" rx="0.3"') + circle(x, 1.5, 1.5, "currentColor") + circle(x, 1.5, 1.2, "none", 0, `stroke="${C.steelDark}" stroke-width="0.5"`);
-  let liv = rect(0, 0, L, 13, "#1f4d3a") + rect(0, 5.6, L, 3.6, "#efe6d2") + rect(0, 9.2, L, 0.5, "#a0522d");
-  s += path(d, "#1f4d3a") + clipped(d, liv);
-  for (let x = 5.6; x < L - 6; x += 6.2) s += win(x, 5.9, 4.6, 2.8, 0.4);
-  s += door(1.2, 2.8, 2.4, 6.6, { glassY: 0.55, glassH: 0.3, grabs: false });
-  return s + outlineOf(d) + carEnds(c, { floor: 2.8, top: 10.0 });
+// Talgo Series 8 (Oregon's two Amtrak Cascades sets, "Mount Bachelor" and
+// "Mount Jefferson", 2013): short articulated cars, 13.14 m (43 ft 1 in)
+// between the joints and 3.34 m (10 ft 11.5 in) to the roof, the floor about
+// 2 ft 7 in above the rail. Under each joint a single pair of independent
+// wheels (about 34.6 in) in a low cast frame, shared by the two cars; the
+// cars hang between tall end columns (Talgo's pendular suspension), so the
+// joints stand out as dark posts between the bodies. One door at one end of
+// each car. A set is a baggage car, two business class cars, a lounge, a
+// bistro, seven coaches and a cab car, with a WSDOT SC-44 at the other end
+// (Wikipedia, "Amtrak Cascades"). The cab car (14.85 m, 3.6 m tall,
+// trainspo.com) rides on a conventional truck under its cab and a Talgo
+// wheel pair at its inner end.
+// Their dress since the 2020s, from photographs (Seattle, June 2025 and
+// April 2026): cream sides and roof, a chocolate brown window band, a cream
+// line under it over an evergreen band along the bottom; the cab car's cap
+// evergreen, its nose cream, a brown slash rising from the lower front back
+// along the side.
+const TALGO = { cream: "#eee7d6", brown: "#4c2f28", green: "#1f4a40", skirt: "#3a3d41" };
+const TALGO_ROOF = 10.96, TALGO_SILL = 2.6;
+// A joint: the wheel pair in its frame and the suspension post between the
+// bodies; each car draws the whole joint at both its ends, its neighbor's
+// drawing covering the same place.
+const talgoJoint = (x) => {
+  let s = path(poly([[x - 1.6, 2.7], [x + 1.6, 2.7], [x + 1.4, 1.2], [x - 1.4, 1.2]]), "currentColor", 0, 'opacity="0.85"');
+  s += circle(x, 1.44, 1.44, "currentColor") + circle(x, 1.44, 1.18, "none", 0, `stroke="${C.steelDark}" stroke-width="0.5" vector-effect="non-scaling-stroke"`) + circle(x, 1.44, 0.36, C.steelDark);
+  s += rect(x - 0.45, 2.7, 0.9, 7.6, C.rubber, 0, 'rx="0.2"') + rect(x - 0.3, 3.4, 0.6, 1.4, C.steelDark);
+  return s;
+};
+const talgoPaint = (L) => rect(0, 0, L, 13, TALGO.cream) + rect(0, TALGO_SILL, L, 1.7, TALGO.green) + rect(0, 4.3, L, 0.22, TALGO.cream) +
+  rect(0, 4.52, L, 3.55, TALGO.brown) + rect(0, TALGO_ROOF - 0.9, L, 1.2, "#e2dccb");
+// Windows a side and their spacing. Coach: six; business class: five spaced
+// wider; lounge: five big ones; bistro: three, the counter's blank side
+// between; baggage: none, a wide door mid-car.
+const TALGO_CARS = {
+  coach: { xs: seq(9.0, 5.4, 6), w: 3.6 },
+  business: { xs: seq(9.6, 6.4, 5), w: 3.9 },
+  lounge: { xs: seq(8.6, 6.6, 5), w: 5.2 },
+  bistro: { xs: [8.6, 14.6, 33.6], w: 4.6 },
+  bag: { xs: [], w: 0 },
+};
+function talgoCar(c, kind = "coach") {
+  const { L } = c, k = TALGO_CARS[kind], x0 = 0.5, x1 = L - 0.5;
+  const d = bodyOutline(x0, x1, TALGO_SILL, TALGO_ROOF, { endR: 1.1 });
+  let s = talgoJoint(0) + talgoJoint(L);
+  s += rect(8, 1.6, L - 16, 1.0, "currentColor", 0, 'opacity="0.7" rx="0.2"');           // equipment under the floor
+  s += path(d, TALGO.cream) + clipped(d, talgoPaint(L));
+  for (const x of k.xs) s += win(x, 5.0, k.w, 2.55, 0.35);
+  s += kind === "bag" ? door(L / 2 - 2.6, TALGO_SILL + 0.15, 5.2, 6.0, { leaves: 2, glass: false, grabs: false })
+    : door(1.2, TALGO_SILL + 0.15, 2.4, 6.4, { glassY: 0.5, glassH: 0.38, grabs: false });
+  s += rect(L / 2 - 4, TALGO_ROOF - 0.05, 8, 0.32, C.steelDark, 0.4, 'rx="0.15"');            // air conditioning
+  if (kind === "business") s += goLetters(c, L / 2, 8.75, 0.42, "BUSINESS CLASS", TALGO.brown, { weight: 600, spacing: 0.06 });
+  return s + outlineOf(d);
+}
+export const talgo = (c) => talgoCar(c);
+export const talgoBusiness = (c) => talgoCar(c, "business");
+export const talgoLounge = (c) => talgoCar(c, "lounge");
+export const talgoBistro = (c) => talgoCar(c, "bistro");
+export const talgoBag = (c) => talgoCar(c, "bag");
+// The cab car: a blunt cream nose under a raked windshield and an evergreen
+// cap that rounds back over the cab roof (the headlights in a box on its
+// brow); the cab door and a louvered grille behind it, then a short
+// passenger end with two windows.
+export function talgoCab(c) {
+  const { L } = c, sill = TALGO_SILL, top = 11.8;
+  const d = poly([[2.2, sill], [L - 0.5, sill], [L - 0.5, TALGO_ROOF - 1.1], ["q", L - 0.5, TALGO_ROOF, L - 1.6, TALGO_ROOF], [24, TALGO_ROOF],
+    ["q", 21.5, top, 18.5, top], [6.2, top], ["q", 3.4, top, 2.6, 10.4], [1.4, 7.4], ["q", 0.9, 6.3, 0.9, 4.6], ["q", 0.9, sill, 2.2, sill]]);
+  let s = talgoJoint(L) + truck(9.6, { wb: 8.5, d: 36, top: sill });
+  s += path(poly([[2.2, sill], [1.0, 3.8], [1.0, 1.4], [6.4, 1.4], [6.4, sill]]), TALGO.skirt) + pilot(1.0, sill);
+  s += rect(15, 1.6, L - 21, 1.0, "currentColor", 0, 'opacity="0.7" rx="0.2"');
+  let liv = rect(0, 0, L, 13, TALGO.cream) + rect(0, sill, L, 1.7, TALGO.green);
+  liv += path(`M3.6 ${sill}L${L + 1} ${sill}L${L + 1} 8.07L32 8.07L28 5.3L10 ${sill + 1.9}Z`, TALGO.brown);
+  liv += path(`M0 ${top + 1}L0 10.2L2.6 10.2Q5 10.4 8 10.6L26 10.6Q24 ${TALGO_ROOF} 24 ${top + 1}Z`, TALGO.green);
+  liv += path(poly([[1.55, 7.6], [2.75, 10.1], [5.4, 10.1], [5.4, 7.6]]), C.black) + path(poly([[1.85, 7.85], [2.85, 9.85], [5.1, 9.85], [5.1, 7.85]]), C.glass);
+  liv += rect(4.0, 10.75, 2.6, 0.75, "#2a2d31", 0, 'rx="0.2"') + rect(4.4, 10.9, 0.7, 0.45, "#f5ecc8") + rect(5.5, 10.9, 0.7, 0.45, "#f5ecc8");
+  s += path(d, TALGO.cream) + clipped(d, liv);
+  s += win(6.2, 7.8, 1.9, 1.9, 0.3) + door(8.8, sill + 0.15, 2.2, 7.2, { glassY: 0.6, glassH: 0.25 });
+  s += rect(12.4, 5.2, 3.4, 4.6, "rgba(20,22,25,0.45)", 0.4) + slats(12.4, 5.2, 3.4, 4.6, 0.3, "rgba(255,255,255,0.22)");
+  for (const x of [34.5, 39.6]) s += win(x, 5.0, 3.6, 2.55, 0.35);
+  s += door(30.6, sill + 0.15, 2.4, 6.4, { glassY: 0.5, glassH: 0.38, grabs: false });
+  s += rect(8.6, top - 0.05, 1.2, 0.35, "currentColor") + rect(14, top - 0.05, 6, 0.3, C.steelDark, 0.4, 'rx="0.15"');
+  return s + outlineOf(d);
 }
 
 // ===================== Auto Train =====================
@@ -3897,6 +4054,11 @@ export const MODELS = {
   desiro: M(desiro, 68.4, true),
   flirtPower: M(flirtPower, 22),
   venture: M(venture, 85, false, (c) => (c.agency === "brightline" ? brightColor(c) : "")),
+  airoBusiness: M(airoBusiness, 85),
+  airoCafe: M(airoCafe, 85),
+  airoCoach: M(airoCoach, 85),
+  airoCab: M(airoCab, 85, true),
+  alc42e: M(alc42, 71.5, true),                   // the ALC-42's body; no pantograph
   ventureCab: M(ventureCab, 85, true),
   buddCoach: M(buddCoach, 85),
   buddSleeper: M(buddSleeper, 85),
@@ -3908,6 +4070,11 @@ export const MODELS = {
   acelaPower: M(acelaPower, 62.7, true),
   acelaCoach: M(acelaCoach, 61.35, false, (c) => (c.index === 1 ? "a" : c.index === c.count - 2 ? "b" : "")),
   talgo: M(talgo, 43.1),
+  talgoBusiness: M(talgoBusiness, 43.1),
+  talgoLounge: M(talgoLounge, 43.1),
+  talgoBistro: M(talgoBistro, 43.1),
+  talgoBag: M(talgoBag, 43.1),
+  talgoCab: M(talgoCab, 48.7, true),
   renaissanceCoach: M(renaissanceCoach, 75.5),
   renaissanceSleeper: M(renaissanceSleeper, 75.5),
   renaissanceDiner: M(renaissanceDiner, 75.5),
