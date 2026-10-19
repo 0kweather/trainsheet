@@ -768,7 +768,8 @@ async function parseCtrail(board) {
 // Railroads whose live data names a train but not its stops (South Shore,
 // SunRail), or that have no live data (Rail Runner), use their timetable.
 const schedules = {};
-export const loadSchedule = (agency) => (schedules[agency] ??= fetch(`data/schedules/${agency}.json?v=dev`).then((r) => r.json()));
+export const loadSchedule = (agency) => (schedules[agency] ??= fetch(`data/schedules/${agency}.json?v=dev`)
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`No timetable for ${agency} (HTTP ${r.status})`)))));
 const clocks = {};
 // Minutes past midnight at epoch second `sec` in time zone `tz`.
 export function localMinutes(sec, tz) {
@@ -835,10 +836,15 @@ function gpsRunTrain(agency, tt, number, run, fields, { delay = 0, live = {}, tr
   });
 }
 
-// Railroads with no live data (Rail Runner, COASTER, TEXRail...): each train
-// is placed from its timetable.
+// Railroads with no live data (Rail Runner, TEXRail...), and those whose
+// live feed waits on an API key (untilKey "timetable", below): each train is
+// placed from its timetable. A railroad abroad has its file there too
+// (build_schedules.py); a timetable that names no time zone runs on its
+// railroad's. One with no timetable file has no trains to place.
 async function timetableTrains(agency) {
-  const tt = await loadSchedule(agency);
+  const file = await loadSchedule(agency).catch(() => null);
+  if (!file?.trips) return [];
+  const tt = file.tz ? file : { ...file, tz: AGENCIES[agency]?.tz || "America/New_York" };
   const now = nowSec(), out = [];
   for (const number of Object.keys(tt.trips)) {
     const run = runNow(tt, number, now, 120);
@@ -1236,12 +1242,36 @@ const BUILT_IN_SOURCES = [
     credit: { label: "Rail Runner timetable", href: "https://riometro.org/" },
     load: async () => null, parse: () => timetableTrains("railrunner"),
   },
-  // No live positions published (COASTER, SPRINTER and the A-train report
-  // through Swiftly, which needs a key; DART, Trinity Metro, WeGo's Star, UP
+  // COASTER and SPRINTER (NCTD) and the A-train (DCTA) report through
+  // Swiftly's GTFS-realtime, which needs a free key per agency, kept on the
+  // relay; the relay passes on only their trains' entities (the feeds cover
+  // every bus too). Until a key is set, their trains are placed from the
+  // timetable, as they always were (untilKey).
+  ...[["coaster", "SWIFTLY_NCTD_KEY", ["398", "498"], "Coaster", { label: "NCTD (Swiftly)", href: "https://gonctd.com/" },
+       { label: "COASTER timetable", href: "https://gonctd.com/coaster/" }],
+      ["sprinter", "SWIFTLY_NCTD_KEY", ["399"], "Sprinter", { label: "NCTD (Swiftly)", href: "https://gonctd.com/" },
+       { label: "SPRINTER timetable", href: "https://gonctd.com/sprinter/" }],
+      ["atrain", "SWIFTLY_DCTA_KEY", ["4911"], "A-train", { label: "DCTA (Swiftly)", href: "https://www.dcta.net/resources/open-data" },
+       { label: "DCTA timetable", href: "https://www.dcta.net/" }]].map(([id, key, routes, line, credit, timetableCredit]) => ({
+    id, agencies: [id], format: "pb", interval: 30, relay: true, needsKey: key, untilKey: "timetable", credit, timetableCredit,
+    parse: async (buf) => {
+      // Trip ids name the train (COASTER's trip_short_name; SPRINTER and
+      // the A-train number none) and its stops, by data/trips.json. The
+      // relay has kept only the rail routes; a copy read from elsewhere
+      // (config.js's TRAINSHEET_FEEDS) is cut to them here.
+      const west = (await loadTrips())[id];
+      return gtfsVehicles(id, buf, {
+        keep: (v) => routes.includes(v.trip?.routeId) || Boolean(west?.trips[v.trip?.tripId]),
+        route: () => line,
+        number: (v) => (id === "coaster" && west?.trips[v.trip?.tripId]?.[0]) || null,
+        west,
+      });
+    },
+  })),
+  // No live positions published (DART, Trinity Metro, WeGo's Star, UP
   // Express, Ontario Northland and the Alaska Railroad publish none for
   // their trains): placed from the timetable.
-  ...[["coaster", "COASTER timetable", "https://gonctd.com/coaster/"], ["sprinter", "SPRINTER timetable", "https://gonctd.com/sprinter/"],
-      ["atrain", "DCTA timetable", "https://www.dcta.net/"], ["tre", "DART timetable", "https://www.dart.org/"],
+  ...[["tre", "DART timetable", "https://www.dart.org/"],
       ["silverline", "DART timetable", "https://www.dart.org/"], ["texrail", "Trinity Metro timetable", "https://ridetrinitymetro.org/texrail/"],
       ["star", "WeGo timetable", "https://www.wegotransit.com/ride/wego-star/"], ["upx", "UP Express timetable", "https://www.upexpress.com/"],
       ["ontarionorthland", "Ontario Northland timetable", "https://www.ontarionorthland.ca/"],
@@ -1299,9 +1329,27 @@ const BUILT_IN_SOURCES = [
 // A plug-in's source has no parser until its file is loaded (fetchSource).
 // Its scope says when it's polled: "always", like the railroads above, or
 // "view": only while its railroads are on screen or being followed (app.js).
+//
+// A source with untilKey "timetable" (a keyed feed: needsKey) has its
+// railroads' trains placed from their timetables while its feed is off,
+// the relay not yet holding its key (or no relay at all): app.js's
+// sourceAvailability says so, and fetchSource is asked for the timetable.
 export const SOURCES = placed(BUILT_IN_SOURCES, PLUGIN_SOURCES.map((s) => ({ ...s })));
 
-export async function fetchSource(src, relayBase) {
+// Who a source's trains come from: its feed, or (placed from the timetable
+// while its key isn't set) the timetable, its own credit for it if it has
+// one, else its first railroad's.
+export function creditOf(src, timetable = false) {
+  if (!timetable) return src.credit;
+  if (src.timetableCredit) return src.timetableCredit;
+  const a = AGENCIES[src.agencies[0]];
+  return { label: `${a.short} timetable`, href: a.credit?.href || src.credit.href, license: a.license ?? src.credit.license ?? null };
+}
+
+// The source's trains: from its feed, or with `timetable`, from each of its
+// railroads' timetables (estimated, as every timetable-placed train is).
+export async function fetchSource(src, relayBase, timetable = false) {
+  if (timetable) return (await Promise.all(src.agencies.map((a) => timetableTrains(a)))).flat();
   // A plug-in's parser file loads alongside its first fetch.
   const parser = src.parse ? null : PARSERS[src.module]().then((m) => (src.parse = m.parse[src.id]));
   parser?.catch(() => {}); // a failed load is reported by the await below

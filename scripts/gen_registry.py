@@ -105,8 +105,22 @@ def main():
                 fail(mid, f"source {sid}: format or scope is off")
             if not isinstance(s.get("interval"), (int, float)) or isinstance(s["interval"], bool) or s["interval"] <= 0:
                 fail(mid, f"source {sid} needs an interval, seconds between polls")
+            # untilKey "timetable": while the relay has no key for this feed,
+            # its railroads' trains are placed from their timetables, so it
+            # must be a keyed relay feed, and each railroad needs a timetable
+            # (an entry in the plug-in's GTFS that build_schedules.py builds).
+            if "untilKey" in s:
+                if s["untilKey"] != "timetable":
+                    fail(mid, f"source {sid}: untilKey can only be \"timetable\"")
+                if not s.get("relay") or not s.get("needsKey"):
+                    fail(mid, f"source {sid}: untilKey is for a relay feed that needs a key (relay, needsKey)")
+                gtfs = getattr(mod, "GTFS", {})
+                for aid in s["agencies"]:
+                    extras = gtfs[aid][-1] if aid in gtfs and isinstance(gtfs[aid][-1], dict) else {}
+                    if aid not in gtfs or extras.get("schedule", True) is False:
+                        fail(mid, f"source {sid}: untilKey needs a timetable for {aid} (GTFS)")
             first = mod.AGENCIES[s["agencies"][0]]
-            stub = {k: v for k, v in s.items() if k in ("id", "agencies", "format", "interval", "relay", "needsKey", "url", "after")}
+            stub = {k: v for k, v in s.items() if k in ("id", "agencies", "format", "interval", "relay", "needsKey", "untilKey", "url", "after")}
             stub.update(scope=s.get("scope", "view"), module=mid,
                         credit={**(first.get("credit") or {"label": first["name"], "href": ""}), "license": first.get("license")})
             sources.append(stub)

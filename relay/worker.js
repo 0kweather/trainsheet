@@ -27,7 +27,7 @@ import { FEEDS as PLUGIN_FEEDS } from "./feeds/index.js";
 const CACHE_SECONDS = 15;
 const feedMem = new Map(); // feed -> { at, bytes, type }: its last good copy
 const STALE_MS = 5 * 60 * 1000; // how old a copy may be served when the railroad refuses
-const RELAY_VERSION = "2026-10-18 (delays by stop)";
+const RELAY_VERSION = "2026-10-19 (Swiftly: COASTER, SPRINTER, A-train)";
 // Sent where a railroad's terms ask callers to say who they are.
 const IDENTIFYING_UA = "Trainsheet/1.0 (+https://trainsheet.com)";
 
@@ -89,6 +89,14 @@ const FEEDS = {
       also: ["gtfsrt-trips", "gtfsrt-tripupdates", "gtfsrt-trip-updates"].map((p) => `https://metrolink-gtfsrt.gbsdigital.us/feed/${p}`),
       headers: { "X-Api-Key": env.METROLINK_API_KEY },
     },
+  // COASTER and SPRINTER (NCTD) and the A-train (DCTA), through Swiftly: a
+  // free key per agency, asked of Swiftly (NCTD) or on DCTA's open data page.
+  // Each agency's feeds cover every bus; only the rail routes go on (route
+  // ids from their GTFS). Without a key, the page places these trains from
+  // their timetables.
+  coaster: (env) => env.SWIFTLY_NCTD_KEY && swiftly("nctd", env.SWIFTLY_NCTD_KEY, ["398", "498"]),
+  sprinter: (env) => env.SWIFTLY_NCTD_KEY && swiftly("nctd", env.SWIFTLY_NCTD_KEY, ["399"]),
+  atrain: (env) => env.SWIFTLY_DCTA_KEY && swiftly("dcta", env.SWIFTLY_DCTA_KEY, ["4911"]),
   // The railroad plug-ins' feeds (relay/feeds/index.js, from scripts/railroads/*.py).
   ...Object.fromEntries(Object.entries(PLUGIN_FEEDS).map(([id, p]) => [id, (env) => pluginFeed(p, env)])),
 };
@@ -109,6 +117,15 @@ function pluginFeed(p, env) {
 function feed511(agency, env) {
   const q = `agency=${agency}&api_key=${encodeURIComponent(env.API_511_KEY)}`;
   return { url: `https://api.511.org/transit/vehiclepositions?${q}`, also: [`https://api.511.org/transit/tripupdates?${q}`] };
+}
+
+// Swiftly's GTFS-realtime for one agency: positions, plus predicted stop
+// times, the key in the Authorization header (sent with both). Fetched at
+// most every 30 seconds, well inside Swiftly's limits per key, though
+// COASTER and SPRINTER share NCTD's.
+function swiftly(agency, key, routes) {
+  const base = `https://api.goswift.ly/real-time/${agency}`;
+  return { url: `${base}/gtfs-rt-vehicle-positions`, also: [`${base}/gtfs-rt-trip-updates`], headers: { Authorization: key }, routes, ttl: 30 };
 }
 
 // GTFS-realtime filtering, for feeds that cover a whole bus network: keeps the
