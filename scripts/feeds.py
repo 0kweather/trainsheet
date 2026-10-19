@@ -266,13 +266,34 @@ def marc_station(name):
     return re.sub(r"[^a-z0-9]+", "-", base.lower()).strip("-"), base
 
 
+# A timetable that comes inside another zip: Transport Victoria publishes
+# one zip of every mode's own ("1/google_transit.zip" V/Line's, "2/..."
+# Metro's). The url names the file inside after a "#", as Transitland's feed
+# records do ("...gtfs.zip#2/google_transit.zip"); the "#" part is never
+# sent. The outer download (Victoria's is 270 MB) is kept for the next
+# railroad's file in it, until a url without a "#" comes.
+OUTER = {}
+
+
+def nested(url, timeout):
+    """The bytes of the file a "zip#member" url names."""
+    outer, _, member = url.partition("#")
+    if outer not in OUTER:
+        OUTER.clear()
+        OUTER[outer] = get_raw(outer, timeout)
+    return zipfile.ZipFile(io.BytesIO(OUTER[outer])).read(member)
+
+
 def get_zip(url, timeout=180, attempts=4, page_link=True):
     """A railroad's timetable as a ZipFile, trying again on a dropped download
     (Amtrak's 18 MB sometimes drops). page_link: follow a page that links the
-    current file (the Alaska Railroad's, named by date)."""
+    current file (the Alaska Railroad's, named by date). A "#" in the url
+    names a zip inside the one downloaded (nested(), above)."""
+    if "#" not in url:
+        OUTER.clear()
     for attempt in range(attempts):
         try:
-            data = get_raw(url, timeout)
+            data = nested(url, timeout) if "#" in url else get_raw(url, timeout)
             if page_link and data[:2] != b"PK":
                 href = re.search(rb'href="([^"]+\.zip)"', data, re.I).group(1).decode()
                 zf = get_zip(urllib.parse.urljoin(url, href), timeout, attempts, page_link)
