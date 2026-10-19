@@ -52,15 +52,20 @@ CODES = {
     "SLE": "ctrail", "NICD": "southshore", "JPBX": "caltrain", "SDRX": "sounder", "ACEX": "ace",
     "SFRC": "trirail", "TRCX": "trirail", "CFCR": "sunrail", "NCTD": "coaster", "SMRT": "smart",
     "DRTD": "rtd", "RTDC": "rtd", "CMRX": "capmetro", "TRE": "tre", "DART": "tre",
-    "NMRX": "railrunner", "WES": "wes", "TEXR": "texrail", "NRTX": "star",
-    # Canada
-    "GO": "go", "AMT": "exo", "EXO": "exo", "WCE": "wce", "WCXR": "wce",
+    "NMRX": "railrunner", "TEXR": "texrail", "NRTX": "star",
+    # WES runs on Portland & Western track (PNWR) that NTAD flags as commuter
+    # and lists WES on.
+    "WES": "wes",
+    # Canada. NTAD flags none of the West Coast Express's track (CPKC's
+    # Cascade Subdivision) as commuter: its codes are kept for when it does.
+    "GO": "go", "AMT": "exo", "EXO": "exo", "WCE": "westcoastexpress", "WCXR": "westcoastexpress",
 }
 ORDER = ["amtrak", "via", "brightline"]  # intercity first, then commuter networks alphabetically
 COMMUTER_STATIONS = {"mbta", "lirr", "mnr", "njt", "septa", "metra", "rtd", "frontrunner",
                      "capmetro", "trirail", "caltrain", "smart", "metrolink", "ctrail",
                      "marc", "vre", "sounder", "southshore", "sunrail", "railrunner",
-                     "coaster", "sprinter", "atrain", "tre", "silverline", "texrail", "star", "upx"}
+                     "coaster", "sprinter", "atrain", "tre", "silverline", "texrail", "star", "upx",
+                     "wes", "westcoastexpress"}
 # CTrail's Hartford Line trains run on Amtrak's New Haven-Springfield line,
 # which NTAD files as Amtrak's alone: (south, west, north, east).
 HARTFORD_LINE = (41.30, -72.95, 42.105, -72.585)
@@ -178,6 +183,9 @@ OSM_OPERATORS = {
     "atrain": "DCTA|Denton County", "tre": "Trinity Railway Express", "silverline": "Silver Line|Dallas Area Rapid Transit|DART",
     "texrail": "TEXRail|Trinity Metro", "star": "WeGo|Music City Star|Regional Transportation Authority",
     "upx": "UP Express|Union Pearson", "ontarionorthland": "Ontario Northland",
+    # WES's routes: network "Westside Express Service", operator TriMet. The
+    # West Coast Express's: network TransLink, operator Alstom (its contractor).
+    "wes": "TriMet|Westside Express", "westcoastexpress": "West Coast Express|^TransLink$",
 }
 # (name, network to tag, Overpass relation filter, bbox south,west,north,east)
 TARGETED_FILLS = [
