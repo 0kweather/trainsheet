@@ -209,9 +209,23 @@ async function logRide(rec, arrivedAt) {
   if (trips) loadTrips();
 }
 
-// Upcoming: planned for today or later. History: taken, cancelled, or a
-// planned day that has gone by.
-const isUpcoming = (r) => r.status === "planned" && r.service_date >= today();
+// Upcoming: planned and not yet over. History: taken, cancelled, or a
+// planned trip that has gone by (with "I took it").
+const isUpcoming = (r) => r.status === "planned" && !gone(r);
+// A planned trip is over a quarter of an hour after it was due at the
+// rider's stop, unless its train is out today and hasn't got there yet
+// (running late); with only a departure time, three hours after it leaves;
+// with no times, once its day is over.
+const LATE_GRACE_MS = 15 * 60000;
+function gone(r) {
+  const end = r.arrive_at ? Date.parse(r.arrive_at) + LATE_GRACE_MS : r.depart_at ? Date.parse(r.depart_at) + 3 * 3600000 : NaN;
+  if (Number.isNaN(end)) return r.service_date < today();
+  if (Date.now() < end) return false;
+  if (r.service_date !== today()) return true;
+  const stops = ctx.liveTrain?.(r.agency, r.number)?.stops || [];
+  const stop = stops.find((s) => (r.to_key && s.key === r.to_key) || (!r.to_key && r.to_name && s.name === r.to_name));
+  return !stop || stop.status === "past";
+}
 const byWhen = (a, b) => (a.service_date + (a.depart_at || "")).localeCompare(b.service_date + (b.depart_at || ""));
 
 // ---------- The sheet ----------
