@@ -33,6 +33,9 @@ railroad on it. To rebuild the regions from the track on file and the route
 tiles already fetched, with no downloads:
 
     python3 scripts/build_rail.py --offline
+
+The public Overpass servers are often too busy for the route tiles;
+scripts/osm_tiles.py writes them all from Geofabrik's country extracts first.
 """
 import hashlib, json, math, os, pathlib, re, socket, ssl, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import defaultdict
