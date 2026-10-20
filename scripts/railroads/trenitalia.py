@@ -49,8 +49,15 @@ SMALL = {"di", "del", "della", "dello", "dei", "degli", "delle", "da", "dal", "e
          "a", "per", "con", "su"}
 
 
+# Names whose accented letter Trenitalia's file already lost (it carries the
+# replacement character U+FFFD in its place).
+LOST_ACCENTS = {"Palermo Libert\ufffd": "Palermo Libertà", "Macerata Universit\ufffd": "Macerata Università",
+                "Ciri\ufffd": "Ciriè"}
+
+
 def stop_name(name):
     name = re.sub(r"\s{2,}", " ", name.strip())
+    name = LOST_ACCENTS.get(name, name)
     if name != name.upper():
         return name
     words = re.split(r"(\s+|-|/|\.)", name.lower())
@@ -62,7 +69,8 @@ def stop_name(name):
             # "sant'elena" -> "Sant'Elena", "d'ampezzo" -> "d'Ampezzo"
             w = "'".join(p if p in ("d", "dell", "all", "nell") and i else p[:1].upper() + p[1:] for p in w.split("'"))
         out.append(w)
-    return "".join(out)
+    name = "".join(out)
+    return LOST_ACCENTS.get(name, name)
 
 
 COLORS = {"Frecciarossa": "#c8102e", "Frecciargento": "#7d8287", "Frecciabianca": "#5b6770", "Intercity": "#1b3f8b",
