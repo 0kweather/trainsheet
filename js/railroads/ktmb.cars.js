@@ -1,13 +1,18 @@
-// KTMB's trains (scripts/railroads/ktmb.py): the ETS electric sets, KTM
-// Komuter's EMUs, the Class 61 DMUs and the locomotive-hauled trains. The
-// feed names each train's set (vehicle.label "ETS202", "SCS21", "EMU23",
-// "DMU06"), which js/railroads/ktmb.js passes as the car's type; the rest of
-// the train is what that class runs as. Drawn from each class's published
-// dimensions and photographs of the current paint; the lettering is drawn
-// as type, not copied from the operator's logo.
+// KTMB's trains (scripts/railroads/ktmb.py): the ETS electric sets (Classes
+// 91, 93/1, 93/2 and 94), KTM Komuter's EMUs (Classes 92, 83 and 81), the
+// Class 61 DMUs, and the locomotive-hauled trains (Class 25 and Class 26
+// diesels, the power generator car, seated and sleeping coaches, and the
+// generator wagon of the Pasir Gudang "hybrid" train). The feed names each
+// train's set (vehicle.label "ETS202", "SCS21", "EMU23", "DMU06"), which
+// js/railroads/ktmb.js passes as the car's type; the rest of the train is
+// what that class runs as, and the set's number picks the batch or paint
+// where a class has more than one (93/1 or 93/2, the ex-Skypark Class 83s).
+// Drawn from each class's published dimensions and photographs of the
+// current paint; the lettering is drawn as type, not copied from the
+// operator's logo.
 
 import { bilevel, newId } from "../carmodels.js?v=dev";
-import { C, rect, circle, path, line, lines, poly, win, door, truck, pantograph, underframe, slats, flutes } from "../carart.js?v=dev";
+import { C, rect, circle, path, line, lines, poly, win, door, truck, pantograph, underframe, slats, flutes, locoCoupler } from "../carart.js?v=dev";
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
 const KTM = {
@@ -45,8 +50,9 @@ function acUnit(x, w, roof, { h = 0.8, fill = "#c3c8ce" } = {}) {
     slats(x + 0.9, roof + 0.12, gw, h - 0.42, 0.3, "rgba(0,0,0,0.35)") + slats(x + w - 0.9 - gw, roof + 0.12, gw, h - 0.42, 0.3, "rgba(0,0,0,0.35)") +
     line(x + 0.7, t - 0.16, x + w - 0.7, t - 0.16, "rgba(255,255,255,0.5)", 0.4);
 }
-function panDeck(cx, roof, { facing = 1, cableTo = null } = {}) {
-  let s = rect(cx - 3.3, roof - 0.05, 6.6, 0.35, "#8f969e", 0.4) + pantograph(cx, roof + 0.3, { facing });
+// down: the pantograph folded (a set hauled off the wires).
+function panDeck(cx, roof, { facing = 1, cableTo = null, down = false } = {}) {
+  let s = rect(cx - 3.3, roof - 0.05, 6.6, 0.35, "#8f969e", 0.4) + pantograph(cx, roof + 0.3, { facing, up: !down });
   const ax = cx + 4.1 * facing;
   s += rect(ax - 0.2, roof, 0.4, 0.95, "#7d848c", 0.3) + lines([[ax - 0.27, roof + 0.32, ax + 0.27, roof + 0.32], [ax - 0.27, roof + 0.62, ax + 0.27, roof + 0.62]], "#4a5057", 0.6) + circle(ax, roof + 1.05, 0.16, "#5a6068");
   if (cableTo != null) {
@@ -113,10 +119,15 @@ const middleCar = (spec, car) => unit(spec, car, false);
 // about 13 ft to the roof. Trucks 52 ft 6 in apart on 34 in wheels; the
 // equipment under the floor behind fairings.
 // Class 93 (CRRC Zhuzhou, ETS 201-219, 2013-18): driving cars 24 m, the
-// others 23 m; a long raked nose. Silver, a red over orange band low on the
-// side over a gray skirt; the nose yellow, edged in navy, the yellow
-// running back along the top of the side; the windshield a black mask over
-// the nose; pantographs on the two trailers next to the driving cars.
+// others 23 m; a long raked nose; the windshield a black mask over the
+// nose; pantographs on the two trailers next to the driving cars. Two
+// paints (photographs of ETS 201 at KL Sentral, 2023, and of 93/2 sets at
+// Padang Besar and Gemas, 2024, Commons): the first ten sets (93/1, ETS
+// 201-210) silver with the yellow nose edged in navy and a navy line under
+// the eave, nothing low on the side; the ETS2 sets (93/2, ETS 211-219) a
+// red over orange band low on the side over a gray skirt and the yellow
+// running back along the top of the side. (Every set was drawn in the 93/2
+// paint before.)
 // Class 94 (ETS3, CRRC Zhuzhou with CRRC Batu Gajah, ETS 301-310, 2023-25):
 // a blunter nose in the flag's colors: silver, a navy band low on the side
 // under two red pinstripes; the lower nose yellow, a red fin behind the
@@ -136,6 +147,16 @@ function etsPaint(kind) {
   return (c, g, nose) => {
     const L = g.L;
     let s = rect(0, 0, L, 18, KTM.silver);
+    if (kind === "931") {
+      // The first batch: no bands low on the side; the yellow nose's navy
+      // edge carried back from the cab as a thin line under the eave.
+      s += rect(0, 0, L, 3.95, KTM.skirt) + rect(0, 3.95, L, 0.12, "#9aa1a9");
+      if (nose) {
+        const edge = [[0, 4.25], [2.6, 4.25], ["q", 6.6, 4.5, 8.5, 7.0], [10.0, 9.6], ["q", 11.3, 11.3, 14.5, 11.3], [16.5, 11.45]];
+        s += above(shift(edge, 0.3, -0.32), KTM.navy) + above(edge, KTM.yellow) + rect(16.4, 11.45, L, 0.3, KTM.navy) + rect(14.0, 12.35, L, 2, KTM.roof);
+      } else s += rect(0, 11.45, L, 0.3, KTM.navy) + rect(0, 12.35, L, 2, KTM.roof);
+      return s + etsBand(L, nose ? 17.3 : 0);
+    }
     if (kind === "93") {
       s += rect(0, 0, L, 3.95, KTM.skirt) + rect(0, 3.95, L, 0.85, KTM.orange) + rect(0, 4.8, L, 0.72, KTM.red);
       if (nose) {
@@ -187,7 +208,7 @@ const etsDetail = (kind) => (c, g, nose, { a, b }) => {
   if (nose) s += acUnit(26, 11, 13.0) + acUnit(L - 22, 8, 13.0) + antenna(kind === "91" ? 9 : 15, 13.0);
   else if (besideCab(c)) s += acUnit(6, 9, 13.0) + panDeck(L - 13, 13.0, { facing: -1, cableTo: 22 });
   else s += acUnit(8, 9, 13.0) + acUnit(L - 17, 9, 13.0);
-  if (nose) s += kind === "93" ? ktmMark(c, 24.4, 6.2, 0.85, KTM.navy) + letters(c, 29.4, 6.15, 0.95, "ETS", KTM.gold, { weight: 800, italic: true, stroke: KTM.navy })
+  if (nose) s += kind.startsWith("93") ? ktmMark(c, 24.4, 6.2, 0.85, KTM.navy) + letters(c, 29.4, 6.15, 0.95, "ETS", KTM.gold, { weight: 800, italic: true, stroke: KTM.navy })
     : kind === "94" ? ktmMark(c, 24.4, 6.15, 0.85, KTM.navy) + letters(c, 29.4, 6.1, 0.95, "ETS", KTM.red, { weight: 800, italic: true })
       : ktmMark(c, 16.0, 6.35, 0.8, KTM.navy) + letters(c, 20.8, 6.3, 0.9, "ETS", KTM.blue, { weight: 800, italic: true });
   return s;
@@ -201,12 +222,14 @@ const etsSet = (kind, carL, midL) => {
   const mid = { rows: etsRows(7.2, Math.floor((midL - 13.0) / 6.3)), doors: [etsDoor(2.0), etsDoor(midL - 5.0)] };
   return { car: drivingCar(spec, car), mid: middleCar(spec, mid) };
 };
-const E93 = etsSet("93", 78.7, 75.5), E94 = etsSet("94", 78.7, 75.5), E91 = etsSet("91", 72.9, 72.2);
+const E931 = etsSet("931", 78.7, 75.5), E93 = etsSet("93", 78.7, 75.5), E94 = etsSet("94", 78.7, 75.5), E91 = etsSet("91", 72.9, 72.2);
 
 // ===================== KTM Komuter =====================
 // Class 92 (CSR Zhuzhou, SCS 01-38, 2010-12): six cars, driving cars 23.7 m,
 // the others 22.8 m; three double-leaf doors a side; 25 kV, 125 km/h. White,
-// a red line along the eave over a silver skirt; the cab front yellow, a
+// a blue band along the eave, a red line under the windows, a silver skirt
+// (photograph of SCS sets at Padang Besar, 2024; the red was drawn at the
+// eave before, corrected); the cab front yellow, a
 // blue band behind it from the roof down the cab side, a red sweep under
 // it; blue and yellow slashes by the first door. The equipment hung in the
 // open under the floor; pantographs on the two motor cars next to the
@@ -219,7 +242,7 @@ const SCS = { roof: 13.0, sill: 3.3, cornerR: 1.0, end: 0.6, trucks: { centers: 
     frontCoupler(0, 2.85, 1.7) + deflector(1.6, 4.6, 3.3),
   paint: (c, g, nose) => {
     const L = g.L;
-    let s = rect(0, 0, L, 18, KTM.white) + rect(0, 12.35, L, 2, KTM.roof) + rect(0, 11.9, L, 0.32, KTM.red) + rect(0, 0, L, 3.9, "#a3aab2") + rect(0, 3.9, L, 0.15, "#7d848c");
+    let s = rect(0, 0, L, 18, KTM.white) + rect(0, 12.35, L, 2, KTM.roof) + rect(0, 11.75, L, 0.6, KTM.royal) + rect(0, 6.3, L, 0.32, KTM.red) + rect(0, 0, L, 3.9, "#a3aab2") + rect(0, 3.9, L, 0.15, "#7d848c");
     if (nose) {
       s += path(poly([[3.2, 3.9], ["q", 4.6, 5.6, 5.4, 8.2], ["q", 6.2, 11.4, 7.2, 13.6], [9.8, 13.6], ["q", 8.6, 11.4, 7.8, 8.2], ["q", 7.0, 5.6, 5.6, 3.9]]), KTM.blue);
       s += path(poly([[0, 13.6], [0, 3.9], [3.2, 3.9], ["q", 4.6, 5.6, 5.4, 8.2], ["q", 6.2, 11.4, 7.2, 13.6]]), KTM.yellow);
@@ -248,9 +271,15 @@ const scs92Mid = middleCar(SCS, SCS_MID);
 
 // Class 83 (Hyundai Precision with Marubeni, EMU 19-40, 1996-97): three
 // cars, the driving motor cars 22.2 m, the trailer between them 23.2 m with
-// the pantograph; a nearly upright fiberglass front; two double doors a
-// side. Corrugated stainless sides, a blue window band with a white chevron
-// behind the cab and a yellow line over it; the cab end yellow all over.
+// the pantograph; a nearly upright fiberglass front; three double doors a
+// side, two windows between each pair (Wikipedia; photograph of EMU 2x at
+// Ipoh, 2024; drawn with two doors before, corrected). Corrugated stainless
+// sides and doors, the windows in blue panels, a white chevron behind the
+// cab, a yellow line along the top of the side; the cab end yellow all
+// over. EMU 25, 30 and 33, bought back from the KLIA Skypark Link, keep
+// that service's paint (photograph at Ipoh, 2024): the windows in a coral
+// band with an orange line under it, a red chevron behind the cab, the
+// front's lower half orange-red.
 const E83 = { roof: 12.9, sill: 3.4, cornerR: 1.0, end: 0.6, trucks: { centers: 50.0, wb: 8.0, d: 34 }, diaphragm: [3.7, 11.7], badge: false,
   nose: [[1.0, 3.4], [0.8, 4.5], [0.8, 9.2], ["q", 0.9, 11.2, 1.8, 12.2], ["q", 2.4, 12.9, 3.6, 12.9]], cabLen: 4.5,
   cab: () => path(poly([[0.9, 7.2], [0.9, 10.3], ["q", 1.1, 11.3, 1.9, 11.8], [3.7, 11.8], [3.7, 7.2]]), KTM.black) + path(poly([[1.0, 9.9], ["q", 1.2, 11.1, 2.0, 11.6], [3.5, 11.6], [3.5, 9.9]]), C.glassLight) +
@@ -259,7 +288,14 @@ const E83 = { roof: 12.9, sill: 3.4, cornerR: 1.0, end: 0.6, trucks: { centers: 
   paint: (c, g, nose) => {
     const L = g.L;
     let s = rect(0, 0, L, 18, "#cfd3d8") + flutes(0, L, 3.6, 6.4, 0.27) + flutes(0, L, 10.95, 12.2, 0.27) + rect(0, 12.2, L, 2, KTM.roof) + rect(0, 0, L, 3.65, "#9aa1a9");
-    s += rect(0, 6.75, L, 3.65, "#2a55a6") + rect(0, 10.55, L, 0.28, KTM.yellow);
+    if (c.sky) {
+      s += rect(0, 6.75, L, 3.65, "#e2604b") + rect(0, 6.35, L, 0.3, "#f39a2b");
+      if (nose) s += path("M12.6 6.9L11.2 6.9L9.8 8.55L11.2 10.25L12.6 10.25L11.2 8.55Z", "#c8102e") +
+        path(poly([[0, -1], [5.2, -1], [5.2, 11.4], ["q", 5.2, 13.6, 3.6, 13.6], [0, 13.6]]), "#d3d7db") + path(poly([[0, -1], [5.2, -1], [5.2, 7.6], ["q", 3.0, 7.2, 0, 8.4]]), "#ec5b2c") +
+        line(5.2, 3.4, 5.2, 11.4, "rgba(0,0,0,0.3)", 0.5);
+      return s;
+    }
+    s += rect(0, 6.75, L, 3.65, "#2a8ad6") + rect(0, 10.55, L, 0.28, KTM.yellow);
     if (nose) {
       s += path("M12.6 6.9L11.2 6.9L9.8 8.55L11.2 10.25L12.6 10.25L11.2 8.55Z", "#f4f5f6");
       s += path(poly([[0, -1], [5.2, -1], [5.2, 11.4], ["q", 5.2, 13.6, 3.6, 13.6], [0, 13.6]]), "#f2b705") + line(5.2, 3.4, 5.2, 11.4, "rgba(0,0,0,0.3)", 0.5);
@@ -270,14 +306,54 @@ const E83 = { roof: 12.9, sill: 3.4, cornerR: 1.0, end: 0.6, trucks: { centers: 
     const L = g.L;
     let s = equipment(a + 6.2, b - 6.2, 3.4, { depth: 1.4, boxes: nose ? 4 : 3 });
     if (nose) s += acUnit(16, 9, 12.9) + acUnit(L - 24, 9, 12.9) + horns(6.4, 12.9) + antenna(9, 12.9) + letters(c, 30.0, 5.6, 0.95, "KTM Komuter", KTM.navy, { weight: 800, italic: true });
-    else s += panDeck(16, 12.9, { cableTo: 34 }) + acUnit(40, 9, 12.9) + acUnit(L - 14, 9, 12.9);
+    else s += panDeck(16, 12.9, { cableTo: 34, down: c.hauled }) + acUnit(40, 9, 12.9) + acUnit(L - 14, 9, 12.9);
     return s;
   },
 };
-const e83Door = (x) => ({ x, w: 4.2, y0: 3.5, y1: 10.5, leaves: 2, glassY: 0.45, glassH: 0.4 });
-const e83Rows = (xs) => [{ xs, y: 7.0, w: 4.2, h: 2.9, r: 0.35 }];
-const emu83Car = drivingCar(E83, { rows: e83Rows([5.4, 21.8, 27.2, 32.6, 38.0, 43.4, 60.0, 65.6]), doors: [e83Door(13.6), e83Door(51.4)] });
-const emu83Mid = middleCar(E83, { rows: e83Rows([2.2, 17.4, 22.8, 28.2, 43.6, 49.0, 54.4, 69.6]), doors: [e83Door(9.6), e83Door(62.3)] });
+// The doors stainless, over the window panels' paint.
+const e83Door = (x) => ({ x, w: 4.2, y0: 3.5, y1: 10.5, leaves: 2, glassY: 0.45, glassH: 0.4, fill: "#c9ced3" });
+const e83Rows = (xs) => [{ xs, y: 7.0, w: 4.4, h: 2.9, r: 0.35 }];
+const E83_CAR = { rows: e83Rows([8.0, 21.6, 28.2, 44.0, 50.6, 66.0]), doors: [e83Door(15.0), e83Door(37.4), e83Door(59.8)] };
+const E83_MID = { rows: e83Rows([2.6, 7.8, 19.8, 26.4, 42.8, 49.4, 65.0, 70.2]), doors: [e83Door(13.2), e83Door(35.9), e83Door(58.5)] };
+const emu83Car = drivingCar(E83, E83_CAR), emu83Mid = middleCar(E83, E83_MID);
+const skyOf = (draw) => (c) => draw({ ...c, sky: true });
+const emu83SkyCar = skyOf(emu83Car), emu83SkyMid = skyOf(emu83Mid);
+
+// Class 81 (Ganz-Hunslet, built by Jenbacher, EMU 01-18, 1993-94; out of
+// service 2012-18, then refurbished by Woojin; Wikipedia): three cars,
+// Mc-Tp-Mc (the pantograph on the trailer), 3.65 m to the roof; car lengths
+// aren't published: about 20 m, from photographs against the platform. A
+// flat, slightly raked front; two double doors a side on each car. The
+// refurbished paint (photograph of EMU 05 at KL Sentral, 2022): cream, the
+// windows framed in light blue over a light blue band low on the side; the
+// cab end cream, a broad blue and a yellow stripe slanting up its side and
+// back over the first window.
+const E81 = { roof: 12.0, sill: 3.4, cornerR: 1.0, end: 0.6, trucks: { centers: 45.0, wb: 8.0, d: 34 }, diaphragm: [3.7, 11.0], badge: false,
+  nose: [[1.0, 3.4], [0.7, 4.5], [0.7, 9.6], ["q", 0.8, 11.3, 1.8, 11.8], ["q", 2.4, 12.0, 3.6, 12.0]], cabLen: 4.5,
+  cab: () => path(poly([[0.75, 7.2], [0.75, 10.4], ["q", 1.0, 11.2, 1.9, 11.4], [3.7, 11.4], [3.7, 7.2]]), KTM.black) + path(poly([[0.8, 9.8], ["q", 1.0, 10.9, 1.9, 11.2], [3.5, 11.2], [3.5, 9.8]]), C.glassLight) +
+    line(1.3, 7.5, 1.9, 9.7, "#0a0b0c", 0.8) + lamp([[0.7, 5.3], [1.7, 5.3], [1.7, 6.0], [0.7, 6.0]], "#fff6d0") + rect(0.7, 4.6, 0.45, 0.4, "#d8252d") +
+    frontCoupler(0, 2.85, 1.3) + rect(0.6, 1.8, 3.0, 1.6, "#3a3f45", 0.4) + rect(4.0, 3.8, 1.0, 6.6, "none", 0.5, 'rx="0.2"'),
+  paint: (c, g, nose) => {
+    const L = g.L;
+    let s = rect(0, 0, L, 18, "#ece6d6") + rect(0, 11.3, L, 2, "#b9bfc5") + rect(0, 0, L, 3.65, "#7d848c") + rect(0, 3.65, L, 1.4, "#8fb3df") + rect(0, 5.05, L, 0.2, "#3f6fbf");
+    if (nose) s += path(poly([[3.0, 3.65], [5.4, 3.65], [9.4, 11.3], [7.0, 11.3]]), "#3f6fbf") + path(poly([[5.6, 3.65], [6.5, 3.65], [10.5, 11.3], [9.6, 11.3]]), KTM.yellow);
+    return s;
+  },
+  detail: (c, g, nose, { a, b }) => {
+    const L = g.L;
+    let s = equipment(a + 6.0, b - 6.0, 3.4, { depth: 1.4, boxes: 3 });
+    if (nose) s += acUnit(14, 9, 12.0) + acUnit(L - 22, 9, 12.0) + horns(6.0, 12.0) + antenna(8.6, 12.0) + ktmMark(c, 30.0, 6.0, 0.75, "#3f6fbf");
+    else s += panDeck(14, 12.0, { cableTo: 30 }) + acUnit(36, 9, 12.0) + acUnit(L - 13, 9, 12.0);
+    return s;
+  },
+};
+// The window frames, light blue round each window.
+const e81Rows = (xs) => [{ xs, y: 7.1, w: 3.6, h: 2.7, r: 0.3 }];
+const e81Frames = (xs) => (c, g) => xs.map((x) => rect(x - 0.3, 6.8, 4.2, 3.3, "none", 0, 'stroke="#6f9bd6" stroke-width="1.4" vector-effect="non-scaling-stroke" rx="0.4"')).join("");
+const e81Door = (x) => ({ x, w: 4.2, y0: 3.5, y1: 10.3, leaves: 2, glassY: 0.45, glassH: 0.4, fill: "#ece6d6" });
+const E81_CAR_XS = [11.0, 20.2, 25.0, 29.8, 34.6, 39.4, 52.6, 57.4], E81_MID_XS = [2.0, 15.0, 19.8, 24.6, 29.4, 34.2, 39.0, 51.4, 56.0, 60.6];
+const emu81Car = drivingCar(E81, { rows: e81Rows(E81_CAR_XS), doors: [e81Door(14.8), e81Door(46.2)], extra: e81Frames(E81_CAR_XS) });
+const emu81Mid = middleCar(E81, { rows: e81Rows(E81_MID_XS), doors: [e81Door(8.8), e81Door(45.4)], extra: e81Frames(E81_MID_XS) });
 
 // ===================== Class 61 DMU =====================
 // CRRC Zhuzhou, DMU 01-13 (2018-20, the first two built in China, the rest
@@ -323,84 +399,184 @@ const dmu61Car = drivingCar(D61, { rows: d61Rows(14.6, 9), doors: [d61Door(11.0)
 const dmu61Mid = middleCar(D61, { rows: d61Rows(7.4, 10), doors: [d61Door(2.0), d61Door(71.0)] });
 
 // ===================== Locomotive-hauled trains =====================
-// The Ekspres Rakyat Timuran and Shuttle Tebrau: diesel locomotives (Class
-// 26, also Classes 24 and 25) with air-conditioned coaches. Drawn on the
-// Class 26 (ADtranz/Bombardier DE-AC33C "Blue Tiger", 26101-26120,
-// 2003-04): 23.7 m, Co-Co, a cab at each end and a narrower hood between
-// them with walkways along it. KTMB's silver, a navy band along the middle
-// edged in red and yellow, a dark gray frame; the cab ends striped alike.
+// The Ekspres Rakyat Timuran, the Shuttle Tebrau and the Johor shuttle:
+// diesel locomotives with KTMB's air-conditioned coaches.
+// --- Class 26 (ADtranz/Bombardier DE-AC33C "Blue Tiger", 26101-26120,
+// 2003-04; Wikipedia, "ADtranz DE-AC33C"): 23.7 m, Co-Co, 3,300 hp. A
+// full-width cab at the front, its windshield raked back under a peak; a
+// long hood behind it a little lower than the cab roof, a walkway along its
+// side; a small window high in the far end for running backward. KTMB's
+// paint (photographs of 26111 and 26113, Commons): light silver gray, four
+// stripes (blue, white, yellow, red from the top) along the foot of the cab
+// and hood, a leaping tiger in blue on the hood, the frame dark gray, the
+// pilot red. (Corrected from an earlier drawing with a cab at each end and a
+// navy band along the middle.)
 function ktmLoco(c) {
-  const L = c.L, sill = 4.4, cab = 9.4, roof = 13.6, hood = 12.4;
+  const L = c.L, deck = 5.3, roof = 13.6, hood = 12.9, cabB = 11.0;
   const tA = L / 2 - 21.5, tB = L / 2 + 21.5;
-  let s = truck(tA, { wb: 12.4, d: 40, kind: "loco", top: sill, axles: 3 }) + truck(tB, { wb: 12.4, d: 40, kind: "loco", top: sill, axles: 3 });
+  let s = truck(tA, { wb: 12.4, d: 40, kind: "loco", top: 4.4, axles: 3 }) + truck(tB, { wb: 12.4, d: 40, kind: "loco", top: 4.4, axles: 3 });
   // Fuel tank between the trucks, its gauge and filler; the main reservoirs
-  // beside it; the frame, steps at each end and the end beams.
-  s += path(poly([[L / 2 - 12, sill], [L / 2 + 12, sill], [L / 2 + 12, 2.4], ["q", L / 2 + 12, 1.6, L / 2 + 11.2, 1.6], [L / 2 - 11.2, 1.6], ["q", L / 2 - 12, 1.6, L / 2 - 12, 2.4]]), "#3d4249", 0.4);
+  // beside it; the frame, steps, the pilot and the end beams.
+  s += path(poly([[L / 2 - 12, 4.4], [L / 2 + 12, 4.4], [L / 2 + 12, 2.4], ["q", L / 2 + 12, 1.6, L / 2 + 11.2, 1.6], [L / 2 - 11.2, 1.6], ["q", L / 2 - 12, 1.6, L / 2 - 12, 2.4]]), "#3d4249", 0.4);
   s += rect(L / 2 - 2, 2.4, 2.4, 0.9, "#7d848c", 0.3) + circle(L / 2 + 3, 3.0, 0.3, "#7d848c") + line(L / 2 - 11.6, 3.7, L / 2 + 11.6, 3.7, "rgba(255,255,255,0.18)", 0.5);
   for (const x of [L / 2 - 16.5, L / 2 + 13.0]) s += rect(x, 2.7, 3.5, 1.0, "#4a5057", 0.3, 'rx="0.5"');
-  s += rect(0.4, 3.4, L - 0.8, sill - 3.4 + 0.95, "#3d4249", 0.4);
-  for (const x of [1.4, L - 3.4]) s += lines([[x, 1.6, x, 3.4], [x + 2, 1.6, x + 2, 3.4], [x, 1.7, x + 2, 1.7], [x, 2.5, x + 2, 2.5]], "#3d4249", 0.8);
-  // End beams with the coupler where nothing is coupled (consist.js draws
-  // it where the next car is), headlights and marker lights on the beam.
+  s += rect(0.4, 4.0, L - 0.8, deck - 4.0, "#3d4249", 0.4);
+  s += path(poly([[0.3, 4.0], [3.6, 4.0], [3.2, 1.2], [2.6, 0.6], [0.6, 0.6], [0.2, 1.8]]), "#d5402f", 0.4) + rect(L - 2.0, 1.4, 1.6, 2.6, "#d5402f", 0.4);
+  for (const x of [4.0, L - 4.6]) s += lines([[x, 1.6, x, 4.0], [x + 2, 1.6, x + 2, 4.0], [x, 1.7, x + 2, 1.7], [x, 2.8, x + 2, 2.8]], "#3d4249", 0.8);
   for (const [x, side, coupled] of [[0, -1, c.coupledL], [L, 1, c.coupledR]]) {
     if (!coupled) s += rect(side < 0 ? x : x - 2.4, 2.55, 2.4, 0.6, "#2a2d31") + rect(side < 0 ? x : x - 0.45, 2.25, 0.45, 1.2, "#2a2d31", 0, 'rx="0.12"');
   }
-  const cabBox = (x0, x1, front) => poly(front < 0
-    ? [[x0, sill + 0.95], [x1, sill + 0.95], [x1, roof], [x0 + 1.4, roof], ["q", x0 + 0.5, roof, x0 + 0.5, roof - 0.9], [x0 + 0.2, 9.4], [x0, sill + 0.95]]
-    : [[x0, sill + 0.95], [x1, sill + 0.95], [x1 - 0.2, 9.4], [x1 - 0.5, roof - 0.9], ["q", x1 - 0.5, roof, x1 - 1.4, roof], [x0, roof]]);
-  const hoodD = poly([[cab + 0.6, sill + 0.95], [L - cab - 0.6, sill + 0.95], [L - cab - 0.6, hood - 0.5], ["q", L - cab - 0.6, hood, L - cab - 1.1, hood], [cab + 1.1, hood], ["q", cab + 0.6, hood, cab + 0.6, hood - 0.5]]);
-  // Paint, clipped to each body part: silver, the navy band edged in red
-  // and yellow, a darker roof.
-  const stripe = (top) => rect(0, 7.2, L, 1.5, KTM.navy) + rect(0, 8.75, L, 0.3, KTM.red) + rect(0, 6.85, L, 0.3, KTM.yellow) + rect(0, top - 0.5, L, 2, "#8f98a3");
-  const clip = (d, inner) => { const id = newId(); return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})">${inner}</g>`; };
-  s += path(hoodD, "#cdd2d7", 0.8) + clip(hoodD, stripe(hood) + rect(0, sill + 0.95, L, 0.4, "#9aa1a9"));
-  // Hood doors and louvers: the radiator intakes at the back, the engine
-  // room and inertial filter doors, the dynamic brake grille, the KTM mark.
-  s += slats(L - cab - 13, 9.4, 10, 2.4, 0.35, "rgba(0,0,0,0.3)") + rect(L - cab - 13, 9.4, 10, 2.4, "none", 0.45) + slats(cab + 3, 9.4, 6, 2.4, 0.35, "rgba(0,0,0,0.3)") + rect(cab + 3, 9.4, 6, 2.4, "none", 0.45);
-  for (const x of seq(cab + 10.5, 7.2, 5)) s += rect(x, sill + 1.6, 6.4, 4.6, "none", 0.45, 'rx="0.15"') + line(x + 5.6, sill + 3.4, x + 5.6, sill + 4.4, "currentColor", 0.6);
-  s += ktmMark(c, L / 2, 10.6, 1.1, KTM.navy);
-  // Roof: radiator fans at the back, the exhaust, the dynamic brake hatch.
-  for (const x of [L - cab - 11.5, L - cab - 6.5]) s += path(`M${x - 2} ${hood}Q${x} ${hood + 0.7} ${x + 2} ${hood}Z`, C.steelDark, 0.4) + line(x - 1.4, hood + 0.25, x + 1.4, hood + 0.25, "rgba(0,0,0,0.35)", 0.4);
-  s += rect(L / 2 - 2, hood - 0.05, 1.6, 0.8, "#3a3f45") + rect(cab + 3, hood - 0.05, 8, 0.35, C.steelDark, 0.4);
-  // Walkway handrails along the hood.
-  s += lines([[cab + 0.8, 8.4, L - cab - 0.8, 8.4], ...seq(cab + 1, 9.6, 6).map((x) => [x, sill + 1.0, x, 8.4])], "currentColor", 0.5);
-  for (const [x0, x1, f] of [[0.4, cab + 0.6, -1], [L - cab - 0.6, L - 0.4, 1]]) {
-    const d = cabBox(x0, x1, f), nose = f < 0 ? x0 : x1, k = -f;
-    s += path(d, "#cdd2d7") + clip(d, stripe(roof));
-    // Windshield, cab side window, door; headlights and marker lights; horns
-    // on the cab roof; a number board.
-    s += win(f < 0 ? x0 + 0.9 : x1 - 2.5, 9.7, 1.6, 2.6, 0.3) + win(f < 0 ? x0 + 4.4 : x1 - 7.6, 9.7, 3.2, 2.4, 0.3);
-    s += door(f < 0 ? x0 + 3.5 : x1 - 5.7, sill + 1.2, 2.2, 7.4, { glassY: 0.62, glassH: 0.28, grabs: true });
-    s += rect(nose + k * 0.15 - (k < 0 ? 0.6 : 0), 5.8, 0.6, 0.8, "#e9edf0", 0.3) + rect(nose + k * 0.15 - (k < 0 ? 0.6 : 0), 6.7, 0.6, 0.35, "#d8252d");
-    s += horns(f < 0 ? x0 + 3.2 : x1 - 4.4, roof) + rect(f < 0 ? x0 + 1.0 : x1 - 2.6, roof - 0.8, 1.6, 0.55, "#1d1f22", 0, 'rx="0.1"');
-    s += path(d, "none", 0.8);
+  // The body: the cab's raked front under its peak, the hood behind it.
+  const cabD = poly([[0.5, deck], [cabB, deck], [cabB, roof], [2.9, roof], ["q", 2.3, roof, 2.0, roof - 0.5], [0.7, 9.6], [0.5, 9.0]]);
+  const hoodD = poly([[cabB, deck], [L - 0.5, deck], [L - 0.5, hood - 1.2], [L - 1.4, hood], [cabB, hood]]);
+  const body = cabD + hoodD, id = newId();
+  const liv = rect(0, 0, L, 16, "#cdd1d6") + rect(0, 7.1, L, 0.4, KTM.navy) + rect(0, 6.8, L, 0.3, "#f4f5f6") + rect(0, 6.4, L, 0.4, KTM.yellow) + rect(0, 6.0, L, 0.4, KTM.red);
+  s += path(body, "#cdd1d6") + `<clipPath id="${id}"><path d="${body}"/></clipPath><g clip-path="url(#${id})">${liv}</g>`;
+  // Cab: the windshield's edge and the side window, the door, headlights
+  // in the peak and low on the front, marker lights, horns, the KTM mark.
+  s += path(poly([[0.85, 9.9], [2.15, 12.9], [3.4, 12.9], [3.4, 9.9]]), C.glass) + win(4.6, 10.0, 2.6, 2.4, 0.3) + door(8.2, deck + 0.4, 2.2, 7.4, { glassY: 0.62, glassH: 0.28, grabs: true });
+  s += rect(1.6, roof - 0.55, 1.4, 0.45, "#e9edf0", 0.3, 'rx="0.2"') + rect(0.55, 7.8, 0.5, 0.7, "#e9edf0", 0.3) + rect(0.55, 8.6, 0.5, 0.35, "#d8252d");
+  s += horns(4.4, roof) + antenna(9.6, roof) + ktmMark(c, 5.6, 8.6, 0.8, KTM.navy) + rect(4.0, 5.5, 2.4, 0.6, "#b98a2e", 0.3, 'rx="0.1"');
+  // Hood: the engine room doors, the intake grilles high behind the cab, the
+  // radiator grille near the far end; the tiger; the far end's window.
+  for (const x of seq(cabB + 9.5, 4.6, 7)) s += line(x, deck + 0.6, x, hood - 0.5, "rgba(0,0,0,0.25)", 0.5);
+  s += rect(cabB + 1.2, 9.4, 7.2, 2.6, "rgba(0,0,0,0.1)", 0.4) + slats(cabB + 1.2, 9.4, 7.2, 2.6, 0.35, "rgba(0,0,0,0.35)");
+  s += rect(L - 13, 8.6, 9, 3.4, "rgba(0,0,0,0.1)", 0.4) + slats(L - 13, 8.6, 9, 3.4, 0.35, "rgba(0,0,0,0.35)") + win(L - 2.8, 10.2, 1.4, 1.6, 0.25);
+  const tx = L * 0.62;
+  s += path(`M${tx - 4} 8.4Q${tx - 1} 10.6 ${tx + 2.5} 10.4Q${tx + 4} 10.9 ${tx + 4.6} 11.7Q${tx + 3.4} 11.2 ${tx + 2.6} 11.0Q${tx + 0.4} 11.3 ${tx - 1.6} 10.0Q${tx - 3} 9.2 ${tx - 4} 8.4Z`, KTM.navy) +
+    path(`M${tx - 1.2} 9.8L${tx - 2.2} 8.0L${tx - 1.4} 8.0L${tx - 0.3} 9.9Z`, KTM.navy) + path(`M${tx + 2.0} 10.4L${tx + 2.8} 8.4L${tx + 3.5} 8.5L${tx + 2.8} 10.6Z`, KTM.navy);
+  // Roof: the radiator fans at the far end, the exhausts, the dynamic brake hatch.
+  for (const x of [L - 11.5, L - 6.5]) s += path(`M${x - 2} ${hood}Q${x} ${hood + 0.6} ${x + 2} ${hood}Z`, C.steelDark, 0.4);
+  s += rect(L / 2 - 2, hood - 0.05, 1.6, 0.7, "#3a3f45") + rect(L / 2 + 0.2, hood - 0.05, 1.6, 0.7, "#3a3f45") + rect(cabB + 2, hood - 0.05, 8, 0.35, C.steelDark, 0.4);
+  // The walkway's handrail along the hood.
+  s += lines([[cabB + 0.6, deck + 3.0, L - 1.2, deck + 3.0], ...seq(cabB + 0.6, 6.4, 6).map((x) => [x, deck, x, deck + 3.0])], "#e3e6e9", 0.6);
+  return s + path(body, "none", 0.8);
+}
+
+// --- Class 25 (EMD GT18LC-2, built at London, Ontario: 25/1, 25101-25112,
+// 1990-91; 25/2, 25201-25205, 2002; Wikipedia "EMD GT18LC-2"; the 254xx
+// are rebuilt 25/1s): the locomotive photographed on today's passenger trains
+// (25110 on the Shuttle Tebrau at Woodlands, 2023; 25202 on the Ekspres
+// Rakyat Timuran at Bangsar; 25106 and 25406 at Tumpat; Commons). A road
+// switcher: a low short hood ahead of the cab, the long hood behind it with
+// its engine room doors, a tall intake louvre behind the cab, the radiator's
+// big grille low at the far end and its fans on the roof above. Co-Co on
+// three-axle trucks. No length is published for the GT18LC-2; drawn to its
+// sister GT18MC's (South African Class 35-200, Wikipedia), which matches the
+// photographs: 16.485 m over the couplers, trucks 9.627 m apart, 3.302 m
+// wheelbase, 915 mm wheels, 3.924 m to the cab roof. KTMB's paint
+// as photographed: light silver gray all over, four stripes along the foot
+// of the hoods and cab (blue, white, yellow, red from the top), the frame
+// dark gray, the end beams red; "KTM" in blue on the long hood, the number
+// big in black under it.
+function ktm25(c) {
+  const L = c.L, deck = 4.6, roof = 12.87, hood = 11.9, nose = 8.9, cabA = 7.4, cabB = 14.6;
+  let s = "";
+  for (const x of [L / 2 - 15.8, L / 2 + 15.8]) s += truck(x, { wb: 10.8, d: 36, kind: "loco", top: 3.5, axles: 3 });
+  // Fuel tank and air reservoirs between the trucks; the frame; steps and
+  // the red end beams.
+  s += path(poly([[L / 2 - 8, 3.5], [L / 2 + 8, 3.5], [L / 2 + 8, 2.1], ["q", L / 2 + 8, 1.4, L / 2 + 7.3, 1.4], [L / 2 - 7.3, 1.4], ["q", L / 2 - 8, 1.4, L / 2 - 8, 2.1]]), "#3d4249", 0.4) +
+    rect(L / 2 - 1, 2.3, 2.0, 0.8, "#7d848c", 0.3) + rect(L / 2 + 8.4, 2.6, 2.8, 0.85, "#4a5057", 0.3, 'rx="0.42"');
+  s += rect(0.5, 3.5, L - 1.0, deck - 3.5, "#3d4249", 0.4);
+  for (const [x, side] of [[0.5, -1], [L - 0.5, 1]]) {
+    s += rect(side < 0 ? x : x - 1.6, 1.3, 1.6, 2.2, "#9b1f24", 0.4) + rect(side < 0 ? x + 1.7 : x - 3.7, 1.3, 2.0, 2.2, "none", 0) +
+      lines([[side < 0 ? x + 1.8 : x - 1.8, 1.4, side < 0 ? x + 1.8 : x - 1.8, 3.5], [side < 0 ? x + 3.4 : x - 3.4, 1.4, side < 0 ? x + 3.4 : x - 3.4, 3.5], [side < 0 ? x + 1.8 : x - 3.4, 2.4, side < 0 ? x + 3.4 : x - 1.8, 2.4]], "#3d4249", 0.8);
+    if (!(side < 0 ? c.coupledL : c.coupledR)) s += rect(side < 0 ? 0 : L - 2.0, 2.55, 2.0, 0.6, "#2a2d31") + rect(side < 0 ? 0 : L - 0.45, 2.25, 0.45, 1.2, "#2a2d31", 0, 'rx="0.12"');
   }
+  // Hoods and cab, painted together and outlined.
+  const noseD = poly([[1.2, deck], [cabA, deck], [cabA, nose], [2.0, nose], ["q", 1.2, nose, 1.2, nose - 0.8]]);
+  const cabD = poly([[cabA, deck], [cabB, deck], [cabB, roof - 0.6], ["q", cabB, roof, cabB - 0.6, roof], [cabA + 0.6, roof], ["q", cabA, roof, cabA, roof - 0.6]]);
+  const hoodD = poly([[cabB, deck], [L - 1.2, deck], [L - 1.2, hood - 1.0], [L - 2.4, hood], [cabB, hood]]);
+  const body = noseD + cabD + hoodD, id = newId();
+  const liv = rect(0, 0, L, 16, "#c9cdd2") + rect(0, 5.75, L, 0.38, KTM.navy) + rect(0, 5.45, L, 0.3, "#f4f5f6") + rect(0, 5.1, L, 0.35, KTM.yellow) + rect(0, 4.75, L, 0.35, KTM.red);
+  s += path(body, "#c9cdd2") + `<clipPath id="${id}"><path d="${body}"/></clipPath><g clip-path="url(#${id})">${liv}</g>`;
+  // Nose: its doors, the number box, a headlight pair on top.
+  s += lines([[2.2, deck + 1.6, 2.2, nose - 0.4], [cabA - 0.5, deck + 1.6, cabA - 0.5, nose - 0.4]], "rgba(0,0,0,0.3)", 0.5) + rect(1.6, nose + 0.02, 1.0, 0.55, "#2a2d31", 0, 'rx="0.12"') + circle(2.1, nose + 0.3, 0.18, "#fff6d0");
+  // Cab: the front windows' edge, the side window and door, the nameplate;
+  // horns and twin headlights over the windshield.
+  s += rect(cabA - 0.05, nose + 0.5, 0.3, roof - nose - 1.3, KTM.black) + win(cabA + 0.7, 9.5, 2.3, 2.3, 0.25) + win(cabA + 3.6, 9.5, 2.4, 2.3, 0.25) +
+    door(cabB - 2.6, deck + 0.5, 2.0, 6.6, { glassY: 0.62, glassH: 0.3, grabs: true }) + rect(cabA + 1.0, 7.0, 3.0, 0.9, "#c8102e", 0.3, 'rx="0.1"') +
+    horns(cabA + 2.0, roof) + rect(cabA + 0.4, roof - 0.9, 0.9, 0.7, "#e9edf0", 0.3, 'rx="0.2"') + antenna(cabB - 1.2, roof);
+  // Long hood: the intake louvre behind the cab, the engine room doors and
+  // latches, the radiator grille low at the far end; KTM and the number.
+  s += rect(cabB + 0.6, 6.6, 1.2, 4.8, "rgba(0,0,0,0.12)", 0.4) + slats(cabB + 0.6, 6.6, 1.2, 4.8, 0.25, "rgba(0,0,0,0.45)");
+  for (const x of seq(cabB + 2.6, 3.2, Math.floor((L - 12 - cabB - 2.6) / 3.2))) s += line(x, deck + 1.8, x, hood - 0.4, "rgba(0,0,0,0.28)", 0.5) + rect(x + 1.4, 8.6, 0.22, 0.5, "#2a2d31");
+  s += rect(L - 9.6, 6.4, 7.2, 3.0, "rgba(20,22,25,0.55)", 0.4) + slats(L - 9.6, 6.4, 7.2, 3.0, 0.3, "rgba(255,255,255,0.18)") + rect(L - 11.2, 7.0, 0.7, 2.0, "rgba(0,0,0,0.35)", 0.3);
+  s += letters(c, L - 6.6, 10.7, 0.8, "KTM", KTM.navy, { weight: 900, italic: true }) + letters(c, L - 6.6, 9.75, 1.1, "25", "#1d1f22", { weight: 500 });
+  // Roof: the radiator fans at the far end, the exhaust, the dynamic brake
+  // hatch; walkway handrails; the long hood's end lights.
+  for (const x of [L - 8.0, L - 4.6]) s += path(`M${x - 1.5} ${hood}Q${x} ${hood + 0.5} ${x + 1.5} ${hood}Z`, C.steelDark, 0.4);
+  s += rect(cabB + 9, hood - 0.05, 1.4, 0.65, "#3a3f45") + rect(cabB + 3, hood - 0.05, 6, 0.3, C.steelDark, 0.4) + rect(L - 1.9, hood - 1.5, 0.6, 0.6, "#e9edf0", 0.3, 'rx="0.2"');
+  s += lines([[0.9, deck, 0.9, deck + 2.8], [0.9, deck + 2.8, cabA - 0.2, deck + 2.8], [L - 0.9, deck, L - 0.9, deck + 2.8], [L - 0.9, deck + 2.8, L - 4.5, deck + 2.8]], "#e3e6e9", 0.7);
+  return s + path(body, "none", 0.8);
+}
+
+// KTM's locomotive-hauled coaches (photographs of the Ekspres Rakyat
+// Timuran's rake at Bangsar and of the Shuttle Tebrau's coaches, Commons
+// and railtravelstation.com): bare silver steel, about 20.5 m, a swing door
+// at each end of each side, round-cornered windows. The seated coaches
+// (ASC, second class; AFC, first) a broad blue band low on the side under a
+// yellow line, a red line under the eave; the sleepers (ADNS) two rows of
+// windows (the upper berths' small ones over the lower berths'), with blue,
+// yellow and red lines under them; the power generator car (PGC) behind the
+// locomotive, its generator room's louvred panels in place of windows and
+// the radiator's raised housing on the roof, in the seated coaches' bands.
+// (The seated coach is corrected here from a drawing with the stripes in the
+// wrong order and its windows set in a gray band.)
+const coachBands = (L) => rect(0, 4.25, L, 1.45, KTM.navy) + rect(0, 5.75, L, 0.4, KTM.yellow) + rect(0, 11.75, L, 0.16, KTM.red);
+const coachDoors = [{ x: 1.3, w: 2.4, y0: 3.7, y1: 10.6, glassY: 0.55, glassH: 0.3 }, { x: 63.5, w: 2.4, y0: 3.7, y1: 10.6, glassY: 0.55, glassH: 0.3 }];
+const coachGear = (c, g, doors) => {
+  const L = g.L, a = L / 2 - 23, b = L / 2 + 23;
+  return bogieGear(a, 7.5, 3.6) + bogieGear(b, 7.5, 3.6) + doorTrim(doors, 3.6) + equipment(a + 6, b - 6, 3.6, { depth: 1.5, boxes: 4 });
+};
+const KTM_COACH = { roof: 12.8, sill: 3.6, cornerR: 1.0, end: 0.6, trucks: { centers: 46.0, wb: 7.5, d: 33 }, diaphragm: [3.9, 11.6], badge: false,
+  doors: coachDoors, rows: [{ xs: seq(6.4, 5.1, 11), y: 7.1, w: 3.9, h: 2.7, r: 0.6 }], roofItems: [],
+  paint: (c, g) => rect(0, 0, g.L, 18, KTM.silver) + rect(0, 12.1, g.L, 2, "#8f98a3") + rect(0, 0, g.L, 3.9, "#7c8189") + coachBands(g.L),
+  extra: (c, g) => coachGear(c, g, coachDoors) + acUnit(5.5, 9, 12.8) + acUnit(g.L - 14.5, 9, 12.8) + rect(24, 12.75, 19, 0.25, C.steelDark, 0.4) + ktmMark(c, g.L / 2, 4.95, 0.75, "#f4f5f6"),
+};
+const ktmCoach = (c) => bilevel(c, KTM_COACH);
+const ktmSleeper = (c) => bilevel(c, { ...KTM_COACH,
+  rows: [{ xs: seq(6.6, 4.65, 12), y: 6.6, w: 3.0, h: 2.2, r: 0.5 }, { xs: seq(7.0, 4.65, 12), y: 9.6, w: 2.2, h: 1.3, r: 0.4 }],
+  paint: (c, g) => rect(0, 0, g.L, 18, KTM.silver) + rect(0, 12.1, g.L, 2, "#8f98a3") + rect(0, 0, g.L, 3.9, "#7c8189") +
+    rect(0, 5.55, g.L, 0.35, KTM.navy) + rect(0, 5.1, g.L, 0.35, KTM.yellow) + rect(0, 4.65, g.L, 0.35, KTM.red),
+  extra: (c, g) => coachGear(c, g, coachDoors) + acUnit(5.5, 9, 12.8) + acUnit(g.L - 14.5, 9, 12.8) + rect(24, 12.75, 19, 0.25, C.steelDark, 0.4) + letters(c, g.L / 2, 4.1, 0.55, "ADNS", "#3a3f45", { weight: 600 }),
+});
+const pgcDoors = [{ x: 1.3, w: 2.4, y0: 3.7, y1: 10.6, glassY: 0.55, glassH: 0.3 }];
+const ktmPower = (c) => bilevel(c, { ...KTM_COACH, doors: pgcDoors, rows: [{ xs: [58.6, 62.6], y: 7.8, w: 2.4, h: 2.0, r: 0.3 }],
+  extra: (c, g) => {
+    let s = coachGear(c, g, pgcDoors) + seq(7.0, 6.7, 7).map((x) => rect(x, 7.0, 4.4, 3.6, "rgba(0,0,0,0.12)", 0.4, 'rx="0.2"') + slats(x + 0.2, 7.1, 4.0, 3.4, 0.3, "rgba(0,0,0,0.4)")).join("");
+    // The radiator housing and its fans on the roof; the exhaust; the fuel tank under the floor.
+    s += rect(16, 12.75, 14, 1.0, "#9ba2aa", 0.4, 'rx="0.3"') + slats(16.5, 12.85, 13, 0.8, 0.4, "rgba(0,0,0,0.35)") + rect(33, 12.75, 0.6, 1.1, "#3a3f45") + rect(34.0, 12.75, 0.6, 1.1, "#3a3f45") +
+      rect(g.L / 2 - 6, 1.7, 12, 1.6, "#3d4249", 0.4, 'rx="0.7"');
+    return s + letters(c, 50, 9.7, 0.6, "PGC", "#3a3f45", { weight: 700 }) + ktmMark(c, 50, 8.3, 0.75, KTM.navy);
+  } });
+
+// --- The Pasir Gudang branch's "hybrid" train (KTM Komuter Southern
+// Sector; railtravelstation.com): the branch from Kempas Baru isn't wired,
+// so a diesel locomotive hauls an unpowered Class 83 set whose lights and
+// air conditioning run off a diesel generator set in a container on a BCF
+// container flat wagon between them. The wagon: about 15 m over couplers
+// on two trucks (estimated from photographs); a 20 ft generator container
+// (6.06 m long, 2.59 m high, ISO), painted white with KTMB's blue band,
+// its radiator louvres at one end and the exhaust stack on top.
+function genFlat(c) {
+  const L = c.L, deck = 4.1;
+  let s = truck(L / 2 - 16, { wb: 5.6, d: 33, top: 3.1 }) + truck(L / 2 + 16, { wb: 5.6, d: 33, top: 3.1 });
+  s += rect(0.5, 3.1, L - 1.0, deck - 3.1, "#3d4249", 0.4) + rect(0.5, 2.6, L - 1.0, 0.5, "#2a2d31") + line(L / 2 - 8, 2.4, L / 2 + 8, 2.4, "#5a6068", 1.0);
+  for (const [x, side, coupled] of [[0, -1, c.coupledL], [L, 1, c.coupledR]]) if (!coupled) s += rect(side < 0 ? x : x - 1.6, 2.55, 1.6, 0.55, "#2a2d31");
+  const x0 = L / 2 - 10, w = 19.9, top = deck + 8.5;
+  s += rect(x0, deck, w, 8.5, "#eef0f2", 0.6) + lines(seq(x0 + 0.6, 0.55, 35).map((x) => [x, deck + 0.3, x, top - 0.3]), "rgba(0,0,0,0.08)", 0.4) +
+    rect(x0, deck + 3.2, w, 0.9, KTM.royal) + rect(x0 + w - 5.2, deck + 4.6, 4.4, 3.2, "rgba(0,0,0,0.12)", 0.4) + slats(x0 + w - 5.1, deck + 4.7, 4.2, 3.0, 0.3, "rgba(0,0,0,0.45)") +
+    door(x0 + 1.4, deck + 0.4, 2.6, 7.2, { glass: false, grabs: false, fill: "rgba(0,0,0,0.05)" }) + rect(x0 + w - 3.0, top, 0.5, 1.4, "#3a3f45") + rect(x0 + w - 3.2, top + 1.4, 0.9, 0.15, "#3a3f45") +
+    ktmMark(c, x0 + w / 2, deck + 5.9, 0.9, KTM.royal);
   return s;
 }
 
-// KTM's air-conditioned intercity coaches (second-class seats, first class
-// and day-night sleepers on the overnight train): a vestibule at each end,
-// a long row of windows. Silver like the locomotives, the navy band edged
-// in red and yellow under the windows, a gray roof; an air-conditioning
-// unit at each end of the roof, the generator and battery boxes under the
-// floor.
-const KTM_COACH = { roof: 12.8, sill: 3.6, cornerR: 1.0, end: 0.6, trucks: { centers: 46.0, wb: 7.5, d: 33 }, diaphragm: [3.9, 11.6], badge: false,
-  doors: [{ x: 1.3, w: 2.4, y0: 3.7, y1: 10.6, glassY: 0.55, glassH: 0.3 }, { x: 63.5, w: 2.4, y0: 3.7, y1: 10.6, glassY: 0.55, glassH: 0.3 }],
-  rows: [{ xs: seq(6.4, 5.1, 11), y: 7.1, w: 3.9, h: 2.7, r: 0.35 }], roofItems: [],
-  paint: (c, g) => rect(0, 0, g.L, 18, KTM.silver) + rect(0, 12.1, g.L, 2, "#8f98a3") + rect(0, 0, g.L, 3.9, "#7c8189") +
-    rect(0, 5.0, g.L, 1.35, KTM.navy) + rect(0, 6.4, g.L, 0.26, KTM.red) + rect(0, 4.7, g.L, 0.26, KTM.yellow) + rect(0, 6.95, g.L, 3.05, "#9aa1a9", 0, 'rx="0.3"'),
-  extra: (c, g) => {
-    const L = g.L, a = L / 2 - 23, b = L / 2 + 23;
-    let s = bogieGear(a, 7.5, 3.6) + bogieGear(b, 7.5, 3.6) + doorTrim(KTM_COACH.doors, 3.6) + equipment(a + 6, b - 6, 3.6, { depth: 1.5, boxes: 4 });
-    s += acUnit(5.5, 9, 12.8) + acUnit(L - 14.5, 9, 12.8) + rect(24, 12.75, 19, 0.25, C.steelDark, 0.4) + ktmMark(c, L / 2, 5.75, 0.85, "#f4f5f6");
-    return s;
-  },
-};
-const ktmCoach = (c) => bilevel(c, KTM_COACH);
-
 export const TYPES = {
-  ets93Car: { name: "KTM Class 93 (ETS) driving car", kind: "emu" },
-  ets93Mid: { name: "KTM Class 93 (ETS) car", kind: "emu" },
+  ets93Car: { name: "KTM Class 93/1 (ETS) driving car", kind: "emu" },
+  ets93Mid: { name: "KTM Class 93/1 (ETS) car", kind: "emu" },
+  ets932Car: { name: "KTM Class 93/2 (ETS2) driving car", kind: "emu" },
+  ets932Mid: { name: "KTM Class 93/2 (ETS2) car", kind: "emu" },
   ets94Car: { name: "KTM Class 94 (ETS3) driving car", kind: "emu" },
   ets94Mid: { name: "KTM Class 94 (ETS3) car", kind: "emu" },
   ets91Car: { name: "KTM Class 91 (ETS) driving car", kind: "emu" },
@@ -409,62 +585,108 @@ export const TYPES = {
   scs92Mid: { name: "KTM Class 92 car", kind: "emu" },
   emu83Car: { name: "KTM Class 83 driving car", kind: "emu" },
   emu83Mid: { name: "KTM Class 83 trailer", kind: "emu" },
+  emu83SkyCar: { name: "KTM Class 83 driving car (ex-Skypark)", kind: "emu" },
+  emu83SkyMid: { name: "KTM Class 83 trailer (ex-Skypark)", kind: "emu" },
+  emu81Car: { name: "KTM Class 81 driving car", kind: "emu" },
+  emu81Mid: { name: "KTM Class 81 trailer", kind: "emu" },
   dmu61Car: { name: "KTM Class 61 DMU driving car", kind: "emu" },
   dmu61Mid: { name: "KTM Class 61 DMU motor car", kind: "emu" },
-  ktmLoco: { name: "KTM diesel locomotive", kind: "diesel" },
-  ktmCoach: { name: "KTM intercity coach", kind: "coach" },
+  ktm25: { name: "KTM Class 25 locomotive", kind: "diesel" },
+  ktmLoco: { name: "KTM Class 26 locomotive", kind: "diesel" },
+  ktmPower: { name: "KTM power generator car", kind: "coach" },
+  ktmCoach: { name: "KTM air-conditioned seated coach", kind: "coach" },
+  ktmSleeper: { name: "KTM sleeper (ADNS)", kind: "coach" },
+  ktmGenFlat: { name: "Generator container wagon", kind: "coach" },
+  // A Class 83 hauled off the wires on the Pasir Gudang branch, its
+  // pantograph down and its cabs only the ends of the train.
+  emu83Hauled: { name: "KTM Class 83 driving car (hauled)", kind: "coach" },
+  emu83HauledMid: { name: "KTM Class 83 trailer (hauled)", kind: "coach" },
 };
 
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
 const pan = (c) => (besideCab(c) ? "pan" : "");
 export const MODELS = {
-  ets93Car: M(E93.car, 78.7, true), ets93Mid: M(E93.mid, 75.5, false, pan),
+  ets93Car: M(E931.car, 78.7, true), ets93Mid: M(E931.mid, 75.5, false, pan),
+  ets932Car: M(E93.car, 78.7, true), ets932Mid: M(E93.mid, 75.5, false, pan),
   ets94Car: M(E94.car, 78.7, true), ets94Mid: M(E94.mid, 75.5, false, pan),
   ets91Car: M(E91.car, 72.9, true), ets91Mid: M(E91.mid, 72.2, false, pan),
   scs92Car: M(scs92Car, 77.75, true), scs92Mid: M(scs92Mid, 74.8, false, pan),
   emu83Car: M(emu83Car, 72.8, true), emu83Mid: M(emu83Mid, 76.1),
+  emu83SkyCar: M(emu83SkyCar, 72.8, true), emu83SkyMid: M(emu83SkyMid, 76.1),
+  emu81Car: M(emu81Car, 65.6, true), emu81Mid: M(emu81Mid, 65.6),
   dmu61Car: M(dmu61Car, 77.4, true), dmu61Mid: M(dmu61Mid, 76.0),
-  ktmLoco: M(ktmLoco, 77.75), ktmCoach: M(ktmCoach, 67.3),
+  ktm25: M(ktm25, 54.1, true), ktmLoco: M(ktmLoco, 77.75, true),
+  ktmPower: M(ktmPower, 67.3, true), ktmCoach: M(ktmCoach, 67.3), ktmSleeper: M(ktmSleeper, 67.3),
+  ktmGenFlat: M(genFlat, 49.2),
+  emu83Hauled: M((c) => emu83Car({ ...c, cabL: true }), 72.8, true),
+  emu83HauledMid: M((c) => emu83Mid({ ...c, hauled: true }), 76.1),
 };
 
 // The feed names sets, not numbered cars ("ETS202", "SCS21"); ktmb.js maps
 // each to its class. These ranges are for the fleet roster: the ETS sets by
 // their own numbers, the others by class and set (92001-92038 for SCS 01-38,
-// 83019-83040 for EMU 19-40, 61001-61013 for DMU 01-13), and the Class 26
-// locomotives by theirs.
+// 83019-83040 for EMU 19-40, 81001-81018 for EMU 01-18, 61001-61013 for DMU
+// 01-13), and the locomotives by theirs.
 export const FLEETS = {
-  ktmb: [[101, 105, "ets91Car"], [201, 219, "ets93Car"], [301, 310, "ets94Car"], [61001, 61013, "dmu61Car"], [26101, 26120, "ktmLoco"]],
-  ktmkomuter: [[92001, 92038, "scs92Car"], [83019, 83040, "emu83Car"]],
+  ktmb: [[101, 105, "ets91Car"], [201, 210, "ets93Car"], [211, 219, "ets932Car"], [301, 310, "ets94Car"], [61001, 61013, "dmu61Car"],
+    [25101, 25112, "ktm25"], [25201, 25205, "ktm25"], [26101, 26120, "ktmLoco"]],
+  ktmkomuter: [[92001, 92038, "scs92Car"], [83025, 83025, "emu83SkyCar"], [83030, 83030, "emu83SkyCar"], [83033, 83033, "emu83SkyCar"],
+    [83019, 83040, "emu83Car"], [81001, 81018, "emu81Car"]],
 };
 
 const ETS_SETS = {
-  ets91Car: ["Class 91", "ets91"], ets93Car: ["Class 93", "ets93"], ets94Car: ["Class 94 (ETS3)", "ets94"],
+  ets91Car: ["Class 91", "ets91"], ets93Car: ["Class 93/1", "ets93"], ets932Car: ["Class 93/2 (ETS2)", "ets932"], ets94Car: ["Class 94 (ETS3)", "ets94"],
 };
 const six = (k) => [[`${k}Car`, 1], [`${k}Mid`, 4], [`${k}Car`, 1]];
+const three = (k) => [[`${k}Car`, 1], [`${k}Mid`, 1], [`${k}Car`, 1]];
+// The number in the feed's set name ("ETS211", "EMU25").
+const setNo = (t) => Number(/(\d+)$/.exec(String(t.cars?.numbers?.[0] || ""))?.[1] || NaN);
+const SKYPARK = new Set([25, 30, 33]);
+// What hauls KTMB's trains today, as photographed: Class 25s on the Ekspres
+// Rakyat Timuran, the Shuttle Tebrau and the Johor shuttle; the Class 26s
+// mostly on freight.
 export const TYPICAL = {
   // The set the feed names decides; else the line.
   ktmb: (t, reported) => {
-    const kind = ETS_SETS[reported] ? "ets" : reported === "dmu61Car" ? "dmu" : reported === "ktmLoco" ? "loco"
-      : t.route === "ETS" ? "ets" : t.route === "Intercity Shuttle" ? "dmu" : "loco";
-    if (kind === "ets") {
-      const [name, k] = ETS_SETS[reported] || ETS_SETS.ets93Car;
-      return { label: `Six-car KTM ${name} ETS set${reported ? "" : " (some trains Class 91 or 94)"}`, units: six(k) };
+    const r = t.route || "";
+    if (ETS_SETS[reported] || (!reported && r === "ETS")) {
+      // ktmb.js names every Class 93 "ets93Car": the set number tells 93/1
+      // (ETS 201-210) from 93/2 (211-219).
+      const key = reported === "ets93Car" && setNo(t) >= 211 ? "ets932Car" : reported;
+      const [name, k] = ETS_SETS[key] || ETS_SETS.ets932Car;
+      return { label: `Six-car KTM ${name} ETS set${reported ? "" : " (some trains Class 91, 93/1 or 94)"}`, units: six(k) };
     }
-    if (kind === "dmu") {
+    if (reported === "dmu61Car" || r === "Intercity Shuttle") {
       return { label: "Four-car KTM Class 61 DMU", units: [["dmu61Car", 1], ["dmu61Mid", 2], ["dmu61Car", 1]] };
     }
-    if (t.route === "Shuttle Tebrau") {
-      return { label: "Diesel locomotives at each end with air-conditioned coaches", units: [["ktmLoco", 1], ["ktmCoach", 4], ["ktmLoco", 1]] };
+    const loco = reported === "ktmLoco" ? "ktmLoco" : "ktm25", name = loco === "ktm25" ? "Class 25" : "Class 26";
+    if (r === "Shuttle Tebrau") {
+      return { label: `${name} locomotives at each end with four air-conditioned coaches`, units: [[loco, 1], ["ktmCoach", 4], [loco, 1]] };
     }
-    return { label: "Diesel locomotive with seated and sleeper coaches", units: [["ktmLoco", 1], ["ktmCoach", 7]] };
+    return { label: `${name} locomotive, power car, sleepers and seated coaches (usually 8 to 10 cars)`,
+      units: [[loco, 1], ["ktmPower", 1], ["ktmSleeper", 2], ["ktmCoach", 4]] };
   },
-  // Class 92 sets run the Klang Valley lines; the northern lines and Shuttle
-  // Selatan are mostly Class 83 three-car sets, with some Class 92s.
+  // Class 92 sets run the Klang Valley lines; the northern lines are mostly
+  // Class 83 three-car sets, with some Class 92s and refurbished Class 81s.
+  // The Southern Sector's Shuttle Selatan is locomotive-hauled: a Class 25,
+  // a power car and seated coaches between JB Sentral and Paloh; on the
+  // unwired Kempas Baru-Pasir Gudang branch a locomotive hauls a Class 83
+  // set powered from a generator wagon.
   ktmkomuter: (t, reported) => {
-    const old = reported ? reported === "emu83Car" : /Padang Besar|Ipoh|Selatan/.test(t.route || "");
-    return old
-      ? { label: "Three-car KTM Class 83 EMU (some trains Class 92)", units: [["emu83Car", 1], ["emu83Mid", 1], ["emu83Car", 1]] }
-      : { label: "Six-car KTM Class 92 EMU", units: six("scs92") };
+    const r = t.route || "", ends = `${t.origin || ""} ${t.destination || ""}`;
+    if (/Selatan/.test(r) || /Pasir Gudang|Kempas|Paloh/.test(ends)) {
+      if (/Pasir Gudang|Kempas/.test(ends) || reported === "emu83Car" || reported === "emu81Car") {
+        return { label: "Diesel locomotive (Class 25 drawn), generator wagon and an unpowered three-car EMU (Class 83 drawn)",
+          units: [["ktm25", 1], ["ktmGenFlat", 1], ["emu83Hauled", 1], ["emu83HauledMid", 1], ["emu83Hauled", 1]] };
+      }
+      return { label: "Class 25 locomotive, power car and seated coaches", units: [["ktm25", 1], ["ktmPower", 1], ["ktmCoach", 3]] };
+    }
+    if (reported === "emu81Car") return { label: "Three-car KTM Class 81 EMU", units: three("emu81") };
+    if (reported === "emu83Car" || (!reported && /Padang Besar|Ipoh/.test(r))) {
+      if (SKYPARK.has(setNo(t))) return { label: "Three-car KTM Class 83 EMU in its Skypark Link paint", units: three("emu83Sky") };
+      return { label: `Three-car KTM Class 83 EMU${reported ? "" : " (some trains Class 92 or 81)"}`, units: three("emu83") };
+    }
+    return { label: "Six-car KTM Class 92 EMU", units: six("scs92") };
   },
 };
 
@@ -494,19 +716,40 @@ const DMU61 = { model: "KTM Class 61", type: "Diesel multiple unit", builder: "C
   about: "Four-car diesel trains with MAN power packs under the two middle cars, the first two built in China and the rest at Batu Gajah. They run the intercity shuttles on the unelectrified East Coast line between Tumpat, Gua Musang, Kuala Lipis and Gemas.",
   source: `${WIKI}KTM_Class_61` };
 const LOCO = { model: "KTM Class 26", type: "Diesel-electric locomotive", builder: "ADtranz and Bombardier", built: "2003–2004", fleet: "20 (26101–26120)",
-  topSpeedMph: 74.6, lengthFt: 77.8,
-  about: "A Co-Co road locomotive with a cab at each end, the Malaysian version of the Blue Tiger. KTMB's overnight Ekspres Rakyat Timuran and the Shuttle Tebrau are hauled by these or by the older Class 24 and 25 locomotives.",
+  topSpeedMph: 74.6, powerHp: 3300, lengthFt: 77.8,
+  about: "A Co-Co road locomotive with a full-width cab at the front and a hood behind, the Malaysian version of the Blue Tiger, with a leaping tiger on its side. Mostly on freight now; the passenger trains are usually behind Class 25s.",
   source: `${WIKI}ADtranz_DE-AC33C` };
-const COACH = { model: "KTM intercity coach", type: "Passenger coach",
-  about: "KTMB's air-conditioned coaches for its locomotive-hauled trains: second-class seats, first class and day-night sleepers with 40 berths a car on the Ekspres Rakyat Timuran.",
+const C25 = { model: "KTM Class 25", type: "Diesel-electric locomotive", builder: "General Motors (EMD), London, Ontario", built: "1990–1991, 2002",
+  fleet: "17 (25101–25112, 25201–25205)", topSpeedMph: 66.5, powerHp: 1500, lengthFt: 54.1,
+  about: "EMD GT18LC-2 road switchers, bought as shunters and kept for their reliability. Today they haul KTMB's locomotive-hauled passenger trains: the overnight Ekspres Rakyat Timuran, the Shuttle Tebrau across the causeway to Woodlands and the Johor shuttles.",
+  source: `${WIKI}EMD_GT18LC-2` };
+const COACH = { model: "KTM seated coach (ASC/AFC)", type: "Passenger coach",
+  about: "KTMB's air-conditioned coaches for its locomotive-hauled trains, second and first class, built by Hyundai and in India; the Shuttle Tebrau runs four of them between two locomotives.",
   source: `${WIKI}KTM_Intercity` };
+const SLEEPER = { model: "KTM sleeper (ADNS)", type: "Sleeping car", seats: 40,
+  about: "The Ekspres Rakyat Timuran's day-night sleepers: open berths in two tiers along the car, curtained, 40 to a car, which is why the side has two rows of windows.",
+  source: `${WIKI}KTM_Intercity` };
+const PGC = { model: "KTM power generator car", type: "Generator car",
+  about: "The car behind the locomotive on KTMB's hauled trains: diesel generators that power the coaches' air conditioning and lights, behind louvred panels.",
+  source: `${WIKI}KTM_Intercity` };
+const GENFLAT = { model: "Generator container wagon", type: "Container flat wagon",
+  about: "A generator set in a 20 ft container on a container flat, coupled between the locomotive and the unpowered Class 83 that runs the Kempas Baru–Pasir Gudang shuttle, which has no overhead wires.",
+  source: "https://railtravelstation.com/ktm-berhad/" };
+const EMU81 = { model: "KTM Class 81", type: "Electric multiple unit", builder: "Ganz-Hunslet (built by Jenbacher)", built: "1993–1994", fleet: "18 three-car sets (EMU 01–18), a few refurbished in service",
+  topSpeedMph: 77.7, seats: 224,
+  about: "The oldest Komuter trains still running: withdrawn in 2012, several were refurbished by Woojin and returned in 2018. They run in the north and south and on the Batu Caves shuttle.",
+  source: `${WIKI}KTM_Class_81` };
 const each = (keys, sheet) => Object.fromEntries(keys.map((k) => [k, sheet]));
 export const FACTS = {
-  ...each(["ets93Car", "ets93Mid"], ETS93),
+  ...each(["ets93Car", "ets93Mid"], { ...ETS93, model: "KTM Class 93/1", fleet: "10 six-car sets (ETS 201–210)" }),
+  ...each(["ets932Car", "ets932Mid"], { ...ETS93, model: "KTM Class 93/2 (ETS2)", fleet: "9 six-car sets (ETS 211–219)" }),
   ...each(["ets94Car", "ets94Mid"], ETS94),
   ...each(["ets91Car", "ets91Mid"], ETS91),
   ...each(["scs92Car", "scs92Mid"], SCS92),
-  ...each(["emu83Car", "emu83Mid"], EMU83),
+  ...each(["emu83Car", "emu83Mid", "emu83Hauled", "emu83HauledMid"], EMU83),
+  ...each(["emu83SkyCar", "emu83SkyMid"], { ...EMU83, model: "KTM Class 83 (ex-Skypark Link)", fleet: "3 three-car sets (EMU 25, 30, 33)",
+    about: "Three Class 83s that ran the KLIA Skypark Link to Subang Airport until 2020 and returned to Komuter service still in its paint." }),
+  ...each(["emu81Car", "emu81Mid"], EMU81),
   ...each(["dmu61Car", "dmu61Mid"], DMU61),
-  ktmLoco: LOCO, ktmCoach: COACH,
+  ktm25: C25, ktmLoco: LOCO, ktmCoach: COACH, ktmSleeper: SLEEPER, ktmPower: PGC, ktmGenFlat: GENFLAT,
 };

@@ -9,12 +9,15 @@ import { C, rect, circle, path, line, lines, poly, win, door, truck, pantograph,
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
 
-// InterCity silver and green with yellow ends; the commuter railcars' lime
-// over navy; DART's dark green and lime; the Enterprise's silver and charcoal.
+// InterCity silver and green with yellow ends; the commuter railcars' two
+// greens; DART's dark green and lime; the Cork and Limerick railcars' white
+// and teal; the Enterprise's silver with a black window band between a
+// magenta line and a red one.
 const IE = { silver: "#d6dade", roof: "#9ea5ad", green: "#0b6b3e", dark: "#0d4f30", lime: "#a6c83a", yellow: "#f2c21b", skirt: "#3a3e44", band: "#22272c" };
-const COM = { lime: "#a3c63a", navy: "#1f2b5e", white: "#f3f4f4" };
+const COMG = { green: "#22a046", dark: "#137a35" };
+const TEAL = "#0f8a80";
 const DART = { green: "#1f4d2c", lime: "#93b83a", yellow: "#d9d321", front: "#c9d42a", red: "#b3262d" };
-const ENT = { silver: "#cdd1d6", charcoal: "#3b3f46", plum: "#6b2149" };
+const ENT = { silver: "#cdd1d6", band: "#1c1e21", magenta: "#c8197c", red: "#d6283a", pink: "#e98bbd", gray: "#8b9097" };
 
 // ---------- Detail shared by the drawings ----------
 
@@ -154,18 +157,22 @@ export const icrMid = (c) => unit({ ...c, cabL: false, cabR: false }, { ...ICR,
 
 // --- 29000 Class (CAF, 2002-05): 29 four-car railcars, 81.5 m long, an
 // MAN engine under each car, 121 km/h. Two pairs of sliding doors a side on
-// every car, at about the third points. The commuter livery: lime green
-// over a white band lettered with the company's name, navy below; pale gray
-// doors; a yellow front with the windshield in a navy surround.
+// every car, at about the third points. The paint since their 2010s
+// refresh, the last of the navy and lime Commuter sets redone by 2022
+// (photographs of 29123 at Maynooth and a set at Inchicore, Geograph,
+// 2019-23): green all over, a darker green below the windows, white doors,
+// the company's name and mark in white low on the side; the front yellow
+// with the windshield in black. (Corrected from an earlier drawing of the
+// old Commuter livery.)
 const CAF29 = { roof: 12.6, sill: 3.6, cornerR: 1.0, end: 0.6, trucks: { centers: 46, wb: 8.2, d: 33 }, diaphragm: [3.9, 11.6], badge: false };
 const c29Paint = (c, g, cab) => {
   const L = g.L;
-  let s = rect(0, 0, L, 17, COM.lime) + rect(0, 11.8, L, 2, "#9aa2a9") + rect(0, 11.7, L, 0.12, "#6f777f") + rect(0, 0, L, 3.6, IE.skirt);
-  s += rect(0, 3.6, L, 1.55, COM.navy) + rect(0, 5.15, L, 1.0, COM.white) + rect(0, 6.15, L, 0.12, COM.navy);
-  if (cab) s += path("M0 3.6L0 12.0Q3.4 12.0 5.4 11.3L5.4 6.3Q3.4 6.0 2.8 3.6Z", COM.navy) + path("M0 3.6L0 7.6Q2.0 7.5 2.6 6.4L2.4 3.6Z", IE.yellow);
-  return s + ieName(c, L / 2 + 3, 5.65, 0.6, COM.navy);
+  let s = rect(0, 0, L, 17, COMG.green) + rect(0, 11.8, L, 2, "#9aa2a9") + rect(0, 11.7, L, 0.12, "#6f777f") + rect(0, 0, L, 3.6, IE.skirt);
+  s += rect(0, 3.6, L, 3.1, COMG.dark) + rect(0, 6.7, L, 0.12, "rgba(255,255,255,0.35)");
+  if (cab) s += path("M0 3.6L0 12.0Q3.4 12.0 4.6 11.5L4.6 3.6Z", IE.yellow) + path("M0.9 7.9L0.9 11.6Q3.0 11.7 4.4 11.3L4.4 7.9Z", ENT.band);
+  return s + ieName(c, L / 2 + 3, 5.0, 0.6, "#ffffff");
 };
-const c29Door = (x) => ({ x, w: 4.3, y0: 3.7, y1: 10.9, leaves: 2, glassY: 0.45, glassH: 0.42, fill: "#e6e9eb" });
+const c29Door = (x) => ({ x, w: 4.3, y0: 3.7, y1: 10.9, leaves: 2, glassY: 0.45, glassH: 0.42, fill: "#f1f3f2" });
 const c29Gear = (a) => [[a, 7.5, 1.6, "g"], [a + 8.2, 4.2, 1.2, "b"], [a + 13.2, 5.6, 1.0, "t"]];
 export const c29Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...CAF29,
   nose: [[0.9, 3.6], [0.9, 9.4], ["q", 1.0, 11.4, 2.0, 12.2], ["q", 2.8, 12.6, 4.4, 12.6]],
@@ -187,25 +194,34 @@ export const c29Mid = (c) => unit({ ...c, cabL: false, cabR: false }, { ...CAF29
 
 // --- 2600 Class (Tokyu Car, 1993; Cork's suburban trains) and 2800 Class
 // (Tokyu Car, 2000; Limerick and the west): two-car railcars, a Cummins
-// engine and hydraulic drive under each car. A single sliding door a side
-// near each end of each car; between them big windows. Silver over a gray
-// skirt, a dark green panel and door behind the yellow cab front edged in
-// lime, the windows in a dark band, the name low on the side.
+// engine and hydraulic drive under each car. Behind the cab the crew door;
+// then on each side of each car a window, a single sliding door at about a
+// quarter of the way along, a long run of windows, a second door at about
+// three quarters, two more windows (photographs of 2603 near Fota, 2023,
+// and 2819 at Limerick, Commons). The paint since the 2010s: white, the
+// doors and a panel round the crew door teal, the front yellow, the
+// company's name and mark small and low mid-car. The 2600s have a gangway
+// door in the front, the 2800s a plain one; from the side they match.
+// (Corrected from an earlier drawing with a door at each end of each car
+// and the old silver and green.)
+const tkDoor = (x) => ({ x, w: 3.4, y0: 3.8, y1: 10.9, glassY: 0.5, glassH: 0.36, fill: TEAL });
 const tokyu = (big) => married((c) => unit(c, {
   roof: 12.6, sill: 3.7, cornerR: 1.0, end: 0.6, trucks: { centers: 47, wb: 8.2, d: 33 }, diaphragm: [3.9, 11.6], badge: false,
   nose: [[0.9, 3.7], [0.9, 9.6], ["q", 1.0, 11.6, 2.1, 12.3], ["q", 2.9, 12.6, 4.4, 12.6]],
-  rows: [{ xs: big ? seq(13.4, 7.4, 6) : seq(13.2, 5.9, 8), y: 7.1, w: big ? 6.2 : 4.6, h: 2.6, r: 0.35 }],
-  doors: [{ x: 7.6, w: 3.0, y0: 3.8, y1: 10.9, glassY: 0.5, glassH: 0.36, fill: "rgba(0,0,0,0.1)" }, { x: c.L - 5.6, w: 3.0, y0: 3.8, y1: 10.9, glassY: 0.5, glassH: 0.36 }],
+  rows: [{ xs: [8.6], y: 7.1, w: 7.4, h: 2.7, r: 0.35 }, { xs: [24.6, 30.9, 37.2], y: 7.1, w: 5.8, h: 2.7, r: 0.35 }, { xs: [52.4, 58.9], y: 7.1, w: 6.0, h: 2.7, r: 0.35 }],
+  doors: [tkDoor(18.6), tkDoor(46.0)],
   ac: [[14, 9, 0.6], [42, 10, 0.6]], cabLen: 5,
-  gear: [[20, 7, 1.6, "g"], [27.8, 5, 1.2, "b"], [33.6, 6, 1.0, "t"], [40.4, 3.6, 0.9]],
+  gear: [[24, 7, 1.6, "g"], [31.8, 5, 1.2, "b"], [37.6, 6, 1.0, "t"], [44.4, 3.6, 0.9]],
   onRoof: (c, g) => exhaust(34, g.roof),
   paint: (c, g) => {
     const L = g.L;
-    return rect(0, 0, L, 17, IE.silver) + rect(0, 11.7, L, 2, IE.roof) + rect(0, 11.62, L, 0.12, "#7e858d") + rect(0, 0, L, 3.7, IE.skirt) +
-      rect(12.4, 6.85, L - 19, 3.1, IE.band, 0, 'rx="0.4"') + path("M3.4 3.7L11.4 3.7L11.4 17L3.4 17Z", IE.dark) + rect(11.4, 3.7, 0.35, 13.3, IE.lime) +
-      path("M0 0L0 7.8Q2.4 7.8 3.4 7.0L3.4 0Z", IE.yellow) + rect(12.4, 5.25, L - 19, 0.3, IE.dark) + ieName(c, L / 2 + 2, 4.5, 0.55, IE.dark);
+    let s = rect(0, 0, L, 17, "#e9ecee") + rect(0, 11.7, L, 2, IE.roof) + rect(0, 11.62, L, 0.12, "#7e858d") + rect(0, 0, L, 3.7, IE.skirt) +
+      ieName(c, L / 2 + 2, 4.6, 0.5, "#4d5359");
+    if (c.cabL) s += path("M3.4 3.7L7.6 3.7L7.6 12.0Q5.4 12.0 3.4 11.4Z", TEAL) + path("M0 0L0 12.6L3.4 12.6L3.4 0Z", IE.yellow);
+    return s;
   },
-  cabArt: () => path(poly([[1.0, 8.1], [1.8, 11.4], [3.3, 11.4], [3.3, 8.1]]), C.glass) + win(4.6, 7.4, 2.0, 2.4, 0.3) + rect(1.9, 10.8, 1.4, 0.42, "#121417", 0.3) + rect(2.0, 10.9, 0.9, 0.22, "#f5a623"),
+  cabArt: () => path(poly([[1.0, 8.1], [1.8, 11.4], [3.3, 11.4], [3.3, 8.1]]), C.glass) + door(4.1, 4.0, 2.6, 6.8, { glassY: 0.55, glassH: 0.32, grabs: false, fill: "rgba(0,0,0,0.12)" }) +
+    rect(1.9, 10.8, 1.4, 0.42, "#121417", 0.3) + rect(2.0, 10.9, 0.9, 0.22, "#f5a623") + (big ? "" : rect(0.85, 4.2, 0.12, 6.4, "rgba(0,0,0,0.3)")),
   front: { lamp: [0.95, 5.3], coupler: [0, 2.9], skirt: [[0.9, 3.7], [1.1, 1.6], [5.2, 1.6], [5.6, 3.7]], horn: [5.4, 12.6], wiper: [1.3, 8.4, 2.1, 10.9] },
 }));
 export const ie2600 = tokyu(false);
@@ -267,8 +283,11 @@ export const dart85Mid = dart85(false);
 // six-axle locomotives, 3,200 hp, 160 km/h, 20.96 m; a cab at each end.
 // Now they haul the Dublin–Cork Mark 4 sets and the Enterprise. InterCity
 // livery: silver over green, a lime line between, yellow ends, the name in
-// white on the green; the Enterprise's: silver over charcoal, plum around
-// the cab windows, "Enterprise" on the side. Radiator intakes and the
+// white on the green. The Enterprise's (since its 2016 relaunch; photograph
+// of 207 at Dublin Connolly, Commons): silver all over with the yellow
+// fronts, and on each side a broad magenta sweep with pink and white lines
+// in it, rising from low behind the cab to the roof edge by mid-body
+// (corrected from an earlier drawing of the 2000s charcoal and plum). Radiator intakes and the
 // cooling fans at one end, the exhaust amidships, the fuel tank between the
 // trucks, buffers and a screw coupling at both ends.
 export function loco201(c) {
@@ -283,12 +302,16 @@ export function loco201(c) {
   // Pilots under the buffer beams.
   for (const [a, b] of [[0.8, 3.4], [L - 0.8, L - 3.4]]) s += path(poly([[a, sill], [b, sill], [b, 1.6], [a + (b > a ? 0.4 : -0.4), 1.0]]), "#2a2d31", 0.4);
   let liv = rect(0, 0, L, 15, ent ? ENT.silver : IE.silver) + rect(0, 12.3, L, 2, IE.roof) + rect(0, 12.2, L, 0.12, "#7e858d");
-  if (ent) liv += rect(0, 0, L, 6.8, ENT.charcoal) + rect(0, 6.8, L, 0.3, ENT.plum);
-  else liv += rect(0, 0, L, 7.0, IE.green) + rect(0, 7.0, L, 0.35, IE.lime);
+  if (ent) {
+    // The sweep: from low behind the No. 1 cab up to the roof edge, the
+    // magenta with a pink band and a white line through its upper part.
+    const band = (lo, w, fill) => path(`M8.8 ${lo}Q24 ${lo} 31 ${lo + (12.4 - lo) * 0.45}Q36 ${12.4 - (12.4 - lo) * 0.2} 43 12.4L${43 + w * 2.6} 12.4` +
+      `Q${36 + w * 2.2} ${12.4 - (12.4 - lo - w) * 0.2} ${31 + w * 1.6} ${lo + w + (12.4 - lo - w) * 0.45}Q${24 + w} ${lo + w} 8.8 ${lo + w}Z`, fill);
+    liv += band(4.3, 4.6, ENT.magenta) + band(6.9, 1.5, ENT.pink) + band(8.4, 0.35, "#ffffff");
+  } else liv += rect(0, 0, L, 7.0, IE.green) + rect(0, 7.0, L, 0.35, IE.lime);
   for (const [x, k] of [[0, 1], [L, -1]]) {
     const X = (v) => x + k * v;
     liv += path(poly([[X(0), 0], [X(2.7), 0], [X(2.7), 8.9], ["q", X(2.6), 9.4, X(2.1), 9.4], [X(0), 9.4]]), IE.yellow);
-    if (ent) liv += path(poly([[X(0.9), 9.2], [X(4.6), 9.2], [X(4.6), 12.6], [X(1.5), 12.6]]), ENT.plum);
     liv += path(poly([[X(1.05), 9.5], [X(1.75), 12.2], [X(3.6), 12.2], [X(3.6), 9.5]]), C.glass);
     liv += line(X(1.6), 9.7, X(2.6), 11.6, "#0b0d0f", 0.8);
   }
@@ -306,7 +329,7 @@ export function loco201(c) {
   s += exhaust(L / 2 - 4, roof) + horns(4.0, roof) + horns(L - 5.2, roof) + aerial(L / 2 + 5, roof);
   // Headlights and tail lights low on each nose.
   for (const x of [0.85, L - 1.45]) s += rect(x, 7.4, 0.6, 0.45, "#f6f3dc", 0.4, 'rx="0.14"') + rect(x, 6.6, 0.6, 0.4, "#d0212e", 0.3, 'rx="0.1"');
-  s += letters(c, L / 2, 5.4, 1.15, ent ? "Enterprise" : "Iarnród Éireann", "#ffffff", { weight: ent ? 600 : 600, style: ent ? "italic" : "" });
+  if (!ent) s += letters(c, L / 2, 5.4, 1.15, "Iarnród Éireann", "#ffffff", { weight: 600 });
   return s + buffers(0.8, -1) + buffers(L - 0.8, 1);
 }
 
@@ -348,15 +371,24 @@ export const mk4Dvt = (c) => unit({ ...c, cabL: true, cabR: false }, { ...MK4,
 
 // --- The Enterprise's De Dietrich coaches (1996-97, shared with NI
 // Railways): seven-car sets with a driving trailer at the Dublin end, 145
-// km/h. A plug door at each end of each side, long rows of windows. As
-// refurbished: silver over charcoal, a plum line between, "Enterprise" in
-// white on the charcoal; the driving trailer's flat front yellow, the
-// windshield in a charcoal surround.
+// km/h. A plug door at each end of each side, long rows of windows. The
+// paint since the 2016 relaunch (photographs at Belfast Lanyon Place and
+// Grand Central, 2019-25, Commons and Geograph): silver, the windows in a
+// black band running the length of the car, a magenta line over it and a
+// red one under it, "Enterprise" in gray under a small red and magenta
+// swoosh low on the side; the driving trailer's flat front yellow below
+// the windshield, the windshield in a black surround. (Corrected from an
+// earlier drawing of the older charcoal and plum.)
 const DD = { roof: 12.8, sill: 3.8, cornerR: 1.0, end: 0.6, trucks: { centers: 55, wb: 8.5, d: 36 }, diaphragm: [4.0, 11.8], badge: false };
+// The Enterprise's band: black from x a to b, the magenta line over it and
+// the red under it; its name in gray under a small swoosh.
+const entBand = (a, b) => rect(a, 6.85, b - a, 3.15, ENT.band) + rect(a, 10.25, b - a, 0.22, ENT.magenta) + rect(a, 6.2, b - a, 0.38, ENT.red);
+const entName = (c, x, y) => letters(c, x, y, 0.85, "Enterprise", ENT.gray, { weight: 500 }) +
+  path(`M${x - 1.6} ${y + 0.75}Q${x} ${y + 1.35} ${x + 1.8} ${y + 0.7}Q${x} ${y + 1.1} ${x - 1.6} ${y + 0.75}Z`, ENT.red) +
+  path(`M${x - 0.6} ${y + 1.0}Q${x + 0.6} ${y + 1.45} ${x + 1.9} ${y + 0.95}Q${x + 0.6} ${y + 1.25} ${x - 0.6} ${y + 1.0}Z`, ENT.magenta);
 const ddPaint = (c, g, a = 0) => {
   const L = g.L;
-  return rect(0, 0, L, 17, ENT.silver) + rect(0, 3.8, L, 2.5, ENT.charcoal) + rect(0, 6.3, L, 0.3, ENT.plum) + rect(a, 6.95, L - a, 2.9, IE.band, 0, 'rx="0.3"') +
-    rect(0, 11.9, L, 2, IE.roof) + rect(0, 11.8, L, 0.12, "#7e858d") + rect(0, 0, L, 3.8, IE.skirt) + letters(c, L / 2, 5.05, 1.0, "Enterprise", "#ffffff", { weight: 600, style: "italic" });
+  return rect(0, 0, L, 17, ENT.silver) + entBand(a, L) + rect(0, 11.9, L, 2, IE.roof) + rect(0, 11.8, L, 0.12, "#7e858d") + rect(0, 0, L, 3.8, IE.skirt) + entName(c, L * 0.3, 4.95);
 };
 const ddGear = [[20, 6, 1.3, "b"], [27, 6.5, 1.0, "t"], [34.5, 5, 1.2], [40.5, 6, 1.0, "t"], [47.5, 5, 1.3, "b"]];
 const ddDoor = (x) => ({ ...mk4Door(x), fill: "rgba(0,0,0,0.08)" });
@@ -369,11 +401,35 @@ export const ddCab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...DD,
   nose: [[0.9, 3.8], [0.9, 10.2], ["q", 1.0, 12.2, 2.4, 12.6], ["q", 3.0, 12.8, 4.4, 12.8]],
   rows: [{ xs: seq(11.6, 5.2, 11), y: 7.1, w: 4.4, h: 2.55, r: 0.3 }],
   doors: [ddDoor(6.6), ddDoor(c.L - 4.3)], cabLen: 5,
-  paint: (c, g) => ddPaint(c, g, 9.6) + path("M0 7.6L4.8 7.6L4.8 12.2Q3.0 12.8 0 12.8Z", ENT.charcoal) + rect(0, 0, 2.6, 8.4, IE.yellow),
+  paint: (c, g) => ddPaint(c, g, 9.6) + path("M0 7.6L4.8 7.6L4.8 12.2Q3.0 12.8 0 12.8Z", ENT.band) + rect(0, 0, 2.6, 8.4, IE.yellow),
   cabArt: () => path(poly([[1.0, 8.6], [1.6, 11.6], [4.4, 11.6], [4.4, 8.6]]), C.glass) + rect(1.8, 10.95, 2.4, 0.45, "#121417", 0.3) + rect(2.0, 11.05, 1.4, 0.25, "#f5a623"),
   front: { lamp: [0.95, 5.6], coupler: [0, 3.0], horn: [5.0, 12.8], wiper: [1.4, 8.8, 2.3, 11.0] },
   ac: [[c.L - 16, 10, 0.7]], gear: ddGear,
   more: () => buffers(0.9, -1),
+});
+
+// --- The Enterprise's generator vans (9602, 9604, 9606 and 9608): BR
+// Mark 3 bodies, built at Derby and fitted out at Inchicore in the 1980s
+// as Irish Rail generator vans, rebuilt for the Enterprise and in its sets
+// since 2012, marshalled next to the locomotive to power the De Dietrich
+// coaches. Mark 3 dimensions (Wikipedia, "British Rail Mark 3"): 23.0 m
+// body, about 23.5 m over buffers, 3.88 m to the roof, trucks 16.0 m apart
+// (BT10, 2.6 m wheelbase, 914 mm wheels). No passenger windows: from the
+// locomotive end, two groups of three tall radiator louvres, a guard's
+// door, a double van door (photographs of the vans at Belfast, Geograph
+// and Commons, 2016-24); the generator's exhaust over the louvres. The
+// Enterprise paint, its black band running unbroken past the louvres.
+const GEN = { roof: 12.75, sill: 3.8, cornerR: 1.4, end: 0.6, trucks: { centers: 52.5, wb: 8.5, d: 36 }, diaphragm: [4.0, 11.8], badge: false };
+const louvre = (x) => rect(x, 6.75, 1.45, 3.7, ENT.silver, 0.4, 'rx="0.55"') + lines(seq(7.1, 0.32, 10).map((y) => [x + 0.25, y, x + 1.2, y]), "#5d636a", 0.6);
+export const genVan = (c) => unit({ ...c, cabL: false, cabR: false }, { ...GEN, rows: [],
+  doors: [{ x: 39.4, w: 2.5, y0: 4.0, y1: 10.9, glassY: 0.55, glassH: 0.3, grabs: true, fill: "rgba(0,0,0,0.08)" },
+    { x: 49.4, w: 9.4, y0: 4.0, y1: 10.9, leaves: 2, glass: false, glassY: 0.6, glassH: 0.2, grabs: false, fill: "rgba(0,0,0,0.08)" }],
+  paint: (c, g) => rect(0, 0, g.L, 17, ENT.silver) + entBand(0.6, g.L - 0.6) + rect(0, 11.85, g.L, 2, IE.roof) + rect(0, 11.75, g.L, 0.12, "#7e858d") + rect(0, 0, g.L, 3.8, IE.skirt) +
+    entName(c, 27.0, 4.95),
+  gear: [[17.5, 10, 1.5, "t"], [29, 5, 1.3, "b"], [35, 4, 1.1, "b"], [45, 6, 1.2, "g"]],
+  onRoof: (c, g) => exhaust(17.6, g.roof) + rect(10.5, g.roof - 0.05, 16.5, 0.4, "#9aa1a9", 0.4, 'rx="0.12"') + slats(11, g.roof, 15.5, 0.3, 0.5, "rgba(0,0,0,0.3)") +
+    [62, 70].map((x) => path(`M${x - 1.1} ${g.roof - 0.05}Q${x} ${g.roof + 0.6} ${x + 1.1} ${g.roof - 0.05}Z`, C.steelDark, 0.4)).join(""),
+  more: () => [11.0, 13.1, 15.2, 20.6, 22.7, 24.8].map(louvre).join(""),
 });
 
 export const TYPES = {
@@ -391,6 +447,7 @@ export const TYPES = {
   ieMk4Cab: { name: "Mark 4 generator and control car", kind: "coach", cab: true },
   ieDd: { name: "De Dietrich coach", kind: "coach", amenities: ["first", "cafe"] },
   ieDdCab: { name: "De Dietrich driving trailer", kind: "coach", cab: true },
+  ieGenVan: { name: "Enterprise generator van", kind: "coach" },
 };
 // oneEnd: single-cab equipment, drawn cab-left and mirrored at the back of a train.
 const M = (draw, len, oneEnd = false) => ({ draw, len, oneEnd, variant: null });
@@ -410,6 +467,7 @@ export const MODELS = {
   ieMk4Cab: M(mk4Dvt, 78.1, true),
   ieDd: M(ddCoach, 75.5),
   ieDdCab: M(ddCab, 75.5, true),
+  ieGenVan: M(genVan, 77.1),
 };
 // Fleet numbers: 201 Class 201-234; ICR driving cars 221xx-223xx and middle
 // cars 224xx-228xx; 29000 sets 29001-29029; 2600 and 2800 cars; the DART's
@@ -433,7 +491,11 @@ export const TYPICAL = {
       return set("201 Class locomotive with Mark 4 coaches and a control car (some trains 22000 Class railcars)",
         ...(/Dublin/.test(t.destination || "") ? units.reverse() : units));
     }
-    if (r === "Enterprise") return set("201 Class locomotive with De Dietrich coaches and a driving trailer (generator van not drawn)", ["ie201", 1], ["ieDd", 6], ["ieDdCab", 1]);
+    // The Enterprise's sets: locomotive, generator van, coaches, driving
+    // trailer. Since 2024 a few of its trains are 22000 Class railcars or
+    // NI Railways' CAF 3000 Class units instead.
+    if (r === "Enterprise") return set("201 Class locomotive, generator van, De Dietrich coaches and a driving trailer (a few trains are railcars)",
+      ["ie201", 1], ["ieGenVan", 1], ["ieDd", 6], ["ieDdCab", 1]);
     if (reported === "ie29kCab" || /Northern Commuter|Western Commuter|Rosslare/.test(r)) return set("29000 Class commuter railcar, 4 or 8 cars (some trains 22000 Class)", ["ie29kCab", 1], ["ie29k", 2], ["ie29kCab", 1]);
     if (reported === "ie2600" || r === "Cork Commuter") return set("2600 Class railcars, usually 2 or 4 cars (some trains 22000 Class)", ["ie2600", 2]);
     if (reported === "ie2800" || /^Limerick–/.test(r)) return set("2800 Class railcars, usually 2 or 4 cars (some trains 22000 Class)", ["ie2800", 2]);
@@ -483,6 +545,9 @@ export const FACTS = {
   ieDd: { model: "De Dietrich Enterprise coach", type: "Passenger coach", builder: "De Dietrich Ferroviaire", built: "1996–1997",
     fleet: "28 cars, shared with NI Railways", topSpeedMph: kmh(145),
     about: "The Dublin–Belfast Enterprise's coaches, run jointly by Irish Rail and NI Railways and refurbished in 2007–09. Stadler electro-diesel FLIRTs are to replace them from about 2029.", source: `${WP}Enterprise_(train_service)` },
+  ieGenVan: { model: "Enterprise generator van (Mark 3)", type: "Generator van", builder: "BREL Derby, fitted out at Inchicore", built: "1980s; rebuilt for the Enterprise 2012",
+    fleet: "4 (9602, 9604, 9606, 9608)", lengthFt: 77.1,
+    about: "The van next to the locomotive in each Enterprise set: a diesel generator in a Mark 3 body that supplies the coaches' heating, air conditioning and lights.", source: `${WP}Enterprise_(train_service)` },
   ieDdCab: { model: "De Dietrich Enterprise driving trailer", type: "Driving trailer", builder: "De Dietrich Ferroviaire", built: "1996–1997",
     fleet: "28 Enterprise cars in all", topSpeedMph: kmh(145),
     about: "The cab car at the far end of an Enterprise set from its 201 Class locomotive.", source: `${WP}Enterprise_(train_service)` },
