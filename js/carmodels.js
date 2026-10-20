@@ -3863,6 +3863,12 @@ export function alp45(c) {
 // exo: silver above, sky blue below; a white line from the nose sweeps up
 // over the AMT eye mid-side and back down toward the rear, with deep blue
 // under it; a black frame. exo's wordmark is on a black plate on the front.
+// NCDOT's (Piedmont; 1810, 1859/1776, 1869, 1871, 1893, 1984, ex-GO), from
+// photographs (Cary, 2024; Morehead City, October 2024): the Piedmont
+// scheme of its F59PHIs on the cowl body: a blue nose, cab and roof, the
+// blue sweeping down behind the cab in a white-edged curve to the sill;
+// silver behind it, dark gray along the top of the rear body; a red and a
+// yellow stripe over the black frame; "North Carolina" mid-side.
 export const f59ph = (c) => cabUnit(c, {
   roof: 14.6, sill: 4.6, rearR: 0.9,
   nose: [[1.7, 4.6], [1.35, 5.0], [1.35, 11.9], [1.9, 12.45], [5.6, 12.45], [6.3, 15.0], ["q", 6.45, 15.55, 7.1, 15.55], [12.9, 15.55], ["q", 13.35, 15.55, 13.4, 15.1]],
@@ -3877,10 +3883,17 @@ export const f59ph = (c) => cabUnit(c, {
   extra: () => line(17.15, 12.05, 17.15, 13.8, C.gasket, 0.8) +
     [7.9, 8.8, 10.0, 10.9].map((x) => rect(x, 15.5, 0.6, 0.5, "currentColor", 0, 'rx="0.2"')).join(""),  // horns on the cab roof
   // TRE: its logo on the white cab side under the windows.
-  badge: (c) => (c.agency === "tre" ? { x: 9.9, y: 10.0, h: 2.3, logo: "tre-nolabel" } : null),
+  badge: (c) => (c.agency === "tre" ? { x: 9.9, y: 10.0, h: 2.3, logo: "tre-nolabel" }
+    : c.agency === "amtrak" && c.route === "Piedmont" ? { x: 39.0, y: 8.4, h: 1.6, logo: "north-carolina" } : null),
   paint: (c, sp) => {
     const L = sp.L;
     if (c.agency === "tre") return treLocoPaint(sp, 13.4);
+    if (c.agency === "amtrak" && c.route === "Piedmont") {
+      const swoop = "Q25 13.0 20.5 9.6Q17.8 7.4 16.8 5.4";
+      return rect(0, 0, L, 17, "#c4c8cd") + rect(36, 11.2, L - 36, 6, "#383c43") +
+        path(`M0 5.4L0 17L36 17L36 15.0${swoop}Z`, "#2440a0") + path(`M36 15.0${swoop}`, "none", 0, 'stroke="#ffffff" stroke-width="0.3"') +
+        rect(0, 0, L, 5.0, "#1d1f22") + rect(0, 5.0, L, 0.32, "#c8102e") + rect(0, 5.32, L, 0.14, "#f2b81c");
+    }
     if (c.agency !== "exo") return genericPaint(c, sp);
     const wTop = [[0, 7.85], [17.5, 8.0], [26, 9.95], [35.4, 11.3], [44, 10.15], [52, 7.55], [L, 6.0]];
     const wBot = [[0, 7.05], [17.5, 7.25], [26, 9.35], [35.4, 10.95], [44, 9.8], [52, 7.25], [L, 5.75]];
