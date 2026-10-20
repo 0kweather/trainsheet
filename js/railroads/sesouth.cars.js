@@ -123,7 +123,7 @@ function x61CabPaint(c, k, vt) {
       `<stop offset="0.6" stop-color="${k.light}" stop-opacity="0.7"/><stop offset="1" stop-color="${k.light}" stop-opacity="0"/></linearGradient></defs>`;
     s += path("M3.3 3.4L3.3 4.4Q6.5 6.8 9.8 10.5Q11.4 11.15 14 11.15L60 11.15L60 10.5L14.5 10.5Q11.9 10.5 10.6 9.7Q7.4 6.0 3.3 3.4Z", `url(#${id})`);
     s += letters(c, ft(7.3), 3.7, 0.95, "Pågatågen", "#c6c8f2", { weight: 400, italic: true }) + letters(c, ft(7.0), 4.55, 0.38, "Skånetrafiken", "#d6d8f6", { weight: 600 }) +
-      letters(c, 13.0, 10.5, 0.48, "Birgit Nilsson", "#ffffff", { weight: 500, italic: true, anchor: "start" });
+      letters(c, 13.0, 10.5, 0.48, "Mona Seilitz", "#ffffff", { weight: 500, italic: true, anchor: "start" });
   }
   // The windshield's dark surround on the sloping nose.
   s += path("M3.45 6.25Q4.6 5.75 6.2 5.95L10.75 11.15L10.5 12.1Q9.2 12.35 7.9 11.9Z", vt ? k.light : k.deep);
@@ -454,6 +454,77 @@ function itino(c, part) {
 const itinoCab = (c) => itino(c, "cab");
 const itinoMid = (c) => itino(c, "mid");
 
+// ===================== Alstom Zefiro Express (X80, Västtåg) =====================
+
+// --- X80 (Bombardier/Alstom Zefiro Express, now Avelia Stream Nordic; 45
+// ordered 2016-18, 35 more in 2025, 80001-80080; bodies built in China,
+// finished in Germany; in passenger service since 11 May 2026, first
+// Göteborg-Älvängen and Göteborg-Vänersborg): 80.7 m in three cars,
+// 2'Bo'+2'2'+Bo'2' (a trailer bogie under each cab, the motor bogies at
+// the end cars' inner ends), 2800 kW, 200 km/h, 270 seats five abreast,
+// a low-floor section with the toilets and wheelchair and bicycle space
+// in the middle car (järnväg.net; Swedish Wikipedia). Car lengths (end
+// cars about 27.5 m, middle 25.7 m), the height (about 4.3 m) and the
+// layout are estimated from photographs: a long pointed nose, the
+// windshield in a dark navy mask edged in light blue, a rounded cab side
+// window, one single-leaf door a side about halfway along each end car,
+// two on the middle car either side of its low floor. Västtrafik's new
+// blue and white: white, two light-blue bars down the side behind the cab,
+// the window band navy, the lower side light blue from the door back, the
+// middle car's doors orange; "västtågen" in white.
+const X80 = { roof: 14.1, sill: 3.6, cornerR: 1.2, end: 0.5, noTrucks: true, diaphragm: [3.8, 12.6], badge: false };
+const X80_END = ft(27.5), X80_MID = ft(25.7);
+const X80K = { white: "#f4f5f6", blue: "#2b8fd9", navy: "#1d2b4b", skirt: "#30353c", orange: "#ef6a2a", roof: "#c9ced4" };
+function x80(c, part) {
+  const L = c.L, cab = part === "cab";
+  const doors = cab ? [{ x: ft(12.6) - 1.7, w: 3.4, y0: 3.75, y1: 11.6, glassY: 0.4, glassH: 0.42, grabs: false }]
+    : [ft(6.2), L - ft(6.2)].map((x) => ({ x: x - 2.15, w: 4.3, y0: 2.4, y1: 11.0, leaves: 2, glassY: 0.42, glassH: 0.42, grabs: false }));
+  const pane = (a, b) => rgPanes(a, b);
+  const bands = cab ? [[ft(7.9), doors[0].x - 0.8], [doors[0].x + doors[0].w + 0.8, L - ft(1.4)]] : [[ft(1.2), doors[0].x - 0.8], [doors[0].x + doors[0].w + 0.8, doors[1].x - 0.8], [doors[1].x + doors[1].w + 0.8, L - ft(1.2)]];
+  const panes = bands.map(([a, b]) => pane(a, b));
+  return bilevel({ ...c, cabL: cab, cabR: false, coupledL: cab ? false : c.coupledL }, { ...X80, base: X80K.white,
+    drop: cab ? null : { a: doors[0].x - 0.5, b: doors[1].x + doors[1].w + 0.5, y: 2.2 },
+    nose: cab ? [[3.4, 3.6], [1.0, 3.9], [0.55, 5.3], ["q", 0.55, 7.0, 1.8, 7.7], [7.2, 12.6], ["q", 8.6, 14.1, 11.8, 14.1]] : null, cabLen: cab ? 11 : 0,
+    rows: panes.map((p) => ({ xs: p.xs, y: 6.8, w: p.w, h: 3.5, r: 0.3 })),
+    doors,
+    paint: () => {
+      let s = rect(0, 13.2, L, 2, X80K.roof) + line(0, 13.2, L, 13.2, "rgba(0,0,0,0.15)", 0.5) + rect(0, 0, L, 4.3, X80K.skirt);
+      if (cab) {
+        const d = doors[0];
+        s += rect(d.x - 0.6, 4.3, L, 2.2, X80K.blue) + rect(ft(5.6), 4.3, 1.9, 9.0, X80K.blue) + rect(ft(6.5), 4.3, 1.2, 9.0, X80K.blue);
+      } else s += rect(0, 4.3, L, 2.2, X80K.blue);
+      for (const [a, b] of bands) s += rect(a - 0.3, 6.5, b - a + 0.6, 4.1, X80K.navy, 0, 'rx="0.4"');
+      for (const d of doors) s += rect(d.x - 0.12, d.y0 - 0.1, d.w + 0.24, d.y1 - d.y0 + 0.2, cab ? X80K.white : X80K.orange);
+      if (cab) {
+        // The windshield's navy mask edged in light blue; the cab window.
+        s += path(poly([[1.0, 7.2], [6.9, 13.2], ["q", 8.2, 14.15, 10.4, 14.15], [11.0, 13.4], [4.9, 6.9], ["q", 3.0, 6.3, 1.0, 7.2]]), X80K.blue) +
+          path(poly([[1.5, 7.55], [7.2, 13.0], ["q", 8.3, 13.8, 10.1, 13.8], [10.4, 13.3], [4.7, 7.25], ["q", 3.0, 6.75, 1.5, 7.55]]), X80K.navy) +
+          path(poly([[ft(3.4), 8.0], [ft(4.4), 8.0], [ft(4.4), 11.8], ["q", ft(3.6), 12.3, ft(3.4), 11.0]]), X80K.navy) +
+          letters(c, L - ft(5.0), 5.4, 1.2, "västtågen", "#ffffff", { weight: 700, spacing: -0.03 }) + letters(c, 2.8, 5.6, 0.62, "80013", "#26292e", { weight: 500, italic: true });
+      }
+      return s;
+    },
+    extra: (c, g) => {
+      let s = "";
+      if (cab) s += truck(ft(3.7), { wb: ft(2.6), d: 33, top: 3.6 }) + truck(L - ft(3.4), { wb: ft(2.7), d: 36, top: 3.6 }) +
+        // Skirts over the equipment between the bogies.
+        rect(ft(6.4), 1.6, L - ft(11.2), 2.05, "#3a3f46", 0.4, 'rx="0.2"') + lines(seq(ft(9), ft(3.3), 6).map((x) => [x, 1.7, x, 3.5]), "rgba(255,255,255,0.12)", 0.5) +
+        hvac(ft(8.5), g.roof, 12, 0.7, "#b9bfc6") + roofCover(ft(15.5), g.roof, 22, 0.55, "#aab0b8", 4);
+      else s += truck(ft(3.2), { wb: ft(2.6), d: 33, top: 3.6 }) + truck(L - ft(3.2), { wb: ft(2.6), d: 33, top: 3.6 }) +
+        pantograph(ft(2.2), g.roof + 0.3, { facing: 1 }) + rect(ft(2.2) - 3.0, g.roof - 0.05, 6.0, 0.35, "#8f969e", 0.4) + panGear(ft(2.2), g.roof + 0.2, 1) +
+        roofCover(ft(6.0), g.roof, 16, 0.6, "#aab0b8", 4) + hvac(L - ft(10.5), g.roof, 12, 0.7, "#b9bfc6") + boxes(doors[0].x + 6, doors[1].x - 2, 2.25, 3, 0.4);
+      return s;
+    },
+    cab: () => path(poly([[2.0, 7.85], [7.35, 12.75], ["q", 8.3, 13.5, 9.9, 13.5], [10.15, 13.15], [4.6, 7.55], ["q", 3.1, 7.15, 2.0, 7.85]]), C.glass) +
+      path(poly([[2.6, 8.0], [4.6, 9.9], [5.3, 9.8], [3.4, 7.9]]), C.glassLight) + wiper(3.0, 7.9, 4.8, 10.3) +
+      path(poly([[1.0, 5.6], [2.6, 5.6], [3.6, 6.4], [1.2, 6.5]]), "#1f2226") + lamp(1.4, 5.75, 0.8, 0.45) + lamp(1.15, 4.6, 0.4, 0.35, RED_LAMP) +
+      rect(ft(3.55), 8.3, 2.1, 3.1, C.glass, 0, `rx="0.6" stroke="${C.gasket}" stroke-width="0.5"`) +
+      emuFront(1.4, 3.6, { coupler: 2.9 }) + path(poly([[1.4, 3.6], [8.5, 3.6], [8.5, 1.0], [2.4, 0.8], [1.2, 1.8]]), "#555b63") + rect(0, 2.2, 1.6, 1.3, "#1d1f22", 0.3, 'rx="0.15"'),
+  });
+}
+const x80Cab = (c) => x80(c, "cab");
+const x80Mid = (c) => x80(c, "mid");
+
 export const TYPES = {
   sesX61Cab: { name: "X61 (Alstom Coradia Nordic) end section", kind: "emu" },
   sesX61A: { name: "X61 (Alstom Coradia Nordic) section", kind: "emu" },
@@ -470,6 +541,9 @@ export const TYPES = {
   sesItino: { name: "Y31/Y32 (Bombardier Itino) end car", kind: "emu" },
   sesItinoB: { name: "Y31/Y32 (Bombardier Itino) end car", kind: "emu" },
   sesItinoMid: { name: "Y32 (Bombardier Itino) middle car", kind: "emu" },
+  sesX80: { name: "X80 (Alstom Zefiro Express) end car", kind: "emu" },
+  sesX80B: { name: "X80 (Alstom Zefiro Express) end car", kind: "emu" },
+  sesX80Mid: { name: "X80 (Alstom Zefiro Express) middle car", kind: "emu" },
 };
 
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
@@ -489,22 +563,139 @@ export const MODELS = {
   sesItino: M(itinoCab, IT_END),
   sesItinoB: M(toRight(itinoCab), IT_END),
   sesItinoMid: M(itinoMid, IT_MID),
+  sesX80: M(x80Cab, X80_END),
+  sesX80B: M(toRight(x80Cab), X80_END),
+  sesX80Mid: M(x80Mid, X80_MID),
 };
 
+
+// [first, last, type]: the units' numbers as their operators list them
+// (järnväg.net, Swedish Wikipedia). Trafikverket's feed and the timetable
+// name no vehicles (scripts/railroads/sweden.py), so these only show each
+// railroad's roster; every train is drawn as what typically runs on its
+// line. Pågatåg's units carry 001-099; an Öresundståg is known by its A
+// car (43xx/44xx), with its B car 45xx/46xx and middle car 47xx/48xx.
+const X11_VT = [[3139, 3147, "sesX11"], [3171, 3172, "sesX11"], [3182, 3183, "sesX11"], [3204, 3213, "sesX11"]];
 export const FLEETS = {
   pagatag: [[1, 99, "sesX61Cab"]],
-  vasttag: [[61401, 61422, "sesX61Cab"]],
   oresundstag: [[4301, 4411, "sesX31Cab"], [4501, 4611, "sesX31CabR"], [4701, 4811, "sesX31Mid"]],
+  vasttag: [[61401, 61422, "sesX61Cab"], [80001, 80080, "sesX80"], ...X11_VT, [3195, 3197, "sesX12"], [3214, 3222, "sesX12"],
+    [3190, 3190, "sesX14"], [3223, 3229, "sesX14"], [3235, 3235, "sesX14"], [3238, 3238, "sesX14"], [3240, 3241, "sesX14"],
+    [3262, 3267, "sesRegina"], [3289, 3296, "sesRegina"], [9035, 9036, "sesRegina"], [9038, 9038, "sesRegina"], [9040, 9041, "sesRegina"],
+    [9074, 9076, "sesRegina"], [9084, 9089, "sesRegina"], [1400, 1400, "sesItino"], [1402, 1403, "sesItino"], [1412, 1413, "sesItino"], [1417, 1419, "sesItino"]],
+  krosatag: [[3137, 3137, "sesX11"], [3230, 3230, "sesX14"], [3232, 3233, "sesX14"], [3236, 3237, "sesX14"], [3239, 3239, "sesX14"],
+    [1401, 1401, "sesItino"], [1404, 1411, "sesItino"], [1414, 1416, "sesItino"], [1420, 1429, "sesItino"]],
 };
 
+// What runs where (October 2026). Pågatåg: X61s only, one or two units.
+// Öresundståg: X31Ks, two units on most trains and three at rush hour.
+// Västtåg, by the ends of the run (the operator's line pages, Swedish
+// Wikipedia, järnväg.net): the Kinnekulle line (Herrljunga-Lidköping-
+// Mariestad-Hallsberg/Örebro) Y31 diesels; Borås, Varberg and the
+// Uddevalla-Herrljunga-Borås line X11, X12 and X14 pairs; the new X80s
+// since May 2026 on Göteborg-Älvängen and Göteborg-Trollhättan-
+// Vänersborg (the Säffle trains too); Bohusbanan (Uddevalla, Strömstad,
+// Stenungsund) mostly X61s; the Skövde, Falköping, Jönköping and Nässjö
+// trains Reginas; the Kungsbacka and Alingsås commuter trains X61s.
+// Krösatåg: KLT's Kalmar-Linköping and Linköping-Västervik (the former
+// Kustpilen, no wires) Y31 Itinos, as are the Nord trains to Vetlanda,
+// Eksjö, Värnamo and Halmstad; the electrified lines (Jönköping-Nässjö-
+// Växjö, Nässjö-Tranås, Kalmar-Växjö, Emmaboda-Karlskrona, Växjö-
+// Hässleholm) X11s and X14s. Krösatåg's 28 new CAF Civity units (ER3 and
+// the bimodal BIR1) were delivered from 2025, but their first passenger
+// runs were put off to early 2027, so they aren't drawn.
 const set = (label, ...units) => ({ label, units });
-const X61_SET = set("Four-section X61 (Coradia Nordic), often two together", ["sesX61Cab", 1], ["sesX61A", 1], ["sesX61B", 1], ["sesX61Cab", 1]);
+const X61_SET = set("Four-section X61 (Coradia Nordic), often two coupled", ["sesX61Cab", 1], ["sesX61A", 1], ["sesX61B", 1], ["sesX61Cab", 1]);
 const X31_ONE = ["sesX31Cab", 1], X31_MIDC = ["sesX31Mid", 1], X31_TAIL = ["sesX31CabR", 1];
-const X31_SET = set("Two three-car X31K (Contessa) units, usually 1 to 3", X31_ONE, X31_MIDC, X31_TAIL, X31_ONE, X31_MIDC, X31_TAIL);
+const X31_SET = set("Two three-car X31K (Contessa) units, usually 2 (1 to 3)", X31_ONE, X31_MIDC, X31_TAIL, X31_ONE, X31_MIDC, X31_TAIL);
+const REGINA = set("Three-car Regina (X50-X53), some trains two cars", ["sesRegina", 1], ["sesReginaMid", 1], ["sesReginaB", 1]);
+const X80_SET = set("Three-car X80 (Zefiro Express), some trains still Regina", ["sesX80", 1], ["sesX80Mid", 1], ["sesX80B", 1]);
+const X10_VT = set("Two X11, X12 or X14 two-car units together", ["sesX11", 2], ["sesX14", 2]);
+const X61_VT = set("Four-section X61 (Coradia Nordic), some trains Regina or X11-X14", ...X61_SET.units);
+const X61_PENDEL = set("Four-section X61 (Coradia Nordic), often two coupled", ...X61_SET.units);
+const Y31 = (agency) => set(`Two-car Y31 (Itino) diesel railcar${agency === "krosatag" ? ", some trains a three-car Y32" : ""}`, ["sesItino", 1], ["sesItinoB", 1]);
+const Y32 = set("Three-car Y32 (Itino) diesel railcar", ["sesItino", 1], ["sesItinoMid", 1], ["sesItinoB", 1]);
+const X11_KR = set("X11 or X14 two-car unit, sometimes two together", ["sesX11", 2]);
+const X14_KR = set("X14 or X11 two-car unit, sometimes two together", ["sesX14", 2]);
+const BY_TYPE = {
+  sesX61Cab: X61_SET, sesX61A: X61_SET, sesX61B: X61_SET, sesX31Cab: X31_SET, sesX31CabR: X31_SET, sesX31Mid: X31_SET,
+  sesRegina: REGINA, sesReginaB: REGINA, sesReginaMid: REGINA, sesX80: X80_SET, sesX80B: X80_SET, sesX80Mid: X80_SET,
+  sesItinoMid: Y32,
+};
+// The run's two ends (and, for a train placed from the timetable, its stops).
+const ends = (t) => `${t.origin || ""} ${t.destination || ""}`;
 export const TYPICAL = {
-  oresundstag: () => X31_SET,
   pagatag: () => X61_SET,
-  vasttag: () => X61_SET,
+  oresundstag: () => X31_SET,
+  vasttag: (t, reported) => {
+    if (BY_TYPE[reported]) return BY_TYPE[reported];
+    if (reported === "sesX11" || reported === "sesX12" || reported === "sesX14") return X10_VT;
+    if (reported === "sesItino" || reported === "sesItinoB") return Y31("vasttag");
+    const e = ends(t);
+    if (/Lidköping|Mariestad|Hallsberg|Örebro|Håkantorp|Gårdsjö|Götene|Hova/.test(e)) return Y31("vasttag");
+    if (/Borås|Varberg|Herrljunga|Vårgårda|Limmared/.test(e)) return X10_VT;
+    if (/Älvängen|Vänersborg|Trollhättan|Öxnered|Säffle|Åmål|Mellerud|Lödöse/.test(e)) return X80_SET;
+    if (/Strömstad|Uddevalla|Stenungsund|Munkedal|Dingle|Ytterby|Kode/.test(e)) return X61_VT;
+    if (/Kungsbacka|Alingsås/.test(e) && !/Skövde|Falköping|Töreboda|Jönköping|Nässjö/.test(e)) return X61_PENDEL;
+    return REGINA;
+  },
+  krosatag: (t, reported) => {
+    if (reported === "sesX14") return X14_KR;
+    if (reported === "sesX11") return X11_KR;
+    if (reported === "sesItinoMid") return Y32;
+    if (reported === "sesItino" || reported === "sesItinoB") return Y31("krosatag");
+    const r = t.route || "", e = ends(t);
+    if (/Kalmar$/.test(r) || /Västervik|Linköping|Hultsfred|Vimmerby/.test(e)) return Y31("krosatag");
+    if (/Vetlanda|Eksjö|Halmstad|Värnamo|Åseda|Vaggeryd|Hyltebruk|Oskarshamn/.test(e)) return Y31("krosatag");
+    return X11_KR;
+  },
 };
 
-export const FACTS = {};
+// Fact sheets in mph, hp and ft, from the published km/h, kW and m.
+const JV = "https://www.jarnvag.net/vagnguide/";
+export const FACTS = {
+  sesX61Cab: { model: "Alstom Coradia Nordic (X61)", type: "Electric multiple unit", builder: "Alstom, Salzgitter", built: "2009–2019",
+    fleet: "139 four-section units: Skånetrafiken 99, Västtrafik 22, Östgötatrafiken 18", topSpeedMph: 99.4, powerHp: 2682, seats: 214, lengthFt: 243.8,
+    about: "A shorter, regional version of Stockholm's X60 with toilets and softer seats, articulated on five bogies with a 760 mm low floor. In Skåne it is the only Pågatåg, each unit named after a real or fictional Scanian; Västtrafik's have two more doors a side and are being refreshed in blue in 2025–26.",
+    source: JV + "x61" },
+  sesX31Cab: { model: "Bombardier Contessa (X31K/X32K/ET)", type: "Electric multiple unit", builder: "Adtranz/Bombardier, Kalmar and Germany", built: "1999–2012",
+    fleet: "111 three-car units, all Swedish-owned since 2023", topSpeedMph: 111.8, powerHp: 3084, seats: 194, lengthFt: 258.9,
+    about: "The Öresund trains, built to run on both Sweden's 15 kV and Denmark's 25 kV and to switch between them under way on the Öresund Bridge. Units couple nose to nose behind thick rubber collars, and the driving desks swing aside to open a gangway between them. All were refurbished in 2018–23.",
+    source: JV + "x31k" },
+  sesRegina: { model: "Bombardier Regina (X50–X53)", type: "Electric multiple unit", builder: "Adtranz/Bombardier, Västerås, Kalmar and Hennigsdorf", built: "2000–2013",
+    fleet: "28 at Västtrafik, two- and three-car", topSpeedMph: 124.3, powerHp: 2132, seats: 166, lengthFt: 176.8,
+    about: "Sweden's wide-bodied regional train, 3.45 m across so it seats five abreast. Västtåg runs it to Skövde, Falköping, Jönköping and Nässjö and on the Trollhättan line; a three-car set (264 ft) adds an unpowered middle car.",
+    source: JV + "x50" },
+  sesX11: { model: "ASEA X11", type: "Electric multiple unit", builder: "ASEA (rebuilt from X10)", built: "1982–1993, rebuilt 1994–1998",
+    fleet: "49 two-car units rebuilt; Västtrafik 23, Krösatåg 20", topSpeedMph: 87, powerHp: 1716, lengthFt: 163.6,
+    about: "X10 commuter units rebuilt with a toilet, new seats and their middle doors blocked. Skåne's were the first Pågatåg, in purple from 1983; replaced there by X61s in 2013, they went to Krösatåg in yellow, white and red.",
+    source: JV + "x11" },
+  sesX12: { model: "ASEA X12", type: "Electric multiple unit", builder: "ASEA/ABB", built: "1991–1994", fleet: "18 built; 13 at Västtrafik",
+    topSpeedMph: 99.4, powerHp: 1716, seats: 115, lengthFt: 163.6,
+    about: "A regional version of the X10 with one door a side per car and a toilet. All that remain run for Västtåg around Göteborg.",
+    source: JV + "x12" },
+  sesX14: { model: "ABB X14", type: "Electric multiple unit", builder: "ABB", built: "1994–1995", fleet: "18 built (2 more from X12s); Västtrafik 12, Krösatåg 6",
+    topSpeedMph: 99.4, powerHp: 1716, seats: 123, lengthFt: 163.6,
+    about: "The last of the X10 family, built for regional lines with two doors per car and a toilet. Västtåg runs them to Borås, Varberg and Uddevalla, Krösatåg around Jönköping.",
+    source: JV + "x14" },
+  sesItino: { model: "Bombardier Itino (Y31/Y32)", type: "Diesel multiple unit", builder: "Adtranz/Bombardier, Hennigsdorf", built: "2002–2010",
+    fleet: "24 two-car Y31, 6 three-car Y32", topSpeedMph: 87, powerHp: 1287, seats: 86, lengthFt: 126.0,
+    about: "Articulated diesel railcars with a low-floor section by each door, an engine under each end car. Krösatåg runs them on the lines without wires, among them the former Kustpilen to Kalmar and Västervik; Västtåg on the Kinnekulle line.",
+    source: JV + "y31" },
+  sesX80: { model: "Alstom Zefiro Express (X80)", type: "Electric multiple unit", builder: "Bombardier/Alstom (bodies from China, finished in Germany)", built: "2021–",
+    fleet: "80 ordered, 80001–80080", topSpeedMph: 124.3, powerHp: 3755, seats: 270, lengthFt: 264.8,
+    about: "Västtrafik's new regional train, five seats abreast in three cars with a low-floor middle car. Years late after long testing, the first entered passenger service on 11 May 2026 between Göteborg and Älvängen; they are to replace the X11–X14s and many Reginas.",
+    source: JV + "x80" },
+};
+// A unit's other cars share its sheet, named for the part they are.
+const part = (facts, name) => ({ ...facts, model: `${facts.model}, ${name}` });
+FACTS.sesX61A = part(FACTS.sesX61Cab, "middle section");
+FACTS.sesX61B = part(FACTS.sesX61Cab, "middle section");
+FACTS.sesX31CabR = FACTS.sesX31Cab;
+FACTS.sesX31Mid = part(FACTS.sesX31Cab, "middle car");
+FACTS.sesReginaB = FACTS.sesRegina;
+FACTS.sesReginaMid = part(FACTS.sesRegina, "middle car");
+FACTS.sesItinoB = FACTS.sesItino;
+FACTS.sesItinoMid = part(FACTS.sesItino, "middle car");
+FACTS.sesX80B = FACTS.sesX80;
+FACTS.sesX80Mid = part(FACTS.sesX80, "middle car");
