@@ -422,14 +422,16 @@ export const rf599 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...CAFMD,
   onRoof: (c, g) => cover(24, 13.4, 30, 0.45),
 });
 
-// Cercanías: white, a red band low on the side over a gray line, the cab's
-// front red around the windshield, the emblem by the cab. Rodalies
+// Cercanías (photographs of Civias, 446s and 453s, 2024-26): white, a red
+// line over an aubergine one low on the side, the cab's front red around the
+// windshield, the emblem by the cab. (Drawn before with a broad red band
+// over a gray line, the paint of the 2000s, corrected.) Rodalies
 // (Catalonia): white, an orange front and orange doors, a thin red line
 // under the windows, its R by the cab.
 const cerPaint = (c, L, { cab = false, roof = 12.3, skirt = 3.6, y = 4.6 } = {}) => {
   let s = rect(0, 0, L, 17, RF.white) + rect(0, roof, L, 3, RF.roof) + rect(0, roof - 0.1, L, 0.12, "#8b9198") + rect(0, 0, L, skirt, RF.skirt);
   if (isRodalies(c)) return s + rect(0, y + 2.2, L, 0.22, RF.red) + (cab ? path(`M0 ${skirt}L3.4 ${skirt}L3.4 ${roof - 0.6}Q3.4 ${roof} 2.6 ${roof}L0 ${roof}Z`, RF.rod) : "");
-  return s + rect(0, y, L, 0.9, RF.red) + rect(0, y + 1.05, L, 0.18, "#8a9097") + (cab ? path(`M0 ${skirt}L2.8 ${skirt}L2.8 ${roof - 0.6}Q2.8 ${roof} 2.0 ${roof}L0 ${roof}Z`, RF.red) : "");
+  return s + rect(0, y + 0.6, L, 0.4, RF.red) + rect(0, y, L, 0.45, RF.purple) + (cab ? path(`M0 ${skirt}L2.8 ${skirt}L2.8 ${roof - 0.6}Q2.8 ${roof} 2.0 ${roof}L0 ${roof}Z`, RF.red) : "");
 };
 const cerEmblem = (c, x, y, h) => (isRodalies(c) ? rodMark(c, x, y, h) : cerMark(x, y, h / 2));
 const cerDoor = (c, x, w = 4.3) => ({ x, w, y0: 3.7, y1: 10.9, leaves: 2, glassY: 0.45, glassH: 0.42, ...(isRodalies(c) ? { fill: RF.rod } : { fill: "#e4e6e8" }) });
@@ -465,6 +467,10 @@ export const rfCivia = (c) => unit({ ...c, cabL: false, cabR: false }, { ...CIVI
 // three-car units, a motor car with a cab at each end and a trailer
 // between, 76 m, 2,400 kW; 170 and 183 built. Three pairs of sliding
 // doors a side on every car; the roof's resistors and air-conditioning.
+// The two series share the body and differ inside and in their traction
+// (the 446 good for 100 km/h, the 447 for 120), so one drawing serves both
+// under their own names (photographs of 446s on Madrid's C-7 and of 447s,
+// 2024-26).
 const S447 = { roof: 13.2, sill: 3.7, cornerR: 1.0, end: 0.6, trucks: { centers: 56, wb: 8.5, d: 34 }, diaphragm: [3.9, 12.0], badge: false };
 export const rf447Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...S447,
   nose: [[0.9, 3.7], [0.7, 9.8], ["q", 0.8, 12.0, 2.0, 12.8], ["q", 2.8, 13.2, 4.2, 13.2]],
@@ -514,26 +520,267 @@ export const rf450 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...S450, 
 });
 
 // --- The metre-gauge network Renfe took over from FEVE in 2013
-// (Cercanías in Asturias, Cantabria, Bilbao, León, Ferrol and Cartagena):
-// electric units of series 433-438 and diesel 526-529, mostly two or three
-// short cars. Drawn as one generic three-car unit in Cercanías colors.
+// (Cercanías in Asturias, Cantabria, Bilbao, León, Ferrol and Cartagena).
+// Its electric units and its diesel railcars are drawn class by class.
+// Common: 1,000 mm gauge, 1.5 kV overhead, small cars about 2.5 m wide and
+// 3.6 m tall on trucks with 760 mm wheels.
 const MET = { roof: 11.8, sill: 3.2, cornerR: 0.9, end: 0.5, trucks: { centers: 40, wb: 7.0, d: 28 }, diaphragm: [3.4, 10.8], badge: false };
-export const rfMetCab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...MET,
-  nose: [[0.9, 3.2], [0.7, 8.8], ["q", 0.8, 10.8, 2.0, 11.5], ["q", 2.6, 11.8, 3.8, 11.8]],
-  rows: [{ xs: [5.6, 19.4, 24.0, 28.6, 43.4, 48.0], y: 6.6, w: 3.6, h: 2.5, r: 0.3 }],
-  doors: [cerDoor(c, 10.8, 3.6), cerDoor(c, 34.4, 3.6)].map((d) => ({ ...d, y0: 3.3, y1: 9.9 })), cabLen: 4,
-  paint: (c, g) => cerPaint(c, g.L, { cab: true, roof: 11.0, skirt: 3.2, y: 4.0 }) + cerEmblem(c, 31.6, 7.85, 1.2),
-  cabArt: () => path(poly([[0.8, 7.0], [1.2, 10.4], [3.6, 10.4], [3.6, 7.0]]), C.glass) + sign(1.3, 10.5, 2.2, 0.4),
-  front: { lamp: [0.75, 5.0], coupler: [0, 2.6], skirt: [[0.9, 3.2], [1.1, 1.4], [4.4, 1.4], [4.8, 3.2]], horn: [4.0, 11.8], wiper: [1.2, 7.4, 2.0, 9.9] },
-  ac: [[14, 8, 0.55], [38, 8, 0.55]], gear: [[14, 6, 1.2, "g"], [21, 5, 1.0, "b"], [27, 5, 0.9, "t"], [33, 4, 1.0]],
-  onRoof: (c, g) => aerial(28, 11.8),
+const metDoor = (c, x, w = 3.6) => ({ ...cerDoor(c, x, w), y0: 3.3, y1: 9.9 });
+const metFront = { lamp: [0.75, 5.0], coupler: [0, 2.6], skirt: [[0.9, 3.2], [1.1, 1.4], [4.4, 1.4], [4.8, 3.2]], horn: [4.0, 11.8], wiper: [1.2, 7.4, 2.0, 9.9] };
+
+// Series 436 (FEVE 3600; Siemens and Sunsundegui, 2000-03 and 2006-07; 21
+// units; Spanish Wikipedia, "Serie 3600 de FEVE"): two motor cars, each with
+// a cab, two double doors a side on each car, 420 kW, 100 km/h; Asturias
+// C-4 to C-7, Bilbao C-4 and C-5, Cantabria C-2. Car length isn't published:
+// about 18 m, from photographs. A raked front under a big windshield. The
+// Cercanías paint (photograph of 3627 at Oviedo, 2025): white, the cab end
+// red round the windshield down to a white lower front, a red band low on
+// the side, the windows in a dark band.
+const M436 = { ...MET, roof: 12.0, trucks: { centers: 39, wb: 7.0, d: 30 } };
+export const rf436 = (c) => unit({ ...c, cabL: true, cabR: false }, { ...M436,
+  nose: [[0.9, 3.2], [0.7, 5.6], ["q", 0.8, 6.6, 1.6, 7.6], [3.4, 11.0], ["q", 4.0, 12.0, 5.6, 12.0]],
+  rows: [{ xs: [8.6, 19.0, 24.0, 29.0, 34.0, 47.0, 52.0], y: 6.6, w: 4.2, h: 2.6, r: 0.3 }],
+  doors: [metDoor(c, 13.4, 4.0), metDoor(c, 41.0, 4.0)], cabLen: 6,
+  paint: (c, g) => cerPaint(c, g.L, { roof: 11.2, skirt: 3.2, y: 4.0 }) + rect(8.2, 6.4, g.L - 9.0, 3.0, RF.band, 0, 'rx="0.4"') +
+    path("M0 5.2L4.6 5.2Q6.4 7.0 6.6 9.6L6.8 12.4L0 12.4Z", RF.red) + renfeWord(c, 3.0, 4.2, 0.6, "#ffffff") + cerEmblem(c, 39.2, 7.9, 1.1),
+  cabArt: () => path(poly([[1.7, 7.7], [3.3, 10.9], [5.3, 11.3], [5.6, 8.0]]), C.glass) + sign(3.4, 11.2, 2.0, 0.38),
+  front: { ...metFront, lamp: [0.8, 5.4], horn: [6.2, 12.0], wiper: [2.2, 7.9, 3.2, 10.3] },
+  ac: [[16, 9, 0.55]], gear: [[14, 6, 1.2, "g"], [21, 5, 1.0, "b"], [27, 6, 0.9, "t"], [34, 5, 1.0]],
+  onRoof: (c, g) => panGear(g.L - 11, 12.0) + aerial(30, 12.0),
 });
-export const rfMet = (c) => unit({ ...c, cabL: false, cabR: false }, { ...MET,
-  rows: [{ xs: [2.0, 15.8, 20.4, 25.0, 39.8, 44.4], y: 6.6, w: 3.6, h: 2.5, r: 0.3 }],
-  doors: [cerDoor(c, 7.4, 3.6), cerDoor(c, 30.8, 3.6)].map((d) => ({ ...d, y0: 3.3, y1: 9.9 })),
-  paint: (c, g) => cerPaint(c, g.L, { roof: 11.0, skirt: 3.2, y: 4.0 }),
-  ac: [[3, 6, 0.55], [36, 8, 0.55]], gear: [[13, 6, 1.2, "g"], [20, 5, 1.0, "b"], [26, 6, 0.9, "t"], [33, 4, 1.0]],
-  onRoof: (c, g) => panGear(c.L / 2, 11.8, 1),
+
+// Series 438 (FEVE 3800; CAF, 1992; 16 units): three cars, a motor car with
+// the pantograph, a trailer and a cab trailer (FEVE 6800), 880 kW, up to
+// four units coupled (funet's FEVE archive); Santander's metre-gauge lines
+// to Liérganes and Cabezón de la Sal. About 16 m a car (48 m a unit; car
+// length not published). A flat front, its big windshield and the
+// destination sign in one black surround; two double doors a side, the
+// windows deep and dark. FEVE's paint, kept by Renfe (photograph of 3811 at
+// Santander, Commons): cream, a yellow line over an aubergine stripe low on
+// the side and across the front, "renfe feve" on the front.
+const M438 = { ...MET, roof: 11.6, trucks: { centers: 34, wb: 6.6, d: 30 } };
+const fevePaint = (L, cab) => rect(0, 0, L, 17, RF.cream) + rect(0, 11.0, L, 3, "#cfc8b6") + rect(0, 10.9, L, 0.12, "#a39c8b") + rect(0, 0, L, 3.2, RF.skirt) +
+  rect(0, 3.6, L, 0.55, RF.magenta) + rect(0, 4.4, L, 0.35, RF.feveYellow) + rect(cab ? 6.0 : 0.8, 6.2, L - (cab ? 6.6 : 1.6), 3.4, RF.band, 0, 'rx="0.3"') +
+  (cab ? path("M0 6.0L5.4 6.0L5.4 11.1L0 11.1Z", "#16181b") : "");
+export const rf438Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...M438,
+  nose: [[0.7, 3.2], [0.6, 10.2], ["q", 0.7, 11.4, 1.8, 11.6], [3.4, 11.6]],
+  rows: [{ xs: [6.6, 10.6, 25.6, 30.0, 34.4, 45.4], y: 6.4, w: 3.8, h: 3.0, r: 0.2 }],
+  doors: [metDoor(c, 20.6, 3.6), metDoor(c, 39.6, 3.6)].map((d) => ({ ...d, fill: "rgba(0,0,0,0.06)" })), cabLen: 5.5,
+  paint: (c, g) => fevePaint(g.L, true) + renfeWord(c, 3.0, 5.4, 0.55) + letters(c, 3.3, 4.9, 0.32, "feve", RF.magenta, { weight: 500 }),
+  cabArt: () => path(poly([[0.7, 6.3], [0.75, 10.8], [5.2, 10.8], [5.2, 6.3]]), C.glass) + sign(1.4, 10.0, 2.6, 0.4) + rect(5.5, 3.6, 0.1, 7.4, "rgba(0,0,0,0.3)"),
+  front: { ...metFront, horn: [3.6, 11.6], wiper: [1.4, 6.6, 2.6, 9.6] },
+  ac: [[12, 8, 0.6]], gear: [[13, 6, 1.2, "g"], [20, 5, 1.0, "b"], [26, 5, 0.9, "t"], [32, 4, 1.0]],
+  onRoof: (c, g) => panGear(g.L - 12, 11.6) + aerial(26, 11.6),
+});
+export const rf438 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...M438,
+  rows: [{ xs: [1.6, 5.8, 20.4, 24.8, 29.2, 44.4, 48.6], y: 6.4, w: 3.8, h: 3.0, r: 0.2 }],
+  doors: [metDoor(c, 15.2, 3.6), metDoor(c, 38.2, 3.6)].map((d) => ({ ...d, fill: "rgba(0,0,0,0.06)" })),
+  paint: (c, g) => fevePaint(g.L, false), ac: [[8, 8, 0.6], [32, 8, 0.6]], gear: [[12, 6, 1.0, "b"], [20, 5, 0.9, "t"], [28, 6, 1.0, "b"]],
+});
+// Series 435 (FEVE 3500; CAF, 1990s; Spanish Wikipedia: 15.24 m a car):
+// Asturias' three-car units, the same CAF family and layout as the 438 on
+// shorter cars, still in FEVE's white with a burgundy band low on the side
+// and a thin burgundy line over it (photograph of 3527 at Perlora, Commons).
+const m435Paint = (L, cab) => rect(0, 0, L, 17, RF.white) + rect(0, 11.0, L, 3, RF.roof) + rect(0, 0, L, 3.2, RF.skirt) + rect(0, 3.6, L, 1.1, "#8b1e3a") + rect(0, 5.0, L, 0.2, "#8b1e3a") +
+  rect(cab ? 6.0 : 0.8, 6.2, L - (cab ? 6.6 : 1.6), 3.4, RF.band, 0, 'rx="0.3"') + (cab ? path("M0 6.0L5.4 6.0L5.4 11.1L0 11.1Z", "#16181b") : "");
+export const rf435Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...M438, trucks: { centers: 32, wb: 6.6, d: 30 },
+  nose: [[0.7, 3.2], [0.6, 10.2], ["q", 0.7, 11.4, 1.8, 11.6], [3.4, 11.6]],
+  rows: [{ xs: [6.6, 10.6, 24.4, 28.6, 41.8], y: 6.4, w: 3.8, h: 3.0, r: 0.2 }],
+  doors: [metDoor(c, 19.4, 3.6), metDoor(c, 36.2, 3.6)].map((d) => ({ ...d, fill: "rgba(0,0,0,0.06)" })), cabLen: 5.5,
+  paint: (c, g) => m435Paint(g.L, true) + letters(c, 30.5, 4.15, 0.6, "feve", "#ffffff", { weight: 600 }),
+  cabArt: () => path(poly([[0.7, 6.3], [0.75, 10.8], [5.2, 10.8], [5.2, 6.3]]), C.glass) + sign(1.4, 10.0, 2.6, 0.4),
+  front: { ...metFront, horn: [3.6, 11.6], wiper: [1.4, 6.6, 2.6, 9.6] },
+  ac: [[12, 8, 0.6]], gear: [[12, 6, 1.2, "g"], [19, 5, 1.0, "b"], [25, 5, 0.9, "t"]],
+  onRoof: (c, g) => panGear(g.L - 11, 11.6),
+});
+export const rf435 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...M438, trucks: { centers: 32, wb: 6.6, d: 30 },
+  rows: [{ xs: [1.6, 5.8, 19.8, 24.0, 40.6, 44.8], y: 6.4, w: 3.8, h: 3.0, r: 0.2 }],
+  doors: [metDoor(c, 14.4, 3.6), metDoor(c, 33.6, 3.6)].map((d) => ({ ...d, fill: "rgba(0,0,0,0.06)" })),
+  paint: (c, g) => m435Paint(g.L, false), ac: [[8, 8, 0.6], [30, 8, 0.6]], gear: [[12, 6, 1.0, "b"], [20, 5, 0.9, "t"]],
+});
+
+// Series 529 (FEVE 2900; Sunsundegui with Siemens, 2000s): single diesel
+// railcars with a cab at each end, 17.7 m; León-Guardo and the shuttles of
+// Ferrol and Cartagena (Wikipedia, Renfe's rolling stock tables). A raked
+// front; a crew door behind each cab, a double door off-center on each
+// side; big windows. FEVE's paint, kept by Renfe (photograph of 2911,
+// Commons): white, navy low on the side and across the front over a yellow
+// line, the windows set in navy, a broad yellow curve rising beside the
+// door, "renfe feve" lettered on the front.
+const M529 = { ...MET, roof: 11.9, sill: 3.4, trucks: { centers: 37, wb: 6.6, d: 30 } };
+// A car with a shaped cab at each end: drawn with its cab at the left, the
+// last cut ft at the right replaced by the same drawing turned round.
+const twoCabs = (draw, cut) => (c) => {
+  const id = newId(), L = c.L;
+  const a = draw({ ...c, coupledR: false }), b = draw({ ...c, mirrored: !c.mirrored, coupledL: c.coupledR, coupledR: false });
+  return `<clipPath id="${id}"><rect x="-3" y="-3" width="${L - cut + 3}" height="30"/></clipPath><clipPath id="${id}b"><rect x="-3" y="-3" width="${cut + 3}" height="30"/></clipPath>` +
+    `<g clip-path="url(#${id})">${a}</g><g transform="matrix(-1 0 0 1 ${L} 0)"><g clip-path="url(#${id}b)">${b}</g></g>`;
+};
+const rf529One = (c) => unit({ ...c, cabL: true, cabR: false }, { ...M529,
+  nose: [[0.9, 3.4], [0.7, 5.6], ["q", 0.7, 6.8, 1.4, 7.8], [2.8, 11.0], ["q", 3.4, 11.9, 4.8, 11.9]],
+  rows: [{ xs: [9.4, 14.6, 19.8, 37.6, 42.8], y: 6.6, w: 4.6, h: 3.1, r: 0.25 }],
+  doors: [{ x: 6.0, w: 2.2, y0: 3.5, y1: 10.2, glassY: 0.55, glassH: 0.32, grabs: false, fill: "rgba(0,0,0,0.05)" }, { ...metDoor(c, 26.8, 4.4), y0: 3.5, y1: 10.2, fill: RF.feveBlue },
+    { x: c.L - 8.2, w: 2.2, y0: 3.5, y1: 10.2, glassY: 0.55, glassH: 0.32, grabs: false, fill: "rgba(0,0,0,0.05)" }], cabLen: 5,
+  paint: (c, g) => {
+    const L = g.L;
+    return rect(0, 0, L, 17, RF.white) + rect(0, 11.2, L, 3, RF.roof) + rect(0, 0, L, 3.4, RF.skirt) + rect(0, 3.4, L, 0.45, RF.feveYellow) + rect(0, 3.85, L, 1.6, RF.feveBlue) +
+      rect(8.8, 6.3, 16.4, 3.7, RF.feveBlue, 0, 'rx="0.3"') + rect(37.0, 6.3, 11.4, 3.7, RF.feveBlue, 0, 'rx="0.3"') +
+      path("M32.4 3.9Q33.6 8.2 35.6 10.6L36.8 10.6Q35.2 7.8 34.6 3.9Z", RF.feveYellow) + path("M31.4 3.9Q32.8 8.6 34.6 10.6L35.6 10.6Q33.6 8.2 32.4 3.9Z", "#ffffff");
+  },
+  cabArt: (c) => path(poly([[1.5, 7.9], [2.7, 10.7], [4.6, 11.1], [4.8, 7.9]]), C.glass) + renfeWord(c, 2.7, 6.3, 0.45) + letters(c, 3.0, 5.85, 0.3, "feve", RF.feveBlue, { weight: 500 }) +
+    sign(2.9, 11.15, 1.8, 0.36),
+  front: { ...metFront, lamp: [0.8, 5.8], coupler: [0, 2.8], skirt: [[0.9, 3.4], [1.1, 1.5], [4.4, 1.5], [4.8, 3.4]], horn: [5.4, 11.9], wiper: [1.9, 8.1, 2.8, 10.5] },
+  ac: [[16, 10, 0.6]], gear: [[13, 8, 1.6, "g"], [22, 6, 1.0, "t"], [30, 5, 1.2, "b"]],
+  onRoof: (c, g) => exhaust(29, 11.9) + aerial(34, 11.9),
+});
+export const rf529 = twoCabs(rf529One, 10);
+
+// --- Series 730's generator cars (Talgo, 2012-13): the 15 Series 130 sets
+// rebuilt as hybrids for Alvia services off the wires (Madrid-Badajoz,
+// Madrid-Almería, the Galicia runs before the high-speed line) carry a diesel
+// generator car behind each power car, two MTU engines in a Talgo-length
+// body (Wikipedia, "Renfe Class 730"). No passenger windows: a door at one
+// end, the generator room's grilles, the radiators' raised housing on the
+// roof. The refurbished Alvia paint (photograph at Madrid-Chamartín,
+// Commons): white, the two thin aubergine lines low on the side.
+export const rf730Gen = (c) => {
+  let s = talgoCoach(c, { roof: 11.0, rows: [[c.L - 9.6, 6.6, 2.2, 1.6]], paint: (c, L) => rfPaint(L, { y: 3.9, roof: 10.2, skirt: 2.6, lines: true }) });
+  for (const x of [6.2, 14.0, 21.8]) s += grille(x, 5.0, 6.2, 4.4, 0.35);
+  return s + rect(8, 11.0, 22, 0.9, "#a3aab2", 0.4, 'rx="0.3"') + slats(8.6, 11.1, 20.8, 0.7, 0.45, "rgba(0,0,0,0.35)") + exhaust(31, 11.0) + exhaust(33.4, 11.0);
+};
+
+// --- The locomotive-hauled Talgo Intercitys (Barcelona-Valencia-Alicante-
+// Cartagena and Albacete-Cartagena, being withdrawn as Series 106s and the
+// hybrids take over; geotren, October 2026): Talgo Pendular coaches (Series
+// 6 and 7), 13.14 m, the same articulated design as the 130's, behind a
+// Series 252 electric locomotive north of Alicante or a Series 334 diesel
+// south of it. Their paint (photograph of a 334's Talgo near Cáceres,
+// Commons): white, the windows in small groups in a dark band, a broad
+// aubergine stripe low on the side with a thin one under it.
+const talgoLines = (L, y) => rect(0, y, L, 0.55, RF.purple) + rect(0, y - 0.45, L, 0.2, RF.purple);
+export const rfTalgo = (c) => talgoCoach(c, { roof: 11.0, rows: seq(5.4, 5.9, 6).map((x) => [x, 5.9, 4.0, 2.6]), band: [5.65, 3.1],
+  paint: (c, L) => rect(0, 0, L, 17, RF.white) + rect(0, 10.2, L, 3, RF.roof) + rect(0, 0, L, 2.6, RF.skirt) + talgoLines(L, 4.2) });
+
+// A locomotive with a cab at each end (Series 252, 334): the body, its
+// livery clipped to it, two trucks, buffers and screw couplings, grilles,
+// roof gear; k: { roof, sill, centers, wb, wheel, nose (rake in ft), paint,
+// grilles, onRoof, word }.
+function rfLoco(c, k) {
+  const { L } = c, { roof, sill } = k, n = k.nose;
+  const d = poly([[0.7, sill], [L - 0.7, sill], [L - 0.7, 8.6], ["q", L - 0.8, 9.6, L - 1.4, 10.2], [L - 0.9 - n, roof - 0.6], ["q", L - 1.4 - n, roof, L - 2.4 - n, roof],
+    [2.4 + n, roof], ["q", 1.4 + n, roof, 0.9 + n, roof - 0.6], [1.4, 10.2], ["q", 0.8, 9.6, 0.7, 8.6]]);
+  let s = "";
+  for (const x of [L / 2 - k.centers / 2, L / 2 + k.centers / 2]) s += truck(x, { wb: k.wb, d: k.wheel, kind: "loco", top: sill });
+  s += fairing(L / 2 - k.centers / 2 + k.wb / 2 + 2.2, L / 2 + k.centers / 2 - k.wb / 2 - 2.2, sill, 1.4, RF.fair) + rect(L / 2 - 3, sill - 2.6, 6, 1.2, "currentColor", 0, 'opacity="0.7" rx="0.5"');
+  s += shell(d, RF.white, k.paint(c, L));
+  // Windshields at both ends, cab side windows and doors, lamps.
+  for (const [x, f] of [[0, 1], [L, -1]]) {
+    const X = (v) => x + f * v;
+    s += path(poly([[X(1.1), 10.3], [X(0.95 + n * 0.9), roof - 0.75], [X(2.6 + n), roof - 0.75], [X(2.6 + n), 10.3]]), C.glass) +
+      win(Math.min(X(3.4 + n), X(5.2 + n)), 9.6, 1.8, 2.0, 0.25) + door(Math.min(X(6.0 + n), X(8.0 + n)), sill + 0.5, 2.0, 7.0, { glassY: 0.62, glassH: 0.26, grabs: true, fill: "rgba(0,0,0,0.06)" }) +
+      rect(Math.min(X(0.75), X(1.35)), 6.2, 0.6, 0.45, "#f6f3dc", 0.4, 'rx="0.14"') + rect(Math.min(X(0.75), X(1.35)), 5.6, 0.6, 0.35, "#d0212e", 0.3, 'rx="0.1"');
+  }
+  for (const [x, y, w, h] of k.grilles) s += grille(x, y, w, h, 0.35);
+  s += k.onRoof(c, L) + horns(4.0 + n, roof) + horns(L - 5.2 - n, roof);
+  s += buffersAt(0.7, -1, sill) + buffersAt(L - 0.7, 1, sill);
+  return s + (k.word ? renfeWord(c, ...k.word) : "");
+}
+// Side buffers and the screw coupling's hook at a body end.
+const buffersAt = (x, side, sill) => rect(side < 0 ? x - 0.9 : x, sill - 0.9, 0.9, 0.75, "currentColor", 0, 'rx="0.2"') + rect(side < 0 ? x - 1.0 : x + 0.75, sill - 1.05, 0.25, 1.05, "currentColor") +
+  rect(side < 0 ? x - 0.1 : x - 0.4, sill - 1.6, 0.5, 0.5, "currentColor", 0, 'opacity="0.85"');
+
+// Series 334 (Vossloh, Valencia, 2006; 28; Spanish Wikipedia): the Euro
+// 3000 diesel-electric, Bo'Bo', 2,400 kW, 200 km/h, built for the Talgo
+// Altaria to Murcia; about 21 m over buffers like its Israeli sister the
+// Euro 3000AC (en.wikipedia, "Stadler Euro"), 1,067 mm wheels. A cab at each
+// end under a raked windshield; the machinery room's louvres high on the
+// side, the radiator grille at one end; the exhaust and fans on the roof.
+// Paint (photograph near Cáceres, Commons): white, gray low on the body, a
+// broad aubergine stripe with a thin one under it, "renfe" on the side.
+export const rf334 = (c) => rfLoco(c, { roof: 13.9, sill: 4.1, centers: 34.5, wb: 8.9, wheel: 42, nose: 1.4,
+  paint: (c, L) => rect(0, 0, L, 16, RF.white) + rect(0, 0, L, 5.6, "#c7ccd1") + rect(0, 12.9, L, 2, RF.roof) + talgoLines(L, 6.2),
+  grilles: [[11, 10.6, 13, 1.8], [27, 10.6, 9, 1.8], [45.5, 6.6, 7.5, 5.6]], word: [32, 8.2, 1.3],
+  onRoof: (c, L) => rect(14, 13.85, 34, 0.5, "#a3aab2", 0.4, 'rx="0.2"') + exhaust(30, 14.3) + [50, 55].map((x) => path(`M${x - 2} 13.85Q${x} 14.6 ${x + 2} 13.85Z`, C.steelDark, 0.4)).join("") });
+// Series 252 (Krauss-Maffei and Siemens with CAF and Macosa, 1991-96; 75;
+// the 3 kV DC and 25 kV AC dual-system cousin of DB's class 120; Wikipedia,
+// "Renfe Class 252"): Bo'Bo', 5,600 kW, 220 km/h, 20.38 m, 1,250 mm wheels.
+// Hauls the last Talgo Intercitys north of Alicante. Paint (photograph at
+// Barcelona-França, Commons): white, the roof and upper edge pale gray, two
+// aubergine stripes low, "renfe" huge in aubergine over a gray swirl on the
+// side.
+export const rf252 = (c) => rfLoco(c, { roof: 13.6, sill: 4.2, centers: 32.8, wb: 9.2, wheel: 49, nose: 1.0,
+  paint: (c, L) => rect(0, 0, L, 16, "#efede6") + rect(0, 11.6, L, 3, "#c9cdd1") + rect(0, 0, L, 4.6, "#9aa0a7") + talgoLines(L, 5.4) +
+    path(`M${L * 0.32} 6.4Q${L * 0.38} 9.6 ${L * 0.45} 6.6Q${L * 0.5} 9.0 ${L * 0.55} 6.4`, "none", 0, 'stroke="#9aa0a7" stroke-width="0.6"'),
+  grilles: [[10.4, 10.4, 6, 1.6], [L252 - 16.4, 10.4, 6, 1.6]], word: [L252 * 0.45, 9.0, 2.4],
+  onRoof: (c, L) => pantograph(L - 17, 13.6, { up: true, facing: -1 }) + pantograph(17, 13.6, { up: false }) + cover(22, 13.6, L - 44, 0.5) });
+const L252 = 66.9;
+
+// --- Series 594 (CAF under licence from ABB's Danish IC3 design, 1997; 23
+// units; Spanish Wikipedia): two cars, each with a cab, 47.35 m a unit,
+// 1,200 kW, 160 km/h; the IC3's rubber-faced front without its gangway.
+// Zaragoza-Canfranc since 2021 and other Aragon and Castile lines. Media
+// Distancia's paint (photograph, Commons): white, an orange line over an
+// aubergine stripe low on the side, the windows in a dark band; a single
+// plug door at each end of each car.
+export const rf594Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...CAFMD, roof: 12.8, trucks: { centers: 52, wb: 8.2, d: 33 },
+  nose: [[0.8, 3.6], [0.6, 9.6], ["q", 0.7, 11.8, 2.0, 12.5], ["q", 2.8, 12.8, 4.6, 12.8]],
+  rows: [{ xs: seq(13.0, 5.4, 10), y: 7.2, w: 4.2, h: 2.6, r: 0.4 }],
+  doors: [s120Door(8.2), s120Door(c.L - 4.0)], cabLen: 5,
+  paint: (c, g) => rfPaint(g.L, { y: 5.0, roof: 12.0, skirt: 3.6, band: [12.4, 7.0, 3.1, 4.6] }) + rect(0.4, 3.6, 1.0, 1.8, "#2a2d31", 0, 'rx="0.3"') + renfeWord(c, 3.4, 6.0, 0.6),
+  cabArt: () => path(poly([[0.7, 8.0], [0.9, 11.4], [4.0, 11.6], [4.0, 8.0]]), C.glass) + sign(1.2, 11.7, 2.4, 0.4),
+  front: { lamp: [0.65, 6.2], coupler: [0, 2.9], skirt: [[0.8, 3.6], [1.0, 1.5], [4.6, 1.5], [5.0, 3.6]], horn: [5.0, 12.8], wiper: [1.2, 8.3, 2.0, 10.8] },
+  ac: [[16, 10, 0.6]], gear: [[20, 10, 1.8, "g"], [32, 6, 1.0, "t"], [40, 5, 1.2, "b"]],
+  onRoof: (c, g) => exhaust(34, 12.8) + aerial(28, 12.8),
+});
+// --- Series 598 (CAF, 2004; 21 units; Spanish Wikipedia): three cars, M-R-M,
+// 75.93 m, 2.94 m wide, 4.17 m tall, 1,352 kW from four MAN engines, 160
+// km/h; Seville's C-3, Media Distancia and Intercity in Andalusia and
+// Extremadura. A long pointed nose; two single plug doors a side on each
+// car. Paint (photograph at Ronda, Commons): white, an orange line along
+// the windows' foot over an aubergine line, the windows in a dark band.
+export const rf598Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...CAFMD, roof: 13.7, trucks: { centers: 56, wb: 8.5, d: 33 },
+  nose: [[1.6, 3.6], [0.8, 4.6], ["q", 0.6, 6.2, 2.0, 7.6], [7.0, 11.8], ["q", 9.0, 13.7, 12.6, 13.7]],
+  rows: [{ xs: seq(21.0, 5.6, 9), y: 7.2, w: 4.6, h: 2.8, r: 0.4 }],
+  doors: [s120Door(15.6), s120Door(c.L - 4.4)], cabLen: 13,
+  paint: (c, g) => rfPaint(g.L, { y: 5.0, nose: 12, roof: 12.6, skirt: 3.6, band: [20.4, 7.0, 3.2, 5.0] }) + renfeWord(c, 6.4, 6.0, 0.9),
+  cabArt: () => path(poly([[3.4, 8.2], [6.6, 11.4], [9.8, 12.8], [10.6, 10.0], [6.6, 8.4]]), C.glass),
+  front: { lamp: [1.6, 5.4], skirt: [[1.6, 3.6], [2.2, 1.4], [8.6, 1.4], [9.0, 3.6]], horn: [13.0, 13.7], wiper: [4.6, 8.6, 6.6, 10.6] },
+  ac: [[16, 10, 0.6]], gear: [[22, 10, 1.8, "g"], [34, 6, 1.0, "t"], [42, 7, 1.6, "g"]],
+  onRoof: (c, g) => exhaust(36, 13.7) + exhaust(38.2, 13.7) + aerial(30, 13.7),
+});
+export const rf598 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...CAFMD, roof: 13.7, trucks: { centers: 55, wb: 8.5, d: 33 },
+  rows: [{ xs: seq(7.4, 5.6, 12), y: 7.2, w: 4.6, h: 2.8, r: 0.4 }],
+  doors: [s120Door(1.6), s120Door(c.L - 4.4)], paint: (c, g) => rfPaint(g.L, { y: 5.0, roof: 12.6, skirt: 3.6, band: [6.8, 7.0, 3.2, 5.0] }),
+  ac: [[7, 10, 0.6], [c.L - 17, 10, 0.6]], gear: [[22, 8, 1.2, "b"], [32, 7, 1.0, "t"], [42, 7, 1.2, "b"]],
+});
+
+// --- Series 453 (Stadler, 2025-26; 79 ordered; Railway Gazette and
+// Renfe): Madrid's new Cercanías trains, single-deck FLIRT motor cars with a
+// cab at each end of the train and KISS double-deck trailers between them,
+// 3.05 m wide, 4.297 m tall over the double decks; the four-car T100
+// (Mc-R-R-Mc) 97.72 m: 22.36 m end cars, 26.5 m trailers. In passenger
+// service on the C-7 since August 2026, a few on the C-1. The paint
+// (photographs of 453-001 and -003, 2026): white, the whole front red and
+// the red sweeping back along the cab side in a point, the big Cercanías
+// mark beside it; red doors; a red line over an aubergine one low on the
+// side.
+export const rf453Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { roof: 13.4, sill: 3.4, cornerR: 1.0, end: 0.6, trucks: { centers: 50, wb: 8.9, d: 33 }, diaphragm: [3.6, 12.4], badge: false,
+  nose: [[1.6, 3.4], [0.8, 4.4], ["q", 0.5, 6.4, 1.6, 7.8], [5.0, 11.8], ["q", 6.6, 13.4, 9.6, 13.4]],
+  rows: [{ xs: [14.2, 32.0, 37.0, 42.0, 57.0, 62.4, 67.2], y: 7.0, w: 4.4, h: 3.2, r: 0.4 }],
+  doors: [cerDoor(c, 25.4, 4.6), cerDoor(c, 49.8, 4.6)].map((d) => ({ ...d, y0: 3.5, fill: RF.red })), cabLen: 10,
+  paint: (c, g) => cerPaint(c, g.L, { roof: 12.6, skirt: 3.4, y: 4.4 }) + path("M0 2.6L14 2.6L22 12.6L22 14L0 14Z", RF.red) + path("M12.8 2.6L15.6 2.6L23.4 12.6L21.2 12.6Z", RF.white) +
+    circle(18.6, 8.2, 1.7, "#ffffff") + cerMark(18.6, 8.2, 1.5) + renfeWord(c, 19.0, 5.2, 0.8),
+  cabArt: () => path(poly([[2.6, 8.0], [5.2, 11.6], [8.0, 12.8], [9.0, 9.4], [5.4, 8.0]]), C.glass) + sign(5.4, 12.0, 3.0, 0.42),
+  front: { lamp: [1.4, 5.4], coupler: [0, 2.8], skirt: [[1.6, 3.4], [2.0, 1.4], [7.4, 1.4], [7.8, 3.4]], horn: [10.4, 13.4], wiper: [3.4, 8.3, 5.0, 10.6] },
+  ac: [[30, 12, 0.7]], gear: [[24, 7, 1.4, "g"], [33, 6, 1.2, "b"], [41, 6, 1.0, "t"]],
+  onRoof: (c, g) => panGear(g.L - 14, 13.4) + aerial(26, 13.4),
+});
+export const rf453 = (c) => unit({ ...c, cabL: false, cabR: false }, { roof: 14.1, sill: 3.9, cornerR: 1.0, end: 0.6, trucks: { centers: 64, wb: 8.9, d: 33 },
+  diaphragm: [4.0, 12.6], badge: false, ends: { h: 13.4, len: 12, ramp: 3 }, drop: { a: 18.6, b: c.L - 18.6, y: 1.5 },
+  rows: [{ xs: seq(28.6, 5.6, 6), y: 9.9, w: 4.6, h: 2.6, r: 0.4 }, { xs: seq(28.6, 5.6, 6), y: 4.4, w: 4.6, h: 2.8, r: 0.4 }, { xs: [6.4, c.L - 10.8], y: 7.4, w: 4.4, h: 2.8, r: 0.4 }],
+  doors: [cerDoor(c, 21.2, 4.6), cerDoor(c, c.L - 25.8, 4.6)].map((d) => ({ ...d, y0: 1.7, y1: 9.4, fill: RF.red })),
+  paint: (c, g) => cerPaint(c, g.L, { roof: 13.4, skirt: 3.9, y: 4.0 }) + cerMark(g.L / 2, 13.1, 0.5),
+  ac: [[3, 8, 0.6, 13.4], [c.L - 11, 8, 0.6, 13.4]], gear: [[3.4, 3, 1.0, "b"], [c.L - 6.4, 3, 1.0, "b"]],
 });
 
 export const TYPES = {
@@ -561,8 +808,23 @@ export const TYPES = {
   rf447: { name: "Series 447 trailer", kind: "emu" },
   rf450Cab: { name: "Series 450 double-deck motor car", kind: "bilevel", emu: true, pan: true },
   rf450: { name: "Series 450 double-deck trailer", kind: "bilevel", emu: true },
-  rfMetCab: { name: "Metre-gauge unit end car", kind: "emu" },
-  rfMet: { name: "Metre-gauge unit car", kind: "emu", pan: true },
+  rf446Cab: { name: "Series 446 motor car", kind: "emu", pan: true },
+  rf446: { name: "Series 446 trailer", kind: "emu" },
+  rf436: { name: "Series 436 (FEVE 3600) car", kind: "emu", pan: true },
+  rf438Cab: { name: "Series 438 (FEVE 3800) cab car", kind: "emu", pan: true },
+  rf438: { name: "Series 438 (FEVE 3800) trailer", kind: "emu" },
+  rf435Cab: { name: "Series 435 (FEVE 3500) cab car", kind: "emu", pan: true },
+  rf435: { name: "Series 435 (FEVE 3500) trailer", kind: "emu" },
+  rf529: { name: "Series 529 (FEVE 2900) railcar", kind: "emu" },
+  rf730Gen: { name: "Series 730 generator car", kind: "talgo" },
+  rfTalgo: { name: "Talgo Pendular coach", kind: "talgo" },
+  rf334: { name: "Series 334 diesel locomotive", kind: "diesel" },
+  rf252: { name: "Series 252 electric locomotive", kind: "electric", pan: true },
+  rf594Cab: { name: "Series 594 (TRD) car", kind: "emu" },
+  rf598Cab: { name: "Series 598 end car", kind: "emu" },
+  rf598: { name: "Series 598 middle car", kind: "emu" },
+  rf453Cab: { name: "Series 453 (Stadler) motor car", kind: "emu", pan: true },
+  rf453: { name: "Series 453 double-deck trailer", kind: "bilevel", emu: true },
 };
 // oneEnd: single-cab equipment, drawn cab-left and mirrored at the back of
 // a train. variant: Avlo's purple and Rodalies' orange are the same cars
@@ -582,7 +844,16 @@ export const MODELS = {
   rfCiviaCab: M(rfCiviaCab, 70.5, true), rfCivia: M(rfCivia, 60.4),
   rf447Cab: M(rf447Cab, 85.0, true), rf447: M(rf447, 79.3),
   rf450Cab: M(rf450Cab, 87.2, true), rf450: M(rf450, 87.2),
-  rfMetCab: M(rfMetCab, 58.0, true), rfMet: M(rfMet, 54.0),
+  rf446Cab: M(rf447Cab, 85.0, true), rf446: M(rf447, 79.3),
+  rf436: M(rf436, 59.0, true),
+  rf438Cab: M(rf438Cab, 52.5, true), rf438: M(rf438, 52.5),
+  rf435Cab: M(rf435Cab, 50.0, true), rf435: M(rf435, 50.0),
+  rf529: M(rf529, 58.1),
+  rf730Gen: M(rf730Gen, 43.1, true), rfTalgo: M(rfTalgo, 43.1),
+  rf334: M(rf334, 68.9, true), rf252: M(rf252, 66.9, true),
+  rf594Cab: M(rf594Cab, 77.7, true),
+  rf598Cab: M(rf598Cab, 84.0, true), rf598: M(rf598, 81.1),
+  rf453Cab: M(rf453Cab, 73.4, true), rf453: M(rf453, 86.9),
 };
 
 const set = (label, ...units) => ({ label, units });
@@ -592,16 +863,27 @@ const sets = {
   avlo: set("Avlo Series 112 (Talgo 350) trainset, some Avlo trains Series 106", ["rf112Power", 1], ["rf112Coach", 12], ["rf112Power", 1]),
   s106: set("Series 106 (Talgo Avril) trainset: two power cars and twelve coaches", ["rf106Power", 1], ["rf106Coach", 12], ["rf106Power", 1]),
   s100: set("Series 100 trainset: two power cars and eight trailers (some trains Series 102 or 112)", ["rf100Power", 1], ["rf100", 8], ["rf100Power", 1]),
-  s130: set("Series 130 (Talgo 250) trainset: two power cars and eleven coaches (Series 730 hybrids on some routes)", ["rf130Power", 1], ["rf130Coach", 11], ["rf130Power", 1]),
+  s130: set("Series 130 (Talgo 250) trainset: two power cars and eleven coaches", ["rf130Power", 1], ["rf130Coach", 11], ["rf130Power", 1]),
+  s730: set("Series 730 hybrid (Talgo 250): power car and generator car at each end, nine coaches", ["rf130Power", 1], ["rf730Gen", 1], ["rf130Coach", 9], ["rf730Gen", 1], ["rf130Power", 1]),
+  s120a: set("Series 120 (CAF) four-car unit, sometimes two coupled", ["rf120Cab", 1], ["rf120", 2], ["rf120Cab", 1]),
+  talgo334: set("Series 334 diesel locomotive with Talgo coaches (being replaced)", ["rf334", 1], ["rfTalgo", 10]),
+  talgo252: set("Series 252 electric locomotive with Talgo coaches (being replaced)", ["rf252", 1], ["rfTalgo", 10]),
+  s594: set("Series 594 (TRD) two-car diesel unit", ["rf594Cab", 2]),
+  s598: set("Series 598 three-car diesel unit", ["rf598Cab", 1], ["rf598", 1], ["rf598Cab", 1]),
   s120: set("Series 120 (CAF) four-car unit, sometimes two coupled", ["rf120Cab", 1], ["rf120", 2], ["rf120Cab", 1]),
   s121: set("Series 121 (CAF) four-car unit, sometimes two coupled", ["rf120Cab", 1], ["rf120", 2], ["rf120Cab", 1]),
   s104: set("Series 104 or 114 four-car unit", ["rf104Cab", 1], ["rf104", 2], ["rf104Cab", 1]),
   s449: set("Series 449 five-car electric unit (older 440 and 470 units on some lines)", ["rf449Cab", 1], ["rf449", 3], ["rf449Cab", 1]),
   s599: set("Series 599 three-car diesel unit", ["rf599Cab", 1], ["rf599", 1], ["rf599Cab", 1]),
   civia: set("Civia electric unit, usually 5 cars (some trains Series 446 or 447)", ["rfCiviaCab", 1], ["rfCivia", 3], ["rfCiviaCab", 1]),
-  s447: set("Series 447 or 446 three-car unit, often two coupled (some trains Civia)", ["rf447Cab", 1], ["rf447", 1], ["rf447Cab", 1]),
+  s447: set("Series 447 three-car unit, often two coupled (some trains Civia)", ["rf447Cab", 1], ["rf447", 1], ["rf447Cab", 1]),
+  s446: set("Series 446 three-car unit, often two coupled (some trains Civia)", ["rf446Cab", 1], ["rf446", 1], ["rf446Cab", 1]),
+  civia453: set("Civia electric unit, usually 5 cars (since August 2026 some trains are new Stadler Series 453s)", ["rfCiviaCab", 1], ["rfCivia", 3], ["rfCiviaCab", 1]),
   s450: set("Series 450 six-car double-deck unit (Series 451 three-car sets on some trains)", ["rf450Cab", 1], ["rf450", 4], ["rf450Cab", 1]),
-  met: set("Metre-gauge unit (series 433-438 electric or 526-529 diesel, drawn as one)", ["rfMetCab", 1], ["rfMet", 1], ["rfMetCab", 1]),
+  s436: set("Series 436 (FEVE 3600) two-car unit", ["rf436", 2]),
+  s436a: set("Series 436 (FEVE 3600) two-car unit (some trains Series 435 three-car units)", ["rf436", 2]),
+  s438: set("Series 438 (FEVE 3800) three-car unit (some trains Series 436)", ["rf438Cab", 1], ["rf438", 1], ["rf438Cab", 1]),
+  s529: set("Series 529 (FEVE 2900) single diesel railcar", ["rf529", 1]),
 };
 // Where a long-distance train runs, from its first and last stations.
 const ends = (t) => `${t.origin || ""} ${t.destination || ""}`;
@@ -618,10 +900,26 @@ export const TYPICAL = {
         return sets.s112;
       case "AVE Internacional": return sets.s106;
       case "Avlo": return sets.avlo;
-      case "Alvia": return /Pamplona|Logro|Hendaya|Ir[úu]n|Salamanca|Huelva/.test(e) ? sets.s120 : sets.s130;
-      case "Euromed": case "Intercity": return sets.s130;
+      // Railvolution's survey of Renfe's fleet (April 2024): the hybrid 730s
+      // to Badajoz and Almería, 120s to Pamplona, Logroño, Irún and Hendaye,
+      // 121s to Huelva and Salamanca; 130s elsewhere.
+      case "Alvia":
+        if (/Badajoz|Almer[íi]a|M[ée]rida|C[áa]ceres/.test(e)) return sets.s730;
+        if (/Salamanca|Huelva/.test(e)) return sets.s121;
+        return /Pamplona|Logro|Hendaya|Ir[úu]n/.test(e) ? sets.s120a : sets.s130;
+      case "Euromed": return sets.s130;
+      case "Intercity":
+        // The last locomotive-hauled Talgos: a 334 to Cartagena, a 252 on
+        // the electrified Barcelona-Valencia-Alicante leg.
+        if (/Cartagena|Albacete/.test(e)) return sets.talgo334;
+        if (/Barcelona/.test(e) && /Val[eè]ncia|Alicante|Alacant/.test(e)) return sets.talgo252;
+        if (/Badajoz|Almer[íi]a|C[áa]ceres/.test(e)) return sets.s730;
+        return sets.s130;
       case "Avant": case "Avant Exprés": return /Lleida|Ourense|Coru|Santiago|Vigo|Pontevedra|Calatayud|Zaragoza/.test(e) ? sets.s121 : sets.s104;
-      default: return DIESEL.test(e) ? sets.s599 : sets.s449;
+      default:
+        if (/Canfranc|Jaca|Huesca/.test(e) && /Zaragoza|Canfranc|Jaca/.test(e)) return sets.s594;
+        if (/Sevilla|Huelva|C[áa]diz|C[áa]ceres|Ronda/.test(e) && DIESEL.test(e)) return set("Series 598 three-car diesel unit (some trains Series 599)", ...sets.s598.units);
+        return DIESEL.test(e) ? sets.s599 : sets.s449;
     }
   },
   cercanias: (t) => {
@@ -629,8 +927,15 @@ export const TYPICAL = {
     const n = Number((line.match(/\d+/) || [0])[0]);
     if (line === "T1") return null;                                     // Cádiz's tram-train isn't Renfe's
     if (core === "Rodalies") return /^R2/.test(line) ? sets.s450 : sets.s447;
-    if (/Le[óo]n|Ferrol|Cartagena/.test(core) || (core === "Asturias" && n >= 4) || (core === "Bilbao" && n >= 4) || (core === "Santander" && n >= 2)) return sets.met;
-    if (/Valencia|Bilbao|San Sebasti|Murcia|Santander/.test(core)) return sets.s447;
+    // The metre-gauge lines, by the classes Spanish Wikipedia lists on them.
+    if (/Le[óo]n|Ferrol|Cartagena/.test(core)) return sets.s529;
+    if (core === "Santander" && n >= 2) return sets.s438;
+    if (core === "Asturias" && n >= 4) return sets.s436a;
+    if (core === "Bilbao" && n >= 4) return sets.s436;
+    if (/Bilbao/.test(core)) return sets.s446;
+    if (/Valencia|San Sebasti|Murcia|Santander/.test(core)) return sets.s447;
+    if (/Sevilla/.test(core) && line === "C3") return sets.s598;
+    if (/Madrid/.test(core) && (line === "C7" || line === "C1")) return sets.civia453;
     return sets.civia;
   },
 };
@@ -711,10 +1016,40 @@ export const FACTS = {
   rf450: { model: "Series 450 double-deck trailer", type: "Double-deck electric multiple unit", builder: "GEC-Alsthom and CAF", built: "1993–1995",
     fleet: "24 six-car 450s, 12 three-car 451s", topSpeedMph: kmh(140), lengthFt: 87.2,
     about: "A double-deck trailer of the 450, its lower deck dropped between the trucks.", source: `${ES}Serie_450_de_Renfe` },
-  rfMetCab: { model: "Metre-gauge Cercanías unit", type: "Electric or diesel multiple unit", builder: "Several (mostly CAF)",
-    fleet: "Series 433–438 electric, 526–529 diesel",
-    about: "The former FEVE narrow-gauge lines Renfe has run since 2013 use a mix of short electric and diesel units; Trainsheet draws them as one. Exact models vary by line.", source: `${WP}Renfe_Operadora` },
-  rfMet: { model: "Metre-gauge Cercanías unit, middle car", type: "Electric or diesel multiple unit", builder: "Several (mostly CAF)",
-    fleet: "Series 433–438 electric, 526–529 diesel",
-    about: "A middle car of a metre-gauge unit, drawn generically.", source: `${WP}Renfe_Operadora` },
+  rf446Cab: { model: "Series 446", type: "Electric multiple unit", builder: "CAF, Macosa, ATEINSA and Siemens", built: "1989–1993", fleet: "170 built",
+    topSpeedMph: kmh(100), powerHp: kw(1200), lengthFt: 85,
+    about: "The first of Renfe's three-car commuter units, still on Madrid's and Bilbao's Cercanías. The 447 that followed is the same body with faster traction.", source: `${ES}Serie_446_de_Renfe` },
+  rf446: { model: "Series 446 trailer", type: "Electric multiple unit", builder: "CAF, Macosa, ATEINSA and Siemens", built: "1989–1993", fleet: "170 built",
+    topSpeedMph: kmh(100), lengthFt: 79.3, about: "The unpowered middle car of a 446.", source: `${ES}Serie_446_de_Renfe` },
+  rf436: { model: "Series 436 (FEVE 3600)", type: "Electric multiple unit (metre gauge)", builder: "Siemens and Sunsundegui", built: "2000–2003, 2006–2007", fleet: "21 two-car units",
+    topSpeedMph: kmh(100), powerHp: kw(420),
+    about: "Two motor cars with a cab each, the newest electric trains on the former FEVE lines: Asturias' C-4 to C-7, Bilbao's C-4 and C-5 and Cantabria's C-2.", source: `${ES}Serie_3600_de_FEVE` },
+  rf438Cab: { model: "Series 438 (FEVE 3800)", type: "Electric multiple unit (metre gauge)", builder: "CAF", built: "1992", fleet: "16 three-car units",
+    powerHp: kw(880), about: "Three-car units, a motor car, a trailer and a cab trailer, on Santander's metre-gauge lines to Liérganes and Cabezón de la Sal; up to four can run coupled.", source: "https://ftp.funet.fi/pub/pics/railways/Spain/feve/index.html" },
+  rf438: { model: "Series 438 (FEVE 3800) trailer", type: "Electric multiple unit (metre gauge)", builder: "CAF", built: "1992", fleet: "16 three-car units",
+    about: "The middle car of a 438.", source: "https://ftp.funet.fi/pub/pics/railways/Spain/feve/index.html" },
+  rf435Cab: { model: "Series 435 (FEVE 3500)", type: "Electric multiple unit (metre gauge)", builder: "CAF", lengthFt: 50,
+    about: "Asturias' three-car metre-gauge units, still in FEVE's white and burgundy.", source: `${WP}Renfe_class_435` },
+  rf435: { model: "Series 435 (FEVE 3500) trailer", type: "Electric multiple unit (metre gauge)", builder: "CAF", lengthFt: 50,
+    about: "The middle car of a 435.", source: `${WP}Renfe_class_435` },
+  rf529: { model: "Series 529 (FEVE 2900)", type: "Diesel railcar (metre gauge)", builder: "Sunsundegui with Siemens", lengthFt: 58.1,
+    about: "Single diesel railcars with a cab at each end, on the metre-gauge lines around León, Ferrol and Cartagena.", source: `${WP}Renfe_Operadora` },
+  rf730Gen: { model: "Series 730 generator car", type: "Generator car", builder: "Talgo", built: "2012–2013 (rebuilt from Series 130)", fleet: "2 per set, 15 sets",
+    about: "The diesel generator car behind each power car of a Series 730, which lets the Alvia run on beyond the wires to Badajoz and Almería.", source: `${WP}Renfe_Class_730` },
+  rfTalgo: { model: "Talgo Pendular coach", type: "Articulated tilting coach", builder: "Talgo", built: "1980s–1990s",
+    about: "The tilting Talgo coaches of Renfe's last locomotive-hauled Intercitys, on Barcelona–Valencia–Alicante–Cartagena and Albacete–Cartagena, being withdrawn.", source: `${WP}Talgo` },
+  rf334: { model: "Vossloh Euro 3000 (Series 334)", type: "Diesel-electric locomotive", builder: "Vossloh (Valencia)", built: "2006", fleet: "28",
+    topSpeedMph: kmh(200), powerHp: 3256, about: "Built to haul the Talgo Altaria to Murcia; today on the last Talgo Intercitys south of Alicante.", source: `${ES}Serie_334_de_Renfe` },
+  rf252: { model: "Series 252", type: "Electric locomotive", builder: "Krauss-Maffei and Siemens, with CAF and Macosa", built: "1991–1996", fleet: "75",
+    topSpeedMph: kmh(220), powerHp: kw(5600), lengthFt: 66.9, about: "Dual-voltage Bo'Bo' locomotives derived from DB's class 120, once on the first AVE and the Talgo services; now on the last Talgo Intercitys.", source: `${WP}Renfe_Class_252` },
+  rf594Cab: { model: "Series 594 (TRD)", type: "Diesel multiple unit", builder: "CAF (ABB IC3 licence)", built: "1997", fleet: "23 two-car units",
+    topSpeedMph: kmh(160), powerHp: kw(1200), lengthFt: 77.7, about: "Two-car diesel units after Denmark's IC3, since 2021 on Zaragoza–Canfranc; due for retirement by 2030.", source: `${ES}Serie_594_de_Renfe` },
+  rf598Cab: { model: "Series 598", type: "Diesel multiple unit", builder: "CAF", built: "2004", fleet: "21 three-car units",
+    topSpeedMph: kmh(160), powerHp: kw(1352), lengthFt: 84, about: "Three-car diesel units, now on Seville's Cercanías C-3 and Media Distancia and Intercity trains in Andalusia and Extremadura.", source: `${ES}Serie_598_de_Renfe` },
+  rf598: { model: "Series 598 middle car", type: "Diesel multiple unit", builder: "CAF", built: "2004", fleet: "21 three-car units",
+    topSpeedMph: kmh(160), lengthFt: 81.1, about: "The trailer of a 598, between its two motor cars.", source: `${ES}Serie_598_de_Renfe` },
+  rf453Cab: { model: "Stadler Series 453", type: "Electric multiple unit", builder: "Stadler", built: "2025–2026", fleet: "79 ordered",
+    lengthFt: 73.4, about: "Madrid's new Cercanías trains: single-deck FLIRT motor cars at the ends and KISS double-deck trailers between them. In passenger service on the C-7 since August 2026.", source: `${WP}Renfe_Operadora` },
+  rf453: { model: "Stadler Series 453 trailer", type: "Double-deck electric multiple unit", builder: "Stadler", built: "2025–2026", fleet: "79 ordered",
+    lengthFt: 86.9, about: "A double-deck KISS trailer of a 453.", source: `${WP}Renfe_Operadora` },
 };
