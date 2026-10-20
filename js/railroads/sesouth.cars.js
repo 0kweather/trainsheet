@@ -10,7 +10,7 @@
 // come from are given beside them.
 
 import { bilevel, married, newId } from "../carmodels.js?v=dev";
-import { C, rect, path, line, lines, poly, slats, truck, pantograph, win } from "../carart.js?v=dev";
+import { C, rect, path, line, lines, poly, slats, truck, pantograph, win, flutes } from "../carart.js?v=dev";
 import { letters, hvac, roofCover, panGear, horns, lamp, RED_LAMP, wiper, emuFront, boxes, frames } from "./digitraffic.cars.js?v=dev";
 
 const ft = (m) => Math.round(m * 3.28084 * 100) / 100;
@@ -307,6 +307,153 @@ const rgCab = (c) => rgBody({ ...c, pan: true }, { cab: true, L: c.L });
 const rgCabB = (c) => rgBody({ ...c, pan: false }, { cab: true, L: c.L });
 const rgMid = (c) => rgBody({ ...c, pan: false }, { cab: false, L: c.L });
 
+// ===================== ASEA X10 family (X11, X12, X14) =====================
+
+// --- X11, X12 and X14 (ASEA/ABB, 1982-95): two-car units of a motor car
+// and a driving trailer, 49.868 m (each car 24.93 m), Bo'Bo'+2'2', 1280 kW,
+// a high floor; stainless bodies, corrugated below the windows (järnväg.net).
+// The X11s are X10s rebuilt in 1994-98 with a toilet and their middle door
+// pair blocked, so a door behind the cab and one at the inner end of each
+// car; the X12s (1991-94) were built with one door a side per car, and the
+// X14s (1994-95) with two. A flat front leaning back above the windshields,
+// a destination box with two lamps over them, a headlight low at each
+// corner, a Scharfenberg coupler between two round rubber bumpers, the
+// crew door just behind the cab; on the roof the air intakes' boxy hoods,
+// the motor car's pantograph toward its inner end over the resistor hood.
+// The height (about 3.85 m), bogie spacing and door and window positions
+// are estimated from photographs. Paint:
+//   Västtåg (X11 3139-3147, 3171-3172, 3182-3183, 3204-3213; X12 3195-3197,
+//     3214-3223; X14 3190, 3223-3229, 3235, 3238, 3240-3241): the cab's
+//     upper half and the roof Västtrafik yellow, gray elsewhere, two
+//     yellow lines under the windows, the X11s' and X12s' doors orange,
+//     the X14s' gray edged in yellow, "västtågen" big on the side.
+//   Krösatåg (X11 since the 2013-15 refurbishment, X14 3230, 3232-3233,
+//     3236-3237, 3239): white with a gray window band, the roof and the
+//     cab's upper half yellow, a red line along the sill and a red buffer
+//     beam, yellow doors, KRÖSATÅGEN in spaced red capitals.
+const X10 = { roof: 12.6, sill: 3.3, cornerR: 1.0, end: 0.5, trucks: { centers: ft(17.5), wb: ft(2.6), d: 36 }, diaphragm: [3.6, 11.4], badge: false };
+const X10_L = ft(24.934);
+const X10_PAINT = {
+  vasttag: { upper: "#959ca4", lower: "#c4c8cc", band: "#959ca4", top: "#f2c300", line: "#f2c300", skirt: "#4a4f55", front: "#959ca4", beam: "#5a6068",
+    door: { X11: "#e8742a", X12: "#e8742a", X14: "#9aa1a9" }, edge: "#f2c300", mark: (c, x) => letters(c, x, 4.5, 1.8, "västtågen", "#3f444b", { weight: 700, spacing: -0.05 }) },
+  krosatag: { upper: "#f2f2ef", lower: "#e4e6e7", band: "#8e959c", top: "#f5c400", line: "#d9262e", skirt: "#d9262e", front: "#f2f2ef", beam: "#d9262e",
+    door: { X11: "#f5c400", X12: "#f5c400", X14: "#f5c400" }, edge: "#f5c400", mark: (c, x) => letters(c, x, 4.7, 0.95, "KRÖSATÅGEN", "#d9262e", { weight: 700, spacing: 0.35 }) },
+};
+// Doors (m, centers from the cab end) and window starts by class.
+const X10_DOORS = { X11: [5.0, 23.3], X12: [12.6], X14: [5.0, 23.3] };
+function x10Wins(cls) {
+  const doors = X10_DOORS[cls].map(ft), xs = [ft(2.95)];
+  for (let x = ft(6.15); x < X10_L - ft(1.0); x += ft(1.55)) if (!doors.some((d) => x + ft(1.0) > d - ft(0.75) && x < d + ft(0.75))) xs.push(x);
+  return xs;
+}
+const x10 = (cls) => married((c) => {
+  const L = c.L, k = X10_PAINT[c.agency] || X10_PAINT.vasttag, motor = !c.mate, doors = X10_DOORS[cls].map((m) => ({ x: ft(m) - 2.15, w: 4.3, y0: 3.5, y1: 10.4, leaves: 2, glassY: 0.5, glassH: 0.38, grabs: false }));
+  const wins = x10Wins(cls), kros = c.agency === "krosatag";
+  return bilevel({ ...c, cabR: false }, { ...X10, base: k.upper,
+    nose: [[1.4, 3.3], [0.9, 4.0], [0.75, 7.9], [1.2, 11.0], ["q", 1.45, 12.6, 3.6, 12.6]], cabLen: 5,
+    rows: [{ xs: wins, y: 6.3, w: ft(1.0), h: 3.2, r: 0.35 }],
+    doors,
+    paint: () => {
+      let s = rect(0, 11.6, L, 3, k.top) + line(0, 11.6, L, 11.6, "rgba(0,0,0,0.15)", 0.5) + rect(0, 3.3, L, 2.6, k.lower) + flutes(0, L, 3.5, 5.7, 0.28) +
+        rect(0, 0, L, 3.5, k.skirt);
+      if (kros) s += rect(0, 6.0, L, 3.9, k.band);
+      else s += rect(0, 5.95, L, 0.28, k.line) + rect(0, 5.55, L, 0.22, k.line);
+      for (const d of doors) s += rect(d.x - 0.1, 3.4, d.w + 0.2, 7.1, k.door[cls]) + (cls === "X14" && !kros ? rect(d.x - 0.1, 3.4, 0.3, 7.1, k.edge) + rect(d.x + d.w - 0.2, 3.4, 0.3, 7.1, k.edge) : "");
+      // The cab: the front's upper half yellow back to the crew door.
+      s += path(poly([[0, 7.6], [ft(1.45), 7.6], [ft(1.45), 13], [0, 13]]), k.top) + rect(0, 3.3, ft(1.45), 4.3, k.front) + (kros ? rect(0, 3.3, ft(1.45), 0.55, k.line) : rect(0, 5.55, ft(1.45), 0.5, k.line));
+      s += wins.slice(1).map((x) => rect(x - 0.15, 6.15, ft(1.0) + 0.3, 3.5, "rgba(20,22,25,0.35)", 0, 'rx="0.4"')).join("");
+      return s + k.mark(c, L * 0.42) + letters(c, 2.6, 6.9, 0.55, cls === "X14" ? "3232" : "3137", kros ? "#26292e" : "#1f3f8a", { weight: 600, italic: !kros });
+    },
+    extra: (c, g) => {
+      let s = boxes(ft(5.5), L / 2 - 4, X10.sill, 2, 1.3) + boxes(L / 2 + 4, L - ft(5.5), X10.sill, 2, 1.1) + rect(L / 2 - 3.5, 1.5, 7, 1.1, "#2f3338", 0.4, 'rx="0.5"');
+      // The air intakes' hoods along the roof, yellow like it.
+      for (const m of [1.6, 6.4, 11.2, 18.0, 22.6]) s += path(poly([[ft(m), g.roof - 0.05], [ft(m) + 0.4, g.roof + 0.95], [ft(m) + 4.4, g.roof + 0.95], [ft(m) + 4.8, g.roof - 0.05]]), k.top, 0.4) +
+        slats(ft(m) + 0.7, g.roof + 0.15, 3.4, 0.6, 0.35, "rgba(0,0,0,0.35)");
+      if (motor) s += roofCover(ft(13.2), g.roof, 13, 0.6, "#8d949c", 4) + pantograph(ft(17.4), g.roof + 0.65, { facing: -1 }) + panGear(ft(17.4), g.roof + 0.6, -1);
+      return s;
+    },
+    cab: () => {
+      let s = path(poly([[0.85, 8.4], [1.2, 10.9], [1.6, 10.9], [1.3, 8.4]]), C.glass) + rect(ft(0.5), 11.4, 1.4, 1.0, "#1d1f22", 0.3, 'rx="0.15"');
+      s += lamp(0.8, 5.2, 0.4, 0.55) + lamp(1.0, 11.6, 0.35, 0.35) + horns(3.2, 12.55);
+      // Crew door, the bumpers and coupler, the plow.
+      s += rect(ft(1.6), 4.2, 2.3, 7.0, "rgba(0,0,0,0.05)", 0.5, 'rx="0.15"') + win(ft(1.6) + 0.45, 7.6, 1.4, 2.2, 0.25);
+      s += rect(0.1, 3.85, 1.2, 0.9, "#26292d", 0, 'rx="0.4"') + emuFront(1.4, 3.3, { coupler: 3.0 }) + path(poly([[0.5, 2.0], [5.0, 2.0], [5.0, 0.9], [1.2, 0.8]]), k.beam);
+      return s;
+    },
+  });
+});
+
+// ===================== Bombardier Itino (Y31, Y32) =====================
+
+// --- Itino, Y31 and Y32 (Adtranz/Bombardier, 30 for Sweden 2002-10: Y31
+// 1400-1405 and 1412-1429, two cars; Y32 1406-1411, three): Y31 38.4 m
+// (B'2'B'), Y32 54.75 m (B'2'2'B'), the cars sharing Jakobs bogies, a
+// diesel engine with its transmission under each end car driving the bogie
+// under the cab; 140 km/h, two MAN V12s (Iveco V8s from 2008) of 480-560 kW
+// (järnväg.net). A low-floor section by each car's door, the seats over
+// the bogies a step up; the cooling and the air conditioning on the roof.
+// End cars about 19.2 m and the Y32's middle car 16.35 m; the height (about
+// 3.85 m), doors and windows are estimated from photographs: a raked nose
+// with the windshield in a dark surround, the crew door behind it, three
+// big windows over the motor bogie, the door, two in the low-floor
+// section. Paint:
+//   Krösatåg: white, the roof and the crown over the windshield yellow,
+//     the windows in a gray band, yellow doors, a red line along the side,
+//     KRÖSATÅGEN in small red capitals; each unit named in red script.
+//   Västtåg (1400, 1402-1403, 1412-1413, 1417-1419), repainted from 2021:
+//     silvery gray, Västtrafik's light blue over the crown and roof edge and
+//     in a line low along the side, a dark gray window band, the doors
+//     framed in orange, "västtågen" in dark gray.
+const IT = { roof: 12.6, sill: 3.0, cornerR: 1.0, end: 0.5, noTrucks: true, diaphragm: [2.2, 11.4], badge: false };
+const IT_END = ft(19.2), IT_MID = ft(16.35);
+const IT_PAINT = {
+  krosatag: { body: "#f2f2ef", crown: "#f5c400", band: "#7d848c", line: "#d9262e", door: "#f5c400", frame: "#f5c400", skirt: "#5a6068",
+    mark: (c, x) => letters(c, x, 10.3, 0.5, "KRÖSATÅGEN", "#d9262e", { weight: 700, spacing: 0.2 }), name: (c) => letters(c, ft(4.9), 10.3, 0.75, "Emil i Lönneberga", "#d9262e", { weight: 400, italic: true }) },
+  vasttag: { body: "#b9c1c9", crown: "#4fb3ea", band: "#4a5058", line: "#4fb3ea", door: "#c6ccd2", frame: "#f07a1e", skirt: "#4a5058",
+    mark: (c, x) => letters(c, x, 4.4, 1.4, "västtågen", "#3a3f45", { weight: 700, spacing: -0.04 }), name: () => "" },
+};
+function itino(c, part) {
+  const L = c.L, k = IT_PAINT[c.agency] || IT_PAINT.krosatag, cab = part === "cab";
+  const door = cab ? ft(11.6) : L / 2, d = { x: door - 2.15, w: 4.3, y0: 1.7, y1: 9.6, leaves: 2, glassY: 0.42, glassH: 0.42, grabs: false };
+  const high = cab ? [ft(3.6), ft(5.75), ft(7.9)] : [ft(0.8), ft(13.4)];
+  const low = cab ? [d.x + d.w + 1.0, d.x + d.w + 1.0 + ft(2.25)] : [d.x - ft(2.2) - 0.8, d.x + d.w + 0.8];
+  const xs = [...high, ...low], ww = cab ? ft(2.0) : ft(1.75);
+  return bilevel({ ...c, cabL: cab, cabR: false, coupledL: cab ? false : c.coupledL }, { ...IT, base: k.body,
+    drop: { a: cab ? d.x - 1.5 : ft(2.4), b: L - ft(2.4), y: 1.55 },
+    nose: cab ? [[2.8, 3.0], [1.0, 3.25], [0.8, 4.6], ["q", 0.8, 5.7, 1.5, 6.1], [4.8, 11.2], ["q", 5.8, 12.6, 7.8, 12.6]] : null, cabLen: cab ? 7 : 0,
+    rows: [{ xs, y: 5.5, w: ww, h: 3.4, r: 0.35 }],
+    doors: [d],
+    paint: () => {
+      let s = rect(0, 11.8, L, 2, k.crown) + line(0, 11.8, L, 11.8, "rgba(0,0,0,0.15)", 0.5) + rect(0, 0, L, 2.3, k.skirt) + rect(0, 3.0, L, 0.35, k.line);
+      s += rect(Math.min(...xs) - 0.4, 5.15, Math.max(...xs) + ww - Math.min(...xs) + 0.8, 4.1, k.band, 0, 'rx="0.4"');
+      s += rect(d.x - 0.35, 1.6, d.w + 0.7, 8.3, k.frame) + rect(d.x - 0.08, 1.65, d.w + 0.16, 8.05, k.door);
+      if (cab) {
+        s += path(poly([[0, 5.2], [4.6, 5.2], [9.4, 11.3], ["q", 10.4, 12.4, 12.0, 12.6], [15.0, 13.5], [0, 13.5]]), k.crown) + path(poly([[1.3, 6.2], [4.9, 11.35], ["q", 5.8, 12.3, 7.4, 12.3], [7.8, 11.6], [3.8, 5.9], [1.8, 5.75]]), "#202327");
+        s += k.mark(c, cab ? d.x + d.w + 6 : L / 2) + k.name(c) + letters(c, 2.2, 4.1, 0.6, c.agency === "vasttag" ? "1402" : "1405", "#26292e", { weight: 700 });
+      }
+      return s;
+    },
+    extra: (c, g) => {
+      const jakobs = (x) => truck(x, { wb: ft(2.7), d: 30, top: 3.0 });
+      let s = cab ? truck(ft(3.9), { wb: ft(2.4), d: 33, top: 3.0 }) + jakobs(L) : jakobs(0) + jakobs(L);
+      if (cab) {
+        // The power pack (engine, transmission) and fuel tank under the floor,
+        // the radiators and exhaust on the roof over it, the air conditioning.
+        s += rect(ft(5.4), 1.0, ft(4.3), 2.0, "#2f3338", 0.4, 'rx="0.2"') + slats(ft(5.6), 1.2, ft(1.6), 1.6, 0.35, "rgba(255,255,255,0.18)") + rect(ft(9.8), 1.2, 3.0, 1.6, "#3a3e44", 0.4, 'rx="0.4"');
+        s += roofCover(ft(2.6), g.roof, ft(6.0), 0.85, "#a3a9b1", 4) + slats(ft(2.9), g.roof + 0.12, ft(5.2), 0.6, 0.4, "rgba(0,0,0,0.35)") + rect(ft(8.9), g.roof + 0.8, 0.45, 0.6, "currentColor") +
+          hvac(ft(12.4), g.roof, ft(3.2), 0.6);
+      } else s += hvac(L / 2 - 5, g.roof, 10, 0.6);
+      return s;
+    },
+    cab: () => path(poly([[1.65, 6.5], [5.0, 11.15], ["q", 5.8, 12.05, 7.1, 12.05], [7.35, 11.5], [3.7, 6.25], [2.1, 6.1]]), C.glass) +
+      path(poly([[2.1, 6.6], [3.3, 8.3], [3.9, 8.2], [2.7, 6.5]]), C.glassLight) + wiper(2.4, 6.5, 3.8, 8.9) +
+      lamp(1.0, 4.0, 0.5, 0.45) + lamp(1.05, 4.75, 0.35, 0.3, RED_LAMP) + emuFront(1.0, 3.0, { coupler: 2.6 }) +
+      rect(ft(2.45), 3.3, 2.4, 7.4, "rgba(0,0,0,0.05)", 0.5, 'rx="0.2"') + win(ft(2.45) + 0.4, 6.6, 1.6, 2.6, 0.3) + rect(0, 2.0, 1.2, 1.2, "#26292d", 0.3, 'rx="0.2"'),
+  });
+}
+const itinoCab = (c) => itino(c, "cab");
+const itinoMid = (c) => itino(c, "mid");
+
 export const TYPES = {
   sesX61Cab: { name: "X61 (Alstom Coradia Nordic) end section", kind: "emu" },
   sesX61A: { name: "X61 (Alstom Coradia Nordic) section", kind: "emu" },
@@ -317,6 +464,12 @@ export const TYPES = {
   sesRegina: { name: "Regina (X50-X53) end car", kind: "emu" },
   sesReginaB: { name: "Regina (X50-X53) end car", kind: "emu" },
   sesReginaMid: { name: "Regina (UB) middle car", kind: "emu" },
+  sesX11: { name: "X11 car", kind: "emu" },
+  sesX12: { name: "X12 car", kind: "emu" },
+  sesX14: { name: "X14 car", kind: "emu" },
+  sesItino: { name: "Y31/Y32 (Bombardier Itino) end car", kind: "emu" },
+  sesItinoB: { name: "Y31/Y32 (Bombardier Itino) end car", kind: "emu" },
+  sesItinoMid: { name: "Y32 (Bombardier Itino) middle car", kind: "emu" },
 };
 
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
@@ -330,6 +483,12 @@ export const MODELS = {
   sesRegina: M(rgCab, RG_END),
   sesReginaB: M(toRight(rgCabB), RG_END),
   sesReginaMid: M(rgMid, RG_MID),
+  sesX11: M(x10("X11"), X10_L),
+  sesX12: M(x10("X12"), X10_L),
+  sesX14: M(x10("X14"), X10_L),
+  sesItino: M(itinoCab, IT_END),
+  sesItinoB: M(toRight(itinoCab), IT_END),
+  sesItinoMid: M(itinoMid, IT_MID),
 };
 
 export const FLEETS = {
