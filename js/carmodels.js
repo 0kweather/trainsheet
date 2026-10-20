@@ -2069,7 +2069,7 @@ export const pl42 = (c) => cabUnit(c, {
   },
 });
 
-// --- Bombardier Comet V (NJ Transit, 2002-04: cab cars 6000-6083,
+// --- Alstom Comet V (NJ Transit, 2002-04: cab cars 6000-6083,
 // coaches 6200-6213 and 6500-6601; Metro-North's 6700s on the Port Jervis
 // and Pascack Valley lines): 85 ft, 12 ft 10 in tall, smooth stainless; a
 // vestibule with trap steps at each end; a long row of windows, pairs under
