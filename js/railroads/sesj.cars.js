@@ -61,9 +61,10 @@ const X2_NOSE = [[5.6, X2_SILL], [5.0, 2.0], [1.0, 1.9], ["q", 0.1, 2.2, 0.1, 3.
 // small cab side window, headlights low on the nose, and the light gray
 // chin spoiler under it.
 const x2Cab = () =>
-  path(poly([[3.4, 7.95], [7.5, 10.4], [9.7, 10.4], [9.7, 8.35]]), C.glass) + path(poly([[3.9, 8.2], [5.9, 9.4], [6.6, 9.4], [4.7, 8.2]]), C.glassLight) +
+  path(poly([[3.4, 7.95], [7.5, 10.4], [9.7, 10.4], [9.7, 8.35]]), C.glass, 0, 'stroke="#7d838a" stroke-width="0.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"') +
+  path(poly([[3.9, 8.2], [5.9, 9.4], [6.6, 9.4], [4.7, 8.2]]), C.glassLight) +
   wiper(4.4, 8.3, 6.6, 9.9) + win(11.0, 8.35, 2.1, 1.95, 0.35) +
-  lamp(0.45, 4.05, 0.65, 0.45) + lamp(0.75, 4.85, 0.4, 0.3, RED_LAMP) + lamp(6.4, 9.1, 0.5, 0.25) +
+  lamp(0.4, 3.95, 0.8, 0.55) + lamp(0.8, 4.85, 0.45, 0.32, RED_LAMP) + lamp(2.6, 7.2, 0.55, 0.3) +
   path(poly([[0.95, 1.9], [5.0, 2.0], [4.7, 0.55], [1.7, 0.45], ["q", 0.6, 0.6, 0.75, 1.3]]), X2C.chin, 0.4) +
   line(1.2, 1.25, 4.6, 1.3, "rgba(0,0,0,0.25)", 0.5);
 // The dark front: everything ahead of a line rising from the foot of the
