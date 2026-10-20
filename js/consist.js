@@ -164,6 +164,7 @@ const TYPES = {
   mp54ac: { name: "MP54AC diesel locomotive", kind: "diesel" },
   f40: { name: "F40PH diesel locomotive", kind: "diesel" },
   f40c: { name: "F40PH-3C diesel locomotive", kind: "diesel" },
+  f40phm: { name: "F40PHM-3 diesel locomotive", kind: "diesel" },
   gp40: { name: "GP40MC diesel locomotive", kind: "diesel" },
   gp40h: { name: "GP40-3H diesel locomotive", kind: "diesel" },
   mp32: { name: "MP32PH-Q diesel locomotive", kind: "diesel" },
@@ -582,22 +583,48 @@ function typicalFor(t, reported) {
       if (/Pascack|Port Jervis|Main\/Bergen/.test(r) || reported === "comet5" || reported === "comet5Cab") {
         return set(`${name} locomotive with Comet V coaches and a cab car (some trains MultiLevels)`, [loco, 1], ["comet5", 4], ["comet5Cab", 1]);
       }
+      // The North Jersey Coast's Long Branch–Bay Head shuttles (trains 43xx
+      // and 47xx), beyond the wires: an ALP-45DP or ALP-45A with Comet cars
+      // (Shark River drawbridge, July 2024; Bay Head, May 2025).
+      if (/Coast/.test(r) && /^4[37]\d\d$/.test(String(t.number || ""))) {
+        return { ...set(`${name} locomotive with Comet V coaches and a cab car (the diesel shuttle beyond Long Branch)`, [loco, 1], ["comet5", 4], ["comet5Cab", 1]), wires: false };
+      }
       if (/Raritan|Atlantic City/.test(r) || /Bay Head/.test(dest) || (/Montclair/.test(r) && /Hackettstown|Mount Olive|Lake Hopatcong|Netcong|Dover/.test(dest))) {
         return set(`${name} locomotive with MultiLevel coaches and a cab car`, [loco, 1], ["multilevel", 4], ["multilevelCab", 1]);
       }
       if (/Gladstone/.test(r)) return set("Arrow III electric cars (some trains an ALP-46 with MultiLevels)", ["arrow3", 4]);
       return set("ALP-46 electric locomotive with MultiLevel coaches and a cab car (some trains Arrow III cars)", ["alp46", 1], ["multilevel", 5], ["multilevelCab", 1]);
     }
-    case "metra": return t.route === "Metra Electric"
-      ? set("Highliner electric cars", ["highliner", 4])
-      : ["Milwaukee North", "Milwaukee West"].includes(t.route)
-        ? set("SD70MACH locomotive with gallery bi-levels", ["sd70mach", 1], ["gallery", 5], ["galleryCab", 1])
-        : set("Diesel locomotive with gallery bi-levels", ["mp36", 1], ["gallery", 5], ["galleryCab", 1]);
+    // Metra's diesel lines, each with the locomotives it mostly runs
+    // (Metra's roster on Wikipedia and The Diesel Shop, October 2026;
+    // photographs 2024-26): the SD70MACHs on the Milwaukee lines and the
+    // North Central Service, whose fleet is pooled with Milwaukee West's
+    // (Railway Age, 2025); the MP36PH-3Cs, moved off the Milwaukee lines,
+    // on the Rock Island (Joliet, Blue Island, September 2026) and the
+    // Heritage Corridor (April 2025); the F40PHM-3s on the BNSF with
+    // F40PH-3s; F40PH-3s on the Union Pacific lines and the SouthWest
+    // Service (Manhattan, Palos Park, September 2026).
+    case "metra": {
+      const r = t.route || "";
+      if (r === "Metra Electric") return set("Highliner electric cars", ["highliner", 4]);
+      const [loco, label] = /Milwaukee|North Central/.test(r) ? ["sd70mach", "SD70MACH locomotive (some trains an MP36PH-3C)"]
+        : /Rock Island|Heritage/.test(r) ? ["mp36", "MP36PH-3C locomotive (some trains an F40PH-3)"]
+        : /Burlington|BNSF/.test(r) ? ["f40phm", "F40PHM-3 or F40PH-3 locomotive"]
+        : ["f40", "F40PH-3 locomotive"];
+      return set(`${label} with gallery bi-levels and a cab car`, [loco, 1], ["gallery", 5], ["galleryCab", 1]);
+    }
     case "rtd": return set("Silverliner V electric cars, usually 2 to 4", ["silverliner5", 4]);
     case "frontrunner": return set("MP36PH locomotive with Bombardier bi-levels", ["mp36", 1], ["bilevel", 3], ["bilevelCab", 1]);
     case "capmetro": return set("Stadler GTW diesel railcar", ["gtwCar", 1], ["gtwPower", 1], ["gtwCar", 1]);
     case "trirail": return set("Diesel locomotive with bi-level coaches", ["bl36", 1], ["bilevel", 3], ["bilevelCab", 1]);
-    case "caltrain": return set("Stadler KISS electric trainset", ["kissCab", 1], ["kiss", 5], ["kissCab", 1]);
+    // Caltrain: the KISS electric trainsets between San Francisco and
+    // Tamien; the South County Connector between San Jose and Gilroy
+    // beyond the wires (trains 8xx, four each way on weekdays) is diesel:
+    // an MP36PH-3C at the Gilroy end with Caltrain's Bombardier BiLevels
+    // (Wikipedia, "Caltrain", 2026; photographs at Diridon, 2025).
+    case "caltrain": return /^8\d\d$/.test(String(t.number || "")) || /Gilroy/.test(dest)
+      ? set("MP36PH-3C diesel locomotive with Bombardier bi-levels and a cab car", ["mp36", 1], ["bilevel", 4], ["bilevelCab", 1])
+      : set("Stadler KISS electric trainset", ["kissCab", 1], ["kiss", 5], ["kissCab", 1]);
     case "smart": return set("Nippon Sharyo diesel railcars", ["smartDmu", 2]);
     // Arrow (San Bernardino–Redlands, trains 38xx): Stadler FLIRT railcars.
     case "metrolink": return /^38\d\d$/.test(t.number || "") || /Redlands/.test(dest)
@@ -763,7 +790,9 @@ export function consistOf(t) {
   return {
     // A set may be another railroad's equipment (the Maple Leaf on VIA's
     // timetable is Amtrak's train), drawn in that railroad's colors.
-    cars, complete: true, typical: true, summary: typical.label, agency: typical.agency || t.agency, route,
+    // wires: false for a train on diesel all the way (its dual-mode
+    // locomotive's pantograph drawn down).
+    cars, complete: true, typical: true, summary: typical.label, agency: typical.agency || t.agency, route, ...(typical.wires === false ? { wires: false } : {}),
     reported: one ? { number: one.number, name: TYPES[one.key].name } : null,
   };
 }
@@ -817,7 +846,7 @@ function carsOf(c, color) {
       L, color, agency: c.agency, lead, cabL: flip ? false : cabL, cabR: flip ? false : cabR, mirrored: flip,
       // Multiple units share a pantograph between each pair of cars.
       pan: multipleUnit && t.pan && i % 2 === 0,
-      pair: pairOf(i), index: i, count: n, route: c.route,
+      pair: pairOf(i), index: i, count: n, route: c.route, ...(c.wires === false ? { wires: false } : {}),
       coupledL: flip ? i < n - 1 : i > 0,
       coupledR: flip ? i > 0 : i < n - 1,
     };
