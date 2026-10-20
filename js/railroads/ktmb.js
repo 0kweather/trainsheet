@@ -15,13 +15,13 @@ const lastSeen = new Map(); // train id -> [its last report, when the feed last 
 
 // The vehicle label names the train's set ("ETS202", "SCS21", "EMU23",
 // "DMU06"): its class, which picks the drawing (js/railroads/ktmb.cars.js).
-// EMU 19-40 are the Class 83s; the few Class 81s left aren't drawn.
+// EMU 19-40 are the Class 83s; EMU 01-18 the Class 81s.
 function carsOf(set) {
   const m = /^(ETS|SCS|EMU|DMU)\s*0*(\d+)$/.exec(set || "");
   if (!m) return null;
   const n = Number(m[2]);
   const type = m[1] === "ETS" ? ({ 1: "ets91Car", 2: "ets93Car", 3: "ets94Car" })[Math.floor(n / 100)]
-    : m[1] === "SCS" ? "scs92Car" : m[1] === "DMU" ? "dmu61Car" : n >= 19 ? "emu83Car" : null;
+    : m[1] === "SCS" ? "scs92Car" : m[1] === "DMU" ? "dmu61Car" : n >= 19 ? "emu83Car" : "emu81Car";
   return { numbers: [set], types: [type || null], complete: false };
 }
 
