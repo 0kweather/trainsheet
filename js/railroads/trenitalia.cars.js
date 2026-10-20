@@ -50,6 +50,16 @@ const ic = (c, x, y, h, fill) => letters(c, x, y, h, "InterCity", fill, { weight
 const rMark = (c, x, y, h, bg, fg) => rect(x - h / 2, y - h / 2, h, h, bg, 0, `rx="${r2(h * 0.28)}"`) + letters(c, x, y - 0.03 * h, h * 0.78, "R", fg, { weight: 800 });
 const regionale = (c, x, y, h, fill) => letters(c, x, y, h, "Regionale", fill, { weight: 600, anchor: "start" });
 const classNo = (c, x, y, cls, fill = "#ffffff") => letters(c, x, y, 1.1, String(cls), fill, { weight: 700 });
+// A car's class and service level, as lettered by its doors: the class
+// numeral (Executive and Business are first class, Premium and Standard
+// second) and the level's name small over the window band. c.lv names the
+// level; num and tag are where each goes ([x, y]), or null.
+const LEVEL = { executive: ["1", "EXECUTIVE"], business: ["1", "BUSINESS"], bistro: ["1", "BUSINESS · BISTRÒ"], premium: ["2", "PREMIUM"], standard: ["2", "STANDARD"],
+  first: ["1", null], bar: ["2", "BAR"], second: ["2", null] };
+const levelMark = (c, lv, num, tag, { h = 1.15, fill = "#ffffff", ink = "#3a3f45" } = {}) => {
+  const [n, name] = LEVEL[lv] || LEVEL.second;
+  return (num ? letters(c, num[0], num[1], h, n, fill, { weight: 600 }) : "") + (tag && name ? letters(c, tag[0], tag[1], 0.58, name, ink, { weight: 700, spacing: 0.08 }) : "");
+};
 
 // ---------- Parts ----------
 // A section of a train on its own trucks (or shared ones), drawn by
@@ -132,14 +142,14 @@ const fr4Cab = (c) => {
       lamp(2.1, 5.1, 1.2, 0.36) + lamp(1.2, 4.55, 0.55, 0.28, RED_LAMP) + emuFront(1.4, 3.55, { coupler: 2.9 }) + horns(22.0, 13.3),
     extra: (cc, g) => fairing(11.5, 3.55, 13, FR.dark) + fairing(g.L - 9.8, 3.55, 13, FR.dark) + boxes(19, g.L - 18, 3.55, 4, 1.0, "#33373c") +
       roofFairing(26, g.L - 14, 13.35) + hvac(g.L - 13.5, 13.35, 9.0) + panSet(30.5, 13.9, 1, false) +
-      fsMark(cc, g.L - 15, 11.55, 0.6, FR.band) + trenitalia(cc, g.L - 24, 11.6, 0.42, "#5b6168") });
+      fsMark(cc, g.L - 15, 11.55, 0.6, FR.band) + trenitalia(cc, g.L - 24, 11.6, 0.42, "#5b6168") + levelMark(cc, cc.lv || "standard", [81.6, 8.6], [38, 11.5]) });
 };
 const fr4Mid = (c) => {
   const rows = fr4Rows(4.4, 11);
   const pan = c.index === 3 || c.index === 4;
   return sec(c, { ...FR4, rows, doors: [sgl(c.L - 5.5, 3.75, 10.9)], trucks: [[9.5, 36, 9.2], [c.L - 9.5, 36, 9.2]],
     paint: (cc, g) => frPaint(cc, g, { y0: 6.55, y1: 10.45, red0: 4.55, roofY: 12.45, name: cc.index === 1 ? "Frecciarossa" : null, nameAt: 30 }) + framesOf(rows) +
-      (cc.index === 4 ? letters(cc, 50, 5.4, 0.7, "BAR", "#ffffff", { weight: 700, spacing: 0.1 }) : "") + letters(cc, 3.2, 8.6, 1.2, cc.index <= 2 ? "1" : "2", "#ffffff", { weight: 600 }),
+      (cc.lv === "bistro" ? letters(cc, 50, 5.4, 0.7, "BISTRÒ", "#ffffff", { weight: 700, spacing: 0.1 }) : "") + levelMark(cc, cc.lv || "standard", [2.6, 8.6], [18, 11.5]),
     extra: (cc, g) => fairing(9.5, 3.55, 13, FR.dark) + fairing(g.L - 9.5, 3.55, 13, FR.dark) + boxes(17, g.L - 17, 3.55, 4, 1.0, "#33373c") +
       (pan ? roofFairing(4, 26, 13.35) + panSet(g.L / 2 + 6, 13.6, -1, cc.index === 4) + roofFairing(g.L - 22, g.L - 4, 13.35) : roofFairing(4, g.L - 18, 13.35) + hvac(g.L - 17, 13.35, 9.0)) });
 };
@@ -165,10 +175,9 @@ const e404 = (c) => cabUnit(c, {
 });
 const etr500Coach = (c) => {
   const rows = [{ xs: seq(6.6, 6.05, 12), y: 7.25, w: 4.4, h: 2.65, r: 0.35 }];
-  const first = c.index <= 4;
   return sec(c, { roof: 13.1, sill: 3.9, rows, doors: [sgl(2.0, 4.1, 10.9), sgl(c.L - 4.9, 4.1, 10.9)], trucks: [[11.6, 36, 8.9], [c.L - 11.6, 36, 8.9]],
     paint: (cc, g) => frPaint(cc, g, { y0: 6.8, y1: 10.35, red0: 4.75, roofY: 11.75, darkRoof: true, name: cc.index === 2 ? "Frecciarossa" : null, nameAt: 40 }) + framesOf(rows) +
-      letters(cc, 74, 8.55, 1.15, first ? "1" : "2", "#ffffff", { weight: 600 }) + (cc.index === 5 ? letters(cc, 44, 5.55, 0.65, "BAR", "#ffffff", { weight: 700, spacing: 0.1 }) : ""),
+      levelMark(cc, cc.lv || "standard", [80.6, 8.55], [62, 10.95]) + (cc.lv === "bistro" ? letters(cc, 44, 5.55, 0.65, "BISTRÒ", "#ffffff", { weight: 700, spacing: 0.1 }) : ""),
     extra: (cc, g) => fairing(11.6, 3.9, 13, FR.dark) + fairing(g.L - 11.6, 3.9, 13, FR.dark) + boxes(19, g.L - 19, 3.9, 4, 1.05, "#33373c") +
       hvac(g.L / 2 - 7, 13.1, 14) + roofCover(8, 13.1, 12, 0.35, "#a9afb6", 2) + roofCover(g.L - 20, 13.1, 12, 0.35, "#a9afb6", 2) + trenitalia(cc, 20, 11.25, 0.42, "#e3e6e9") });
 };
@@ -186,13 +195,14 @@ const etr700Cab = (c) => {
     cab: () => glass([[6.6, 9.4], [9.8, 11.6], [13.8, 12.1], [13.8, 10.4], [9.6, 9.85]], [[7.4, 9.75], [9.2, 10.9], [10.0, 10.9], [8.4, 9.75]], [7.6, 9.6, 9.6, 11.0]) +
       lamp(1.4, 5.5, 1.1, 0.4) + lamp(0.9, 4.85, 0.55, 0.28, RED_LAMP) + emuFront(1.2, 3.6, { coupler: 2.9 }) + horns(14.5, 13.2),
     extra: (cc, g) => fairing(10.6, 3.6, 12.5, FR.dark) + fairing(g.L - 10.0, 3.6, 12.5, FR.dark) + boxes(18, g.L - 17, 3.6, 4, 1.0, "#33373c") +
-      roofFairing(16, g.L - 16, 13.25) + hvac(g.L - 15.5, 13.25, 9) + fsMark(cc, g.L - 12, 11.6, 0.6, FR.band) + letters(cc, 17.6, 3.95, 0.5, "ETR 700", "#ffffff", { weight: 600 }) });
+      roofFairing(16, g.L - 16, 13.25) + hvac(g.L - 15.5, 13.25, 9) + fsMark(cc, g.L - 12, 11.6, 0.6, FR.band) + letters(cc, 17.6, 3.95, 0.5, "ETR 700", "#ffffff", { weight: 600 }) +
+      levelMark(cc, cc.lv || "standard", [81.4, 8.5], [36, 11.45]) });
 };
 const etr700Mid = (c) => {
   const rows = [{ xs: seq(5.4, 6.0, 12), y: 7.1, w: 4.3, h: 2.8, r: 0.4 }];
   const pan = c.index === 2 || c.index === c.count - 3;
   return sec(c, { roof: 13.25, sill: 3.6, rows, doors: [sgl(c.L - 5.2, 3.8, 10.9)], trucks: [[9.2, 36, 9.0], [c.L - 9.2, 36, 9.0]],
-    paint: (cc, g) => frPaint(cc, g, { y0: 6.6, y1: 10.45, red0: 4.6, roofY: 12.4 }) + framesOf(rows) + letters(cc, 2.6, 8.5, 1.15, cc.index <= 2 ? "1" : "2", "#ffffff", { weight: 600 }),
+    paint: (cc, g) => frPaint(cc, g, { y0: 6.6, y1: 10.45, red0: 4.6, roofY: 12.4 }) + framesOf(rows) + levelMark(cc, cc.lv || "standard", [2.6, 8.5], [20, 11.45]),
     extra: (cc, g) => fairing(9.2, 3.6, 12.5, FR.dark) + fairing(g.L - 9.2, 3.6, 12.5, FR.dark) + boxes(16, g.L - 16, 3.6, 4, 1.0, "#33373c") +
       (pan ? roofFairing(3, 30, 13.25) + panSet(g.L - 24, 13.5, -1, cc.index === 2) + hvac(g.L - 15, 13.25, 9) : roofFairing(3, g.L - 16, 13.25) + hvac(g.L - 15.5, 13.25, 9)) });
 };
@@ -210,14 +220,14 @@ const etr600Cab = (c) => {
     cab: () => glass([[7.6, 9.5], [11.4, 11.35], [15.0, 11.7], [15.0, 10.1], [10.8, 9.8]], [[8.4, 9.75], [10.6, 10.8], [11.4, 10.8], [9.4, 9.75]], [8.6, 9.7, 10.8, 11.0]) +
       lamp(0.85, 5.1, 1.1, 0.36) + lamp(1.4, 4.55, 0.55, 0.26, RED_LAMP) + emuFront(1.4, 3.6, { coupler: 2.8 }) + horns(16.0, 12.6),
     extra: (cc, g) => fairing(12.6, 3.6, 12, FR.dark) + fairing(g.L - 9.8, 3.6, 12, FR.dark) + boxes(20, g.L - 17, 3.6, 4, 1.0, "#33373c") +
-      roofFairing(17, g.L - 16, 12.65, 0.5) + hvac(g.L - 15, 12.65, 9) + fsMark(cc, g.L - 12, 11.0, 0.55, FR.band) });
+      roofFairing(17, g.L - 16, 12.65, 0.5) + hvac(g.L - 15, 12.65, 9) + fsMark(cc, g.L - 12, 11.0, 0.55, FR.band) + levelMark(cc, cc.lv || "standard", [86.05, 8.35], [36, 10.95], { h: 1.0 }) });
 };
 const etr600Mid = (c) => {
   const rows = [{ xs: seq(5.0, 4.3, 18), y: 6.95, w: 3.2, h: 2.75, r: 0.4 }];
   const pan = c.index === 2 || c.index === 4;
   return sec(c, { roof: 12.65, sill: 3.6, rows, doors: [sgl(c.L - 5.2, 3.8, 10.6)], trucks: [[10.0, 34, 8.9], [c.L - 10.0, 34, 8.9]],
     paint: (cc, g) => frPaint(cc, g, { y0: 6.5, y1: 10.15, red0: 4.6, roofY: 11.75 }) + framesOf(rows) +
-      (cc.index === 3 ? letters(cc, 40, 5.4, 0.65, "BAR", "#ffffff", { weight: 700, spacing: 0.1 }) : "") + letters(cc, 2.5, 8.4, 1.1, cc.index <= 2 ? "1" : "2", "#ffffff", { weight: 600 }),
+      (cc.lv === "bistro" ? letters(cc, 40, 5.4, 0.65, "BAR", "#ffffff", { weight: 700, spacing: 0.1 }) : "") + levelMark(cc, cc.lv || "standard", [2.5, 8.4], [20, 10.95], { h: 1.0 }),
     extra: (cc, g) => fairing(10.0, 3.6, 12, FR.dark) + fairing(g.L - 10.0, 3.6, 12, FR.dark) + boxes(17, g.L - 17, 3.6, 4, 1.0, "#33373c") +
       (pan ? roofFairing(3, 28, 12.65, 0.5) + panSet(g.L - 26, 12.9, -1, cc.index === 2) + hvac(g.L - 15, 12.65, 9) : roofFairing(3, g.L - 16, 12.65, 0.5) + hvac(g.L - 15, 12.65, 9)) });
 };
@@ -245,7 +255,7 @@ const etr485Cab = (c) => {
     cab: () => glass([[7.0, 9.4], [10.4, 11.1], [13.6, 11.45], [13.6, 10.0], [10.0, 9.7]], [[7.8, 9.65], [9.6, 10.5], [10.3, 10.5], [8.6, 9.65]], [8.0, 9.6, 9.9, 10.8]) +
       lamp(0.9, 5.05, 1.0, 0.36) + lamp(1.4, 4.45, 0.5, 0.26, RED_LAMP) + emuFront(1.4, 3.5, { coupler: 2.8 }) + horns(14.6, 12.35),
     extra: (cc, g) => fairing(12.0, 3.5, 12, "#3a3f45") + fairing(g.L - 9.6, 3.5, 12, "#3a3f45") + boxes(19, g.L - 17, 3.5, 4, 1.0, "#33373c") +
-      roofFairing(16, g.L - 15, 12.4, 0.45) + hvac(g.L - 14.5, 12.4, 8.5) + fsMark(cc, g.L - 11.5, 5.4, 0.6, FA.red) });
+      roofFairing(16, g.L - 15, 12.4, 0.45) + hvac(g.L - 14.5, 12.4, 8.5) + fsMark(cc, g.L - 11.5, 5.4, 0.6, FA.red) + levelMark(cc, cc.lv || "second", [82.4, 8.3], null, { h: 1.0 }) });
 };
 const etr485Mid = (c) => {
   const rows = [{ xs: seq(5.2, 4.4, 17), y: 6.9, w: 3.1, h: 2.8, r: 0.35 }];
@@ -254,7 +264,7 @@ const etr485Mid = (c) => {
     paint: (cc, g) => faPaint(cc, g, false) + framesOf(rows) + (cc.index === 1 ? freccia(cc, 40, 5.45, 0.9, faName(cc), FA.red) : ""),
     extra: (cc, g) => fairing(9.8, 3.5, 12, "#3a3f45") + fairing(g.L - 9.8, 3.5, 12, "#3a3f45") + boxes(17, g.L - 17, 3.5, 4, 1.0, "#33373c") +
       (pan ? roofFairing(3, 28, 12.4, 0.45) + panSet(g.L - 25, 12.7, -1, cc.index === 2) + hvac(g.L - 14.5, 12.4, 8.5) : roofFairing(3, g.L - 15, 12.4, 0.45) + hvac(g.L - 14.5, 12.4, 8.5)) +
-      letters(cc, 2.4, 8.3, 1.1, cc.index <= 2 ? "1" : "2", "#ffffff", { weight: 600 }) });
+      levelMark(cc, cc.lv || "second", [2.4, 8.3], null, { h: 1.0 }) + (cc.lv === "bar" ? letters(cc, 40, 5.45, 0.7, "BAR", FA.red, { weight: 700, spacing: 0.1 }) : "") });
 };
 
 // ===================== InterCity =====================
@@ -276,7 +286,9 @@ const icInk = (c) => (night(c) ? "#ffffff" : IC.blue);
 const IC_ROWS = (L, cab) => [{ xs: seq(cab ? 15.4 : 8.0, 6.45, cab ? 10 : 11), y: 7.3, w: 4.7, h: 3.0, r: 0.45 }];
 function z1(c, { cab = false, kind = "coach" } = {}) {
   const L = c.L, roof = 13.3, sill = 3.95;
-  const rows = kind === "sleeper" ? [{ xs: seq(8.2, 6.9, 10), y: 7.6, w: 3.6, h: 2.7, r: 0.4 }] : kind === "couchette" ? [{ xs: seq(8.0, 6.45, 11), y: 7.4, w: 4.4, h: 2.8, r: 0.4 }] : IC_ROWS(L, cab);
+  const rows = kind === "sleeper" ? [{ xs: seq(8.2, 6.9, 10), y: 7.6, w: 3.6, h: 2.7, r: 0.4 }] : kind === "couchette" ? [{ xs: seq(8.0, 6.45, 11), y: 7.4, w: 4.4, h: 2.8, r: 0.4 }]
+    // First class: nine compartments' worth of wider-spaced windows.
+    : c.lv === "first" ? [{ xs: seq(9.2, 7.6, 9), y: 7.3, w: 4.9, h: 3.0, r: 0.45 }] : IC_ROWS(L, cab);
   const doorFill = night(c) ? IC.navy : "#d6dade";
   return sec({ ...c, cabL: cab && c.cabL }, { roof, sill, rows, nose: cab && c.cabL ? [[1.2, sill], [0.9, 7.4], ["q", 1.0, 8.6, 2.3, 9.8], [4.2, 12.3], ["q", 4.8, roof, 6.4, roof]] : null, cabLen: 11,
     doors: [sgl(cab && c.cabL ? 9.4 : 2.0, 4.15, 11.0, 2.6, doorFill), sgl(L - 4.6, 4.15, 11.0, 2.6, doorFill)], trucks: [[L / 2 - 31.15, 36, 8.2], [L / 2 + 31.15, 36, 8.2]],
@@ -287,7 +299,8 @@ function z1(c, { cab = false, kind = "coach" } = {}) {
       if (kind === "sleeper") s += letters(cc, L * 0.62, 5.6, 0.7, "VAGONE LETTO", icInk(cc), { weight: 600, spacing: 0.12 });
       else if (kind === "couchette") s += letters(cc, L * 0.62, 5.6, 0.7, "CUCCETTE", icInk(cc), { weight: 600, spacing: 0.12 });
       else if (night(cc)) s += letters(cc, L * 0.62, 5.6, 0.8, "Notte", "#ffffff", { weight: 600, italic: true });
-      return s + letters(cc, L - 7.2, 8.8, 1.3, cc.firstClass ? "1" : "2", night(cc) ? "#ffffff" : IC.blue, { weight: 600 });
+      return s + letters(cc, L - 7.2, 8.8, 1.3, cc.lv === "first" ? "1" : "2", night(cc) ? "#ffffff" : IC.blue, { weight: 600 }) +
+        (cc.lv === "first" ? letters(cc, 7.2, 8.8, 1.3, "1", night(cc) ? "#ffffff" : IC.blue, { weight: 600 }) : "");
     },
     cab: () => glass([[2.6, 9.95], [4.3, 12.0], [7.6, 12.0], [7.6, 9.95]], [[3.0, 10.2], [3.8, 11.2], [4.5, 11.2], [3.6, 10.2]], [3.2, 10.1, 4.0, 11.6]) +
       lamp(1.0, 5.6, 0.5, 0.5) + lamp(1.0, 4.85, 0.4, 0.32, RED_LAMP) + lamp(5.0, 12.95, 0.6, 0.25) + horns(7.0, roof),
@@ -298,7 +311,8 @@ function z1(c, { cab = false, kind = "coach" } = {}) {
     },
   });
 }
-const icCoach = (c) => z1({ ...c, firstClass: c.index === 1 });
+const icCoach = (c) => z1(c);
+const icFirst = (c) => z1({ ...c, lv: "first" });
 const icCab = (c) => z1(c, { cab: true });
 const icCouchette = (c) => z1(c, { kind: "couchette" });
 const icSleeper = (c) => z1(c, { kind: "sleeper" });
@@ -394,7 +408,9 @@ const masDoor = (c) => (c.agency === "trenitaliaic" ? IC.sky : "#2b6db5");
 const masCab = (c) => {
   const rows = [{ xs: [13.2], y: 6.8, w: 2.6, h: 3.3, r: 0.35 }, { xs: seq(22.0, 5.2, 3), y: 6.8, w: 4.4, h: 3.3, r: 0.35 }, { xs: [c.L - 13.6, c.L - 8.4], y: 6.8, w: 4.4, h: 3.3, r: 0.35 }];
   return sec(c, { roof: 13.4, sill: 3.4, nose: NOSE_MAS, cabLen: 10, rows, doors: [dbl(16.6, 3.4, 10.7, 4.3, masDoor(c)), dbl(c.L - 19.4, 3.4, 10.7, 4.3, masDoor(c))], trucks: [[10.0, 33, 8.5]], jakobs: ["end"],
-    paint: (cc, g) => masPaint(cc, g, true) + (cc.agency === "trenitaliaic" ? ic(cc, 30, 5.0, 0.9, IC.blue) : letters(cc, 30, 5.3, 1.0, "Blues", "#ffffff", { weight: 700, italic: true })),
+    paint: (cc, g) => masPaint(cc, g, true) + (cc.agency === "trenitaliaic" ? ic(cc, 30, 5.0, 0.9, IC.blue) : letters(cc, 30, 5.3, 1.0, "Blues", "#ffffff", { weight: 700, italic: true })) +
+      // InterCity's Plus (first class) seats: "1" and the level's name over the windows.
+      (cc.lv === "first" ? levelMark(cc, "first", [29.6, 11.4], null, { h: 0.95, fill: IC.blue }) + letters(cc, 36.5, 11.4, 0.5, "PLUS", IC.blue, { weight: 700, spacing: 0.08 }) : ""),
     cab: () => glass([[2.3, 8.8], [5.0, 12.0], [9.4, 12.0], [9.4, 8.8]], [[2.8, 9.1], [4.0, 10.6], [4.8, 10.6], [3.6, 9.1]], [3.0, 9.0, 4.4, 11.2]) +
       lamp(1.0, 5.0, 0.9, 0.4) + lamp(0.9, 4.3, 0.5, 0.28, RED_LAMP) + emuFront(1.2, 3.4, { coupler: 2.8 }) + horns(9.0, 13.35),
     extra: (cc, g) => hvac(14, 13.4, 9) + roofCover(32, 13.4, 10, 0.5) + boxes(14, 30, 3.4, 2, 1.2) + rect(31, 1.6, 9, 1.6, "#2a2d31", 0.4, 'rx="0.3"') + slats(31.4, 1.8, 8.2, 1.2, 0.4, "rgba(255,255,255,0.18)") +
@@ -545,7 +561,9 @@ const vivRows = (L, cab) => [{ xs: seq(18.0, 5.05, Math.floor((L - 36) / 5.05) +
   { xs: seq(18.0, 5.05, Math.floor((L - 36) / 5.05) + 1), y: 4.5, w: 4.1, h: 1.95, r: 0.4 }, { xs: cab ? [7.4, L - 7.8] : [3.0, L - 7.0], y: 8.2, w: 3.6, h: 2.2, r: 0.4 }];
 const vivDoorFill = (c) => (c.agency === "tper" ? TP.red : DPR.lime);
 const vivDoors = (L, cab, c) => [sgl(cab ? 11.6 : 8.0, 4.1, 11.6, 3.2, vivDoorFill(c)), sgl(L - 11.4, 4.1, 11.6, 3.2, vivDoorFill(c))];
-const vivOver = (c, L) => (c.agency === "tper" ? letters(c, L / 2, 8.6, 1.0, "Tper", TP.red, { weight: 800 }) : letters(c, L / 2 - 4, 8.6, 0.9, "Vivalto", "#4a5057", { weight: 700, italic: true }) + trenitalia(c, L / 2 + 7, 8.6, 0.4, "#5b6168"));
+// The class numerals at the end of each deck: "1" upstairs on a mixed coach.
+const vivClass = (c) => levelMark(c, c.lv === "first" ? "first" : "second", [16.6, 11.5], null, { h: 0.95, fill: "#4a5057" }) + levelMark(c, "second", [16.6, 5.5], null, { h: 0.95 });
+const vivOver = (c, L) => vivClass(c) + (c.agency === "tper" ? letters(c, L / 2, 8.6, 1.0, "Tper", TP.red, { weight: 800 }) : letters(c, L / 2 - 4, 8.6, 0.9, "Vivalto", "#4a5057", { weight: 700, italic: true }) + trenitalia(c, L / 2 + 7, 8.6, 0.4, "#5b6168"));
 const vivExtra = (c, L) => hvac(4, 14.1, 8.5) + hvac(L - 12.5, 14.1, 8.5) + roofCover(20, 14.1, L - 40, 0.3, "#b2b8bf", 4) + boxes(19, L - 19, 1.6, 3, 0.5) +
   rect(L / 2 - 3, 0.9, 6, 0.6, C.steelDark, 0.4, 'rx="0.3"') + buffers(L, 1) + (c.cabL ? "" : buffers(0, -1));
 const vivalto = (c) => sec(c, { ...VIV, drop: { a: 16.5, b: c.L - 16.5, y: 1.6 }, rows: vivRows(c.L, false), doors: vivDoors(c.L, false, c),
@@ -565,7 +583,9 @@ const minPaint = (cab) => (c, g) => dprSide(g.L, { band: [6.5, 10.2], low: 5.6, 
   (cab ? path("M0 3.4L0 7.8Q2.4 5.9 6.0 5.6L6.0 3.4Z", DPR.yellow) + path(poly([[1.0, 8.6], [4.0, 11.9], [10.6, 11.9], [10.6, 6.5], [6.0, 6.5]]), "#1d2024") : "");
 const minCab = (diesel) => (c) => sec(c, { roof: 13.0, sill: 3.4, nose: NOSE_MIN, cabLen: 10, rows: [{ xs: seq(12.0, 5.0, 4), y: 6.7, w: 4.0, h: 3.2, r: 0.4 }, { xs: [c.L - 7.2], y: 6.7, w: 4.0, h: 3.2, r: 0.4 }],
   doors: [dbl(c.L - 13.8, 3.4, 10.5, 4.2, DPR.lime)], trucks: [[8.8, 30, 8.2]], jakobs: ["end"],
-  paint: (cc, g) => minPaint(true)(cc, g) + letters(cc, 23, 4.55, 0.85, "Minuetto", "#ffffff", { weight: 700, italic: true }),
+  // The "501" end car's first-class section behind the cab: "1" over its windows.
+  paint: (cc, g) => minPaint(true)(cc, g) + letters(cc, 23, 4.55, 0.85, "Minuetto", "#ffffff", { weight: 700, italic: true }) +
+    levelMark(cc, cc.lv || "second", [14.0, 11.25], null, { h: 0.85, fill: "#4a5057" }),
   cab: () => glass([[1.8, 8.9], [4.3, 11.7], [9.6, 11.7], [9.6, 8.6], [5.4, 8.6]], [[2.3, 9.2], [3.6, 10.6], [4.4, 10.6], [3.2, 9.2]], [2.6, 9.1, 3.8, 11.0]) +
     lamp(0.85, 5.3, 0.8, 0.4) + lamp(0.8, 4.55, 0.45, 0.28, RED_LAMP) + emuFront(1.6, 3.4, { coupler: 2.8 }) + horns(9.6, 12.95),
   extra: (cc, g) => hvac(12, 13.0, 9) + (diesel ? roofCover(24, 13.0, 8, 0.7, "#8d949c", 2) + slats(24.6, 13.1, 6.8, 0.5, 0.4, "rgba(0,0,0,0.35)") + rect(28, 13.7, 0.5, 0.8, "currentColor") +
@@ -640,27 +660,47 @@ const tperFlirtMid = (c) => flirt({ ...c, pan: c.index === 2 }, "mid", TPER_FLIR
 // ---------- Tables ----------
 
 export const TYPES = {
-  itFr1000Cab: { name: "Frecciarossa 1000 (ETR 400) end car", kind: "emu", amenities: ["business", "first"] },
-  itFr1000Mid: { name: "Frecciarossa 1000 (ETR 400) car", kind: "emu", amenities: ["cafe"] },
+  itFr1000Exec: { name: "Frecciarossa 1000 Executive car", kind: "emu", amenities: ["first", "business"] },
+  itFr1000Business: { name: "Frecciarossa 1000 Business car", kind: "emu", amenities: ["business"] },
+  itFr1000Bistro: { name: "Frecciarossa 1000 Business car with the bistro", kind: "emu", amenities: ["business", "cafe"] },
+  itFr1000Premium: { name: "Frecciarossa 1000 Premium car", kind: "emu" },
+  itFr1000Mid: { name: "Frecciarossa 1000 Standard car", kind: "emu" },
+  itFr1000Cab: { name: "Frecciarossa 1000 Standard end car", kind: "emu" },
   itE404: { name: "E.404 power car (ETR 500)", kind: "electric", pan: true },
-  itEtr500Coach: { name: "ETR 500 coach", kind: "coach", amenities: ["first", "cafe"] },
-  itEtr700Cab: { name: "ETR 700 end car", kind: "emu", amenities: ["first"] },
-  itEtr700Mid: { name: "ETR 700 car", kind: "emu", amenities: ["cafe"] },
-  itEtr600Cab: { name: "ETR 600 end car", kind: "emu", amenities: ["first"] },
-  itEtr600Mid: { name: "ETR 600 car", kind: "emu", amenities: ["cafe"] },
-  itEtr485Cab: { name: "ETR 485 end car", kind: "emu", amenities: ["first"] },
-  itEtr485Mid: { name: "ETR 485 car", kind: "emu", amenities: ["cafe"] },
+  itEtr500Exec: { name: "ETR 500 Executive and Business coach", kind: "coach", amenities: ["first", "business"] },
+  itEtr500Business: { name: "ETR 500 Business coach", kind: "coach", amenities: ["business"] },
+  itEtr500Bistro: { name: "ETR 500 Business coach with the bistro", kind: "coach", amenities: ["business", "cafe"] },
+  itEtr500Premium: { name: "ETR 500 Premium coach", kind: "coach" },
+  itEtr500Coach: { name: "ETR 500 Standard coach", kind: "coach" },
+  itEtr700CabBiz: { name: "ETR 700 Business end car", kind: "emu", amenities: ["business"] },
+  itEtr700Business: { name: "ETR 700 Business car", kind: "emu", amenities: ["business"] },
+  itEtr700Premium: { name: "ETR 700 Premium car", kind: "emu" },
+  itEtr700Mid: { name: "ETR 700 Standard car", kind: "emu" },
+  itEtr700Cab: { name: "ETR 700 Standard end car", kind: "emu" },
+  itEtr600CabBiz: { name: "ETR 600 Business end car", kind: "emu", amenities: ["business"] },
+  itEtr600Business: { name: "ETR 600 Business car", kind: "emu", amenities: ["business"] },
+  itEtr600Bistro: { name: "ETR 600 Business car with the bar", kind: "emu", amenities: ["business", "cafe"] },
+  itEtr600Premium: { name: "ETR 600 Premium car", kind: "emu" },
+  itEtr600Mid: { name: "ETR 600 Standard car", kind: "emu" },
+  itEtr600Cab: { name: "ETR 600 Standard end car", kind: "emu" },
+  itEtr485CabFirst: { name: "ETR 485 first-class end car", kind: "emu", amenities: ["first"] },
+  itEtr485First: { name: "ETR 485 first-class car", kind: "emu", amenities: ["first"] },
+  itEtr485Bar: { name: "ETR 485 bar car", kind: "emu", amenities: ["cafe"] },
+  itEtr485Mid: { name: "ETR 485 second-class car", kind: "emu" },
+  itEtr485Cab: { name: "ETR 485 second-class end car", kind: "emu" },
   itE414: { name: "E.414 electric locomotive", kind: "electric", pan: true },
   itE401: { name: "E.401 electric locomotive", kind: "electric", pan: true },
   itE402B: { name: "E.402B electric locomotive", kind: "electric", pan: true },
   itE464: { name: "E.464 electric locomotive", kind: "electric", pan: true },
-  itIcCoach: { name: "UIC-Z1 InterCity coach", kind: "coach", amenities: ["first"] },
-  itIcCab: { name: "UIC-Z1 driving coach", kind: "coach", cab: true },
+  itIcFirst: { name: "UIC-Z1 first-class coach", kind: "coach", amenities: ["first"] },
+  itIcCoach: { name: "UIC-Z1 second-class coach", kind: "coach" },
+  itIcCab: { name: "UIC-Z1 second-class driving coach", kind: "coach", cab: true },
   itIcnCouchette: { name: "Couchette car", kind: "coach", amenities: ["sleepers"] },
   itIcnSleeper: { name: "Sleeping car", kind: "coach", amenities: ["sleepers"] },
   itMasCab: { name: "Hitachi Masaccio (HTR 312/412) end car", kind: "emu" },
   itMasMid: { name: "Hitachi Masaccio (HTR 312/412) car", kind: "emu" },
-  itRockCab: { name: "Rock (Caravaggio) end car", kind: "bilevel", emu: true, amenities: ["first"] },
+  itHtrPlus: { name: "HTR 412 InterCity end car with Plus (first class)", kind: "emu", amenities: ["first"] },
+  itRockCab: { name: "Rock (Caravaggio) end car", kind: "bilevel", emu: true },
   itRockMid: { name: "Rock (Caravaggio) car", kind: "bilevel", emu: true },
   itPopCab: { name: "Pop (Coradia Stream) end car", kind: "emu" },
   itPopMid: { name: "Pop (Coradia Stream) car", kind: "emu" },
@@ -669,10 +709,13 @@ export const TYPES = {
   itLxCab: { name: "Leonardo Express (Jazz) end section", kind: "emu" },
   itLxMid: { name: "Leonardo Express (Jazz) section", kind: "emu" },
   itVivalto: { name: "Vivalto double-deck coach", kind: "bilevel" },
+  itVivaltoMixed: { name: "Vivalto coach with first class upstairs", kind: "bilevel", amenities: ["first"] },
   itVivaltoCab: { name: "Vivalto driving car", kind: "bilevel", cab: true },
-  itMinElCab: { name: "Minuetto (ALe 501) end section", kind: "emu" },
+  itMinElFirst: { name: "Minuetto (ALe 501) end section with first class", kind: "emu", amenities: ["first"] },
+  itMinElCab: { name: "Minuetto (ALe 502) end section", kind: "emu" },
   itMinElMid: { name: "Minuetto (ALe 501) middle section", kind: "emu" },
-  itMinDCab: { name: "Minuetto (ALn 501) end section", kind: "emu" },
+  itMinDFirst: { name: "Minuetto (ALn 501) end section with first class", kind: "emu", amenities: ["first"] },
+  itMinDCab: { name: "Minuetto (ALn 502) end section", kind: "emu" },
   itMinDMid: { name: "Minuetto (ALn 501) middle section", kind: "emu" },
   itTafCab: { name: "TAF end car", kind: "bilevel", emu: true },
   itTafMid: { name: "TAF car", kind: "bilevel", emu: true },
@@ -689,26 +732,46 @@ const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, v
 const byIndex = (ctx) => `${ctx.index}:${ctx.route || ""}`;
 const byRoute = (ctx) => ctx.route || "";
 export const MODELS = {
-  itFr1000Cab: M(fr4Cab, 87.3, true, byRoute),
+  itFr1000Exec: M((c) => fr4Cab({ ...c, lv: "executive" }), 87.3, true),
+  itFr1000Business: M((c) => fr4Mid({ ...c, lv: "business" }), 81.7, false, byIndex),
+  itFr1000Bistro: M((c) => fr4Mid({ ...c, lv: "bistro" }), 81.7, false, byIndex),
+  itFr1000Premium: M((c) => fr4Mid({ ...c, lv: "premium" }), 81.7, false, byIndex),
   itFr1000Mid: M(fr4Mid, 81.7, false, byIndex),
+  itFr1000Cab: M(fr4Cab, 87.3, true),
   itE404: M(e404, 67.5, true),
+  itEtr500Exec: M((c) => etr500Coach({ ...c, lv: "executive" }), 85.6, false, byIndex),
+  itEtr500Business: M((c) => etr500Coach({ ...c, lv: "business" }), 85.6, false, byIndex),
+  itEtr500Bistro: M((c) => etr500Coach({ ...c, lv: "bistro" }), 85.6, false, byIndex),
+  itEtr500Premium: M((c) => etr500Coach({ ...c, lv: "premium" }), 85.6, false, byIndex),
   itEtr500Coach: M(etr500Coach, 85.6, false, byIndex),
-  itEtr700Cab: M(etr700Cab, 88.4, true),
+  itEtr700CabBiz: M((c) => etr700Cab({ ...c, lv: "business" }), 88.4, true),
+  itEtr700Business: M((c) => etr700Mid({ ...c, lv: "business" }), 80.4, false, byIndex),
+  itEtr700Premium: M((c) => etr700Mid({ ...c, lv: "premium" }), 80.4, false, byIndex),
   itEtr700Mid: M(etr700Mid, 80.4, false, byIndex),
-  itEtr600Cab: M(etr600Cab, 92.5, true),
+  itEtr700Cab: M(etr700Cab, 88.4, true),
+  itEtr600CabBiz: M((c) => etr600Cab({ ...c, lv: "business" }), 92.5, true),
+  itEtr600Business: M((c) => etr600Mid({ ...c, lv: "business" }), 86.0, false, byIndex),
+  itEtr600Bistro: M((c) => etr600Mid({ ...c, lv: "bistro" }), 86.0, false, byIndex),
+  itEtr600Premium: M((c) => etr600Mid({ ...c, lv: "premium" }), 86.0, false, byIndex),
   itEtr600Mid: M(etr600Mid, 86.0, false, byIndex),
-  itEtr485Cab: M(etr485Cab, 90.2, true, byRoute),
+  itEtr600Cab: M(etr600Cab, 92.5, true),
+  itEtr485CabFirst: M((c) => etr485Cab({ ...c, lv: "first" }), 90.2, true, byRoute),
+  itEtr485First: M((c) => etr485Mid({ ...c, lv: "first" }), 83.0, false, byIndex),
+  itEtr485Bar: M((c) => etr485Mid({ ...c, lv: "bar" }), 83.0, false, byIndex),
   itEtr485Mid: M(etr485Mid, 83.0, false, byIndex),
+  itEtr485Cab: M(etr485Cab, 90.2, true, byRoute),
   itE414: M(e414, 66.4, true, byRoute),
   itE401: M(e401, 60.5, true, byRoute),
   itE402B: M(e402b, 63.7, false, byRoute),
   itE464: M(e464, 51.7, true, byRoute),
-  itIcCoach: M(icCoach, 86.6, false, byIndex),
+  itIcFirst: M(icFirst, 86.6, false, byRoute),
+  itIcCoach: M(icCoach, 86.6, false, byRoute),
   itIcCab: M(icCab, 86.6, true, byRoute),
   itIcnCouchette: M(icCouchette, 86.6, false, byRoute),
   itIcnSleeper: M(icSleeper, 86.6, false, byRoute),
   itMasCab: M(masCab, 75.5, true),
   itMasMid: M(masMid, 66.0, false, byIndex),
+  itHtrPlus: M((c) => masCab({ ...c, lv: "first" }), 75.5, true),
   itRockCab: M(rockCab, 92.0, true),
   itRockMid: M(rockMid, 87.6, false, byIndex),
   itPopCab: M(popCab, 72.0, true),
@@ -718,9 +781,12 @@ export const MODELS = {
   itLxCab: M(lxCab, 60.0, true),
   itLxMid: M(lxMid, 49.9, false, byIndex),
   itVivalto: M(vivalto, 85.5),
+  itVivaltoMixed: M((c) => vivalto({ ...c, lv: "first" }), 85.5),
   itVivaltoCab: M(vivaltoCab, 85.5, true),
+  itMinElFirst: M((c) => minCab(false)({ ...c, lv: "first" }), 63.0, true),
   itMinElCab: M(minCab(false), 63.0, true),
   itMinElMid: M(minMid(false), 44.3),
+  itMinDFirst: M((c) => minCab(true)({ ...c, lv: "first" }), 63.0, true),
   itMinDCab: M(minCab(true), 63.0, true),
   itMinDMid: M(minMid(true), 44.3),
   itTafCab: M(tafCab, 85.6, true),
@@ -734,32 +800,38 @@ export const MODELS = {
 // [first, last, type], by class and serial run together (ETR 400 001 is
 // 400001). The fleet pages draw one of each; no timetable reports a unit.
 export const FLEETS = {
-  frecce: [[400001, 400058, "itFr1000Cab"], [404500, 404659, "itE404"], [700001, 700017, "itEtr700Cab"], [600001, 600012, "itEtr600Cab"], [485001, 485015, "itEtr485Cab"]],
-  trenitaliaic: [[401001, 401040, "itE401"], [402101, 402180, "itE402B"], [414101, 414159, "itE414"], [464001, 464717, "itE464"], [412001, 412011, "itMasCab"]],
+  frecce: [[400001, 400058, "itFr1000Exec"], [404500, 404659, "itE404"], [700001, 700017, "itEtr700CabBiz"], [600001, 600012, "itEtr600CabBiz"], [485001, 485015, "itEtr485CabFirst"]],
+  trenitaliaic: [[401001, 401040, "itE401"], [402101, 402180, "itE402B"], [414101, 414159, "itE414"], [464001, 464717, "itE464"], [412001, 412011, "itHtrPlus"]],
   trenitaliareg: [[521001, 521099, "itRockCab"], [104001, 104099, "itPopCab"], [425001, 425099, "itJazzCab"], [312001, 312099, "itMasCab"],
-    [501001, 501100, "itMinElCab"], [501101, 501204, "itMinDCab"], [426001, 426060, "itTafCab"], [220001, 220040, "itSwingCab"]],
+    [501001, 501100, "itMinElFirst"], [501101, 501204, "itMinDFirst"], [426001, 426060, "itTafCab"], [220001, 220040, "itSwingCab"]],
   tper: [[350001, 350026, "itFlirt350Cab"], [521101, 521143, "itRockCab"], [104101, 104147, "itPopCab"]],
 };
 
 const set = (label, ...units) => ({ label, units });
-const FR1000 = set("Frecciarossa 1000 (ETR 400): eight cars", ["itFr1000Cab", 1], ["itFr1000Mid", 6], ["itFr1000Cab", 1]);
-const ETR500 = set("ETR 500: two E.404 power cars and eleven coaches", ["itE404", 1], ["itEtr500Coach", 11], ["itE404", 1]);
-const ETR700 = set("ETR 700: eight cars, in Frecciarossa paint", ["itEtr700Cab", 1], ["itEtr700Mid", 6], ["itEtr700Cab", 1]);
-const ETR600 = set("ETR 600: seven tilting cars, in Frecciarossa paint", ["itEtr600Cab", 1], ["itEtr600Mid", 5], ["itEtr600Cab", 1]);
-const ETR485 = (name) => set(`${name}: an ETR 485, nine tilting cars`, ["itEtr485Cab", 1], ["itEtr485Mid", 7], ["itEtr485Cab", 1]);
-const IC_DAY = set("InterCity: an E.401 (or E.414) locomotive, UIC-Z1 coaches and a driving coach", ["itE401", 1], ["itIcCoach", 7], ["itIcCab", 1]);
-const IC_414 = set("InterCity: an E.414 locomotive, UIC-Z1 coaches and a driving coach", ["itE414", 1], ["itIcCoach", 7], ["itIcCab", 1]);
-const IC_464 = set("InterCity: an E.464 locomotive and UIC-Z1 coaches", ["itE464", 1], ["itIcCoach", 6]);
-const HTR412 = set("InterCity: a four-car Hitachi HTR 412 (electric, diesel and battery)", ["itMasCab", 1], ["itMasMid", 2], ["itMasCab", 1]);
+// Car 1 leads: the Frecce's cars are numbered from the Executive (or
+// Business) end.
+const FR1000 = set("Frecciarossa 1000: Executive (car 1), Business (2, and 3 with the bistro), Premium (4), Standard (5–8)",
+  ["itFr1000Exec", 1], ["itFr1000Business", 1], ["itFr1000Bistro", 1], ["itFr1000Premium", 1], ["itFr1000Mid", 3], ["itFr1000Cab", 1]);
+const ETR500 = set("ETR 500: E.404 power cars; Executive and Business (coach 1), Business (2–4, and 5 with the bistro), Premium (6), Standard (7–11)",
+  ["itE404", 1], ["itEtr500Exec", 1], ["itEtr500Business", 3], ["itEtr500Bistro", 1], ["itEtr500Premium", 1], ["itEtr500Coach", 5], ["itE404", 1]);
+const ETR700 = set("ETR 700: Business (cars 1–3), Premium (4), Standard (5–8)", ["itEtr700CabBiz", 1], ["itEtr700Business", 2], ["itEtr700Premium", 1], ["itEtr700Mid", 3], ["itEtr700Cab", 1]);
+const ETR600 = set("ETR 600: Business (cars 1–2, and 3 with the bar), Premium and Standard (4–7)",
+  ["itEtr600CabBiz", 1], ["itEtr600Business", 1], ["itEtr600Bistro", 1], ["itEtr600Premium", 1], ["itEtr600Mid", 2], ["itEtr600Cab", 1]);
+const ETR485 = (name) => set(`${name}: an ETR 485, nine tilting cars, first class in three`,
+  ["itEtr485CabFirst", 1], ["itEtr485First", 2], ["itEtr485Bar", 1], ["itEtr485Mid", 4], ["itEtr485Cab", 1]);
+const IC_DAY = set("InterCity: an E.401 (or E.414), a first-class coach, second-class coaches and a driving coach", ["itE401", 1], ["itIcFirst", 1], ["itIcCoach", 6], ["itIcCab", 1]);
+const IC_414 = set("InterCity: an E.414, a first-class coach, second-class coaches and a driving coach", ["itE414", 1], ["itIcFirst", 1], ["itIcCoach", 6], ["itIcCab", 1]);
+const IC_464 = set("InterCity: an E.464, a first-class coach and second-class coaches", ["itE464", 1], ["itIcFirst", 1], ["itIcCoach", 5]);
+const HTR412 = set("InterCity: a four-car Hitachi HTR 412, Plus (first class) in the leading car", ["itHtrPlus", 1], ["itMasMid", 2], ["itMasCab", 1]);
 const ICN = set("InterCity Notte: an E.402B, seated coaches, couchettes and sleeping cars", ["itE402B", 1], ["itIcCoach", 3], ["itIcnCouchette", 4], ["itIcnSleeper", 2]);
 const ICN_BEDS = set("InterCity Notte: an E.402B, couchettes and sleeping cars", ["itE402B", 1], ["itIcnCouchette", 5], ["itIcnSleeper", 3]);
 const ROCK5 = set("Rock: a five-car double-deck electric unit", ["itRockCab", 1], ["itRockMid", 3], ["itRockCab", 1]);
 const POP = set("Pop: a four-car electric unit", ["itPopCab", 1], ["itPopMid", 2], ["itPopCab", 1]);
 const JAZZ = set("Jazz: a five-section electric unit", ["itJazzCab", 1], ["itJazzMid", 3], ["itJazzCab", 1]);
 const LEONARDO = set("Leonardo Express: a Jazz unit in the airport train's paint", ["itLxCab", 1], ["itLxMid", 3], ["itLxCab", 1]);
-const VIVALTO = set("An E.464 locomotive, five Vivalto double-deck coaches and a driving car", ["itE464", 1], ["itVivalto", 5], ["itVivaltoCab", 1]);
-const MIN_D = set("Minuetto: a three-section diesel unit (ALn 501)", ["itMinDCab", 1], ["itMinDMid", 1], ["itMinDCab", 1]);
-const MIN_E = set("Minuetto: a three-section electric unit (ALe 501)", ["itMinElCab", 1], ["itMinElMid", 1], ["itMinElCab", 1]);
+const VIVALTO = set("An E.464, Vivalto double-deck coaches (one with first class upstairs) and a driving car", ["itE464", 1], ["itVivalto", 2], ["itVivaltoMixed", 1], ["itVivalto", 2], ["itVivaltoCab", 1]);
+const MIN_D = set("Minuetto: a three-section diesel unit, 24 first-class seats in the ALn 501 end", ["itMinDFirst", 1], ["itMinDMid", 1], ["itMinDCab", 1]);
+const MIN_E = set("Minuetto: a three-section electric unit, 24 first-class seats in the ALe 501 end", ["itMinElFirst", 1], ["itMinElMid", 1], ["itMinElCab", 1]);
 const TAF = set("TAF: a four-car double-deck electric unit", ["itTafCab", 1], ["itTafMid", 2], ["itTafCab", 1]);
 const SWING = set("Swing (ATR 220): a three-section diesel unit", ["itSwingCab", 1], ["itSwingMid", 1], ["itSwingCab", 1]);
 const BLUES = set("Blues: a three-car Hitachi unit (electric, diesel and battery)", ["itMasCab", 1], ["itMasMid", 1], ["itMasCab", 1]);
@@ -767,7 +839,8 @@ const FLIRT = set("FLIRT (ETR 350): a five-section electric unit", ["itFlirt350C
 const TPER_ROCK = set("Rock: a five-car double-deck electric unit, in Tper's paint", ["itRockCab", 1], ["itRockMid", 3], ["itRockCab", 1]);
 const TPER_POP = set("Pop: a four-car electric unit, in Tper's paint", ["itPopCab", 1], ["itPopMid", 2], ["itPopCab", 1]);
 // The formation a reported unit runs in (the fleet pages draw these).
-const BY_MODEL = { itFr1000Cab: FR1000, itE404: ETR500, itEtr700Cab: ETR700, itEtr600Cab: ETR600, itEtr485Cab: ETR485("Frecciargento"),
+const BY_MODEL = { itFr1000Cab: FR1000, itFr1000Exec: FR1000, itEtr700CabBiz: ETR700, itEtr600CabBiz: ETR600, itEtr485CabFirst: ETR485("Frecciargento"), itHtrPlus: HTR412,
+  itMinElFirst: MIN_E, itMinDFirst: MIN_D, itE404: ETR500, itEtr700Cab: ETR700, itEtr600Cab: ETR600, itEtr485Cab: ETR485("Frecciargento"),
   itE401: IC_DAY, itE414: IC_414, itE402B: ICN, itE464: IC_464, itRockCab: ROCK5, itPopCab: POP, itJazzCab: JAZZ, itMinElCab: MIN_E, itMinDCab: MIN_D,
   itTafCab: TAF, itSwingCab: SWING, itFlirt350Cab: FLIRT, itVivaltoCab: VIVALTO };
 const byModel = (agency, reported) => (reported === "itMasCab" ? (agency === "trenitaliaic" ? HTR412 : BLUES)
@@ -791,7 +864,7 @@ const sicily = (t) => Number.isFinite(t.lat) && t.lat > 36.6 && t.lat < 38.35 &&
 // no published rule says which runs which train);
 // InterCity Notte (750-799 with seats, 1500-1999 berths only) an E.402B.
 // Regionale: Leonardo Express a Jazz in its paint; Sardinia's and Sicily's
-// trains Minuetto diesels; Rome's suburban lines TAFs; Regionale Veloce an
+// trains Minuetto diesels; around Naples and Turin TAFs; Regionale Veloce an
 // E.464 with Vivalto coaches; the others a Rock.
 export const TYPICAL = {
   frecce: (t, reported) => {
@@ -817,7 +890,7 @@ export const TYPICAL = {
     if (/Leonardo/.test(r) || between(t, /Fiumicino Aeroporto/, /Roma Termini/)) return LEONARDO;
     if (sardinia(t) || sicily(t)) return MIN_D;
     if (r === "Regionale Veloce") return VIVALTO;
-    if (near(t, 41.9, 12.5, 0.35)) return TAF;
+    if (near(t, 40.85, 14.27, 0.35) || near(t, 45.07, 7.68, 0.35)) return TAF;
     return ROCK5;
   },
   // Tper: FLIRTs on the Bologna suburban lines to Portomaggiore and
@@ -838,42 +911,62 @@ const FR1000_F = { model: "Frecciarossa 1000 (ETR 400)", type: "High-speed elect
   fleet: "58 of the first series; 74 of a new generation from 2025", topSpeedMph: mph(300), powerHp: hp(9800), seats: 457, lengthFt: ft(202), source: `${ITW}ETR_1000` };
 const ETR500_F = { model: "ETR 500", type: "High-speed train", builder: "TREVI consortium, styled by Pininfarina", built: "1992–2005", fleet: "59 sets",
   topSpeedMph: mph(300), powerHp: hp(8800), seats: 574, source: `${ITW}Elettrotreno_FS_ETR_500` };
+const FS_700 = "https://fsitaliane.it/content/dam/fsitaliane/Documents/old-media-ed-eventi/comunicati-stampa-e-news/anno-2019/giugno/2019_06_03_ETR_700.pdf";
 const ETR700_F = { model: "ETR 700", type: "High-speed electric multiple unit", builder: "AnsaldoBreda, styled by Pininfarina", built: "2009–2012 (as the Fyra V250)", fleet: "17",
-  topSpeedMph: mph(250), powerHp: hp(5500), seats: 497, lengthFt: ft(200.9), source: `${ITW}Elettrotreno_FS_ETR_700` };
+  topSpeedMph: mph(250), powerHp: hp(5500), seats: 497, lengthFt: ft(200.9), source: `${ITW}ETR_700` };
 const ETR600_F = { model: "ETR 600 (New Pendolino)", type: "Tilting electric multiple unit", builder: "Alstom (Savigliano), styled by Giugiaro", built: "2006–2008", fleet: "12",
   topSpeedMph: mph(250), powerHp: hp(5664), seats: 432, lengthFt: ft(187.4), source: `${ITW}Elettrotreno_FS_ETR_600` };
 const ETR485_F = { model: "ETR 485", type: "Tilting electric multiple unit", builder: "Fiat Ferroviaria (Alstom)", built: "Converted 2005–2009", fleet: "15, being retired",
-  topSpeedMph: mph(250), powerHp: hp(5880), seats: 489, source: `${ITW}Elettrotreno_FS_ETR_480` };
+  topSpeedMph: mph(250), powerHp: hp(5880), seats: 489, source: `${ITW}Elettrotreno_FS_ETR_485` };
 const Z1_F = { model: "UIC-Z1 coach", type: "Passenger coach", builder: "Casaralta and others", built: "Since 1985", fleet: "About 990", topSpeedMph: mph(200), lengthFt: ft(26.4),
   source: `${ITW}Carrozza_UIC-Z1` };
 const MAS_F = { model: "Hitachi Masaccio (HTR 312 and HTR 412)", type: "Tri-mode multiple unit (3 kV, diesel, battery)", builder: "Hitachi Rail", built: "Since 2022", topSpeedMph: mph(160),
-  source: `${ITW}Treno_Blues` };
+  source: `${ITW}Hitachi_Blues` };
 const ROCK_F = { model: "Rock (Hitachi Caravaggio: ETR 421, 521, 621)", type: "Double-deck electric multiple unit", builder: "Hitachi Rail", built: "Since 2019", topSpeedMph: mph(160), powerHp: hp(3400),
-  seats: 598, lengthFt: ft(136.8), source: `${ITW}Treno_Rock` };
+  seats: 598, lengthFt: ft(136.8), source: `${ITW}ETR_521` };
 const POP_F = { model: "Pop (Alstom Coradia Stream: ETR 103, 104)", type: "Electric multiple unit", builder: "Alstom", built: "Since 2019", topSpeedMph: mph(160), seats: 305, lengthFt: ft(84.2),
-  source: `${ITW}Treno_Pop` };
+  source: `${ITW}ETR_104` };
 const JAZZ_F = { model: "Jazz (Alstom Coradia Meridian: ETR 324, 425, 526)", type: "Articulated electric multiple unit", builder: "Alstom", built: "2013–2019", topSpeedMph: mph(160), powerHp: hp(2052),
-  seats: 309, lengthFt: ft(82.2), source: `${ITW}Treno_Jazz` };
+  seats: 309, lengthFt: ft(82.2), source: `${ITW}ETR_425` };
 const MIN_F = { model: "Minuetto", type: "Articulated multiple unit", builder: "Alstom (Fiat Ferroviaria), styled by Giugiaro", built: "2004–2010", seats: 146, lengthFt: ft(51.9), source: `${ITW}Minuetto_(treno)` };
 const TAF_F = { model: "TAF (ALe 426 / Le 736 / ALe 506)", type: "Double-deck electric multiple unit", builder: "AnsaldoBreda, Firema and Fiat Ferroviaria", built: "1997–2006",
-  topSpeedMph: mph(140), powerHp: hp(3640), seats: 469, lengthFt: ft(104), source: `${ITW}Elettrotreno_FS_ALe_426/506` };
-const SWING_F = { model: "Swing (Pesa ATR 220)", type: "Articulated diesel multiple unit", builder: "Pesa Bydgoszcz", built: "2014–2016", fleet: "40", seats: 154, lengthFt: ft(55.6),
-  source: `${ITW}Automotrice_FS_ATR_220` };
+  topSpeedMph: mph(140), powerHp: hp(3640), seats: 469, lengthFt: ft(104), source: `${ITW}TAF_(treno)` };
+const SWING_F = { model: "Swing (Pesa ATR 220)", type: "Articulated diesel multiple unit", builder: "Pesa Bydgoszcz", built: "2014–2016", fleet: "40", seats: 155, lengthFt: ft(55.6),
+  source: `${ITW}ATR_220` };
 const VIV_F = { model: "Vivalto", type: "Double-deck coach", builder: "AnsaldoBreda and Firema (later Hitachi Rail)", built: "Since 2004", topSpeedMph: mph(160), lengthFt: ft(26.06), source: `${ITW}Carrozza_Vivalto` };
 const FLIRT_F = { model: "Stadler FLIRT (ETR 350)", type: "Electric multiple unit", builder: "Stadler Rail", fleet: "26", topSpeedMph: mph(160), seats: 269, source: `${WP}Stadler_FLIRT` };
 
 export const FACTS = {
-  itFr1000Cab: { ...FR1000_F, about: "Trenitalia's flagship, styled by Bertone: eight cars, four of them powered, and four pantographs for Italy's 25 kV high-speed lines and its 3 kV older ones. It runs the Turin–Milan–Rome–Naples–Salerno and Venice–Rome Frecciarossas, and to France and Spain." },
+  itFr1000Exec: { ...FR1000_F, about: "Trenitalia's flagship, styled by Bertone: eight cars, four of them powered, and four pantographs for Italy's 25 kV high-speed lines and its 3 kV older ones. Car 1, at one end, is the Executive car: 10 armchairs (14 in the second series) and a meeting room." },
+  itFr1000Business: { ...FR1000_F, about: "Cars 2 and 3 are Business, first class, 2+1 leather seats; car 3 shares its length with the bistro." },
+  itFr1000Bistro: { ...FR1000_F, about: "Car 3: Business seats and the bistro, the train's bar." },
+  itFr1000Premium: { ...FR1000_F, about: "Car 4 is Premium, second class with leather seats and a snack served at the seat." },
+  itFr1000Mid: { ...FR1000_F, about: "Cars 5 to 8 are Standard, second class, 2+2 seats; the train seats 457 in all (461 in the second series)." },
+  itFr1000Cab: { ...FR1000_F, about: "Car 8, the Standard end car. The Frecciarossa 1000 runs the Turin–Milan–Rome–Naples–Salerno and Venice–Rome Frecciarossas, and to France and Spain." },
   itFr1000Mid: { ...FR1000_F, about: "A Frecciarossa 1000 has Executive, Business, Premium and Standard areas and a bar car in the middle of the train." },
   itE404: { model: "E.404 power car (ETR 500)", type: "Electric power car", builder: "TREVI consortium", built: "1992–2005", topSpeedMph: mph(300), lengthFt: ft(20.57), source: `${ITW}Elettrotreno_FS_ETR_500`,
     about: "An ETR 500 is two E.404 power cars with eleven or twelve coaches between them, about 327 m long. In Frecciarossa paint since 2022, it runs many of the Frecciarossas off the main Turin–Salerno corridor." },
-  itEtr500Coach: { ...ETR500_F, lengthFt: ft(26.1), about: "The ETR 500's coaches carry Business, Premium and Standard areas and a bar car; a power car at each end drives the train." },
-  itEtr700Cab: { ...ETR700_F, about: "Built as the V250 for the Fyra service between Amsterdam and Brussels, withdrawn there and bought by Trenitalia in 2016. Rebuilt and repainted Frecciarossa in 2022, it runs mainly on the Adriatic line." },
-  itEtr700Mid: { ...ETR700_F, about: "Eight cars on their own trucks; the ETR 700 seats 497 in first and second class." },
-  itEtr600Cab: { ...ETR600_F, about: "Alstom's second-generation Italian Pendolino, built for 250 km/h with tilt. Once a Frecciargento, it has run as a Frecciarossa, in Frecciarossa paint, since 2022." },
-  itEtr600Mid: { ...ETR600_F, about: "Seven cars, four of them powered; the bar is in the third." },
-  itEtr485Cab: { ...ETR485_F, about: "The last Frecciargento trains, Rome–Ravenna and Rome–Benevento, and since summer 2026 the Frecciabianca between Rome, Pisa and Genoa: nine tilting cars rebuilt from the ETR 480." },
-  itEtr485Mid: { ...ETR485_F, about: "The ETR 485 tilts into curves to run faster on the old lines; Trenitalia is retiring the fleet." },
+  itEtr500Exec: { ...ETR500_F, lengthFt: ft(26.1), about: "Coach 1, next to a power car: the Executive area and a meeting room, then Business Silenzio. Executive and Business are first class." },
+  itEtr500Business: { ...ETR500_F, lengthFt: ft(26.1), about: "Coaches 2 to 4 are Business, first class (coach 3 with a small lounge)." },
+  itEtr500Bistro: { ...ETR500_F, lengthFt: ft(26.1), about: "Coach 5: Business seats and the bistro." },
+  itEtr500Premium: { ...ETR500_F, lengthFt: ft(26.1), about: "Coach 6 is Premium, second class with leather seats." },
+  itEtr500Coach: { ...ETR500_F, lengthFt: ft(26.1), about: "Coaches 7 to 11 are Standard, second class; a power car at each end drives the train, 574 seats in all." },
+  itEtr700CabBiz: { ...ETR700_F, source: FS_700, about: "Built as the V250 for the Fyra service between Amsterdam and Brussels, bought by Trenitalia in 2016 and a Frecciarossa since 2022. Cars 1 to 3 are Business (first class, 2+1 seats), car 4 Premium, cars 5 to 8 Standard." },
+  itEtr700Cab: { ...ETR700_F, source: FS_700, about: "Car 8, a Standard end car. The ETR 700 runs mainly on the Adriatic line." },
+  itEtr700Business: { ...ETR700_F, source: FS_700, about: "Cars 2 and 3 are Business, first class, 2+1 seats." },
+  itEtr700Premium: { ...ETR700_F, source: FS_700, about: "Car 4 is Premium, second class with leather seats, 2+2." },
+  itEtr700Mid: { ...ETR700_F, source: FS_700, about: "Cars 5 to 7 are Standard, second class; about 500 seats in the train." },
+  itEtr600CabBiz: { ...ETR600_F, about: "Alstom's second-generation Italian Pendolino, built for 250 km/h with tilt; a Frecciarossa since 2022. Business, first class, has 126 of its 432 seats, in the cars at this end up to the bar in car 3." },
+  itEtr600Cab: { ...ETR600_F, about: "The Standard end car; Premium and Standard together have 306 seats." },
+  itEtr600Business: { ...ETR600_F, about: "A Business car, first class, three seats across (rows A, B and D)." },
+  itEtr600Bistro: { ...ETR600_F, about: "Car 3: half seats, half the bar, and the conductor's office." },
+  itEtr600Premium: { ...ETR600_F, about: "Premium, second class with leather seats; which car carries it isn't published, so it is drawn next to the bar." },
+  itEtr600Mid: { ...ETR600_F, about: "Standard, second class, four seats across." },
+  itEtr485CabFirst: { ...ETR485_F, about: "The last Frecciargento trains, Rome–Ravenna and Rome–Benevento, and since summer 2026 the Frecciabianca between Rome, Pisa and Genoa. First class has 146 of the 489 seats, about three cars' worth, drawn at this end." },
+  itEtr485First: { ...ETR485_F, about: "First class, 2+1 seats." },
+  itEtr485Bar: { ...ETR485_F, about: "The bar car, between first and second class." },
+  itEtr485Cab: { ...ETR485_F, about: "The second-class end car; second class has 344 seats." },
+  itEtr485Mid: { ...ETR485_F, about: "Second class, 2+2 seats. The ETR 485 tilts into curves on the old lines; Trenitalia is retiring the fleet." },
   itE414: { model: "E.414", type: "Electric locomotive", builder: "TREVI consortium; rebuilt by Trenitalia", fleet: "59", topSpeedMph: mph(200), powerHp: hp(4400), lengthFt: ft(20.25),
     source: `${ITW}Locomotiva_FS_E.414`, about: "The ETR 500's first power cars, rebuilt as locomotives for 200 km/h. Once the Frecciabianca's, they have hauled InterCity trains since 2020–22." },
   itE401: { model: "E.401", type: "Electric locomotive", builder: "Rebuilt by Trenitalia from E.402A", built: "Rebuilt 2015–2019", fleet: "40", topSpeedMph: mph(200), powerHp: hp(6000), lengthFt: ft(18.44),
@@ -882,33 +975,39 @@ export const FACTS = {
     source: `${ITW}Locomotiva_FS_E.402`, about: "A two-cab locomotive; today it hauls mainly the InterCity Notte night trains." },
   itE464: { model: "E.464", type: "Electric locomotive", builder: "Bombardier (ADtranz), Vado Ligure", built: "1999–2014", fleet: "717", topSpeedMph: mph(160), powerHp: hp(3500), lengthFt: ft(15.75),
     source: `${ITW}Locomotiva_FS_E.464`, about: "Italy's most numerous locomotive: one cab, a luggage space at the blind end. It works the Vivalto double-deck push-pull trains and many InterCitys." },
-  itIcCoach: { ...Z1_F, seats: 75, about: "The InterCity coach since the 1980s, open saloons and compartments, rebuilt with new interiors and, from 2024, painted white and light blue." },
-  itIcCab: { ...Z1_F, model: "UIC-Z1 driving coach (Z1a)", type: "Driving coach", seats: 64, about: "Z1 coaches converted since 2017 with a cab at one end, so that an E.401 or E.414 InterCity runs push-pull." },
+  itIcFirst: { ...Z1_F, seats: 54, about: "First class: nine six-seat compartments (54 seats), or an open saloon of 2+1 seats in rebuilt coaches; Trenitalia now sells it as IC Plus. Usually one or two to a train." },
+  itIcCoach: { ...Z1_F, seats: 75, about: "Second class (IC Easy): an open saloon of 75 seats, or 66 in compartments, rebuilt with new interiors and, from 2024, painted white and light blue." },
+  itIcCab: { ...Z1_F, model: "UIC-Z1 driving coach (Z1a)", type: "Driving coach", seats: 64, about: "Second-class Z1 coaches converted since 2017 with a cab at one end, so that an E.401 or E.414 InterCity runs push-pull." },
   itIcnCouchette: { ...Z1_F, model: "Couchette car", type: "Couchette car", fleet: null, about: "InterCity Notte's couchettes, four or six berths to a compartment, on the night trains from the north to Rome, Calabria, Sicily and Apulia. New cars from Škoda and Titagarh Firema are due." },
   itIcnSleeper: { ...Z1_F, model: "Sleeping car (MU)", type: "Sleeping car", fleet: null, about: "Sleeping cars with one to three beds to a compartment; the trains to Sicily cross the Strait of Messina on a ferry." },
-  itMasCab: { ...MAS_F, fleet: "109 Blues; 11 HTR 412 for InterCity", seats: 219, lengthFt: ft(66.88), about: "Hitachi's regional unit runs under the wires, on its diesels or on its batteries. The Blues runs in Tuscany, Sicily, Calabria, Sardinia, Friuli Venezia Giulia and elsewhere." },
-  "itMasCab@trenitaliaic": { ...MAS_F, model: "Hitachi Masaccio (HTR 412), InterCity", fleet: "11 (7 tri-mode, 4 electric)", seats: 200, lengthFt: ft(86.1),
+  itMasCab: { ...MAS_F, fleet: "109 Blues; 11 HTR 412 for InterCity", seats: 219, lengthFt: ft(66.88), about: "Hitachi's regional unit runs under the wires, on its diesels or on its batteries. The Blues runs in Tuscany, Sicily, Calabria, Sardinia, Friuli Venezia Giulia and elsewhere, second class only." },
+  itHtrPlus: { ...MAS_F, model: "Hitachi Masaccio (HTR 412), InterCity", fleet: "11 (7 tri-mode, 4 electric)", lengthFt: ft(86.1), source: "https://siviaggia.it/notizie/trenitalia-intercity-novita-2025/486754/",
+    about: "Four articulated cars in InterCity paint, on Taranto–Reggio Calabria, Bari–Naples and Bari–Rome, with IC Plus (first class) and IC Easy seats: 52 Plus and 74 Easy reported. Plus is drawn in the leading car." },
+  "itMasCab@trenitaliaic": { ...MAS_F, model: "Hitachi Masaccio (HTR 412), InterCity", fleet: "11 (7 tri-mode, 4 electric)", lengthFt: ft(86.1),
     about: "Four articulated cars in InterCity paint, on Taranto–Reggio Calabria, Bari–Naples and Bari–Rome." },
   itMasMid: { ...MAS_F, about: "The cars share Jakobs trucks; the diesel generator sets and the batteries hang under the floor." },
-  itRockCab: { ...ROCK_F, about: "Hitachi's double-deck regional train in four-, five- and six-car versions. Since 2024 Trenitalia drops the Rock name for Regionale and repaints its trains in two greens." },
+  itRockCab: { ...ROCK_F, about: "Hitachi's double-deck regional train in four-, five- and six-car versions, second class only. Since 2024 Trenitalia drops the Rock name for Regionale and repaints its trains in two greens." },
   itRockMid: { ...ROCK_F, about: "Each car rides on its own trucks, with the stairs over them; the electrical gear is on the roof." },
   "itRockCab@tper": { ...ROCK_F, fleet: "43 with Tper", about: "Tper's Rocks run Emilia-Romagna's busiest regional trains." },
-  itPopCab: { ...POP_F, about: "Alstom's single-deck regional train, in three-car (ETR 103) and four-car (ETR 104) versions, for the lighter regional lines." },
+  itPopCab: { ...POP_F, about: "Alstom's single-deck regional train, in three-car (ETR 103) and four-car (ETR 104) versions, second class only (Trenord's ETR 204s have a small first-class area)." },
   itPopMid: { ...POP_F, about: "A Pop's intermediate car; the four-car units seat about 300." },
   "itPopCab@tper": { ...POP_F, fleet: "47 with Tper", about: "Tper runs Pops on Emilia-Romagna's regional lines." },
-  itJazzCab: { ...JAZZ_F, about: "Alstom's low-floor articulated train, the regional mainstay before the Rock and Pop, in the grey DPR scheme." },
+  itJazzCab: { ...JAZZ_F, about: "Alstom's low-floor articulated train, the regional mainstay before the Rock and Pop, one class throughout." },
   itJazzMid: { ...JAZZ_F, about: "The sections share Jakobs trucks; a low floor runs through the whole train." },
-  itLxCab: { ...JAZZ_F, model: "Leonardo Express (Jazz, ETR 425)", about: "The non-stop train between Roma Termini and Fiumicino airport, run with Jazz units in their own white, green and red." },
+  itLxCab: { ...JAZZ_F, model: "Leonardo Express (Jazz, ETR 425)", seats: 253, about: "The non-stop train between Roma Termini and Fiumicino airport, run with Jazz units in their own white, green and red: one class, 253 seats in the airport version. It began with first-class-only coaches behind an E.464." },
   itLxMid: { ...JAZZ_F, model: "Leonardo Express (Jazz, ETR 425)", about: "The Leonardo Express has one class, with luggage space in each section." },
-  itVivalto: { ...VIV_F, seats: 126, about: "The double-deck regional coach, hauled by an E.464 with a driving car at the other end and three to six coaches between." },
+  itVivalto: { ...VIV_F, seats: 126, about: "The double-deck regional coach, hauled by an E.464 with a driving car at the other end and three to six coaches between; second class, 126 seats." },
+  itVivaltoMixed: { ...VIV_F, about: "Since 2016 some Vivaltos have first class on the upper deck and second downstairs; the first series had all-first coaches of 90 seats, three across." },
   itVivaltoCab: { ...VIV_F, seats: 92, about: "The Vivalto driving car's cab copies the E.464's nose, so the train looks alike at both ends." },
-  itMinElCab: { ...MIN_F, model: "Minuetto (ALe 501/502, electric)", fleet: "About 100", topSpeedMph: mph(160), powerHp: hp(1250), about: "Giugiaro's three-section regional train, in electric and diesel versions, on lighter lines across Italy." },
+  itMinElFirst: { ...MIN_F, model: "Minuetto (ALe 501, electric)", fleet: "About 100", topSpeedMph: mph(160), powerHp: hp(1250), about: "Giugiaro's three-section regional train. Its 24 first-class seats are in this end section, the 501; the train has 122 second-class seats." },
+  itMinElCab: { ...MIN_F, model: "Minuetto (ALe 502, electric)", fleet: "About 100", topSpeedMph: mph(160), powerHp: hp(1250), about: "The other end section, the 502, second class." },
   itMinElMid: { ...MIN_F, model: "Minuetto (ALe 501/502, electric)", about: "The middle section carries the pantograph." },
-  itMinDCab: { ...MIN_F, model: "Minuetto (ALn 501/502, diesel)", fleet: "About 104", topSpeedMph: mph(130), powerHp: hp(1120), about: "The diesel Minuetto, an engine under each end section, runs much of Sardinia's and Sicily's network." },
+  itMinDFirst: { ...MIN_F, model: "Minuetto (ALn 501, diesel)", fleet: "About 104", topSpeedMph: mph(130), powerHp: hp(1120), about: "The diesel Minuetto runs much of Sardinia's and Sicily's network. Its 24 first-class seats are in this end section, the 501." },
+  itMinDCab: { ...MIN_F, model: "Minuetto (ALn 502, diesel)", fleet: "About 104", topSpeedMph: mph(130), powerHp: hp(1120), about: "The other end section, the 502, second class; an engine under each end section." },
   itMinDMid: { ...MIN_F, model: "Minuetto (ALn 501/502, diesel)", about: "The three sections share their trucks at the joints." },
-  itTafCab: { ...TAF_F, about: "The 'high-capacity train' built for the Rome and Milan suburban lines, double-deck between the trucks. It still runs Rome's FL lines." },
+  itTafCab: { ...TAF_F, about: "The 'high-capacity train' built for the Rome and Milan suburban lines, double-deck between the trucks, second class only; it runs around Naples and Turin (and with Trenord in Milan)." },
   itTafMid: { ...TAF_F, about: "A TAF's middle cars (Le 736) are unpowered; the motor cars are at the ends." },
-  itSwingCab: { ...SWING_F, about: "A Polish diesel unit for the regional lines without wires in Tuscany, Abruzzo, Calabria, the Marche and Veneto." },
+  itSwingCab: { ...SWING_F, about: "A Polish diesel unit for the regional lines without wires in Tuscany, Abruzzo, Calabria, the Marche and Veneto; 155 seats, second class." },
   itSwingMid: { ...SWING_F, about: "The Swing's middle section; an engine sits under each end section." },
   itFlirt350Cab: { ...FLIRT_F, about: "Tper's FLIRTs run Bologna's suburban lines to Portomaggiore and Vignola." },
   itFlirt350Mid: { ...FLIRT_F, about: "Five sections on shared trucks, with 269 seats and 77 tip-up seats." },
