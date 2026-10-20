@@ -692,7 +692,9 @@ export const TYPICAL = {
     const r = t.route || "";
     if (reported === "ptvN") return NSET;
     if (reported === "ptvSprinter") return set("Sprinter diesel railcars, usually two", ["ptvSprinter", 2]);
-    if (r === "Swan Hill line") return { ...NSET, label: "N class locomotive with an N set (some trains a VLocity)" };
+    // Swan Hill's trains are N sets unless the feed says a VLocity leads.
+    const vlo = reported === "ptvVlocity" || reported === "ptvVlocityMid";
+    if (r === "Swan Hill line") return vlo ? vlocity(1, "VLocity three-car set (most Swan Hill trains are N sets)") : { ...NSET, label: "N class locomotive with an N set (some trains a VLocity)" };
     if (r === "Albury line") return vlocity(2, "Standard-gauge VLocity three-car sets, one or two coupled");
     if (/^(Maryborough|Echuca|Ararat) line$/.test(r)) return vlocity(1, "VLocity three-car set (sometimes two)");
     return vlocity(2, "VLocity three-car sets, usually two coupled (one or three at some times)");
