@@ -175,7 +175,8 @@ def compact(positions, departures, names):
         t = {"n": n, "pos": pos, "heading": p.get("Bearing"), "speed": p.get("Speed"), "ts": seconds(p.get("TimeStamp"))}
         d = latest.get(n)
         if d:
-            to = (d.get("ToLocation") or [{}])[-1].get("LocationName")
+            # The destination: the last of its "to" stations, by their order.
+            to = max(d.get("ToLocation") or [{}], key=lambda x: x.get("Order") or 0).get("LocationName")
             actual, planned = seconds(d.get("TimeAtLocation")), seconds(d.get("AdvertisedTimeAtLocation"))
             t.update(product=first(d.get("ProductInformation"), "Description"), owner=d.get("InformationOwner"),
                      operator=d.get("Operator"), to=names.get(to, to), last=names.get(d.get("LocationSignature"), d.get("LocationSignature")),
