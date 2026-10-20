@@ -530,6 +530,63 @@ const dm12 = (c) => bothEnds(c, (h) => bilevel(h, {
     lamp(1.05, 6.3, 0.45, 0.45) + lamp(1.0, 5.55, 0.35, 0.3, RED_LAMP) + lamp(4.0, 12.15, 0.55, 0.25) + horns(5.8, 12.6) + emuFront(1.2, 3.9, { coupler: 3.0 }),
 }));
 
+// --- Stadler Dr19 (Stadler Valencia, 2022-2026, 60 ordered, 2831-2890; in
+// service since May 2023): a Bo'Bo' diesel-electric hood unit, 18.0 m over
+// the buffers, 4.9 m to the top of the cab's roof gear, 88 t, two
+// Caterpillar C32 engines of 950 kW, 120 km/h (fi.wikipedia "Dr19"). Built
+// mainly for freight, it hauls the night train between Tornio and Kolari,
+// where the line has no wires (a photograph of PYO 276 at Tornio-Itäinen,
+// July 2026). From photographs at Vuosaari, Tampere and Kolari: a long hood
+// of hinged doors over one truck, the cab standing tall behind it, a short
+// hood beyond with the radiator's X-braced screen at its end; a deep gray
+// frame on the trucks, walkways round the hoods behind silver railings,
+// steps at the four corners and a yellow and black chevroned buffer beam.
+// VR's paint: the bright green all over the hoods and cab, VR big in white
+// on the cab side over the number, the frame and trucks dark gray.
+const DR19 = { deck: 5.7, frame: 3.1, hood: 12.6, cab: 14.4, green: "#3dbb3a" };
+const dr19 = (c) => {
+  const L = c.L, { deck, frame, hood, cab, green } = DR19;
+  const cabA = 32.0, cabB = 40.4;
+  let s = "";
+  // Trucks and the frame with its walkways and buffer beams.
+  for (const x of [13.6, L - 13.6]) s += truck(x, { wb: 8.5, d: 39, kind: "loco", top: frame });
+  s += rect(0.9, frame, L - 1.8, deck - frame, "#59606a", 0.5, 'rx="0.15"') + line(1.2, deck - 0.15, L - 1.2, deck - 0.15, "rgba(255,255,255,0.25)", 0.5);
+  s += boxes(20.5, 37.5, frame, 3, 1.2, "#4a5057") + rect(22, frame - 1.6, 12, 1.2, "#3a3f45", 0.4, 'rx="0.4"');   // fuel tank and battery boxes
+  for (const [x, k] of [[0, 1], [L, -1]]) {
+    // The buffer beam in chevrons, buffers and the screw coupling.
+    const bx = k > 0 ? x + 0.9 : x - 2.3;
+    s += rect(bx, frame - 0.4, 1.4, 2.0, "#2a2d31") + [0, 1, 2].map((j) => path(poly([[bx + 0.1, frame - 0.3 + j * 0.65], [bx + 0.6, frame - 0.3 + j * 0.65], [bx + 1.3, frame + 0.3 + j * 0.65], [bx + 0.8, frame + 0.3 + j * 0.65]]), "#f2c200")).join("");
+    s += buffers(x, -k, { y: 3.5, reach: 1.2 });
+    // Steps down from the deck at the corner.
+    s += lines([[x + k * 2.6, deck, x + k * 2.6, 1.6], [x + k * 4.4, deck, x + k * 4.4, 1.6]], "#9aa1a9", 0.8) + lines([2.2, 3.3, 4.4].map((y) => [x + k * 2.6, y, x + k * 4.4, y]), "#9aa1a9", 0.8);
+  }
+  // Long hood: hinged doors in pairs, their handles; louvers near the cab.
+  s += path(`M3.6 ${deck}L3.6 ${hood - 0.4}Q3.6 ${hood} 4.1 ${hood}L${cabA} ${hood}L${cabA} ${deck}Z`, green, 0.5);
+  const doorsAt = seq(4.4, 3.45, 8);
+  s += lines(doorsAt.map((x) => [x, deck + 0.4, x, hood - 0.5]), "rgba(0,0,0,0.28)", 0.5) + doorsAt.map((x) => rect(x + 2.6, deck + 3.0, 0.18, 0.7, "#2a2d31")).join("");
+  s += slats(cabA - 6.0, deck + 1.0, 5.2, hood - deck - 2.0, 0.4, "rgba(0,0,0,0.3)");
+  s += rect(3.6, hood - 0.25, cabA - 3.6, 0.25, "#8d949c") + lamp(4.2, deck + 1.2, 0.45, 0.45);
+  // The cab: tall, its side windows and door, the windshield ahead and
+  // behind (seen edge-on as dark frames), a gray roof with the air
+  // conditioning and horns.
+  s += rect(cabA, deck, cabB - cabA, cab - deck, green, 0.5) + rect(cabA - 0.3, cab, cabB - cabA + 0.6, 0.35, "#8d949c", 0.4);
+  s += rect(cabA + 0.5, cab - 3.3, 2.6, 2.4, C.glass, 0, `stroke="${C.gasket}" stroke-width="0.6"`) + rect(cabA + 4.2, cab - 3.3, 3.3, 2.4, C.glass, 0, `stroke="${C.gasket}" stroke-width="0.6"`);
+  s += rect(cabA - 0.2, cab - 3.4, 0.3, 2.6, "#1d2024") + rect(cabB - 0.1, cab - 3.4, 0.3, 2.6, "#1d2024");
+  s += rect(cabA + 3.8, cab - 2.6, 0.5, 1.0, "#c9ced3", 0.3);                                                    // mirror
+  s += hvac(cabA + 1.0, cab + 0.35, 4.6, 0.8, "#9aa1a9") + horns(cabB - 2.4, cab + 0.35) + rect(cabA + 6.0, cab + 0.35, 0.3, 0.9, "currentColor");
+  s += vrMark(c, cabA + 4.4, deck + 3.6, 2.1, "#ffffff");
+  // Short hood: the radiator's X-braced screen at the end, a headlight.
+  s += path(`M${cabB} ${deck}L${cabB} ${hood - 0.6}L${L - 4.1} ${hood - 0.6}Q${L - 3.6} ${hood - 0.6} ${L - 3.6} ${hood - 1.1}L${L - 3.6} ${deck}Z`, green, 0.5);
+  s += lines(seq(cabB + 1.4, 1.25, 5).map((x) => [x, deck + 0.8, x, hood - 1.3]), "rgba(0,0,0,0.3)", 0.5);
+  const gx = L - 10.2;
+  s += rect(gx, deck + 0.7, 6.0, hood - deck - 2.0, "#2b6b28", 0.4) + lines([[gx, deck + 0.7, gx + 6.0, hood - 1.3], [gx + 6.0, deck + 0.7, gx, hood - 1.3]], "#7fd36f", 0.7);
+  s += lamp(L - 4.6, deck + 1.2, 0.45, 0.45);
+  // Railings along the walkways.
+  const rail = (a, b) => lines([[a, deck + 3.1, b, deck + 3.1], [a, deck + 1.6, b, deck + 1.6], ...seq(a, (b - a) / Math.max(1, Math.round((b - a) / 3.4)), Math.round((b - a) / 3.4) + 1).map((x) => [x, deck, x, deck + 3.1])], "#b9bfc6", 0.7);
+  s += rail(1.4, 3.4) + rail(L - 3.4, L - 1.4) + rail(8.0, cabA - 0.6);
+  return s;
+};
+
 // --- Stadler FLIRT, Sm5 (81 four-car units, 2008-17, owned by the capital
 // region's Pääkaupunkiseudun Junakalusto): 75.2 m, two cab sections and
 // two intermediate ones on shared bogies. HSL's scheme: white, a purple
@@ -566,6 +623,7 @@ export const TYPES = {
   vrSm4: { name: "Sm4 electric car", kind: "emu", pan: true },
   vrSm2: { name: "Sm2 electric car", kind: "emu", pan: true },
   vrDm12: { name: "Dm12 diesel railcar", kind: "emu" },
+  vrDr19: { name: "Dr19 diesel locomotive", kind: "diesel" },
   hslSm5Cab: { name: "Sm5 (Stadler FLIRT) cab section", kind: "emu", pan: true },
   hslSm5Mid: { name: "Sm5 (Stadler FLIRT) intermediate section", kind: "emu", pan: true },
 };
@@ -585,6 +643,7 @@ export const MODELS = {
   vrSm4: M(sm4, 86.8),
   vrSm2: M(sm2, 87.3),
   vrDm12: M(dm12, 82.7),
+  vrDr19: M(dr19, 59.06),
   hslSm5Cab: M(sm5Cab, 70.5, true),
   hslSm5Mid: M(sm5Mid, 51.5),
 };
@@ -598,7 +657,7 @@ export const MODELS = {
 const SM4_SM2 = [[6301, 6330, "vrSm4"], [6401, 6430, "vrSm4"], [6051, 6100, "vrSm2"], [6251, 6300, "vrSm2"]];
 export const FLEETS = {
   vr: [[3001, 3112, "vrSr1"], [3201, 3246, "vrSr2"], [3301, 3380, "vrSr3"], [7101, 7118, "vrSm3Cab"], [7201, 7218, "vrSm3Mid"], [7301, 7318, "vrSm3Mid"],
-    [7401, 7418, "vrSm3Mid"], [7501, 7518, "vrSm3Mid"], [7601, 7618, "vrSm3Cab"], [4401, 4416, "vrDm12"], ...SM4_SM2,
+    [7401, 7418, "vrSm3Mid"], [7501, 7518, "vrSm3Mid"], [7601, 7618, "vrSm3Cab"], [4401, 4416, "vrDm12"], [2831, 2890, "vrDr19"], ...SM4_SM2,
     [0, 0, "vrEdCab"]],
   hsl: [[1, 81, "hslSm5Cab"], ...SM4_SM2],
 };
@@ -621,11 +680,29 @@ const SM6_SET = set("Seven-car Sm6 Pendolino Plus", ["vrSm6Cab", 1], ["vrSm6Mid"
 const IC_SET = (loco) => set(`${{ vrSr1: "Sr1", vrSr2: "Sr2", vrSr3: "Sr3" }[loco]} locomotive with double-deck InterCity coaches${loco === "vrSr3" ? " (some trains an Sr1 or Sr2)" : ""}`, [loco, 1], ["vrEd", 6]);
 const IC_PUSH = set("Sr3 locomotive with double-deck coaches and a driving trailer", ["vrSr3", 1], ["vrEd", 4], ["vrEdCab", 1]);
 const NIGHT = set("Sr2 or Sr1 locomotive with double-deck sleeping cars and coaches (north of Tornio to Kolari a Dr19 diesel)", ["vrSr2", 1], ["vrSleeper", 4], ["vrEd", 2]);
+// The Kolari night train between Tornio-Itäinen and Kolari, where the line
+// has no wires: a Dr19 at its head (fi.wikipedia "Dr19": PYO 276 arriving
+// at Tornio-Itäinen behind one, July 2026). A train with its stops is drawn
+// with the Dr19 while it runs north of Tornio.
+const KOLARI_LINE = /^(Ylitornio|Pello|Kolari)$/;
+const NIGHT_SOUTH = set("Sr2 or Sr1 locomotive with double-deck sleeping cars and coaches", ["vrSr2", 1], ["vrSleeper", 4], ["vrEd", 2]);
+const NIGHT_DR19 = set("Dr19 diesel locomotive (Tornio–Kolari, where the line has no wires) with double-deck sleeping cars and coaches", ["vrDr19", 1], ["vrSleeper", 4], ["vrEd", 2]);
+function northOfTornio(t) {
+  const stops = t.stops || [], i = stops.findIndex((s) => s.status === "next");
+  if (i < 0) return false;
+  const tornio = stops.findIndex((s) => s.name === "Tornio-Itäinen");
+  if (tornio < 0) return false;
+  // Northbound: past Tornio; southbound: Tornio still ahead or the next stop.
+  return KOLARI_LINE.test(stops[stops.length - 1].name || "") ? i > tornio : i <= tornio;
+}
 const SM4_SET = set("Two two-car Sm4 units", ["vrSm4", 4]);
 const SM2_SET = set("Two-car Sm2 units, often two together", ["vrSm2", 4]);
 const SM5_SET = set("Four-section Sm5 FLIRT", ["hslSm5Cab", 1], ["hslSm5Mid", 2], ["hslSm5Cab", 1]);
 const DM12_SET = set("Dm12 diesel railcar", ["vrDm12", 1]);
-const DM12_ENDS = /Nurmes|Savonlinna|Parikkala|Keuruu|Haapamäki|Seinäjoki|Jyväskylä/;
+// Joensuu-Pieksämäki is a railcar's run too (VR's own page for train 729
+// says "Railcar"), and so is Iisalmi-Ylivieska, among the railbus lines in
+// Traficom's 2024 report on them, though both are under wires.
+const DM12_ENDS = /Nurmes|Savonlinna|Parikkala|Keuruu|Haapamäki|Seinäjoki|Jyväskylä|Pieksämäki|Iisalmi|Ylivieska/;
 const BY_TYPE = { vrSr1: IC_SET("vrSr1"), vrSm6Cab: SM6_SET, vrSm6Mid: SM6_SET, vrSr2: IC_SET("vrSr2"), vrSr3: IC_SET("vrSr3"), vrSm3Cab: SM3_SET, vrSm3Mid: SM3_SET, vrEd: IC_SET("vrSr3"), vrEdCab: IC_PUSH,
   vrSleeper: NIGHT, vrSm4: SM4_SET, vrSm2: SM2_SET, vrDm12: DM12_SET, hslSm5Cab: SM5_SET, hslSm5Mid: SM5_SET };
 export const TYPICAL = {
@@ -634,7 +711,7 @@ export const TYPICAL = {
     switch (t.route) {
       case "Pendolino": return /Turku|Oulu/.test(`${t.origin || ""} ${t.destination || ""}`) ? SM3_OR_SM6 : SM3_SET;
       case "InterCity": return IC_SET("vrSr3");
-      case "Night train": return NIGHT;
+      case "Night train": return northOfTornio(t) ? NIGHT_DR19 : /Kolari/.test(`${t.origin || ""} ${t.destination || ""}`) ? NIGHT : NIGHT_SOUTH;
       case "Regional": return DM12_ENDS.test(`${t.origin || ""} ${t.destination || ""}`) && !/Helsinki/.test(`${t.origin || ""} ${t.destination || ""}`) ? DM12_SET : SM4_SET;
       default: return IC_SET("vrSr2");
     }
@@ -694,6 +771,10 @@ export const FACTS = {
     topSpeedMph: 74.6, powerHp: 807, lengthFt: 82.7,
     about: "A single-car diesel railcar with a cab at each end, built in the Czech Republic for VR's lines without overhead wires, such as Joensuu–Nurmes and Parikkala–Savonlinna.",
     source: WIKI + "VR_Class_Dm12" },
+  vrDr19: { model: "Stadler Dr19", type: "Diesel-electric locomotive", builder: "Stadler Rail Valencia", built: "2022–2026", fleet: "60 ordered, 2831–2890",
+    topSpeedMph: 74.6, powerHp: 2548, lengthFt: 59.1,
+    about: "VR's new diesel, two Caterpillar engines in one hood unit, bought mainly for freight to replace the Dr14 and Dr16. It also hauls the night train between Tornio and Kolari, where the line has no wires.",
+    source: "https://fi.wikipedia.org/wiki/Dr19" },
   hslSm5Cab: { model: "Stadler FLIRT (Sm5)", type: "Electric multiple unit", builder: "Stadler Rail", built: "2008–2017",
     fleet: "81 four-car units", topSpeedMph: 99.4, powerHp: 2682, lengthFt: 246.7,
     about: "The capital region's commuter trains, owned by Pääkaupunkiseudun Junakalusto, leased to HSL and run by VR. They serve every HSL line, including the Ring Rail Line to the airport, and wear HSL's purple.",

@@ -83,6 +83,9 @@ export const TYPICAL = {
     if (/^elronEmu/.test(reported || "")) return EMU;
     if (/^elronDmu/.test(reported || "")) return DMU3;
     if (ELECTRIC.test(r)) return EMU;
+    // Tallinn-Tartu-Rīga (since 12 January 2026): a two-car diesel FLIRT,
+    // one of the three ERA cleared for Latvia's lines (vivi.lv and ERR).
+    if (/Rīga/.test(r)) return set("Two-car Stadler FLIRT diesel unit (one of the three cleared for Latvia)", ["elronDmuCab", 2]);
     return /^Tartu–/.test(r) ? DMU2 : DMU3;
   },
 };

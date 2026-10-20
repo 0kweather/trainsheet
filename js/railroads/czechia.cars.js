@@ -32,6 +32,16 @@ export const ARRIVA = { aqua: "#45b5e5", deep: "#1f6f99", white: "#f4f6f7", skir
 export const GW = { orange: "#f07d1d", green: "#1f8443", dark: "#165f31" };
 export const ZS = { red: "#d7212b", dark: "#1d1e20", white: "#f3f4f5", gray: "#9aa1a9" };
 export const HT = { blue: "#0a5aa8", red: "#d71920", violet: "#3b2c85", lilac: "#9184d3", sky: "#56aee2", yellow: "#f5c400", cream: "#f1efe9", white: "#f2f3f4" };
+// The railroads whose trains cross into Czechia and Slovakia (drawn under
+// "Other railroads' trains" below): ÖBB's traffic red, its railjets' deeper
+// red over slate gray, the Nightjets' night blue with a red line; MÁV's
+// blue and turquoise; Raaberbahn's (GySEV's) yellow and green; PKP
+// Intercity's navy over light gray; Die Länderbahn's alex blue and silver.
+export const OBB = { red: "#e1251b", rj: "#a8202a", slate: "#3a3c40", nj: "#28327a", njLine: "#e5392f" };
+export const MAV = { blue: "#1d5fc4", deep: "#163f8c", sky: "#22b3c9", white: "#f1f3f5" };
+export const GYSEV = { yellow: "#f4c20d", green: "#3a9a35", dark: "#1f5e2a" };
+export const PKP = { navy: "#1f2e78", gray: "#d9dde1", orange: "#e8501e", red: "#d7161e" };
+export const DLB = { blue: "#1f6fb6", silver: "#e6e9ec", yellow: "#f2ab00", gray: "#9aa3ab" };
 
 // The plain fallback (kept for other files' use): a body color, a roof band,
 // a lower band with a line on top, a dark skirt.
@@ -219,7 +229,7 @@ export function euroCoach(c, o = {}) {
   const dx = c.cabL && o.cab ? 9.0 : 2.0;
   return coachCar(c, {
     roof, sill, end: 0.6, endR: 1.2, base: p.base, badge: false, under: true,
-    trucks: { centers: 62.3, wb: 8.2, d: 36 }, diaphragm: [4.25, 11.8], rows,
+    trucks: { centers: o.centers ?? 62.3, wb: 8.2, d: 36 }, diaphragm: [4.25, 11.8], rows,
     doors: [{ x: dx, w: 2.6, h: 7.0, glassY: 0.55, glassH: 0.3 }, { x: L - 4.6, w: 2.6, h: 7.0, glassY: 0.55, glassH: 0.3 }],
     livery: (cc) => p.side(cc, L) + [dx, L - 4.6].map((x) => rect(x, sill + 0.15, 2.6, 7.0, p.door)).join("") + (cc.cabL && o.cab && p.cabEnd ? p.cabEnd(cc, L) : ""),
     extra: (cc) => {
@@ -247,6 +257,8 @@ function coachPaint(c) {
       rect(5.4, 7.05, L - 10.8, 3.3, "#1b1e23", 0, 'rx="0.4"'),
     cabEnd: (cc, L) => path("M0 4.35L3.2 4.35Q5.0 6.6 5.6 13.3L0 13.3Z", "#2763c4"),
     over: (cc, L) => cdLogo(cc, L * 0.62, 5.5, 0.95, "#2763c4") };
+  // Other railroads' cars on the international trains (FOREIGN_PAINT below).
+  if (FOREIGN_PAINT[c.livery]) return FOREIGN_PAINT[c.livery](c);
   switch (c.agency) {
     case "czregiojet": case "regiojetsk":
       return { base: RJ.yellow, door: RJ.yellow,
@@ -330,6 +342,13 @@ export const loco109E = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_1
 // behind each cab, its name mid-side.
 const NOSE_VECTRON = [[1.4, 4.1], [1.4, 7.3], ["q", 1.45, 8.3, 2.1, 9.0], [3.0, 12.3], ["q", 3.3, 12.9, 4.3, 12.9]];
 function vectronPaint(c, L) {
+  // MÁV's leased multi-system Vectrons (193, photographs at Miskolc-Tiszai
+  // and Budapest-Déli, 2024-25): bright blue, black along the bottom, a
+  // pale blue-gray panel through the middle of the side carrying MÁV big,
+  // three light blue bars across the nose under the windshield.
+  if (c.livery === "mav") return bands(L, [[0, 20, MAV.blue], [11.8, 3, "#3c4652"], [0, 5.0, "#1c1d20"], [5.0, 0.16, "#7fb2ea"]]) +
+    path(`M14.2 6.2L${L - 14.2} 6.2L${L - 17.2} 11.0L17.2 11.0Z`, "#b9c7d6") +
+    [6.0, 6.7, 7.4].map((y) => path(`M0 ${y}L2.0 ${y}L2.2 ${y + 0.35}L0 ${y + 0.35}Z`, "#8cc3f2") + path(`M${L} ${y}L${L - 2.0} ${y}L${L - 2.2} ${y + 0.35}L${L} ${y + 0.35}Z`, "#8cc3f2")).join("");
   // ČD's (its own 383s and 384s and the leased 193s, photographs at Praha
   // hl.n.): ČD blue, navy over the top and the cab's upper half, a white
   // band along the upper side whose ends slant down behind the cabs, the
@@ -344,6 +363,7 @@ function vectronPaint(c, L) {
   return bands(L, [[0, 20, RJ.yellow], [11.8, 3, RJ.gray], [0, 5.3, RJ.black], [5.3, 0.16, "#f4f4f2"]]) + path("M0 5.3L0 9.0L2.2 9.0L3.4 5.3Z", RJ.black);
 }
 function vectronOver(c, L) {
+  if (c.livery === "mav") return letters(c, L / 2, 8.6, 2.6, "MÁV", MAV.blue, { weight: 800, spacing: "0.02em" }) + letters(c, L / 2 + 9, 4.4, 0.55, "193", "#ffffff", { weight: 600 });
   if (c.agency === "zssk") {
     let s = zsLogo(c, 15.2, 8.3, 2.0, "#ffffff");
     // The folk-pattern panel: white, a lattice of red diamonds.
@@ -358,7 +378,7 @@ function vectronOver(c, L) {
   return letters(c, L / 2, 8.95, 1.55, "RegioJet", RJ.black, { weight: 800 }) + letters(c, L / 2, 4.7, 0.55, "193", "#f4f4f2", { weight: 600 });
 }
 export const vectron = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_VECTRON, rake: [[2.1, 9.0], [3.0, 12.3]], centers: 32.5, door: 5.6,
-  paint: vectronPaint, over: vectronOver, surround: c.agency === "zssk" ? ZS.dark : isLeo(c) ? "#111214" : c.agency === "czcd" ? CD.navy : RJ.black,
+  paint: vectronPaint, over: vectronOver, surround: c.livery === "mav" ? "#16181b" : c.agency === "zssk" ? ZS.dark : isLeo(c) ? "#111214" : c.agency === "czcd" ? CD.navy : RJ.black,
   grilles: [[-19.0, 10.0, 9.4, 11.3], [9.0, 10.0, 9.4, 11.3], [-4.0, 8.0, 9.4, 11.3]], grilleFill: "rgba(20,22,25,0.22)" });
 
 // Bombardier (Alstom) TRAXX 3 MS, RegioJet 388.201-231 (2020-2023, the
@@ -858,6 +878,204 @@ export const leoFlirtMid = (c) => unit(c, { roof: 14.06, sill: 3.0,
   doors: [flirtDoor(18.5)], diaphragm: [3.2, 12.2], paint: leoFlirtPaint(false), pan: c.index === 2 ? c.L / 2 - 4 : null,
   extra: (cc, g) => truck(0, { wb: 8.86, d: 30, top: 3.0 }) + truck(g.L, { wb: 8.86, d: 30, top: 3.0 }) + (cc.index === 2 ? "" : hvac(4, 14.06, 9) + hvac(30, 14.06, 9)) +
     boxes(26, 44, 3.0, 2, 0.6) + (cc.index === 1 ? leoLogo(cc, 11.5, 5.3, 1.1, "#ffffff") : "") });
+// ---------- Other railroads' trains ----------
+// The trains of ÖBB, MÁV, Raaberbahn (GySEV), PKP Intercity and Die
+// Länderbahn that run through Czechia and Slovakia, and the night trains'
+// sleeping cars and couchettes, ČD's and ZSSK's among them. Each key is
+// drawn in its own railroad's paint whichever railroad's train it is in.
+
+// The coach paints (coachPaint uses these by c.livery).
+const kindWord = (c, words) => words[c.kind] || words.coach;
+const FOREIGN_PAINT = {
+  // ÖBB railjet (Siemens Viaggio, 2008-2013, 60 sets; photographs at Wien
+  // Meidling, Villach and the Semmering): a deep carmine red above the
+  // windows, which sit in a black band, slate gray below, a red line low
+  // along the gray; the driving trailer's rounded cab red down to the
+  // coupler; railjet lettered in gray low on the side.
+  railjet: (c) => ({ base: OBB.rj, door: OBB.slate,
+    side: (cc, L) => bands(L, [[12.25, 3, "#8f979f"], [0, 6.75, OBB.slate], [4.65, 0.24, OBB.rj], [0, 4.35, "#25272a"]]) +
+      rect(-1, 6.95, L + 2, 3.6, "#16181b"),
+    cabEnd: (cc, L) => path("M0 4.35L3.2 4.35Q5.0 6.6 5.6 13.3L0 13.3Z", OBB.rj) + path("M3.2 4.35Q5.0 6.6 5.6 13.3L6.4 13.3Q5.6 7.0 4.6 4.35Z", OBB.rj),
+    over: (cc, L) => letters(cc, L * 0.55, 5.55, 1.05, "railjet", "#6f7378", { weight: 700, style: "italic" }) +
+      letters(cc, 6.7, 8.75, 1.4, cc.firstClass ? "1" : "2", "#ffffff", { weight: 600 }) + letters(cc, L - 6.7, 8.75, 1.4, cc.firstClass ? "1" : "2", "#ffffff", { weight: 600 }) }),
+  // ÖBB Nightjet (2016 on; photographs of WLABmz 72-90 and the couchettes
+  // at Bruxelles-Midi and Innsbruck, 2020-2025): night blue all over, a red
+  // line under the windows, the roof gray; ÖBB in red and nightjet in white
+  // italic low on the side, the car's kind (schlafwagen, liegewagen) ahead.
+  nightjet: (c) => ({ base: OBB.nj, door: "#3a4490",
+    side: (cc, L) => bands(L, [[12.25, 3, "#9aa1a9"], [6.75, 0.3, OBB.njLine], [0, 4.35, "#1b1f3d"]]),
+    over: (cc, L) => mark(cc, L / 2, 5.35, txt(-0.4, 0, 0.95, "ÖBB", OBB.njLine, { weight: 800, anchor: "end" }) + txt(0.1, 0, 1.05, "nightjet", "#ffffff", { weight: 700, style: "italic", anchor: "start" })) +
+      letters(cc, L * 0.22, 5.4, 0.7, kindWord(cc, { sleeper: "schlafwagen", couchette: "liegewagen", coach: "sitzwagen" }), "#ffffff", { weight: 500, style: "italic" }) +
+      (cc.kind === "sleeper" ? "" : letters(cc, 6.7, 8.75, 1.4, "2", "#ffffff", { weight: 600 })) }),
+  // ČD's night cars (sleeping cars and couchettes refurbished 2019-2024,
+  // photograph of a Bcmz at Budapest-Nyugati): navy from the roof down
+  // through the windows, a white line under the roof edge, a sky-blue band
+  // under the windows, pale gray below; ČD's mark and the car's kind in
+  // Czech and English on the gray.
+  cdnight: (c) => ({ base: "#dfe3e7", door: CD.navy,
+    side: (cc, L) => bands(L, [[7.0, 6, CD.navy], [12.25, 3, "#98a0a9"], [11.85, 0.22, "#f2f4f6"], [6.0, 1.0, "#3d8fd9"], [0, 4.35, "#2a2d31"]]),
+    over: (cc, L) => cdLogo(cc, L * 0.22, 5.15, 0.95, CD.navy, false) +
+      letters(cc, L * 0.5, 5.1, 0.72, kindWord(cc, { sleeper: "Lůžkový vůz | Sleeping car", couchette: "Lehátkový vůz | Couchette car", coach: "" }), CD.navy, { weight: 600 }) }),
+  // MÁV-START's InterCity and night cars (the 2020s paint, photographs of
+  // Bmz 21-91 at Budapest-Nyugati and Wien Hbf): white below, MÁV blue from
+  // just under the windows to the roof, a turquoise band where they meet,
+  // turquoise doors; MÁV-START's yellow wheel mark and name on the white.
+  mav: (c) => ({ base: MAV.white, door: MAV.sky,
+    side: (cc, L) => bands(L, [[6.7, 6, MAV.blue], [12.25, 3, "#98a0a9"], [6.25, 0.45, MAV.sky], [0, 4.35, "#2a2d31"]]) +
+      path(`M${L * 0.55} 6.7L${L * 0.75} 6.7L${L * 0.7} 10.8L${L * 0.6} 10.8Z`, "#2f77d6", 0, 'opacity="0.55"'),
+    over: (cc, L) => mark(cc, L * 0.3, 5.2, `<circle cx="-1.3" cy="0" r="0.5" fill="none" stroke="#f2b600" stroke-width="0.22"/>` +
+      txt(-0.6, 0, 0.8, "MÁV-START", MAV.deep, { weight: 800, anchor: "start" })) +
+      (cc.kind === "sleeper" ? "" : letters(cc, 6.7, 8.75, 1.4, cc.firstClass ? "1" : "2", "#ffffff", { weight: 600 })) }),
+  // PKP Intercity (photographs of its WLAB sleepers at Praha hl.n. and
+  // Bautzen): navy over the windows and up to the roof, light gray below,
+  // an orange line low; IC and PKP INTERCITY on the gray.
+  pkp: (c) => ({ base: PKP.gray, door: "#c9ced3",
+    side: (cc, L) => bands(L, [[6.95, 6, PKP.navy], [12.25, 3, "#98a0a9"], [5.25, 0.3, PKP.orange], [0, 4.35, "#2a2d31"]]),
+    over: (cc, L) => mark(cc, L * 0.62, 6.1, txt(-0.3, 0, 0.95, "IC", PKP.red, { weight: 800, style: "italic", anchor: "end" }) + txt(0.1, 0, 0.55, "PKP INTERCITY", PKP.navy, { weight: 700, anchor: "start" })) +
+      letters(cc, L * 0.4, 11.5, 0.5, kindWord(cc, { sleeper: "WAGON SYPIALNY", couchette: "KUSZETKA", coach: "" }), "#ffffff", { weight: 600 }) }),
+  // Die Länderbahn's alex coaches (photographs at München Hbf): a slate
+  // roof edge, silver-gray sides, a yellow band under the windows, alex in
+  // blue on the lower side.
+  alex: (c) => ({ base: "#dcdfe2", door: "#5d6670",
+    side: (cc, L) => bands(L, [[12.25, 3, "#5d6670"], [10.75, 1.5, DLB.gray], [6.3, 0.5, DLB.yellow], [0, 4.35, "#2a2d31"]]),
+    over: (cc, L) => letters(cc, L * 0.55, 5.3, 1.3, "alex", DLB.blue, { weight: 800, style: "italic" }) +
+      letters(cc, 6.7, 8.75, 1.4, cc.firstClass ? "1" : "2", DLB.blue, { weight: 600 }) }),
+};
+
+// The cars, on euroCoach's body (26.4 m, unless noted): o.rows its window
+// row, o.centers its trucks apart.
+const coachIn = (livery, kind, o = {}) => (c) => euroCoach({ ...c, agency: o.agency || c.agency, livery, kind, firstClass: o.first ?? false },
+  { rows: o.rows ? o.rows(c.L) : undefined, centers: o.centers });
+// Sleeping cars: a small window to each of the twelve compartments
+// (Siemens's WLABmz of 2003-2005, ÖBB 72-90 and ČD 72-70, 26.4 m; photograph
+// of 72-90 010 at Bruxelles-Midi); the older Görlitz-built WLABmee and PKP's
+// WLAB, 24.5 m on trucks 17.2 m apart, ten bigger ones.
+const SLEEPER_ROWS = (L) => [{ a: 6.4, b: L - 7.6, y: 7.5, w: 3.2, h: 3.0, pitch: 5.95, r: 0.35 }];
+const GORLITZ_ROWS = (L) => [{ a: 5.8, b: L - 5.8, y: 7.6, w: 3.8, h: 2.9, pitch: 6.5, r: 0.35 }];
+// Couchettes: eleven compartments, each with a wide window (Bcmz 59-90 and
+// 59-70, 26.4 m).
+const COUCHETTE_ROWS = (L) => [{ a: 6.2, b: L - 6.2, y: 7.3, w: 4.4, h: 3.0, pitch: 6.6, r: 0.4 }];
+export const njSleeper = coachIn("nightjet", "sleeper", { rows: SLEEPER_ROWS });
+export const njCouchette = coachIn("nightjet", "couchette", { rows: COUCHETTE_ROWS });
+export const njCoach = coachIn("nightjet", "coach");
+// ČD's WLABmz (826) and Bcmz (834) in its night paint; ZSSK's Görlitz
+// WLABmee and its Bcmh couchettes in its white and red (photograph of
+// WLABmee 71-90 005 at Poprad-Tatry); MÁV's sleeping car, couchette and
+// seated cars; PKP Intercity's WLAB sleepers and seated cars (24.5 m).
+export const cdSleeper = coachIn("cdnight", "sleeper", { rows: SLEEPER_ROWS, agency: "czcd" });
+export const cdCouchette = coachIn("cdnight", "couchette", { rows: COUCHETTE_ROWS, agency: "czcd" });
+export const skSleeper = coachIn(null, "sleeper", { rows: GORLITZ_ROWS, centers: 56.4, agency: "zssk" });
+export const skCouchette = coachIn(null, "couchette", { rows: COUCHETTE_ROWS, agency: "zssk" });
+export const huSleeper = coachIn("mav", "sleeper", { rows: SLEEPER_ROWS });
+export const huCouchette = coachIn("mav", "couchette", { rows: COUCHETTE_ROWS });
+export const huCoach = (c) => coachIn("mav", "coach", { first: c.index === 1 })(c);
+export const plSleeper = coachIn("pkp", "sleeper", { rows: GORLITZ_ROWS, centers: 56.4 });
+export const plCoach = coachIn("pkp", "coach", { centers: 56.4, rows: (L) => [{ a: 5.6, b: L - 5.6, y: 7.3, w: 4.4, h: 3.0, pitch: 6.3, r: 0.45 }] });
+export const alexCoach = (c) => coachIn("alex", "coach", { first: c.index % 2 === 1 })(c);
+// A ČD coach and ČD's or ZSSK's Vectron in a train of another railroad.
+export const cdCoach = (c) => euroCoach({ ...c, agency: "czcd" });
+
+// Siemens Taurus (ES64U2, ÖBB 1116, 1999-2006; the three-system ES64U4,
+// 1216, for Italy, Slovenia and the Czech and Slovak lines, 2006-2008):
+// 19.28 m over the buffers (the 1216 19.58 m), Bo'Bo', trucks 9.9 m apart
+// on 1,150 mm wheels; the rounded nose under a deep windshield raked well
+// back, the crew door behind it, smooth sides with the louvers high near
+// the middle (de.wikipedia "Siemens ES64U2", "ÖBB 1216"). The railjet
+// 1116s: the carmine red with a slate band low that swells toward the
+// middle, railjet big in a lighter red; the others traffic red with a dark
+// gray underframe and ÖBB in white.
+const NOSE_TAURUS = [[1.7, 4.1], [1.1, 6.3], ["q", 0.95, 8.5, 2.3, 9.3], [3.9, 12.15], ["q", 4.6, 13.0, 6.4, 13.0]];
+function taurusPaint(c, L) {
+  if (c.livery === "railjet") return bands(L, [[0, 20, OBB.rj], [12.0, 3, "#55595f"], [0, 5.2, OBB.slate]]) +
+    path(`M9.0 5.2Q${L * 0.3} 5.4 ${L / 2} 8.6L${L / 2} 5.2Z`, OBB.slate) + path("M0 5.2L0 7.6L2.0 7.6L3.4 5.2Z", "#1d1e20");
+  return bands(L, [[0, 20, OBB.red], [12.0, 3, "#6d737a"], [0, 5.0, "#3a3d42"], [5.0, 0.14, "#f2f3f4"]]) + path("M0 5.0L0 7.4L2.0 7.4L3.3 5.0Z", "#3a3d42");
+}
+const taurusOver = (c, L) => (c.livery === "railjet"
+  ? letters(c, L / 2 + 1, 8.3, 2.6, "railjet", "#c9414a", { weight: 800, style: "italic", spacing: "-0.02em" }) +
+    mark(c, 14.5, 6.0, txt(-0.2, 0, 0.6, "ÖBB", "#ffffff", { weight: 800, anchor: "end" }) + txt(0.1, 0, 0.6, "railjet", "#ffffff", { weight: 600, anchor: "start" })) +
+    letters(c, L - 14, 11.4, 0.5, "1116", "#ffffff", { weight: 600 })
+  : letters(c, L / 2, 8.6, 2.4, "ÖBB", "#ffffff", { weight: 800 }) + letters(c, L - 14, 11.4, 0.5, c.cls || "1216", "#ffffff", { weight: 600 }));
+export const taurus = (c) => euroLoco(c, { roof: 13.0, sill: 4.1, nose: NOSE_TAURUS, rake: [[2.3, 9.3], [3.9, 12.15]], centers: 32.5, door: 7.2, wheel: 45,
+  paint: taurusPaint, over: taurusOver, surround: "#141518", grilles: [[-13.5, 6.5, 9.8, 11.5], [7.0, 6.5, 9.8, 11.5]], grilleFill: "rgba(20,22,25,0.24)" });
+
+// The railjet's coaches (26.5 m) and its driving trailer (80-90.7, 26.8 m):
+// ČD's bodies (rjCoach, rjCab) in ÖBB's railjet paint. The set: the
+// driving trailer with business and first class, a first-class car, the
+// restaurant car, four second-class cars.
+const RJ_CAB = () => path(poly([[1.0, 8.6], [2.6, 11.6], [5.4, 11.6], [5.4, 8.6]]), C.glass) + path(poly([[0.75, 8.3], [0.75, 11.9], [2.4, 12.2], ["q", 1.0, 11.6, 0.75, 8.3]]), "#111214") +
+  rect(3.2, 11.1, 1.9, 0.3, "#f39a26", 0, 'opacity="0.9"') + line(1.6, 8.8, 2.3, 10.4, "#0d0f12", 0.7);
+export const obbRjCoach = (c) => euroCoach({ ...c, livery: "railjet", firstClass: c.index === 1 || c.index === 2 }, { rows: RJ_ROWS(c.L) });
+export const obbRjCab = (c) => euroCoach({ ...c, livery: "railjet", firstClass: true }, { rows: RJ_ROWS(c.L), cab: RJ_CAB });
+
+// Siemens Desiro ML (ÖBB 4744 and 4746 "cityjet", 2015 on; Raaberbahn's
+// 4744.3 and 4746.3 "Ventus", 2016 and 2021): three cars, 75.15 m over the
+// couplers, 4.26 m tall, the floor 600 mm up, each car on its own two
+// trucks (Bo'Bo'+2'2'+Bo'Bo', the end cars motored, a pantograph on each),
+// trucks 16.24 m apart, 850 mm driving wheels; two double doors a side in
+// each car (the 4746; de.wikipedia "GySEV-Baureihe 4744/4746"); the
+// rounded nose under a tall windshield. cityjet: white, a red-orange
+// band below the windows, which sit in black, a dark gray skirt; the nose
+// white with the red below the lamps. Ventus: yellow over green, the
+// windows in black, yellow at the nose.
+const NOSE_DML = [[1.3, 3.2], [1.0, 5.6], ["q", 1.0, 7.4, 2.3, 8.6], [4.6, 12.9], ["q", 5.6, 13.97, 7.6, 13.97]];
+const dmlPaint = (cab) => (c, g) => {
+  const L = g.L, ventus = c.livery === "ventus";
+  return bands(L, [[0, 20, ventus ? GYSEV.yellow : "#f2f3f4"], [13.0, 3, "#b9bfc6"], [3.6, 2.75, ventus ? GYSEV.green : "#e8402a"], [6.35, 0.16, ventus ? GYSEV.yellow : "#f2f3f4"],
+    [0, 3.6, "#2a2d31"]]) + rect(cab ? 9.6 : -1, 6.55, L + 1 - (cab ? 9.6 : 0), 3.75, "#16181b");
+};
+const dmlName = (c, x) => (c.livery === "ventus" ? letters(c, x, 11.3, 0.9, "ventus", GYSEV.dark, { weight: 800, style: "italic" })
+  : letters(c, x, 11.3, 0.95, "cityjet", "#8a9097", { weight: 700, style: "italic" }) + letters(c, x + 16, 11.3, 0.8, "ÖBB", "#e8402a", { weight: 800 }));
+const dmlDoor = (x) => ({ x, w: 4.3, y0: 3.3, y1: 10.5, leaves: 2, glassY: 0.4, glassH: 0.45 });
+const dmlFill = (c) => (c.livery === "ventus" ? GYSEV.green : "#d8dcdf");
+export const dmlCab = (c) => unit(c, { roof: 13.97, sill: 3.2, nose: NOSE_DML, rake: [[2.3, 8.6], [4.6, 12.9]], depth: 3.0, cabLen: 9, lampY: 5.0,
+  rows: [{ xs: [10.4], y: 6.75, w: 2.8, h: 3.35, r: 0.4 }, { xs: seq(24.6, 5.5, 7), y: 6.75, w: 4.7, h: 3.35, r: 0.4 }, { xs: [c.L - 13.6, c.L - 8.1], y: 6.75, w: 4.7, h: 3.35, r: 0.4 }],
+  doors: [dmlDoor(18.4), dmlDoor(c.L - 21.0)], trucks: [11.5, c.L - 11.5], wheel: 33, paint: dmlPaint(true), doorFill: dmlFill, surround: "#141518",
+  pan: 30, extra: (cc, g) => hvac(g.L - 30, 13.97, 10) + boxes(17, 34, 3.2, 2, 1.1) + boxes(40, g.L - 18, 3.2, 2, 0.9) + dmlName(cc, 44) });
+export const dmlMid = (c) => unit(c, { roof: 13.97, sill: 3.2,
+  rows: [{ xs: [3.2], y: 6.75, w: 4.7, h: 3.35, r: 0.4 }, { xs: seq(23.0, 5.5, 6), y: 6.75, w: 4.7, h: 3.35, r: 0.4 }, { xs: [c.L - 8.0], y: 6.75, w: 4.7, h: 3.35, r: 0.4 }],
+  doors: [dmlDoor(16.4), dmlDoor(c.L - 20.4)], trucks: [12.7, c.L - 12.7], wheel: 30, paint: dmlPaint(false), doorFill: dmlFill,
+  extra: (cc, g) => hvac(4, 13.97, 9) + hvac(g.L - 13, 13.97, 9) + boxes(22, g.L - 22, 3.2, 3, 1.0) + dmlName(cc, 30) });
+
+// GySEV (Raaberbahn) 247 503-509: ÖBB 5047 Jenbacher railcars (1987-1995)
+// bought in 2011; 25.42 m over the buffers, 2'B' (the engine and its
+// hydraulic drive under one end, the powered truck at that end), 840 mm
+// wheels, 120 km/h (de.wikipedia "ÖBB 5047"); a flat front leaning back a
+// little over buffers, a door behind each cab, ten windows between. Still
+// running Bratislava–Rajka–Hegyeshalom (iwk.hu's composition listing, a
+// photograph of 247 503 at Bratislava-Petržalka). GySEV's paint: yellow,
+// a green window band with a thin green line under it, the front yellow
+// round a dark gray windshield frame, a dark skirt.
+const NOSE_247 = [[0.9, 3.9], [0.8, 8.3], [1.15, 11.6], ["q", 1.3, 12.6, 2.4, 12.6]];
+const g247Paint = (c, g) => bands(g.L, [[0, 20, GYSEV.yellow], [11.5, 3, "#a9b0b8"], [6.85, 3.55, GYSEV.green], [6.2, 0.3, GYSEV.green], [0, 3.9, "#2a2d31"]]) +
+  path("M-1 7.9L-1 11.3L3.6 11.3L3.6 7.9Z", "#3a3d42");
+export const gy247 = (c) => twinEnded(c, (h) => unit(h, { roof: 12.6, sill: 3.9, nose: NOSE_247, rake: [[0.85, 8.4], [1.15, 11.4]], depth: 2.2, cabLen: 4, lampY: 5.4,
+  rows: [{ xs: seq(10.6, 6.25, 10), y: 7.1, w: 4.3, h: 3.05, r: 0.35 }], doors: [{ x: 5.0, w: 2.9, y0: 3.4, y1: 10.6, leaves: 2, glassY: 0.5, glassH: 0.35, fill: GYSEV.green }],
+  trucks: [12.7], wheel: 33, paint: g247Paint, coupler: "buffers", diaphragm: [4.2, 11.0], surround: "#2a2d31",
+  extra: (cc, g) => hvac(14, 12.6, 9, 0.55) + rect(4.9, 2.9, 3.1, 0.3, "currentColor") })) +
+  // The one engine: its exhaust on the roof, the engine, gearbox and fuel
+  // tank under the floor at the powered end.
+  exhaust(c.L - 30, 12.6) + boxes(c.L - 36, c.L - 22, 3.9, 1, 1.6) + tank(22, 34, 3.9, 2.0) + boxes(36, c.L - 38, 3.9, 2, 1.0) +
+  mark(c, c.L / 2, 5.3, `<circle cx="-2.6" cy="0" r="0.7" fill="none" stroke="${GYSEV.dark}" stroke-width="0.25"/>` + txt(-1.6, 0, 0.75, "GYSEV", GYSEV.dark, { weight: 800, anchor: "start" })) +
+  letters(c, c.L / 2 + 14, 5.3, 0.5, "247", "#2a2d31", { weight: 600 });
+
+// Siemens ER20 "Herkules" (Die Länderbahn's 223 0xx, 2003-2004): 19.28 m,
+// Bo'Bo' diesel-electric, trucks 10.0 m apart on 1,100 mm wheels; a cab at
+// each end under a steeply raked windshield, the engine room's louvers and
+// doors between, the radiator and exhaust on the roof, the fuel tank
+// between the trucks. It hauls the Prague–Munich trains between Regensburg
+// and Plzeň (zelpage.cz's 2024 compositions for EC 363). Paint
+// (photograph of 223 062): silver-white above, blue below a yellow line,
+// the cab's roof and windshield frame blue.
+const NOSE_ER20 = [[1.3, 4.1], [1.2, 7.6], ["q", 1.3, 8.8, 2.2, 9.5], [3.4, 12.2], ["q", 3.9, 13.0, 5.2, 13.0]];
+const er20Paint = (c, L) => bands(L, [[0, 20, DLB.silver], [12.0, 3, "#5aa2d8"], [0, 7.4, DLB.blue], [7.4, 0.32, DLB.yellow], [0, 4.6, "#22272c"]]) +
+  path("M0 12.0L0 9.4L2.4 9.4L4.6 12.0Z", DLB.blue);
+const er20Roof = (c, L) => exhaust(L / 2 - 2, 13.0) + [L / 2 + 7, L / 2 + 13].map((x) => path(`M${x - 2.4} 12.95Q${x} 13.75 ${x + 2.4} 12.95Z`, C.steelDark, 0.4)).join("") +
+  rect(L / 2 - 12, 12.95, 7, 0.45, C.steelDark, 0.4, 'rx="0.2"') + slats(L / 2 - 11.5, 13.0, 6, 0.35, 0.45, "rgba(0,0,0,0.25)");
+export const er20 = (c) => euroLoco(c, { roof: 13.0, sill: 4.1, nose: NOSE_ER20, rake: [[2.2, 9.5], [3.4, 12.2]], centers: 32.8, door: 5.8, pans: false, wheel: 43,
+  grilles: [[-15.5, 8.0, 7.9, 11.2], [-5.0, 10.0, 7.9, 11.2], [7.5, 8.0, 7.9, 11.2]], grilleFill: "rgba(20,22,25,0.3)", paint: er20Paint, surround: DLB.blue,
+  under: (cc, L) => tank(L / 2 - 9, L / 2 + 9, 4.1, 1.35), roof2: er20Roof,
+  over: (cc, L) => letters(cc, L / 2, 5.6, 1.4, "alex", "#ffffff", { weight: 800, style: "italic" }) + letters(cc, L - 13, 10.4, 0.5, "223", DLB.blue, { weight: 600 }) });
+
 // The built-in FLIRT's colors swapped (kept for other files' use).
 export const repaint = (svg, map) => svg.replace(/#[0-9a-f]{6}\b/gi, (m) => map[m.toLowerCase()] || m);
 
@@ -906,6 +1124,34 @@ export const TYPES = {
   czRegioSprinter: { name: "RegioSprinter railcar", kind: "emu" },
   czEso: { name: "Class 362/363 electric locomotive", kind: "electric", pan: true },
   cz816: { name: "Class 816 railcar (single Regionova)", kind: "emu" },
+  // Other railroads' cars on the international trains.
+  atTaurus: { name: "ÖBB Taurus (1116) electric locomotive, railjet paint", kind: "electric", pan: true },
+  at1216: { name: "ÖBB Taurus (1216) electric locomotive", kind: "electric", pan: true },
+  atRjCoach: { name: "ÖBB railjet coach", kind: "coach", amenities: ["first", "business", "dining"] },
+  atRjCab: { name: "ÖBB railjet driving trailer", kind: "coach", cab: true, amenities: ["first", "business"] },
+  atNjSleeper: { name: "ÖBB Nightjet sleeping car", kind: "coach", amenities: ["sleepers"] },
+  atNjCouchette: { name: "ÖBB Nightjet couchette car", kind: "coach", amenities: ["sleepers"] },
+  atNjCoach: { name: "ÖBB Nightjet seated coach", kind: "coach" },
+  atDesiroCab: { name: "ÖBB cityjet (Desiro ML) end car", kind: "emu", pan: true },
+  atDesiroMid: { name: "ÖBB cityjet (Desiro ML) middle car", kind: "emu" },
+  gyDesiroCab: { name: "Raaberbahn Ventus (Desiro ML) end car", kind: "emu", pan: true },
+  gyDesiroMid: { name: "Raaberbahn Ventus (Desiro ML) middle car", kind: "emu" },
+  gy247: { name: "GySEV class 247 diesel railcar", kind: "emu" },
+  huVectron: { name: "MÁV Vectron electric locomotive", kind: "electric", pan: true },
+  huCoach: { name: "MÁV-START coach", kind: "coach" },
+  huSleeper: { name: "MÁV sleeping car", kind: "coach", amenities: ["sleepers"] },
+  huCouchette: { name: "MÁV couchette car", kind: "coach", amenities: ["sleepers"] },
+  plSleeper: { name: "PKP Intercity sleeping car", kind: "coach", amenities: ["sleepers"] },
+  plCoach: { name: "PKP Intercity coach", kind: "coach" },
+  cdSleeper: { name: "ČD sleeping car", kind: "coach", amenities: ["sleepers"] },
+  cdCouchette: { name: "ČD couchette car", kind: "coach", amenities: ["sleepers"] },
+  cdCoach: { name: "ČD coach", kind: "coach" },
+  cdVectron: { name: "ČD Vectron electric locomotive", kind: "electric", pan: true },
+  skSleeper: { name: "ZSSK sleeping car", kind: "coach", amenities: ["sleepers"] },
+  skCouchette: { name: "ZSSK couchette car", kind: "coach", amenities: ["sleepers"] },
+  skVectron: { name: "ZSSK Vectron (383) electric locomotive", kind: "electric", pan: true },
+  deEr20: { name: "Die Länderbahn ER20 (223) diesel locomotive", kind: "diesel" },
+  deAlexCoach: { name: "alex coach (Die Länderbahn)", kind: "coach" },
 };
 
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
@@ -955,6 +1201,33 @@ export const MODELS = {
   czRegioSprinter: M(regioSprinter, 81.36),
   czEso: M(eso, 55.1),
   cz816: M((c) => twinEnded(c, regionova), 46.65),
+  atTaurus: M((c) => taurus({ ...c, livery: "railjet" }), 63.25),
+  at1216: M(taurus, 64.24),
+  atRjCoach: M(obbRjCoach, 86.9, false, byIndex),
+  atRjCab: M(obbRjCab, 87.9, true),
+  atNjSleeper: M(njSleeper, 86.6),
+  atNjCouchette: M(njCouchette, 86.6),
+  atNjCoach: M(njCoach, 86.6),
+  atDesiroCab: M(dmlCab, 84.0, true),
+  atDesiroMid: M(dmlMid, 78.7),
+  gyDesiroCab: M((c) => dmlCab({ ...c, livery: "ventus" }), 84.0, true),
+  gyDesiroMid: M((c) => dmlMid({ ...c, livery: "ventus" }), 78.7),
+  gy247: M(gy247, 83.4),
+  huVectron: M((c) => vectron({ ...c, livery: "mav" }), 62.27),
+  huCoach: M(huCoach, 86.6, false, byIndex),
+  huSleeper: M(huSleeper, 86.6),
+  huCouchette: M(huCouchette, 86.6),
+  plSleeper: M(plSleeper, 80.4),
+  plCoach: M(plCoach, 80.4),
+  cdSleeper: M(cdSleeper, 86.6),
+  cdCouchette: M(cdCouchette, 86.6),
+  cdCoach: M(cdCoach, 86.6),
+  cdVectron: M((c) => vectron({ ...c, agency: "czcd" }), 62.27),
+  skSleeper: M(skSleeper, 80.4),
+  skCouchette: M(skCouchette, 86.6),
+  skVectron: M((c) => vectron({ ...c, agency: "zssk" }), 62.27),
+  deEr20: M(er20, 63.24),
+  deAlexCoach: M(alexCoach, 86.6, false, byIndex),
 };
 
 // [first, last, type], by UIC number (class and serial run together).
@@ -1046,6 +1319,58 @@ const ELF = set("Pesa Elf (654): a two-car electric unit", ["czElf", 2]);
 const ELF3 = set("Pesa Elf (655): a three-car electric unit in PID's colors", ["czElfPid", 1], ["czElfMid", 1], ["czElfPid", 1]);
 const SIRIUS = set("CRRC Sirius (665): a three-car electric unit (one train a locomotive with coaches)", ["czSiriusCab", 1], ["czSiriusMid", 1], ["czSiriusCab", 1]);
 const SPRINTER = set("Usually a RegioSprinter railcar (some trains a class 628 or a railbus)", ["czRegioSprinter", 1]);
+// The night trains (zelpage.cz's compositions for the 2024 timetable, the
+// latest it lists, and ČD's 2026 timetable news). Nightjet 456/457 Graz-
+// Wien-Praha-Berlin: ÖBB's own cars behind a three-system Taurus (1216)
+// all the way, MÁV's sleeping car and couchette from Budapest added at
+// Břeclav. EuroNight Slovakia (442/443) Praha-Košice-Humenné: a ZSSK
+// Vectron with ZSSK's and ČD's sleeping cars and couchettes, ČD's seats
+// and car carriers (not drawn). Chopin and, from December 2025, Carpatia
+// (406/407, 416), Břeclav-Bohumín-Poland: a ČD locomotive (a 362 in the
+// listing) with PKP Intercity's sleeping and seated cars and ČD's sleeping
+// car and couchette from Prague. Metropol (476/477) Budapest-Břeclav: a
+// ČD 109E with MÁV's cars for Berlin, PKP's for Warsaw and ČD's for Prague.
+export const NIGHT_SETS = {
+  nightjet: set("Nightjet (ÖBB): a Taurus (1216) with ÖBB's sleeping cars, couchettes and seats, and MÁV's sleeping car and couchette from Budapest",
+    ["at1216", 1], ["atNjSleeper", 2], ["atNjCouchette", 2], ["atNjCoach", 2], ["huSleeper", 1], ["huCouchette", 1]),
+  slovakia: set("EuroNight Slovakia: a ZSSK Vectron with ZSSK's and ČD's sleeping cars and couchettes and a ČD coach (and car carriers to Košice)",
+    ["skVectron", 1], ["skSleeper", 1], ["skCouchette", 1], ["cdSleeper", 2], ["cdCouchette", 1], ["cdCoach", 1]),
+  chopin: set("EuroNight Chopin or Carpatia: usually a ČD locomotive with PKP Intercity's sleeping and seated cars and ČD's sleeping car and couchette",
+    ["czEso", 1], ["plCoach", 2], ["plSleeper", 2], ["cdSleeper", 1], ["cdCouchette", 1]),
+  metropol: set("EuroNight Metropol: a ČD 109E with MÁV's sleeping car, couchette and seats for Berlin, PKP's cars for Warsaw and ČD's couchette for Prague",
+    ["cz380", 1], ["plCoach", 1], ["plSleeper", 1], ["huSleeper", 1], ["huCouchette", 1], ["huCoach", 1], ["cdCouchette", 1]),
+};
+// The Prague-Munich trains (Ex6 and EuroCity via Domažlice; zelpage.cz's
+// 2024 composition of EC 363 "Bavorský expres"): a ČD 362 between Prague
+// and Plzeň; from Plzeň over the unwired line through Domažlice to
+// Regensburg Die Länderbahn's ER20 diesel (223); two ČD coaches and two of
+// Die Länderbahn's alex coaches throughout. Leo Express takes the line
+// over on 13 December 2026. A train west of Plzeň is drawn with its diesel.
+const PLZEN_WEST = /Holýšov|Staňkov|Domažlice|Furth|Chotěšov|Stod|Nýřany|Pňovany/;
+function westOfPlzen(t) {
+  const stops = t.stops || [];
+  const next = stops.find((s) => s.status === "next");
+  if (!next) return false;
+  const i = stops.indexOf(next), plzen = stops.findIndex((s) => /^Plzeň hl/.test(s.name || ""));
+  if (plzen < 0) return PLZEN_WEST.test(next.name || "");
+  // Heading west: past Plzeň; heading east: not yet there.
+  const west = stops.slice(plzen + 1).some((s) => PLZEN_WEST.test(s.name || ""));
+  return west ? i > plzen : i <= plzen;
+}
+const munich = (t) => set("Prague–Munich: a ČD 362 to Plzeň, Die Länderbahn's diesel (223) beyond, with two ČD coaches and two alex coaches",
+  [westOfPlzen(t) ? "deEr20" : "czEso", 1], ["czCoach", 2], ["deAlexCoach", 2]);
+// Other railroads' trains through Slovakia (zsr.cars.js): ÖBB's railjet
+// xpress, its cityjets and Raaberbahn's Ventus units from Petržalka, GySEV's
+// railcars to Hegyeshalom, MÁV's trains from Budapest to Košice and the
+// Budapest-Warsaw Báthory.
+export const FOREIGN_SETS = {
+  railjet: set("railjet (ÖBB): a Taurus (1116) and seven railjet cars, the driving trailer at the back", ["atTaurus", 1], ["atRjCoach", 6], ["atRjCab", 1]),
+  cityjet: set("Desiro ML: a three-car ÖBB cityjet (some trains Raaberbahn's Ventus)", ["atDesiroCab", 1], ["atDesiroMid", 1], ["atDesiroCab", 1]),
+  ventus: set("Desiro ML: a three-car Raaberbahn Ventus (some trains an ÖBB cityjet)", ["gyDesiroCab", 1], ["gyDesiroMid", 1], ["gyDesiroCab", 1]),
+  gysev: set("GySEV's class 247: a single diesel railcar (ex-ÖBB 5047)", ["gy247", 1]),
+  kosice: set("A MÁV Vectron (through to Košice since October 2026) with MÁV and ZSSK coaches", ["huVectron", 1], ["huCoach", 3], ["czCoach", 2]),
+  bathory: set("Báthory: a ČD Vectron with MÁV's coaches (ČD coaches added at Bohumín for Warsaw)", ["cdVectron", 1], ["huCoach", 4], ["cdCoach", 2]),
+};
 // The formation a reported car's model runs in (for the fleet pages).
 const BY_MODEL = { cz380: VECTRON_CD(7), czPendoCab: PENDOLINO, czElefant471: ELEFANT, czPanter640: PANTER3, czPanter650: PANTER2(""), czLink: SHARK,
   czRegionova: REGIONOVA, czRs1: RS1, cz628: VT628, czLint: LINT, czFlirtCab: FLIRT, czElf: ELF, czVectron: VECTRON_CD(7), czFox: FOX, czFoxPid: FOX_PID,
@@ -1127,12 +1452,13 @@ export const TYPICAL = {
     if (r === "SuperCity") return PENDOLINO;
     if (r === "railjet") return RAILJET;
     if (r === "Ex5" || r === "Ex3" || r === "Ex7" || (/^(EuroCity|InterCity)$/.test(r) && /Schandau|Děčín|Kúty|Břeclav/.test(ends))) return COMFORTJET;
-    if (/^(EuroNight|Nightjet)$/.test(r)) return NIGHT;
+    if (r === "Nightjet") return NIGHT_SETS.nightjet;
+    if (r === "EuroNight") return /Michle|Čadca|Košice|Humenné/.test(ends) ? NIGHT_SETS.slovakia : /Bohumín|Chałupki|Břeclav/.test(ends) ? NIGHT_SETS.chopin : NIGHT;
     if (r === "R13") return INTER3;
     if (r === "R10" && where.electric !== false) return INTER5;
     if (/^(R41|R61|RE20|R33)$/.test(r)) return where.electric === false ? cdRegional(t, r, where) : /^(R33|RE20)$/.test(r) ? PANTER2("") : PANTER3;
     if (/^(R42|R43|R44|R45|R49|R24|R27|R54)$/.test(r)) return cdRegional(t, r, where);
-    if ((r === "Ex6" || r === "EuroCity") && /Domažlice|Furth/.test(ends)) return set("A locomotive and coaches (beyond Plzeň the line has no wires; not verified which locomotive)", ["czVectron", 1], ["czCoach", 5]);
+    if ((r === "Ex6" || r === "EuroCity") && /Domažlice|Furth/.test(ends)) return munich(t);
     if (/^(EuroCity|InterCity|Expres)$/.test(r) || /^Ex\d/.test(r)) return where.electric === false ? cdRegional(t, r, where) : VECTRON_CD(7);
     if (r === "R17" || r === "R18") return ESO_CD(5);
     if (r === "Rychlík" || /^R\d/.test(r)) return where.electric === false ? cdRegional(t, r, where) : ESO_CD(5);
@@ -1309,3 +1635,69 @@ FACTS.czCjCab = unitPart(FACTS.czCjCoach, "driving trailer");
 FACTS.czMoraviaMid = unitPart(FACTS.czMoraviaCab, "intermediate car");
 FACTS.czElfMid = unitPart(FACTS.czElfPid, "middle car");
 FACTS.czSiriusMid = unitPart(FACTS.czSiriusCab, "middle car");
+
+// Other railroads' cars on the international trains.
+const de = (page) => `https://de.wikipedia.org/wiki/${page}`;
+const ZELPAGE = "https://www.zelpage.cz/razeni/24/vlaky/cd-456";
+Object.assign(FACTS, {
+  atTaurus: { model: "Siemens Taurus (ÖBB 1116)", type: "Electric locomotive", builder: "Siemens and Krauss-Maffei", built: "1999–2006", fleet: "382 with the 1016s",
+    topSpeedMph: 143, powerHp: 8579, lengthFt: 63.25, source: de("Siemens_ES64U2"),
+    about: "ÖBB's standard electric locomotive for 15 kV and 25 kV AC; the ones painted for the railjet haul its push-pull sets, here the railjet xpress between Bratislava, Vienna, Innsbruck and Switzerland." },
+  at1216: { model: "Siemens Taurus III (ÖBB 1216)", type: "Electric locomotive", builder: "Siemens", built: "2006–2008", fleet: "50",
+    topSpeedMph: 143, powerHp: 8579, lengthFt: 64.24, source: de("ÖBB_1216"),
+    about: "The three- and four-system Taurus, for the Czech, Slovak, Slovenian and Italian lines; it hauls the Nightjet between Graz, Vienna, Prague and Berlin all the way." },
+  atRjCoach: { model: "railjet coach (Siemens Viaggio)", type: "Passenger coach", builder: "Siemens Mobility", built: "2008–2013", fleet: "60 seven-car sets with ÖBB",
+    topSpeedMph: 143, lengthFt: 86.9, source: `${WP}Railjet`,
+    about: "ÖBB's railjet: business, first and economy class, a restaurant car and a driving trailer, pushed or pulled by a Taurus at up to 230 km/h." },
+  atRjCab: { model: "railjet driving trailer (80-90.7)", type: "Driving trailer", builder: "Siemens Mobility", built: "2008–2013", topSpeedMph: 143, lengthFt: 87.9,
+    source: `${WP}Railjet`, about: "The railjet's cab car, with business class behind the cab and first class beyond." },
+  atNjSleeper: { model: "Nightjet sleeping car (WLABmz)", type: "Sleeping car", builder: "Siemens SGP", built: "2003–2005, refurbished for the Nightjet", lengthFt: 86.6,
+    source: ZELPAGE, about: "Twelve compartments of one to three beds, some with their own shower and toilet; on the Nightjet between Graz, Vienna, Prague and Berlin." },
+  atNjCouchette: { model: "Nightjet couchette car (Bcmz)", type: "Couchette car", builder: "Various, rebuilt", lengthFt: 86.6, source: ZELPAGE,
+    about: "Compartments of four or six berths, made up at night as couchettes; breakfast is included." },
+  atNjCoach: { model: "Nightjet seated coach (Bmz)", type: "Passenger coach", builder: "Various", lengthFt: 86.6, source: ZELPAGE,
+    about: "Ordinary second-class compartments for the Nightjet's seated passengers." },
+  atDesiroCab: { model: "Siemens Desiro ML (ÖBB cityjet 4744/4746)", type: "Electric multiple unit", builder: "Siemens Mobility", built: "Since 2015",
+    fleet: "Over 200 units", topSpeedMph: 99.4, lengthFt: 246.6, source: de("ÖBB_4744"),
+    about: "ÖBB's three-car regional train for the Vienna area, the cityjet; its REX trains run from Vienna to Bratislava-Petržalka through Kittsee." },
+  gyDesiroCab: { model: "Siemens Desiro ML (Raaberbahn 4744.3/4746.3, Ventus)", type: "Electric multiple unit", builder: "Siemens Mobility", built: "2016 and 2021",
+    fleet: "13 units", topSpeedMph: 99.4, seats: 244, lengthFt: 246.6, source: de("GySEV-Baureihe_4744/4746"),
+    about: "Raaberbahn's (GySEV's) Desiro MLs, the same as ÖBB's cityjets bar details; they run its REX 6 from Bratislava-Petržalka through Vienna to Eisenstadt and Deutschkreutz." },
+  gy247: { model: "GySEV class 247 (ex-ÖBB 5047)", type: "Diesel railcar", builder: "Jenbacher Werke", built: "1987–1995; to GySEV in 2011", fleet: "7, 247 503–509",
+    topSpeedMph: 74.6, powerHp: 570, seats: 62, lengthFt: 83.4, source: de("ÖBB_5047"),
+    about: "Austrian railcars GySEV bought and refurbished; they run between Bratislava, Rajka and Hegyeshalom." },
+  huVectron: { model: "Siemens Vectron MS (MÁV 193)", type: "Electric locomotive", builder: "Siemens Mobility", built: "Since 2017", fleet: "About 24 multi-system, leased",
+    topSpeedMph: 99.4, powerHp: 8583, lengthFt: 62.3, source: "https://iho.hu/hirek/oktobertol-kassara-is-atjarnak-a-mav-os-vectronok-260929",
+    about: "MÁV's leased Vectrons; from October 2026 its multi-system ones haul the trains from Budapest to Košice across the border, onto Slovakia's 3 kV DC, without a change at Hidasnémeti." },
+  huCoach: { model: "MÁV-START coach", type: "Passenger coach", builder: "Various, refurbished", lengthFt: 86.6, source: "https://hu.wikipedia.org/wiki/Hern%C3%A1d_nemzetk%C3%B6zi_InterCity",
+    about: "MÁV-START's InterCity coaches on its trains to Košice and the Báthory to Warsaw, in its blue and white." },
+  huSleeper: { model: "MÁV sleeping car (WLABmz)", type: "Sleeping car", builder: "Various", lengthFt: 86.6, source: ZELPAGE,
+    about: "MÁV's through sleeping car from Budapest, coupled to the Nightjet at Břeclav for Prague and Berlin." },
+  huCouchette: { model: "MÁV couchette car (Bcmz)", type: "Couchette car", builder: "Various", lengthFt: 86.6, source: ZELPAGE,
+    about: "MÁV's couchettes from Budapest, coupled to the Nightjet at Břeclav." },
+  plSleeper: { model: "PKP Intercity sleeping car (WLAB)", type: "Sleeping car", builder: "Waggonbau Görlitz and Bautzen, modernised", lengthFt: 80.4,
+    source: "https://www.zelpage.cz/razeni/24/vlaky/cd-406", about: "PKP Intercity's sleeping cars on the night trains from Vienna, Munich, Budapest and Prague to Warsaw and Kraków." },
+  plCoach: { model: "PKP Intercity coach", type: "Passenger coach", builder: "Various", lengthFt: 80.4, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-406",
+    about: "PKP Intercity's seated cars on its night trains through Czechia." },
+  cdSleeper: { model: "ČD sleeping car (WLABmz)", type: "Sleeping car", builder: "Siemens SGP", built: "2003", lengthFt: 86.6, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ČD's sleeping cars on its night trains to Slovakia and Poland, with compartments of one to three beds." },
+  cdCouchette: { model: "ČD couchette car (Bcmz)", type: "Couchette car", builder: "Various, refurbished", lengthFt: 86.6, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ČD's couchettes, four or six berths a compartment, on its night trains to Slovakia and Poland." },
+  skSleeper: { model: "ZSSK sleeping car (WLABmee)", type: "Sleeping car", builder: "Waggonbau Görlitz", lengthFt: 80.4, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ZSSK's sleeping cars on the EuroNight between Prague, Košice and Humenné." },
+  skCouchette: { model: "ZSSK couchette car (Bcmh)", type: "Couchette car", builder: "Various", lengthFt: 86.6, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ZSSK's couchettes on the EuroNight between Prague and Košice." },
+  skVectron: { model: "Siemens Vectron (ZSSK 383)", type: "Electric locomotive", builder: "Siemens Mobility", built: "Since 2017", fleet: "15, leased", topSpeedMph: 99.4,
+    powerHp: 8583, lengthFt: 62.3, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ZSSK's leased Vectrons haul the EuroNight between Prague and Košice across both countries' systems." },
+  deEr20: { model: "Siemens ER20 Herkules (Die Länderbahn 223)", type: "Diesel-electric locomotive", builder: "Siemens", built: "2003–2004", topSpeedMph: 87,
+    powerHp: 2700, lengthFt: 63.24, source: de("Siemens_ER20"),
+    about: "Die Länderbahn's diesels haul the Prague–Munich trains over the unwired lines between Plzeň, Domažlice, Schwandorf and Regensburg." },
+  deAlexCoach: { model: "alex coach (Die Länderbahn)", type: "Passenger coach", builder: "Various, refurbished", lengthFt: 86.6, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-363",
+    about: "Die Länderbahn's alex coaches, first and second class with a bistro, run through from Munich to Prague with ČD's." },
+});
+FACTS.cdVectron = FACTS["czVectron@czcd"] || { model: "Siemens Vectron (ČD 383 and leased 193)", type: "Electric locomotive", builder: "Siemens Mobility", topSpeedMph: 124,
+  powerHp: 8583, lengthFt: 62.3, source: `${WP}Siemens_Vectron`, about: "ČD's Vectrons haul its EuroCity trains, the Báthory between Budapest and Warsaw among them." };
+FACTS.cdCoach = FACTS["czCoach@czcd"];
+FACTS.atDesiroMid = unitPart(FACTS.atDesiroCab, "middle car");
+FACTS.gyDesiroMid = unitPart(FACTS.gyDesiroCab, "middle car");
