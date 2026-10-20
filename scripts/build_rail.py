@@ -1223,7 +1223,7 @@ ROUTE_DETOUR = 2.5        # a route may be this many times the straight distance
 ROUTE_MAX_KM = 400        # longer hops between stops aren't routed
 ROUTE_ALONG_M = 60        # track this close to a railroad's routes is on them
 ROUTE_WAYS = ('way["railway"~"^(rail|narrow_gauge)$"][!"service"]'
-              '["usage"!~"^(industrial|military|tourism|test)$"]({bbox});')
+              '["usage"!~"^(industrial|military|test)$"]({bbox});')
 
 
 ROUTE_ABROAD = 0.5         # degrees past a plug-in's box that its hops are still routed
@@ -1323,31 +1323,45 @@ class RailGraph:
         for n in self.adj:
             self.grid[(int(n[0] // self.CELL), int(n[1] // self.CELL))].append(n)
 
-    def snap(self, p):
-        best, bd = None, ROUTE_SNAP_M
+    def near(self, p, k=40):
+        """The k nodes nearest p within ROUTE_SNAP_M, nearest first."""
         gx, gy = int(p[0] // self.CELL), int(p[1] // self.CELL)
         r = int(ROUTE_SNAP_M / 700) + 1
+        found = []
         for dx in range(-r, r + 1):
             for dy in range(-r, r + 1):
                 for n in self.grid.get((gx + dx, gy + dy), ()):
                     d = meters(p, n)
-                    if d < bd:
-                        best, bd = n, d
-        return best
+                    if d <= ROUTE_SNAP_M:
+                        found.append((d, n))
+        found.sort()
+        return found[:k]
+
+    def snap(self, p):
+        found = self.near(p, 1)
+        return found[0][1] if found else None
 
     def route(self, a, b):
-        """The nodes from the track nearest a to the track nearest b (A*), or None."""
+        """The nodes from track near a to track near b (A*), or None. Every
+        node near each stop is a way on or off: the nearest is often a
+        platform track tied to the main lines only by sidings, which aren't
+        in the graph. Starting farther from the stop costs twice the walk, so
+        the track at the station itself still wins where it's connected."""
         import heapq
-        s, t = self.snap(a), self.snap(b)
-        if not s or not t:
+        starts, ends = self.near(a), self.near(b)
+        if not starts or not ends:
             return None
+        goal = {n: d for d, n in ends}
         limit = ROUTE_DETOUR * meters(a, b) + 5000
-        best = {s: 0.0}
-        prev = {}
-        heap = [(meters(s, t), 0.0, s)]
+        best, prev, heap = {}, {}, []
+        for d, n in starts:
+            best[n] = 2 * d
+            heapq.heappush(heap, (2 * d + meters(n, b), 2 * d, n))
+        END = (math.inf, math.inf)  # reached from any node near b, at twice its distance from b (a pair, so heap ties compare)
         while heap:
             _f, g, n = heapq.heappop(heap)
-            if n == t:
+            if n is END:
+                n = prev[END]
                 path = [n]
                 while n in prev:
                     n = prev[n]
@@ -1355,12 +1369,16 @@ class RailGraph:
                 return path[::-1]
             if g > best.get(n, math.inf):
                 continue
+            if n in goal and g + 2 * goal[n] < best.get(END, math.inf):
+                best[END] = g + 2 * goal[n]
+                prev[END] = n
+                heapq.heappush(heap, (best[END], best[END], END))
             for m, d in self.adj[n]:
                 ng = g + d
-                if ng < best.get(m, math.inf) and ng + meters(m, t) <= limit:
+                if ng < best.get(m, math.inf) and ng + meters(m, b) <= limit:
                     best[m] = ng
                     prev[m] = n
-                    heapq.heappush(heap, (ng + meters(m, t), ng, m))
+                    heapq.heappush(heap, (ng + meters(m, b), ng, m))
         return None
 
 
