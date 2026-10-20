@@ -134,7 +134,8 @@ function rockCab(c) {
     doors: [{ x: a + 0.6, w: 4.4, low: true }, { x: b - 5.0, w: 4.4, low: true }], ends: [b + 4.0], paint: rockPaint(true), doorFill: () => TN.door,
     surround: TN.ink,
     extra: (cc, g) => cover(14, ROCK.roof, 14) + hvac(34, ROCK.roof, 12) + hvac(g.L - 22, ROCK.roof, 10) + boxes(a + 6, b - 6, ROCK.y + 0.05, 2, 0.4) +
-      tnName(cc, 40, 9.05, 0.95) + regione(cc, 62, 9.05, 0.42) + plate(cc, g.L - 6.4, 6.2, cc.count === 5 ? "ETR 521" : "ETR 421") });
+      tnName(cc, 40, 9.05, 0.95) + regione(cc, 62, 9.05, 0.42) + plate(cc, g.L - 6.4, 6.2, cc.count === 5 ? "ETR 521" : "ETR 421") +
+      (mxp(cc) ? classDoors(cc, [{ x: a + 0.6, w: 4.4 }, { x: b - 5.0, w: 4.4 }], ROCK.y + 0.15, false) : "") });
 }
 // An aircraft pictogram (Trenord's airport-area marking), h ft long,
 // nose to the right.
@@ -143,6 +144,24 @@ const plane = (c, x, y, h, fill) => `<g transform="translate(${x} ${y}) scale(${
   `<path d="M0.08 0.03L-0.12 0.42L-0.02 0.42L0.24 0.03ZM0.08 -0.03L-0.12 -0.42L-0.02 -0.42L0.24 -0.03Z" fill="${fill}"/>` +
   `<path d="M-0.36 0.03L-0.48 0.18L-0.42 0.18L-0.28 0.03ZM-0.36 -0.03L-0.48 -0.18L-0.42 -0.18L-0.28 -0.03Z" fill="${fill}"/></g>`;
 const AIR_YELLOW = "#f5c400";
+// Trainsheet's own class marking, as on Italy's other railroads' cars: a
+// gold band the length of a first-class car just over its upper windows,
+// under the roof edge; on each door's leaf the class numeral (1 big, 2
+// smaller) and, on the first-class car, "1ª CLASSE" beside the door. Only
+// the airport Caravaggios have two classes; the other Trenord trains drawn
+// here are one class and carry none of it.
+const CLASS_GOLD = "#c9a227";
+const mxp = (c) => /^RE5[14]$/.test(String(c.route || "").replace(/[\s_]/g, "").toUpperCase());
+function classDoors(c, doors, y, first) {
+  return doors.map(({ x, w }, i) => {
+    let s = letters(c, x + w / 4, y + 1.6, first ? 3.0 : 2.2, first ? "1" : "2", TN.ink, { weight: 800 });
+    if (first) {
+      const side = i ? -1 : 1, anchor = (side > 0) !== !!c.mirrored ? "start" : "end";
+      s += letters(c, side > 0 ? x + w + 0.7 : x - 0.7, 9.0, 1.65, "1ª CLASSE", TN.ink, { weight: 700, anchor, spacing: "0.02em" });
+    }
+    return s;
+  }).join("");
+}
 // The airport Caravaggios' (ETR 421 047-054) first-class area: marked
 // outside with a yellow band and aircraft pictograms by the doors.
 function airMark(c, L, a, b) {
@@ -152,10 +171,10 @@ function airMark(c, L, a, b) {
 function rockMid(c) {
   const L = c.L, a = 13.6, b = L - 13.6, pan = c.index === 1 || (c.count === 5 && c.index === 3);
   return deck(c, { ...ROCK, a, b, trucks: [8.0, L - 8.0], doors: [{ x: a + 0.6, w: 4.4, low: true }, { x: b - 5.0, w: 4.4, low: true }], ends: [3.4, b + 4.4],
-    paint: rockPaint(false), doorFill: () => TN.door,
-    extra: (cc, g) => (pan ? pantograph(g.L / 2 - 8, ROCK.roof + 0.55, { up: true, facing: -1 }) + cover(g.L / 2 - 11, ROCK.roof, 7, 0.55) + hvLine(g.L / 2 - 5, g.L / 2 + 4, ROCK.roof + 0.55) + cover(g.L / 2 + 4, ROCK.roof, 12)
+    paint: (cc, g) => rockPaint(false)(cc, g) + (cc.air ? rect(-1, 13.3, g.L + 2, 0.55, CLASS_GOLD) : ""), doorFill: () => TN.door,
+    extra: (cc, g) => (cc.air || mxp(cc) ? classDoors(cc, [{ x: a + 0.6, w: 4.4 }, { x: b - 5.0, w: 4.4 }], ROCK.y + 0.15, !!cc.air) : "") + (pan ? pantograph(g.L / 2 - 8, ROCK.roof + 0.55, { up: true, facing: -1 }) + cover(g.L / 2 - 11, ROCK.roof, 7, 0.55) + hvLine(g.L / 2 - 5, g.L / 2 + 4, ROCK.roof + 0.55) + cover(g.L / 2 + 4, ROCK.roof, 12)
       : hvac(15, ROCK.roof, 12) + cover(g.L / 2 + 2, ROCK.roof, 14)) + boxes(a + 6, b - 6, ROCK.y + 0.05, 2, 0.4) +
-      (cc.air ? airMark(cc, g.L, a, b) + letters(cc, g.L / 2, 8.95, 0.7, "Malpensa Express", TN.blue, { weight: 600, style: "italic" })
+      (cc.air ? airMark(cc, g.L, a, b) + letters(cc, g.L / 2, 7.6 + 1.3, 0.7, "Malpensa Express", TN.blue, { weight: 600, style: "italic" })
         : cc.index === 1 ? letters(cc, g.L / 2, 8.95, 0.7, "Caravaggio", TN.blue, { weight: 600, style: "italic" }) : "") });
 }
 
@@ -388,7 +407,7 @@ const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, v
 const byIndex = (ctx) => ctx.index;
 export const MODELS = {
   tnRockCab: M(rockCab, 92.8, true, (ctx) => `${ctx.count}${ctx.route}`),
-  tnRockMid: M(rockMid, 87.0, false, (ctx) => `${ctx.index}${ctx.count}`),
+  tnRockMid: M(rockMid, 87.0, false, (ctx) => `${ctx.index}${ctx.count}${ctx.route}`),
   tnRockAir: M((c) => rockMid({ ...c, air: true }), 87.0),
   tnPopCab: M(popCab, 73.5, true, (ctx) => ctx.count),
   tnPopMid: M(popMid, 64.6, false, byIndex),

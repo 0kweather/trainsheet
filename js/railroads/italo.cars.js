@@ -32,6 +32,27 @@ const pinline = (L, y) => rect(-1, y, L + 2, 0.42, IT.gold) + rect(-1, y + 0.62,
 // A plug door, single leaf, flush with the side.
 const plugDoor = (x, sill, top, w = 2.6, fill = IT.deep) => ({ x, w, y0: sill, y1: top, leaves: 1, glassY: 0.55, glassH: 0.3, grabs: false, fill });
 
+// ---------- Classes ----------
+// Trainsheet's own class marking, as on Italy's other railroads' cars: a
+// gold band the length of a first-class car (Club Executive, Prima) just
+// over its windows, under the roofline; on each door the class numeral, big
+// (1, or a smaller 2 for Smart), and the class's name lettered beside it.
+// c.cls: "club", "prima" or "smart"; car 1 of an EVO is Club and Prima.
+const CLASS_GOLD = "#c9a227";
+const premium = (c) => c.cls === "club" || c.cls === "prima";
+const classBand = (c, L, y) => (premium(c) ? rect(-1, y, L + 2, 0.55, CLASS_GOLD) : "");
+const CLASSES = { club: ["1", "CLUB EXECUTIVE"], prima: ["1", "PRIMA"], smart: ["2", "SMART"] };
+// The numeral on the door (x, w), centered at numY; the name at nameY
+// beside it, on the door's side `side` (1 toward the car's right end in its
+// own drawing, -1 its left), reading left to right on a mirrored car too.
+function classMark(c, cls, x, w, { numY, nameY, side }) {
+  const [num, name] = CLASSES[cls] || [];
+  if (!num) return "";
+  const anchor = (side > 0) !== !!c.mirrored ? "start" : "end";
+  return letters(c, x + w / 2, numY, num === "1" ? 3.0 : 2.2, num, IT.white, { weight: 800 }) +
+    letters(c, side > 0 ? x + w + 0.6 : x - 0.6, nameY, 1.65, name, IT.white, { weight: 700, anchor, spacing: "0.02em" });
+}
+
 // ---------- AGV 575 ----------
 // Alstom's AGV (Automotrice à Grande Vitesse): eleven articulated cars on
 // twelve trucks, 200 m; the traction spread along the train under the
@@ -43,7 +64,7 @@ const AGV = { roof: 11.45, sill: 3.3 };
 const NOSE_AGV = [[0.9, 2.5], [0.55, 3.6], ["q", 0.6, 5.2, 2.6, 6.6], [10.4, 9.9], ["q", 15.0, 11.45, 19.5, 11.45]];
 function agvPaint(cab) {
   return (c, g) => {
-    let s = bands(g.L, [[0, 20, IT.red], [10.55, 3, IT.roof], [10.35, 0.2, IT.deep], [0, 3.3, IT.skirt]]) + pinline(g.L, 3.55);
+    let s = bands(g.L, [[0, 20, IT.red], [10.55, 3, IT.roof], [10.35, 0.2, IT.deep], [0, 3.3, IT.skirt]]) + pinline(g.L, 3.55) + classBand(c, g.L, 9.35);
     // The nose: the red darkens toward the tip; a black mask round the
     // windshield sweeps back along the cab.
     // The 2026 gold band sweeping up from the lower nose toward the windows.
@@ -68,7 +89,8 @@ function agvCab(c) {
     extra: (cc, g) => agvRoof(g.L, 19.5, g.L - 0.8) + hvac(26, AGV.roof + 0.25, 12, 0.55) + agvSkirt(11.6, g.L - 5.6) + boxes(13, g.L - 7, 3.3, 3, 1.4) +
       // A slanted cab side window and the cab door's outline.
       path(poly([[16.2, 7.4], [19.6, 7.4], [19.6, 9.4], [17.0, 9.4]]), "#1d2026", 0.4) + rect(20.3, 3.6, 2.2, 6.1, "rgba(0,0,0,0.08)", 0.5) +
-      italoName(cc, 40, 4.9, 1.0) + letters(cc, 25, 4.75, 0.42, "AGV 575", IT.white, { weight: 600, spacing: "0.06em" }) });
+      italoName(cc, 40, 4.9, 1.0) + letters(cc, 25, 4.75, 0.42, "AGV 575", IT.white, { weight: 600, spacing: "0.06em" }) +
+      classMark(cc, cc.cls, g.L - 6.2, 2.6, { numY: 5.3, nameY: 5.15, side: -1 }) });
 }
 function agvMid(c) {
   const L = c.L, k = c.index;
@@ -80,7 +102,7 @@ function agvMid(c) {
     extra: (cc, g) => agvRoof(g.L, 0.6, g.L - 0.6) + (pan ? pantograph(g.L * 0.42, AGV.roof + 0.25, { up: true, facing: -1 }) + hvLine(g.L * 0.42 + 3.0, g.L * 0.42 + 9.5, AGV.roof + 0.25)
       : hvac(8, AGV.roof + 0.25, 11, 0.55) + hvac(g.L - 21, AGV.roof + 0.25, 9, 0.55)) +
       agvSkirt(5.4, g.L - 5.4) + boxes(6, g.L - 6, 3.3, 3, 1.4) +
-      (k === 5 ? italoName(cc, g.L / 2, 4.9, 1.0) : "") + letters(cc, 3.0, 7.5, 0.6, String(k + 1), IT.white, { weight: 600 }) });
+      (k === 5 ? italoName(cc, 16, 4.9, 1.0) : "") + classMark(cc, cc.cls, g.L - 5.6, 2.6, { numY: 5.3, nameY: 5.15, side: -1 }) });
 }
 
 // ---------- Pendolino EVO (ETR 675) ----------
@@ -94,7 +116,7 @@ const EVO = { roof: 13.0, sill: 3.75 };
 const NOSE_EVO = [[1.0, 3.2], [0.7, 4.9], ["q", 0.8, 6.6, 3.0, 7.9], [10.4, 11.6], ["q", 12.6, 13.0, 15.6, 13.0]];
 function evoPaint(cab) {
   return (c, g) => {
-    let s = bands(g.L, [[0, 20, IT.red], [11.95, 3, IT.roof], [11.75, 0.2, IT.deep], [6.55, 3.65, IT.band], [0, 3.75, IT.skirt]]) + pinline(g.L, 4.0);
+    let s = bands(g.L, [[0, 20, IT.red], [11.95, 3, IT.roof], [11.75, 0.2, IT.deep], [6.55, 3.65, IT.band], [0, 3.75, IT.skirt]]) + pinline(g.L, 4.0) + classBand(c, g.L, 10.75);
     if (cab) s += path("M2.4 7.6Q7.0 9.0 10.4 10.4L13.0 11.6L20.0 11.6L20.0 10.2L22.0 10.2L22.0 6.55L13.2 6.55Q8.8 6.6 5.4 6.2Z", IT.band) +
       path("M-1 3.2L-1 5.3Q3.6 5.6 8.6 5.9L14.0 5.9L14.0 6.25L8.4 6.25Q3.6 6.0 -1 5.8Z", IT.wine);
     return s;
@@ -109,7 +131,8 @@ function evoCab(c) {
     diaphragm: [4.0, 11.6], paint: evoPaint(true), surround: IT.band,
     extra: (cc, g) => evoRoof(g.L, 15.6, g.L - 1.2) + hvac(29, EVO.roof + 0.3, 13, 0.6) + hvac(g.L - 24, EVO.roof + 0.3, 9, 0.6) +
       boxes(17, g.L - 15, 3.75, 3, 1.3) + rect(15.5, 4.0, 18, 0.5, IT.wine) +
-      italoName(cc, 50, 5.25, 1.35) + letters(cc, 70, 5.15, 0.85, "EVO", IT.silver, { weight: 300, spacing: "0.3em" }) });
+      italoName(cc, 52, 5.25, 1.35) + letters(cc, 66, 5.15, 0.85, "EVO", IT.silver, { weight: 300, spacing: "0.3em" }) +
+      classMark(cc, cc.cls, 22.4, 2.7, { numY: 5.6, nameY: 5.6, side: 1 }) + classMark(cc, cc.cls === "club" ? "prima" : cc.cls, g.L - 4.6, 2.7, { numY: 5.6, nameY: 5.6, side: -1 }) });
 }
 function evoMid(c) {
   const L = c.L, k = c.index;
@@ -122,7 +145,7 @@ function evoMid(c) {
       (pan ? pantograph(g.L * 0.38, EVO.roof + 0.33, { up: k === 1, facing: -1 }) + hvLine(g.L * 0.38 + 3.0, g.L * 0.38 + 10.0, EVO.roof + 0.33) + hvac(g.L - 22, EVO.roof + 0.3, 10, 0.6)
         : hvac(10, EVO.roof + 0.3, 12, 0.6) + hvac(g.L - 22, EVO.roof + 0.3, 10, 0.6)) +
       boxes(16, g.L - 16, 3.75, 3, 1.3) +
-      letters(cc, 6.4, 5.2, 0.6, String(k + 1), IT.white, { weight: 600 }) });
+      classMark(cc, cc.cls, 1.7, 2.7, { numY: 5.6, nameY: 5.6, side: 1 }) + classMark(cc, cc.cls, g.L - 4.4, 2.7, { numY: 5.6, nameY: 5.6, side: -1 }) });
 }
 
 // ---------- Tables ----------
@@ -132,9 +155,10 @@ function evoMid(c) {
 // class, 2+1) and Smart (2+2). AGV: Club in car 1, Prima in cars 2-5 (4
 // and 5 were Comfort, since merged into Prima), Smart in cars 6-11. EVO:
 // Club and the first Prima seats in car 1, Prima through car 3, Smart in
-// cars 4-7. No class is lettered on the outside (the classes' names are
-// on the end walls inside), so the cars are drawn alike; each class is its
-// own type, placed in the formation, with its own fact sheet.
+// cars 4-7. Italo letters no class on the outside (the classes' names are
+// on the end walls inside); the drawings carry Trainsheet's class marking
+// (above), so each class shows. Each is its own type, placed in the
+// formation, with its own fact sheet.
 export const TYPES = {
   itAgvClub: { name: "AGV 575 Club Executive car", kind: "emu", amenities: ["business"] },
   itAgvPrima: { name: "AGV 575 Prima car", kind: "emu", pan: true, amenities: ["first"] },
@@ -148,14 +172,14 @@ export const TYPES = {
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
 const byIndex = (ctx) => ctx.index;
 export const MODELS = {
-  itAgvClub: M(agvCab, 72.5, true),
-  itAgvPrima: M(agvMid, 56.8, false, byIndex),
-  itAgvMid: M(agvMid, 56.8, false, byIndex),
-  itAgvCab: M(agvCab, 72.5, true),
-  itEvoClub: M(evoCab, 92.5, true),
-  itEvoPrima: M(evoMid, 85.0, false, byIndex),
-  itEvoMid: M(evoMid, 85.0, false, byIndex),
-  itEvoCab: M(evoCab, 92.5, true),
+  itAgvClub: M((c) => agvCab({ ...c, cls: "club" }), 72.5, true),
+  itAgvPrima: M((c) => agvMid({ ...c, cls: "prima" }), 56.8, false, byIndex),
+  itAgvMid: M((c) => agvMid({ ...c, cls: "smart" }), 56.8, false, byIndex),
+  itAgvCab: M((c) => agvCab({ ...c, cls: "smart" }), 72.5, true),
+  itEvoClub: M((c) => evoCab({ ...c, cls: "club" }), 92.5, true),
+  itEvoPrima: M((c) => evoMid({ ...c, cls: "prima" }), 85.0, false, byIndex),
+  itEvoMid: M((c) => evoMid({ ...c, cls: "smart" }), 85.0, false, byIndex),
+  itEvoCab: M((c) => evoCab({ ...c, cls: "smart" }), 92.5, true),
 };
 
 // Units by number (class and serial run together): AGV 575 001-025, ETR
