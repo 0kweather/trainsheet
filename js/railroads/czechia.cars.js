@@ -237,6 +237,16 @@ export function euroCoach(c, o = {}) {
 // Each railroad's coach paint: base, side(c, L) inside the body, door
 // color, cabEnd (a driving trailer's), over (lettering).
 function coachPaint(c) {
+  // ComfortJet (Siemens Viaggio Comfort, ČD, 20 nine-car push-pull sets,
+  // 2023-2026; photographs at Děčín, Berlin and Brno): ČD blue from the roof
+  // edge to just under the windows, which sit in a continuous dark band,
+  // a navy line, pale gray below, navy doors; "České dráhy" and its mark on
+  // the gray.
+  if (c.livery === "comfortjet") return { base: "#e4e7ea", door: "#1d4f9e",
+    side: (cc, L) => bands(L, [[12.25, 3, "#9aa2ab"], [6.55, 5.7, "#2763c4"], [6.55, 0.25, CD.navy], [0, 4.35, "#c7ccd2"], [4.35, 0.12, "#8d949c"]]) +
+      rect(5.4, 7.05, L - 10.8, 3.3, "#1b1e23", 0, 'rx="0.4"'),
+    cabEnd: (cc, L) => path("M0 4.35L3.2 4.35Q5.0 6.6 5.6 13.3L0 13.3Z", "#2763c4"),
+    over: (cc, L) => cdLogo(cc, L * 0.62, 5.5, 0.95, "#2763c4") };
   switch (c.agency) {
     case "czregiojet": case "regiojetsk":
       return { base: RJ.yellow, door: RJ.yellow,
@@ -320,6 +330,13 @@ export const loco109E = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_1
 // behind each cab, its name mid-side.
 const NOSE_VECTRON = [[1.4, 4.1], [1.4, 7.3], ["q", 1.45, 8.3, 2.1, 9.0], [3.0, 12.3], ["q", 3.3, 12.9, 4.3, 12.9]];
 function vectronPaint(c, L) {
+  // ČD's (its own 383s and 384s and the leased 193s, photographs at Praha
+  // hl.n.): ČD blue, navy over the top and the cab's upper half, a white
+  // band along the upper side whose ends slant down behind the cabs, the
+  // underframe black.
+  if (c.agency === "czcd") return bands(L, [[0, 20, CD.blue], [10.9, 3, CD.navy], [0, 4.9, "#1c1d20"]]) +
+    path(`M9.5 4.9L12.0 4.9L14.6 8.9L${L - 14.6} 8.9L${L - 12.0} 4.9L${L - 9.5} 4.9L${L - 13.2} 10.9L13.2 10.9Z`, "#f2f4f6") +
+    path("M0 10.9L0 8.2L2.4 8.6L4.6 10.9Z", CD.navy) + path(`M${L} 10.9L${L} 8.2L${L - 2.4} 8.6L${L - 4.6} 10.9Z`, CD.navy);
   if (c.agency === "zssk") return bands(L, [[0, 20, ZS.red], [11.8, 3, "#3a3d42"], [0, 5.4, ZS.dark], [5.4, 0.18, "#f4f5f6"]]) +
     path("M0 5.4L0 9.2Q1.4 9.4 2.6 9.4L4.6 5.4Z", ZS.dark);
   if (isLeo(c)) return bands(L, [[0, 20, LEO.graphite], [11.8, 3, LEO.roof], [0, 4.9, "#17181a"]]) +
@@ -337,11 +354,62 @@ function vectronOver(c, L) {
     return s + lines(segs, ZS.red, 1.0) + letters(c, L / 2 + 2, 4.75, 0.55, "383", "#ffffff", { weight: 600 });
   }
   if (isLeo(c)) return leoLogo(c, L / 2, 8.9, 1.9, "#ffffff");
+  if (c.agency === "czcd") return cdLogo(c, L / 2 - 6, 9.9, 1.0, CD.navy) + letters(c, L / 2 + 6, 4.4, 0.55, "383", "#ffffff", { weight: 600 });
   return letters(c, L / 2, 8.95, 1.55, "RegioJet", RJ.black, { weight: 800 }) + letters(c, L / 2, 4.7, 0.55, "193", "#f4f4f2", { weight: 600 });
 }
 export const vectron = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_VECTRON, rake: [[2.1, 9.0], [3.0, 12.3]], centers: 32.5, door: 5.6,
-  paint: vectronPaint, over: vectronOver, surround: c.agency === "zssk" ? ZS.dark : isLeo(c) ? "#111214" : RJ.black,
+  paint: vectronPaint, over: vectronOver, surround: c.agency === "zssk" ? ZS.dark : isLeo(c) ? "#111214" : c.agency === "czcd" ? CD.navy : RJ.black,
   grilles: [[-19.0, 10.0, 9.4, 11.3], [9.0, 10.0, 9.4, 11.3], [-4.0, 8.0, 9.4, 11.3]], grilleFill: "rgba(20,22,25,0.22)" });
+
+// Bombardier (Alstom) TRAXX 3 MS, RegioJet 388.201-231 (2020-2023, the
+// mainstay of its long-distance trains and R8; the TRAXX MS2e 386.201-204
+// alike, cs.wikipedia "RegioJet" fleet table 6/2026): 18.9 m over the
+// buffers, Bo'Bo', bogies 10.44 m apart on 1,250 mm wheels, about 4.28 m
+// tall; a flat, upright front under a shallow raked windshield, smooth
+// sides with a crew door behind each cab, the machine room's few grilles
+// high near the middle, four pantographs' worth of roof gear for its
+// four systems. RegioJet's paint (photographs, 388.223 at Ostrava): yellow,
+// a silver band along the top of the side that sweeps down behind each
+// cab door and wraps the cab's shoulders, the windshield in black, the
+// underframe dark gray; "REGIOJET POOL" big along the side, red with
+// RegioJet's two red bars ahead of it, POOL in blue.
+const NOSE_TRAXX = [[1.2, 4.1], [1.0, 7.7], ["q", 1.05, 8.6, 1.7, 9.1], [2.5, 12.2], ["q", 2.8, 12.9, 3.9, 12.9]];
+function traxxPaint(c, L) {
+  const silver = "#b7bcc2";
+  let s = bands(L, [[0, 20, RJ.yellow], [11.75, 3, silver], [0, 5.0, "#3a3d42"]]);
+  // The silver sweep behind each cab, and the cab's black windshield band.
+  for (const [a, k] of [[0, 1], [L, -1]]) {
+    s += path(`M${a} 11.75L${a} 9.6L${a + k * 2.2} 9.6L${a + k * 6.6} 11.75Z`, silver) +
+      path(`M${a + k * 8.6} 11.75L${a + k * 9.4} 11.75L${a + k * 8.6} 5.0L${a + k * 7.8} 5.0Z`, silver);
+  }
+  return s;
+}
+const traxxOver = (c, L) => mark(c, L / 2 - 0.8, 7.6, `<path d="M-12.7 -1.5L-12.1 -1.5L-12.1 1.5L-12.7 1.5ZM-11.8 -1.5L-11.2 -1.5L-11.2 1.5L-11.8 1.5Z" fill="${CD.red}"/>` +
+  txt(-10.6, 0, 2.2, "REGIOJET", CD.red, { weight: 800, anchor: "start", spacing: "-0.02em" }) + txt(1.4, 0.35, 1.1, "POOL", "#1d3f9e", { weight: 700, anchor: "start" })) +
+  letters(c, L / 2, 4.5, 0.5, c.cls || "388", "#f4f4f2", { weight: 600 });
+export const traxx = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_TRAXX, rake: [[1.7, 9.1], [2.5, 12.2]], centers: 34.25, door: 5.4, wheel: 49,
+  paint: traxxPaint, over: traxxOver, surround: "#141518", grilles: [[-6.0, 5.0, 10.0, 11.4], [1.0, 5.0, 10.0, 11.4]], grilleFill: "rgba(20,22,25,0.18)" });
+
+// Škoda 69E "Eso" (ČSD E 499.3, 1980-1990, 181 built: ČD 363.001-181,
+// many rebuilt for 140 km/h as 362; ZSSK's 363s and their rebuilds; the DC
+// 163/162 are the same body): 16.8 m over the buffers, about 4.2 m to the
+// roof, Bo'Bo' on 1,250 mm wheels, bogies about 8.6 m apart, 87 t
+// (en.wikipedia "ČD Class 363"). A flat front with two big windshield panes
+// leaning back a little, the headlights in a box between them and lamp
+// pairs low; a crew door behind each cab, the machine room's long run of
+// dark windows high on the side, ribbed panels below; two pantographs. ČD
+// still runs them on R and some Ex trains (Prague-České Budějovice, -Plzeň,
+// -Břeclav, Ústí-Cheb, Brno-Olomouc). ČD's paint: blue, a cream band across
+// the middle, the roof pale gray; ZSSK's: white over a red lower half.
+const NOSE_ESO = [[0.95, 4.1], [0.8, 8.5], [1.25, 12.0], ["q", 1.35, 12.9, 2.4, 12.9]];
+const esoPaint = (c, L) => c.agency === "zssk"
+  ? bands(L, [[0, 20, ZS.white], [11.9, 3, "#c9ced4"], [0, 7.6, ZS.red], [7.6, 0.2, "#f4f5f6"], [0, 4.6, "#2a2d31"]])
+  : bands(L, [[0, 20, "#2f5fb8"], [11.9, 3, "#d6d9dc"], [6.7, 1.95, "#ece3c4"], [0, 4.6, "#1f3f80"]]) +
+    lines([4.9, 5.4, 5.9, 6.3].map((y) => [8.5, y, L - 8.5, y]), "rgba(0,0,0,0.18)", 0.5);
+const esoOver = (c, L) => (c.agency === "zssk" ? zsLogo(c, L / 2, 6.1, 0.6, "#ffffff", false) : cdLogo(c, 3.6, 7.7, 0.9, "#16181b", false)) +
+  letters(c, 3.6, 5.6, 0.45, c.agency === "zssk" ? "363" : "362", "#ffffff", { weight: 700 });
+export const eso = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_ESO, rake: [[0.85, 8.6], [1.25, 12.0]], centers: 28.2, door: 4.6, wheel: 49,
+  paint: esoPaint, over: esoOver, surround: "#1d2026", grilles: [[-(c.L / 2 - 7.6), c.L - 15.2, 8.9, 11.5]], grilleFill: "rgba(20,22,25,0.72)" });
 
 // ---------- Coaches ----------
 
@@ -349,6 +417,10 @@ export const vectron = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_VE
 // trailer's rounded cab end, navy edged in yellow, at the back of the train.
 const RJ_ROWS = (L) => [{ a: 6.0, b: L - 6.0, y: 7.2, w: 5.2, h: 3.1, pitch: 6.45, r: 0.5 }];
 export const rjCoach = (c) => euroCoach({ ...c, agency: "czcd", firstClass: c.index === 1 }, { rows: RJ_ROWS(c.L) });
+export const cjCoach = (c) => euroCoach({ ...c, agency: "czcd", livery: "comfortjet" }, { rows: RJ_ROWS(c.L) });
+export const cjCab = (c) => euroCoach({ ...c, agency: "czcd", livery: "comfortjet" }, { rows: RJ_ROWS(c.L),
+  cab: () => path(poly([[1.0, 8.6], [2.6, 11.6], [5.4, 11.6], [5.4, 8.6]]), C.glass) + path(poly([[0.75, 8.3], [0.75, 11.9], [2.4, 12.2], ["q", 1.0, 11.6, 0.75, 8.3]]), "#111214") +
+    rect(3.2, 11.1, 1.9, 0.3, "#f39a26", 0, 'opacity="0.9"') + line(1.6, 8.8, 2.3, 10.4, "#0d0f12", 0.7) });
 export const rjCab = (c) => euroCoach({ ...c, agency: "czcd" }, { rows: RJ_ROWS(c.L),
   cab: () => path(poly([[1.0, 8.6], [2.6, 11.6], [5.4, 11.6], [5.4, 8.6]]), C.glass) + path(poly([[0.75, 8.3], [0.75, 11.9], [2.4, 12.2], ["q", 1.0, 11.6, 0.75, 8.3]]), "#111214") +
     rect(3.2, 11.1, 1.9, 0.3, "#f39a26", 0, 'opacity="0.9"') + line(1.6, 8.8, 2.3, 10.4, "#0d0f12", 0.7) });
@@ -445,6 +517,14 @@ function cdBlue(L, { cab = null, low, top, skirt, sill, roofY }) {
 function panterPaint(cab) {
   return (c, g) => {
     const L = g.L;
+    // Moravia (Škoda, the South Moravian Region's 530 four-car and 550 two-
+    // car units of the RegioPanter family, 2022-23, run by ČD on Brno's S2,
+    // S3 and S51; cs.wikipedia "Moravia (elektrická jednotka)", photographs):
+    // raspberry red, the windows in a black band, a white band under them
+    // that rises toward the car ends, red doors, a dark skirt.
+    if (c.livery === "jmk") return bands(L, [[0, 20, "#c42a4c"], [12.9, 3, "#c9ced4"], [0, 3.95, "#2a2d31"]]) +
+      path(`M-1 4.3L${L + 1} 4.3L${L + 1} 6.3Q${L / 2} 5.6 -1 6.6Z`, "#f4f5f6") + rect(-1, 6.25, L + 2, 4.35, "#16181b") +
+      (cab ? path("M0 3.95L0 14L7.6 14L7.6 4.6Q6.0 3.95 4.0 3.95Z", "#c42a4c") : "");
     if (c.agency === "zssk") return bands(L, [[0, 20, ZS.white], [12.9, 3, ZS.gray], [5.9, 4.8, ZS.red], [0, 3.9, "#2a2d31"], [3.9, 0.15, ZS.red]]) +
       (cab ? path("M0 5.9L0 14L8.4 14L8.4 6.4Q8.0 5.9 7.0 5.9Z", ZS.red) : "");
     if (c.agency === "czarriva") return bands(L, [[0, 20, ARRIVA.aqua], [12.9, 3, "#c9ced4"], [0, 3.9, ARRIVA.skirt], [4.2, 0.22, ARRIVA.white], [4.65, 0.22, ARRIVA.white]]) +
@@ -452,8 +532,9 @@ function panterPaint(cab) {
     return cdBlue(L, { cab: cab ? 8.0 : null, low: 4.35, top: 11.25, skirt: 4.1, sill: 3.0, roofY: 12.9 });
   };
 }
-const panterFill = (c) => (c.agency === "zssk" ? ZS.red : null);
-const panterName = (c, x) => (c.agency === "czcd" || !c.agency ? cdLogo(c, x, 5.35, 1.1, "#ffffff") : c.agency === "czarriva" ? letters(c, x, 5.6, 1.3, "arriva", "#ffffff", { weight: 700 })
+const panterFill = (c) => (c.agency === "zssk" ? ZS.red : c.livery === "jmk" ? "#c42a4c" : null);
+const panterName = (c, x) => (c.livery === "jmk" ? letters(c, x, 5.1, 0.75, "Jihomoravský kraj", "#16181b", { weight: 600 })
+  : c.agency === "czcd" || !c.agency ? cdLogo(c, x, 5.35, 1.1, "#ffffff") : c.agency === "czarriva" ? letters(c, x, 5.6, 1.3, "arriva", "#ffffff", { weight: 700 })
   : zsLogo(c, x, 11.6, 0.55, ZS.red, false) + letters(c, x + 1.0, 11.65, 0.7, "ZSSK", ZS.red, { anchor: "start", weight: 800 }));
 const panterRoof = (L, items) => items.map(([x, w]) => hvac(x, 13.9, w)).join("");
 export const panterCab = (c) => unit(c, { roof: 13.9, sill: 3.0, nose: NOSE_PANTER, rake: [[2.0, 8.3], [4.2, 12.9]], cabLen: 8,
@@ -462,10 +543,26 @@ export const panterCab = (c) => unit(c, { roof: 13.9, sill: 3.0, nose: NOSE_PANT
   surround: c.agency === "zssk" ? "#1d1e20" : undefined,
   pan: c.index === 0 && c.count === 2 ? 44 : null,
   extra: (cc, g) => panterRoof(g.L, [[18, 13], [g.L - 26, 10]]) + boxes(25, g.L - 18, 3.0, 2, 0.6) + panterName(cc, 30) +
-    (cc.agency === "czcd" || !cc.agency ? letters(cc, 58, 5.35, 0.85, "RegioPanter", "#ffffff", { weight: 600 }) : "") });
+    (cc.livery === "jmk" ? letters(cc, 58, 5.1, 0.85, "Moravia", "#16181b", { weight: 700 })
+      : cc.agency === "czcd" || !cc.agency ? letters(cc, 58, 5.35, 0.85, "RegioPanter", "#ffffff", { weight: 600 }) : "") });
 export const panterMid = (c) => unit(c, { roof: 13.9, sill: 3.0,
   rows: [{ xs: seq(17.6, 6.4, 7), y: 6.4, w: 5.6, h: 3.8, r: 0.45 }, { xs: [3.0, c.L - 6.6], y: 6.4, w: 3.6, h: 3.8, r: 0.45 }],
   doors: [plug(9.4, 3.0, 10.5), plug(c.L - 13.8, 3.0, 10.5)], trucks: [8.0, c.L - 8.0], paint: panterPaint(false), doorFill: panterFill, pan: c.L / 2 - 8,
+  extra: (cc, g) => panterRoof(g.L, [[3.5, 10], [g.L - 14, 10]]) + boxes(18, g.L - 18, 3.0, 2, 0.6) + panterName(cc, 40) });
+// InterPanter (Škoda 7Ev for long distance, ČD 660.0 three-car and 660.1
+// five-car, 2015-16, 4 and 10 units; Brno-Olomouc R13 and other R lines,
+// railwaygazette.com 2015, ceskedrahy.cz): the RegioPanter's cars in the
+// same paint, seated for long trips: a single door a side in each car,
+// toward its inner end, a window row from the cab to the door, the name in
+// white.
+export const interCab = (c) => unit(c, { roof: 13.9, sill: 3.0, nose: NOSE_PANTER, rake: [[2.0, 8.3], [4.2, 12.9]], cabLen: 8,
+  rows: [{ xs: seq(12.6, 6.4, 8), y: 6.4, w: 5.6, h: 3.8, r: 0.45 }, { xs: [9.0, c.L - 7.4], y: 6.4, w: 3.0, h: 3.8, r: 0.45 }],
+  doors: [plug(c.L - 13.2, 3.0, 10.5)], trucks: [9.5, c.L - 8.0], paint: panterPaint(true),
+  extra: (cc, g) => panterRoof(g.L, [[18, 13], [g.L - 26, 10]]) + boxes(25, g.L - 18, 3.0, 2, 0.6) + panterName(cc, 30) +
+    letters(cc, 58, 5.35, 0.85, "InterPanter", "#ffffff", { weight: 600 }) });
+export const interMid = (c) => unit(c, { roof: 13.9, sill: 3.0,
+  rows: [{ xs: seq(3.4, 6.4, 10), y: 6.4, w: 5.6, h: 3.8, r: 0.45 }, { xs: [c.L - 6.6], y: 6.4, w: 3.6, h: 3.8, r: 0.45 }],
+  doors: [plug(c.L - 13.8, 3.0, 10.5)], trucks: [8.0, c.L - 8.0], paint: panterPaint(false), pan: c.index % 2 ? c.L / 2 - 8 : null,
   extra: (cc, g) => panterRoof(g.L, [[3.5, 10], [g.L - 14, 10]]) + boxes(18, g.L - 18, 3.0, 2, 0.6) + panterName(cc, 40) });
 
 // RegioShark (Pesa Link, ČD 844): two cars, 43.73 m, a diesel under each;
@@ -482,18 +579,133 @@ export const linkCar = (c) => unit(c, { roof: 13.3, sill: 2.9, nose: NOSE_LINK, 
     boxes(16, 30, 2.9, 2, 1.1) + tank(31, 38, 2.9, 1.4) + boxes(39, g.L - 15, 2.9, 1, 1.0) +
     mark(cc, 27, 4.78, txt(0, 0, 1.15, "RegioShark", CD.shark, { weight: 700 })) + cdLogo(cc, 47, 11.1, 0.85, "#ffffff", false) });
 
+// RegioFox (Pesa Link II, ČD 847.001-106, 2022-2026, the commonest new
+// diesel on ČD's branch and regional lines): two cab sections on a shared
+// Jakobs truck, 44.465 m over the couplers (22.23 m a section), 4.28 m
+// tall, floor 600 mm above the rail between the trucks; a powered truck
+// under each cab (2.4 m wheelbase, 780 mm wheels) 17.04 m from the Jakobs
+// truck (2.9 m), an MTU power pack and fuel tank under each section, the
+// cooling and air-conditioning modules on the roof; a rounded nose under a
+// big wraparound windshield; one double plug door a side in each section,
+// toward the joint, the toilet's small window beyond it (cs.wikipedia,
+// "Motorová jednotka 847"; photographs). ČD's paint (the Najbrt studio's):
+// white below the windows, ČD blue through the window band, the roof and
+// the cab's upper half navy, a navy line along the skirt, "RegioFox" in
+// blue behind the cab. PID's (Prague and Central Bohemia, cs: "červeno-
+// šedý"): pale gray, a black window band, red around the door and on the
+// nose's corner, "pid" in red.
+const NOSE_FOX = [[1.5, 2.4], [1.15, 5.2], ["q", 1.2, 7.4, 2.7, 8.9], [5.2, 12.8], ["q", 6.1, 14.04, 8.0, 14.04]];
+const FOXD = { roof: 14.04, sill: 2.4, door: 40.0 };
+function foxPaint(c, g) {
+  const L = g.L, pid = c.livery === "pid";
+  if (pid) {
+    return bands(L, [[0, 20, "#e6e8ea"], [12.7, 3, "#c9cdd2"], [0, 2.75, "#3a3d42"]]) +
+      rect(FOXD.door - 6.2, 2.75, 17.0, 10.0, CD.red) + rect(9.6, 6.25, L - 9.6, 3.95, "#16181b") +
+      path("M0 2.75L0 6.2L3.2 6.2Q2.5 4.4 3.0 2.75Z", CD.red);
+  }
+  return bands(L, [[0, 20, CD.white], [12.6, 3, CD.navy], [6.0, 6.6, CD.blue], [0, 2.75, CD.navy]]) +
+    // The cab: navy over the windshield and down its sides to the waist,
+    // white below, the blue beginning behind the cab door.
+    path("M0 7.6Q4.4 7.4 6.6 6.0L9.8 6.0L9.8 14.2L0 14.2Z", CD.navy) + rect(9.8, 6.0, 0.3, 6.6, CD.white);
+}
+const foxDoor = (x) => plug(x, 2.45, 10.6, 4.4);
+const foxRows = [{ xs: [10.5], y: 7.0, w: 2.4, h: 3.0, r: 0.4 }, { xs: seq(13.6, 5.8, 4), y: 6.5, w: 4.8, h: 3.6, r: 0.45 },
+  { xs: [36.8], y: 6.5, w: 2.0, h: 3.6, r: 0.4 }, { xs: [46.8, 56.8, 62.6], y: 6.5, w: 4.8, h: 3.6, r: 0.45 }, { xs: [52.9], y: 8.5, w: 1.6, h: 1.6, r: 0.3 }];
+export const fox = (c) => unit(c, { roof: FOXD.roof, sill: FOXD.sill, nose: NOSE_FOX, rake: [[2.7, 8.9], [5.2, 12.8]], depth: 2.9, cabLen: 9, lampY: 4.7,
+  rows: foxRows, doors: [foxDoor(FOXD.door)], diaphragm: [2.6, 12.6], paint: foxPaint,
+  surround: c.livery === "pid" ? "#16181b" : CD.navy,
+  // Its own trucks (the motor truck under the cab, the Jakobs truck shared at
+  // the joint); the power pack and fuel tank between them and the door, the
+  // battery and air boxes under the low floor; on the roof the engine's
+  // cooling module and exhaust behind the cab, air-conditioning over the
+  // saloon, the brake resistor toward the joint.
+  extra: (cc, g) => truck(17.1, { wb: 7.9, d: 30.7, top: FOXD.sill }) + truck(g.L, { wb: 9.5, d: 30.7, top: FOXD.sill }) +
+    boxes(22.0, 31.0, FOXD.sill, 1, 1.3) + tank(31.4, 37.6, FOXD.sill, 0.9) + boxes(45.5, 62.0, FOXD.sill - 0.3, 3, 0.5) +
+    rect(12.5, FOXD.roof - 0.05, 13.0, 1.15, C.steelDark, 0.4, 'rx="0.3"') + slats(13.2, FOXD.roof + 0.2, 11.6, 0.75, 0.42, "rgba(0,0,0,0.3)") + exhaust(25.0, FOXD.roof) +
+    hvac(36.0, FOXD.roof, 11.0, 0.8) + rect(52.0, FOXD.roof - 0.05, 9.0, 0.55, C.steelDark, 0.4, 'rx="0.2"') +
+    (cc.livery === "pid"
+      ? letters(cc, 23.0, 4.4, 1.6, "pid", CD.red, { weight: 700 }) + letters(cc, 42.2, 11.4, 0.5, "Pražská integrovaná doprava", "#3a3d42", { weight: 600 })
+      : mark(cc, 22.0, 4.55, txt(0, 0, 1.2, "Regio", CD.blue, { weight: 500, anchor: "end" }) + txt(0, 0, 1.2, "Fox", CD.blue, { weight: 800, anchor: "start" })) +
+        cdLogo(cc, 64.0, 4.6, 0.85, CD.navy, false)) });
+
+// The Studénka railcars (Moravskoslezská vagónka): the 842 (37, 1988-94,
+// 842.001-037) and the 843 (31, 1995-97, 843.001-031) with its 943
+// driving trailers (2006-07). Each 25.2 m over the buffers, about 4.24 m
+// tall, floor 1.3 m up; bogies 17 m apart on 840 mm wheels; a flat cab end
+// at both ends of the railcars, three windshield panes under the headlight
+// box, buffers and a screw coupling; a two-leaf folding door a side behind
+// each cab (the 843's at the No. 1 end opens into its luggage room, with a
+// wheelchair lift), wide windows between; the engine and transmission
+// under the floor, its radiators and exhaust in a long roof housing at one
+// end (cs.wikipedia, "Motorový vůz 842", "Motorový vůz 843"; photographs).
+// ČD's paint: sky blue down to the waist, a navy line there, white below
+// and a navy skirt; yellow along the buffer beam; ČD's mark under the
+// windshield and on the side.
+const NOSE_STUD = [[0.75, 4.1], [0.62, 12.2], ["q", 0.7, 13.9, 2.6, 13.9]];
+const studPaint = (c, g) => bands(g.L, [[0, 20, "#eef0f2"], [7.2, 8, "#3f8bdc"], [13.1, 3, "#4e5560"], [6.75, 0.45, CD.navy], [0, 4.55, CD.navy]]) +
+  rect(-1, 4.1, 3.2, 0.5, CD.yellow);
+const studDoor = (x) => ({ x, w: 4.1, y0: 4.25, y1: 11.3, leaves: 2, glassY: 0.42, glassH: 0.42 });
+const studRows = (wins) => [{ xs: [2.7], y: 8.0, w: 2.3, h: 2.9, r: 0.35 }, { xs: wins, y: 7.6, w: 3.9, h: 3.1, r: 0.35 }];
+function studCar(c, { engine, full = false }) {
+  return unit(c, { roof: 13.9, sill: 4.1, nose: NOSE_STUD, rake: [[0.68, 8.4], [0.66, 12.3]], depth: 0.5, cabLen: 2, lampY: 5.3, coupler: "buffers",
+    rows: studRows(full ? seq(15.6, 5.25, 10) : seq(15.6, 5.25, 5)), doors: full ? [studDoor(9.4), studDoor(c.L - 13.5)] : [studDoor(9.4)],
+    paint: studPaint, surround: "#1d2026", diaphragm: [4.3, 12.4],
+    extra: (cc, g) => {
+      let s = truck(13.4, { wb: 8.5, d: 33, top: 4.1 }) + buffers(g.L, 1, { sill: 4.1 }) + lines([[0.3, 13.2, g.L - 0.3, 13.2]], "rgba(0,0,0,0.25)", 0.5);
+      if (engine) {
+        // The engine and gearbox between the trucks, the fuel tank beside
+        // them; the radiator housing and exhaust on the roof over them.
+        s += boxes(18.5, 30.0, 4.1, 2, 1.5) + tank(30.5, 36.5, 4.1, 2.2) + rect(4.0, 13.85, 17.0, 0.95, C.steelDark, 0.4, 'rx="0.35"') +
+          slats(5.0, 14.0, 15.0, 0.65, 0.42, "rgba(0,0,0,0.3)") + exhaust(21.5, 13.9);
+      } else s += boxes(20.0, 34.0, 4.1, 2, 1.0) + hvac(6.0, 13.9, 9.0, 0.55);
+      return s + letters(cc, 30.0, 6.0, 0.62, cc.cls || "", CD.navy, { weight: 700 });
+    } });
+}
+// Railcars: one half drawn, mirrored for the other end; the second truck and
+// the logo over both.
+const studTwin = (c, engine) => twinEnded(c, (h) => studCar(h, { engine })) + cdLogo(c, c.L / 2, 5.6, 0.85, CD.navy, false);
+export const car842 = (c) => studTwin(c, true);
+export const car843 = (c) => studTwin(c, true);
+// The 943 driving trailer: the same body with one cab, no engine.
+export const car943 = (c) => studCar(c, { engine: false, full: true }) + truck(c.L - 13.4, { wb: 8.5, d: 33, top: 4.1 }) + boxes(48.0, 62.0, 4.1, 2, 0.9) +
+  cdLogo(c, c.L / 2, 5.6, 0.85, CD.navy, false);
+
 // Regionova (ČD 814): two-axle railbus cars of 14.22 m rebuilt from class
 // 810 railbuses; an upright new cab, a folding door behind it. ČD's
 // regional yellow and green: green below a wave that rises to the cab, the
 // name in white on the green.
-function axle(x, sill) {
+export function axle(x, sill) {
   return rect(x - 2.6, 1.6, 5.2, 0.32, "currentColor", 0, 'opacity="0.8"') + circle(x, 1.25, 1.25, "currentColor") + circle(x, 1.25, 1.02, "none", 0, `stroke="${C.steelDark}" stroke-width="0.5" ${STROKE}`) +
     circle(x, 1.25, 0.33, C.steelDark) + rect(x - 0.55, 0.85, 1.1, 0.8, C.steelDark, 0, 'rx="0.14"') + rect(x - 1.2, 1.95, 2.4, sill - 1.95, "currentColor", 0, 'opacity="0.8"') +
     // The leaf spring over the axle box, hung from brackets at each end.
     path(`M${n(x - 2.4)} 2.35Q${n(x)} 1.55 ${n(x + 2.4)} 2.35L${n(x + 2.4)} 2.6Q${n(x)} 1.85 ${n(x - 2.4)} 2.6Z`, C.steelDark) +
     rect(x - 2.7, 2.3, 0.35, sill - 2.3, "currentColor") + rect(x + 2.35, 2.3, 0.35, sill - 2.3, "currentColor");
 }
-const NOSE_814 = [[0.9, 3.9], [0.8, 6.8], ["q", 0.9, 7.9, 1.6, 8.6], [2.4, 10.9], ["q", 2.8, 11.6, 3.8, 11.6]];
+// The 810 railbus itself (Vagónka Studénka, 1975-1982, 810.001-679; about
+// 40 still in ČD's regular service in 2026, on Central Bohemian, Olomouc-
+// region, Karlovy Vary and seasonal branch lines, cs.wikipedia "Motorový
+// vůz 810", fdrive.cz 2026) and its Btax trailer (ex-010): 13.97 m over the
+// buffers, two axles 6.6 m apart under a body like the Regionova's; a flat
+// cab at each end with two big windshield panes, the headlight in a pod on
+// the roof's edge and lamp pairs at the waist; a one-leaf folding door at
+// each end of the side, six wide windows between. Most still wear the
+// railbuses' red with a cream band under the windows (others ČD's blue).
+const NOSE_810 = [[0.75, 3.9], [0.6, 10.4], ["q", 0.65, 11.6, 2.2, 11.6]];
+const paint810 = (c, g) => bands(g.L, [[0, 20, "#b3202c"], [5.55, 1.95, "#ecdcb0"], [10.95, 3, "#c9c4b8"], [0, 3.95, "#8c1a24"]]);
+const rows810 = (xs) => [{ xs, y: 7.65, w: 4.3, h: 2.75, r: 0.35 }];
+const door810 = (x) => ({ x, w: 2.5, y0: 3.95, y1: 10.2, leaves: 1, glassY: 0.5, glassH: 0.38 });
+const half810 = (h) => unit(h, { roof: 11.6, sill: 3.9, nose: NOSE_810, rake: [[0.66, 7.5], [0.62, 10.5]], depth: 0.45, cabLen: 0.5, lampY: 6.2, coupler: "buffers",
+  rows: rows810([7.0, 12.5, 18.0]), doors: [door810(3.5)], paint: paint810, diaphragm: [4.2, 10.4], surround: "#1d2026",
+  // The engine, gearbox and fuel tank under the floor between the axles,
+  // the radiator grille and exhaust on the roof.
+  extra: (cc, g) => axle(12.1, 3.9) + boxes(15.0, 22.9, 3.9, 1, 1.4) + rect(5.0, 11.55, 9.0, 0.55, C.steelDark, 0.4, 'rx="0.25"') +
+    rect(0.45, 11.0, 1.0, 0.75, "#2a2d31", 0.35, 'rx="0.3"') + lamp(0.5, 11.15, 0.55, 0.45) });
+export const railbus810 = (c) => twinEnded(c, half810) + exhaust(c.L / 2 - 1.2, 11.6) + cdLogo(c, c.L / 2, 6.5, 0.75, "#8c1a24", false);
+// The trailer: the same body without cabs or engine, gangways at the ends.
+export const trailer010 = (c) => unit(c, { roof: 11.6, sill: 3.9, rows: rows810(seq(6.6, 5.45, 6)), doors: [door810(2.8), door810(c.L - 5.3)], paint: paint810,
+  diaphragm: [4.2, 10.4], extra: (cc, g) => axle(12.1, 3.9) + axle(g.L - 12.1, 3.9) + boxes(16.0, g.L - 16.0, 3.9, 2, 0.8) + buffers(0, -1, { sill: 3.9 }) + buffers(g.L, 1, { sill: 3.9 }) });
+
+const NOSE_814 =[[0.9, 3.9], [0.8, 6.8], ["q", 0.9, 7.9, 1.6, 8.6], [2.4, 10.9], ["q", 2.8, 11.6, 3.8, 11.6]];
 const novaPaint = (c, g) => bands(g.L, [[0, 20, "#f6c400"], [10.75, 3, "#a9b0b8"], [0, 4.2, "#2a2d31"]]) +
   path(`M-1 4.2L-1 8.0C4.6 8.0 8.4 5.8 14.6 5.8L${g.L + 1} 5.8L${g.L + 1} 4.2Z`, "#2f8f3a") + path(`M-1 8.0C4.6 8.0 8.4 5.8 14.6 5.8L${g.L + 1} 5.8L${g.L + 1} 6.0L14.6 6.0C8.4 6.0 4.6 8.2 -1 8.2Z`, "#ffffff");
 export const regionova = (c) => unit(c, { roof: 11.6, sill: 3.9, nose: NOSE_814, rake: [[1.6, 8.6], [2.4, 10.9]], depth: 2.0, cabLen: 5, lampY: 5.4,
@@ -502,9 +714,11 @@ export const regionova = (c) => unit(c, { roof: 11.6, sill: 3.9, nose: NOSE_814,
   // Buffers and screw couplings at both ends (the cars run as 810s did);
   // the door's folding step; the engine, fuel tank and battery box between
   // the axles; air-conditioning, exhaust and a rain gutter over the side.
-  extra: (cc, g) => axle(12.5, 3.9) + axle(g.L - 12.5, 3.9) + hvac(18, 11.6, 9, 0.55) + exhaust(29, 11.6) + buffers(g.L, 1, { sill: 3.9 }) +
+  // The second car of a pair is the 914 driving trailer, with no engine
+  // (corrected 2026-10: both cars used to be drawn as 814 motor cars).
+  extra: (cc, g) => axle(12.5, 3.9) + axle(g.L - 12.5, 3.9) + hvac(18, 11.6, 9, 0.55) + (cc.trailer ? "" : exhaust(29, 11.6)) + buffers(g.L, 1, { sill: 3.9 }) +
     rect(5.2, 2.9, 3.6, 0.3, "currentColor") + rect(5.6, 2.3, 2.8, 0.25, "currentColor", 0, 'opacity="0.8"') + line(4.4, 11.15, g.L - 0.8, 11.15, "rgba(0,0,0,0.25)", 0.6) +
-    boxes(16.4, 20.6, 3.9, 1, 1.1) + tank(21.0, 26.0, 3.9, 2.2) + boxes(26.4, g.L - 16.4, 3.9, 1, 1.0) + rect(g.L - 9.2, 2.7, 2.6, 1.2, "currentColor", 0, 'opacity="0.75" rx="0.1"') +
+    boxes(16.4, 20.6, 3.9, 1, 1.1) + (cc.trailer ? boxes(21.0, 26.0, 3.9, 1, 0.8) : tank(21.0, 26.0, 3.9, 2.2)) + boxes(26.4, g.L - 16.4, 3.9, 1, 1.0) + rect(g.L - 9.2, 2.7, 2.6, 1.2, "currentColor", 0, 'opacity="0.75" rx="0.1"') +
     letters(cc, 26, 4.95, 0.95, "Regionova", "#ffffff", { weight: 700, style: "italic" }) + cdLogo(cc, g.L - 8, 10.25, 0.65, CD.navy, false) });
 
 // Regio-Shuttle RS1 (ČD 840 and 841, GW Train 841.2): one car of 25.5 m with
@@ -522,6 +736,28 @@ export const rs1 = (c) => twinEnded(c, (h) => unit(h, { roof: 13.1, sill: 3.6, d
   trucks: [8.4, c.L - 8.4], low: 4.6, paint: rs1Paint, lampY: 5.2, doorFill: (cc) => (cc.agency === "czgwtrain" ? GW.green : null),
   extra: (cc, g) => hvac(10, 13.1, 9) + exhaust(20.5, 13.1) + boxes(13.0, 16.3, 3.6, 1, 1.2) })) +
   (c.agency === "czgwtrain" ? letters(c, c.L / 2, 4.15, 1.65, "GWTRAIN", "#ffffff", { weight: 800, style: "italic", spacing: "-0.02em" }) : cdLogo(c, c.L / 2, 11.15, 0.9, "#ffffff"));
+
+// Duewag RegioSprinter (GW Train Regio's 654s, 16 bought from Rurtalbahn,
+// on its South Bohemian lines since December 2017 and Karlovy Vary-
+// Mariánské Lázně; de.wikipedia "Duewag RegioSprinter", cs.wikipedia "GW
+// Train Regio"): three modules, 24.8 m over the couplers, 3.45 m tall; a
+// cab module at each end over a single powered axle with its MAN engine
+// under the high floor, the short middle module low-floored over a two-
+// axle truck (A'2'A'); a raked windshield, a big window in the cab door, a
+// double door a side in each end module by the joint, big windows. In GW
+// Train's orange, the cab ends green.
+const NOSE_RSP = [[1.0, 2.6], [0.8, 5.4], ["q", 0.9, 6.8, 1.8, 7.6], [3.4, 10.6], ["q", 3.9, 11.3, 5.2, 11.3]];
+const halfRsp = (h) => unit(h, { roof: 11.3, sill: 2.6, nose: NOSE_RSP, rake: [[1.8, 7.6], [3.4, 10.6]], depth: 2.2, cabLen: 4, lampY: 4.2,
+  rows: [{ xs: [5.0], y: 6.2, w: 4.0, h: 3.6, r: 0.5 }, { xs: [12.0], y: 5.8, w: 7.0, h: 4.0, r: 0.4 }, { xs: [25.6], y: 5.8, w: 6.4, h: 4.0, r: 0.4 },
+    { xs: [37.2], y: 5.8, w: 7.0, h: 4.0, r: 0.4 }],
+  doors: [{ x: 20.2, w: 4.2, y0: 2.0, y1: 9.9, leaves: 2, glassY: 0.3, glassH: 0.55 }], diaphragm: [2.4, 10.4],
+  paint: (cc, g) => bands(g.L, [[0, 20, GW.orange], [10.4, 3, "#8e959d"], [0, 3.1, "#3a3d42"], [3.1, 0.25, GW.green]]) + path("M-1 3.1L10.0 3.1L11.2 11.3L-1 11.3Z", GW.green),
+  doorFill: () => GW.green, surround: "#1d2026",
+  // The joints between the modules (a rubber seal and a dark band), the
+  // powered axle and engine under the cab module, the middle module's truck.
+  extra: (cc, g) => rect(32.7, 2.6, 0.6, 8.7, "#2a2d31") + slats(10.1, 6.4, 0.9, 3.0, 0.3, "rgba(0,0,0,0.5)") +
+    truck(7.8, { wb: 0.01, d: 30, top: 2.6 }) + boxes(11.0, 19.5, 2.6, 1, 1.0) + truck(g.L / 2, { wb: 5.9, d: 26, top: 2.0 }) + hvac(13, 11.3, 8, 0.6) + exhaust(4.5, 11.3) });
+export const regioSprinter = (c) => twinEnded(c, halfRsp) + letters(c, 28.8, 3.9, 0.95, "GWTRAIN", "#ffffff", { weight: 800, style: "italic" });
 
 // DB class 628 (Arriva 845, GW Train's 628s): two cars of 22.9 m, a diesel
 // under the motor car; a wedge cab; single folding doors near each end.
@@ -556,13 +792,51 @@ export const lintCar = (c) => unit(c, { roof: 13.4, sill: 2.8, nose: NOSE_LINT, 
 // region's lime green over dark green, yellow round the windshield, a dark
 // roof; RegioJet's name in white.
 const NOSE_ELF = [[1.4, 3.4], [1.0, 6.0], ["q", 1.1, 7.8, 2.6, 9.2], [5.0, 12.9], ["q", 5.8, 13.8, 7.6, 13.8]];
-const elfPaint = (c, g) => bands(g.L, [[0, 20, RJ.lime], [12.9, 3, "#4a5056"], [0, 4.7, RJ.green], [4.7, 0.2, "#ffffff"]]) +
+// The three-car Elf.eu (RegioJet 655, 7 units, 2025, Prague's S49 and S61;
+// cs.wikipedia "RegioJet" fleet table) in PID's red and gray: pale gray, a
+// black window band, red over and under the band beside the inner door,
+// the nose's edge red; RegioJet's name behind the cab.
+const elfPid = (c, g, cab) => bands(g.L, [[0, 20, "#e6e8ea"], [12.9, 3, "#c9cdd2"], [0, 4.0, "#3a3d42"]]) +
+  rect(cab ? 40.5 : 22.0, 4.0, 12.0, 9.0, CD.red) + rect(cab ? 10.5 : -1, 6.35, g.L + 2, 4.1, "#16181b") +
+  (cab ? path("M0 4.0L0 9.0Q1.0 9.4 1.6 9.0L1.6 4.0Z", CD.red) + path("M0 9.6Q2.4 10.4 4.6 13.9L5.4 13.9Q3.2 10.0 0.6 9.1Z", CD.red) : "");
+const elfPaint = (c, g) => c.livery === "pid" ? elfPid(c, g, true) : bands(g.L, [[0, 20, RJ.lime], [12.9, 3, "#4a5056"], [0, 4.7, RJ.green], [4.7, 0.2, "#ffffff"]]) +
   path("M0 8.2L0 14L9.2 14L9.2 12.0Q6.8 12.0 5.0 9.6Q3.4 8.2 0 8.2Z", RJ.yellow) + rect(-1, 3.4, 4.8, 0.7, RJ.yellow);
 export const elfCar = (c) => unit(c, { roof: 13.8, sill: 3.4, nose: NOSE_ELF, rake: [[2.6, 9.2], [5.0, 12.9]], cabLen: 8, lampY: 5.4,
   rows: [{ xs: seq(15.6, 6.0, 3), y: 6.6, w: 5.0, h: 3.7, r: 0.45 }, { xs: seq(40.4, 6.0, 4), y: 6.6, w: 5.0, h: 3.7, r: 0.45 }],
-  doors: [plug(9.8, 3.4, 10.6), plug(34.4, 3.4, 10.6)], trucks: [9.0, c.L - 8.0], pan: c.index === 0 ? 50 : null, paint: elfPaint, doorFill: () => "#7ab534",
+  doors: [plug(9.8, 3.4, 10.6), plug(34.4, 3.4, 10.6)], trucks: [9.0, c.L - 8.0], pan: c.index === 0 && c.livery !== "pid" ? 50 : null, paint: elfPaint, doorFill: (cc) => (cc.livery === "pid" ? "#d9dcdf" : "#7ab534"),
   extra: (cc, g) => hvac(15, 13.8, 12) + (cc.index === 0 ? rect(37, 13.75, 6, 0.6, C.steelDark, 0.4, 'rx="0.2"') : hvac(44, 13.8, 10)) + boxes(18, 33, 3.4, 2, 0.7) +
-    letters(cc, 26, 5.65, 0.95, "RegioJet", "#ffffff", { weight: 700 }) + letters(cc, g.L - 18, 5.65, 0.6, "DOPRAVA ÚSTECKÉHO KRAJE", "#ffffff", { weight: 600, spacing: "0.03em" }) });
+    (cc.livery === "pid" ? letters(cc, 20, 5.6, 0.95, "‖ REGIOJET", "#16181b", { weight: 700 }) + letters(cc, 46.5, 5.2, 1.4, "pid", "#ffffff", { weight: 700 })
+      : letters(cc, 26, 5.65, 0.95, "RegioJet", "#ffffff", { weight: 700 }) + letters(cc, g.L - 18, 5.65, 0.6, "DOPRAVA ÚSTECKÉHO KRAJE", "#ffffff", { weight: 600, spacing: "0.03em" })) });
+// Its middle car: two double doors a side, the pantograph between them.
+export const elfMid = (c) => unit({ ...c, livery: "pid" }, { roof: 13.8, sill: 3.4,
+  rows: [{ xs: [3.0], y: 6.6, w: 3.0, h: 3.7, r: 0.45 }, { xs: seq(13.4, 6.0, 6), y: 6.6, w: 5.0, h: 3.7, r: 0.45 }, { xs: [c.L - 6.0], y: 6.6, w: 3.0, h: 3.7, r: 0.45 }],
+  doors: [plug(7.6, 3.4, 10.6), plug(c.L - 12.0, 3.4, 10.6)], trucks: [8.0, c.L - 8.0], pan: c.L / 2 - 4, paint: (cc, g) => elfPid(cc, g, false), doorFill: () => "#d9dcdf",
+  extra: (cc, g) => hvac(4, 13.8, 10) + boxes(16, g.L - 16, 3.4, 2, 0.7) });
+
+// CRRC Sirius (ZEMU03, RegioJet 665.001-003, built 2019-2021 for Leo
+// Express, leased by RegioJet for R23 Kolín-Ústí nad Labem since December
+// 2024; en.wikipedia "CRRC ZEMU03", cs.wikipedia "RegioJet"): three cars,
+// about 82 m, each on its own two trucks, about 4.2 m tall; a long, low
+// nose sloping up to a deep windshield, a large oval side window in the cab
+// door; one double door a side in each car, near its inner end. Its paint
+// (photographs at Ústí nad Labem): slate gray, a yellow line along the
+// sill that turns up behind the cab and arches over the cab's oval window,
+// the deflector orange; RegioJet's name in white over the windows.
+const NOSE_SIRIUS = [[3.0, 3.6], [1.2, 4.3], ["q", 0.35, 5.6, 1.4, 7.2], [7.2, 12.2], ["q", 8.8, 13.6, 11.6, 13.6]];
+const SIR = { slate: "#666d74", roof: "#8a9197", yellow: "#f6b800" };
+const siriusPaint = (cab) => (c, g) => bands(g.L, [[0, 20, SIR.slate], [12.4, 3, SIR.roof], [4.35, 0.55, SIR.yellow], [0, 3.95, "#3b3f44"]]) +
+  (cab ? path("M13.2 4.35L13.2 12.0L13.9 12.0L13.9 4.35Z", SIR.yellow) + path("M13.0 12.0Q11.0 12.4 9.0 11.0Q8.0 9.6 8.4 7.4L9.0 7.4Q8.8 9.4 9.6 10.6Q11.2 11.7 13.0 11.4Z", SIR.yellow) +
+    path("M9.2 7.6Q9.0 9.6 10.0 10.6Q11.4 11.4 12.8 11.0L12.8 7.6Q11.0 7.0 9.2 7.6Z", C.glass) : "");
+const siriusRows = (xs) => [{ xs, y: 6.9, w: 4.0, h: 3.4, r: 0.4 }];
+export const siriusCab = (c) => unit(c, { roof: 13.6, sill: 3.6, nose: NOSE_SIRIUS, rake: [[1.4, 7.2], [7.2, 12.2]], depth: 3.6, cabLen: 14, lampY: 5.0,
+  rows: siriusRows(seq(16.0, 5.3, 10)), doors: [plug(c.L - 11.6, 3.6, 10.8, 4.2)], trucks: [11.5, c.L - 8.0], paint: siriusPaint(true),
+  doorFill: () => SIR.yellow, surround: "#202326",
+  extra: (cc, g) => path(poly([[3.0, 3.6], [7.0, 3.6], [6.4, 1.0], [3.4, 0.8], [2.6, 2.4]]), "#d9622b") + hvac(18, 13.6, 13) + rect(45, 13.55, 14, 0.55, C.steelDark, 0.4, 'rx="0.25"') +
+    boxes(18, g.L - 16, 3.6, 4, 1.1) + mark(cc, 40, 11.3, `<path d="M-6.1 -0.65L-5.85 -0.65L-5.85 0.65L-6.1 0.65ZM-5.65 -0.65L-5.4 -0.65L-5.4 0.65L-5.65 0.65Z" fill="#ffffff"/>` +
+      txt(-5.1, 0, 1.25, "REGIOJET", "#ffffff", { weight: 700, anchor: "start" })) });
+export const siriusMid = (c) => unit(c, { roof: 13.6, sill: 3.6,
+  rows: siriusRows(seq(4.0, 5.3, 13)), doors: [plug(c.L - 11.0, 3.6, 10.8, 4.2)], trucks: [8.0, c.L - 8.0], paint: siriusPaint(false), doorFill: () => SIR.yellow,
+  pan: c.L / 2 - 6, extra: (cc, g) => hvac(4, 13.6, 10) + boxes(16, g.L - 16, 3.6, 3, 1.1) });
 
 // Stadler FLIRT (Leo Express 480): sections of the built-in FLIRT's
 // dimensions (js/carmodels.js), cab sections 21.5 m to the joint, the
@@ -611,6 +885,27 @@ export const TYPES = {
   czElf: { name: "Pesa Elf car", kind: "emu" },
   czFlirtCab: { name: "Stadler FLIRT end section", kind: "emu", amenities: ["first", "cafe"] },
   czFlirtMid: { name: "Stadler FLIRT intermediate section", kind: "emu" },
+  czFox: { name: "RegioFox (847) section", kind: "emu" },
+  czFoxPid: { name: "RegioFox (847) section, PID paint", kind: "emu" },
+  cz842: { name: "Class 842 diesel railcar", kind: "emu" },
+  cz843: { name: "Class 843 diesel railcar", kind: "emu" },
+  cz943: { name: "Class 943 driving trailer", kind: "emu", cab: true },
+  cz810: { name: "Class 810 railbus", kind: "emu" },
+  cz010: { name: "Railbus trailer (Btax)", kind: "emu" },
+  cz660Cab: { name: "InterPanter end car", kind: "emu" },
+  cz660Mid: { name: "InterPanter intermediate car", kind: "emu", pan: true },
+  czCjCoach: { name: "ComfortJet coach", kind: "coach", amenities: ["first", "cafe"] },
+  czCjCab: { name: "ComfortJet driving trailer", kind: "coach", cab: true },
+  czMoraviaCab: { name: "Moravia (530/550) end car", kind: "emu" },
+  czMoraviaMid: { name: "Moravia (530) intermediate car", kind: "emu", pan: true },
+  czTraxx: { name: "TRAXX electric locomotive", kind: "electric", pan: true },
+  czElfPid: { name: "Pesa Elf (655) end car", kind: "emu" },
+  czElfMid: { name: "Pesa Elf (655) middle car", kind: "emu", pan: true },
+  czSiriusCab: { name: "CRRC Sirius (665) end car", kind: "emu" },
+  czSiriusMid: { name: "CRRC Sirius (665) middle car", kind: "emu", pan: true },
+  czRegioSprinter: { name: "RegioSprinter railcar", kind: "emu" },
+  czEso: { name: "Class 362/363 electric locomotive", kind: "electric", pan: true },
+  cz816: { name: "Class 816 railcar (single Regionova)", kind: "emu" },
 };
 
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
@@ -632,13 +927,34 @@ export const MODELS = {
   czPanter650: M(panterCab, 86.8, true),
   czPanterMid: M(panterMid, 86.8),
   czLink: M(linkCar, 71.7, true),
-  czRegionova: M(regionova, 46.65, true),
+  czRegionova: M((c) => regionova({ ...c, trailer: c.index % 2 === 1 }), 46.65, true, byIndex),
   czRs1: M(rs1, 83.7),
   cz628: M(vt628, 75.1, true),
   czLint: M(lintCar, 68.7, true),
   czElf: M(elfCar, 71.5, true),
   czFlirtCab: M(leoFlirtCab, 70.5, true),
   czFlirtMid: M(leoFlirtMid, 51.5, false, byIndex),
+  czFox: M(fox, 72.95, true),
+  czFoxPid: M((c) => fox({ ...c, livery: "pid" }), 72.95, true),
+  cz842: M(car842, 82.68),
+  cz843: M(car843, 82.68),
+  cz943: M(car943, 82.68, true),
+  cz810: M(railbus810, 45.83),
+  cz010: M(trailer010, 45.83),
+  cz660Cab: M(interCab, 86.8, true),
+  cz660Mid: M(interMid, 86.8, false, byIndex),
+  czCjCoach: M(cjCoach, 86.9),
+  czCjCab: M(cjCab, 86.9, true),
+  czMoraviaCab: M((c) => panterCab({ ...c, livery: "jmk" }), 86.8, true),
+  czMoraviaMid: M((c) => panterMid({ ...c, livery: "jmk" }), 86.8),
+  czTraxx: M(traxx, 62.0),
+  czElfPid: M((c) => elfCar({ ...c, livery: "pid" }), 71.5, true),
+  czElfMid: M(elfMid, 64.0),
+  czSiriusCab: M(siriusCab, 91.9, true),
+  czSiriusMid: M(siriusMid, 85.3),
+  czRegioSprinter: M(regioSprinter, 81.36),
+  czEso: M(eso, 55.1),
+  cz816: M((c) => twinEnded(c, regionova), 46.65),
 };
 
 // [first, last, type], by UIC number (class and serial run together).
@@ -654,55 +970,190 @@ export const FLEETS = {
 // A train's line or kind: "S4", "R19", "Ex3", or "Osobní", "railjet"...
 const lineNo = (route) => Number((/^[A-Z]+(\d+)/.exec(route || "") || [])[1]);
 const set = (label, ...units) => ({ label, units });
-const RAILJET = set("railjet: a ČD 109E locomotive and seven railjet coaches, the driving trailer at the back", ["cz380", 1], ["czRjCoach", 6], ["czRjCab", 1]);
+
+// ---------- Where a train runs ----------
+// Every Czech station the five railroads' timetables stop at, by its CIS
+// number (the stop ids' last part): the region (kraj) it lies in, and
+// whether it is on electrified track. Built for October 2026 from the
+// timetables' stop positions and OpenStreetMap (a station within 120 m of a
+// railway tagged electrified=contact_line counts as electrified; the region
+// is that of the nearest of a set of seed towns per kraj). Packed as each
+// station's number less the one before (two base-36 digits, or "~" and
+// four), then its region letter, upper case when electrified: A Prague,
+// S Central Bohemia, P Plzeň, K Karlovy Vary, U Ústí, L Liberec, H Hradec
+// Králové, E Pardubice, J Vysočina, C South Bohemia, B South Moravia,
+// M Olomouc, T Moravia-Silesia, Z Zlín. A train is electric when every one
+// of its Czech stops is electrified, and in the region most of them are.
+const CZ_STATIONS = "~0pgtz07M02T01B07M02t01B07M03B07M03M07m02t01M07m02t01M07m02t01M07m02t01B07M02t01B07M02T01B07m02T01B07t02T01B07t03b07M03z07M03z07t03z0ab07M03z0az0ab0ab0ab07t02T02z06m02T02z06m02T0aT0aT0at08m02t01B07m03B07M03B07m02t01B07t02t01B09t0at0at01B09t0at01B09t01B09t01z07z02t01z07m02T01B07m02T01z02B05m02T03B05m02T03E04T01m02T01z02B05M02T01b02E05M02T01b07z02T01b07z03b07z02t01b07z02t01b07z02t01z07m03z07m03j07m03j07m02t01j07m02t01m07m03m07m03z07m03b07z02T01b09T01b07m02t0aT01J07t0cT01J0aJ0hm02t0at01b07Z03b07Z03b07Z03z07m03z07m03z07m03z07m03z0az0ab07Z03b07Z03b07Z03b07Z03B07Z03z07m03z07m0am03B07m03z07m02t08m02t01B0ab09t08M02m08M03B07M03B07M02t01B07M02T01M07M03M0az0aB0aZ09t08M02t08m02t08m0am03B07m0am0am02T01M07m02T01M07m02T01b07m02T01b07m02t01M07m02t01M07M02t01j01j04t04t01j09t0aT01J09T01J09t01J0aJ07m02t08m0at02t08t0at03b07M03b07M03j07m04M06m0dm01M0jB07M0aM02T08m02T08m02T01m07m01T01T01m07m03m07m02T0aT0aT0aT0aT0at01j07m03m07m03m09t01m0am07M02t01m07M02T08M02T01z07M02Z01B07M01M01Z01B07m03B02M05m02t01J07m02t01J07m02t01z08T02z03T06t01z0az0bz06M04z06M03B07M02t01B07M02t01b09t01b09T08m0am0dB0aB0aB0az0az07m03z07z0kz02T08m02t01B07m02T01B07m0am02t06b02m02T01b07m02T01b07m02t01b07m02t01b07m02t08m05e05M05e05m02T03e05M02T03e05M02T01B07M03B07M05e05M03B01B06M02t01b07Z03b09t01j07M02t08M02t08M02t0aT0im0xj0ab07M0aM03B07M03Z0ab0ab07Z0aZ03j07z03Z07z03Z07Z03Z07z03b07t03b07t03M07m03b0ab0ab07z03b07m03M07m03M07m0az0az0az0aM0aM0am03z07t03z07t03j07t03j07t03j07m03b07t03b0ab07Z03j07z03j07z03b0az0hZ03z07M03J07M03z07m03z07m0aM0dz0az07m03Z07m03z0kB0aB0aB0az02J0aJ1mM07M0dm0cJ0aJ0aJ08m02J08m0am0am0aB0aB0aB0ab0ab0ab0ab0aB0aB0ab0aB0kj0aj0aB0bM09J07M03b07M03B0aB0aB0aB14J0aJ0az0az0kb0ab0aB0aB0aZ0aZ0aj0aB0aB01B09j0ab0aB0aj0aj0aB0aB0aB09B01B1gJ08j0aB0aB0ab09B0bB0aB0ab0aB0aB0aB0kb0ab0aZ0aZ2iz0az0az0kz0az0az0kb0ab0ab0aj0aj0aj0aj0aj0aj0aj0kb0ab0ab0az0az0az0kb0bJ09B0aJ0aB0kM0aB0aB0aB0az0az0aB0ab0kz0uJ0aj0aJ0aj0az0az0aB0ab0ab0ab0ab0az0az0az0az0kz0az0kzgez64B0jT~0bjwA05S03S02A02S02h01S03S04S02S04S02A08S02A02S02S04S02A02S02E06S03S01H06A03S01H06A03S01H06S04H06S03U01H04S02S03U01H04S02S03U01H04S02s03U01H04S02s03U01H04S02S03U01H06S04H06S03U01H06S04H06S03U01e06S03U01h04S02S04e01A03S02S04e04S02A03U01e04S02A03U01e04S02A04e06A04e0ae09U01e09U01e09U01e04S06e04S06E09U01e09U01E09U01E0aE0aE0aE09U01E04s05U01E04S06E04S06E04S06E04s06E04S02s04m04S02s04m04S02s04m03S01S02s03U01m03S03s04m03S03s04m03E03s03U01m03E02m01s03U01m03E03s0as03U07s0as03U07s04m0am0gs04h03E03s07E03s07E03s07E01E02s04h03E03a07E03s07E03a01u06E03s07E04u06E04u03h03E04u02U07u04h06u04h06s03U01h06s0eh09U01h09U01h09U01h06s04h03E03s04h03E03s04h03e03s04h03E03s05h05s04h03E07h03E07h0ah0kh03E07h03E03s04h03E03s04h03E03s04h03E03s07M0aM03s07M0aM03s07E01S02s03u01h04S02s03U05S02s04h04S02s04h04S02a04H04S02s01s03H01s05s04E04s02s04E03S06U01E03S04s03h01h02S01S01h02s02U01e03J04s02U01e03J04s02U01e03J04s03e03J04s02U01e03J06u01e03j06u01e03j07e03j06u01e03J0aJ06u03l01J06u03l01j02s02s02u03l01j04s02u03l01j04s05l01J04S05l01J04S05l01j04S05l05S05l05S03l06S06l01E03S02U03l02E03S06l01E03S05s02E08s02e03S05s05S05s05S0aS0aS0aS08S0as02s01U09A05s05S05s05A0aA05s05A05s05A0aA0aA03U02s03S02s05s05s05s01u04s05s05s03U02s03S02s05U01l02S02s06l04s06l03S01s06l04s03u03l04s03u03l01E03s06l04s03u03l01e03s03u03l01e03a04a02l01e03s06l01e03a07e0ae03s01s01s05e03s07e03s03U04e03s03U04e03a03U07a03U03l07U03l04a03U03l04a06l03A01A0aa03U0aU07A03U01H02l01e03A03U03l01e03A03U03l01e03s06l01e03s06l01e03s03U03l01e03s03U03l01e03s03U03l04s02e04l01j03a07j03a03U03l01j03a03U03l01j03a03U04j03a06l01j03a03U03l04A03u03l0al01l01l02A06l04A06l04A06l01e03S06l01e03S06l01e03S07e03S07e03S07e03S06l01e03S06l01e03s06l01e03s06l01e03s06l01e03S03u03l01e03S03u03l01e03S03u03l01e03S03U03l04s03U04e03s03u04e03s03u04e03s03u03l04s03u07s03u04e03S03u03l01e03S07e03C07e03C06l01e03C06l01e03C06l01e03C06l01e03C04l03e03s04l02l01e03s07e03s04l03e03s04l06s04l06s04l06s04l03e03s04l06s04h0ah0ah01h09h0ah03s03S04h03s06u01h03s06u04s06u04s06u05s05u05s05u05s05u0au0au01h03e07h06a03u01h03e03a03u01h03e03a03u01h03e03a04h03e0ae03a04h03e03a04h06s04h06a03U01h03e03s03U01h03e03s03U01h06s03U01h06s03U01h06s03U01h06s04h06s04h06s03U07a07e0ae03a07e03s07e03s03U05e02s03U07s03U07s03U07s03U01h06s03U01h06s03U01h06s03U01h03j03s03U04j06U04j06U04j0aj06U01h03j0gU01h0ah09U01h06s03U02h05s03U07s03U07s03U02s05s03S02s05s03U02s05s05s05s05s05s05s0fs03U02s05s03U02s05s05s05s03U02s05s05s05s03U02s05s05s05s05s05s05s05s05s05s05s05s03U02s05s05s05s05s05s03U02s05s03U02s05s05s05s03U02s05s05s04j06s04s04u02s04s04u06j04u02s04j06s04j0aj06h0ah08u02h08u01h01s08u01h01s05s03l01h09u01h0ah0ah06s04h06s04h01s05s0as0as04h06s05s05s04s06s03u01s06s03u01h06s04h06s04h06s03u01h06s03u01h06s03u01h06s03u01h06s04h06s0as03u0au07s03u07s03u03l07u03l07u03l04s03u03l04s03u01l06s03u01l06s03u01l06s03u01l06s04h09u01h09u01h09u01h09u01h09u01h09u01h09u01h09u01h09u01h09u01h09u01h09u01h09u01h09u01H09l01h09l01h09l0al0kl0al0al0al0al0al01H09s01E03E05s02H0al08s02l08s02l0ah0al0ah0ah01h09h0ah09u01h09U01h06A03u01h07A02u07A01a02u01h09u01h09l07a03l01h06A0aa03l01h06A03l01h09l01l09l01l0al09l01l0al06A04l09l01l06A03l01l0al09l01h06a03l01h09u01h06A04h06A0eh06A05A05a0aA03A01h07A03h0ah0ah06A03u01h0ah06a04h06A04h06a04h06A04h0ah06a04h06A0eh0ah0ah0ah0ah0ah0ah0ah0ah0ah2sEb4S63U2pa1pa33A~0b79k09s01k07s03k07s03k07s03k07c03k07c03k07c02S08c02S08c02S01k07s02S0aS08C02S0aS07s03S07s09S02s03S07c03S07c03P07c03P07c03P07c03P07c03P07c03p07c03p07c03p07c03P07c03P07C04s0as06C04s06C04s06C04k06C03k07C03k07C03k07C03k07C03k07C03k07C03k07C03k07C03k07C03k07C03k07C03K07C03k07C03k07C03k07C03k07C03k07C03k07C03p0ap07C03p07C03p07C03p07C01C02p07C03p0ap07C03k01p06C03c07C01C02c07C03c07C02c01p07c0ac0ac0ac04C06c0ac0ac0ac0ac0ac0ac03P07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03C07c03C07c03C07c03P01P06c03P07c03P07c03P07c03P07c03P07c03P07c03P0aP0aP0bP09K05K05K0aK0ak0kK0ak0ak0ak0ap0ap07C03p07C03p07C03p07C03p07C03p07C03k07C03p07C03k07C03k07j03k07j03k07j03k07j01p02k07j03k07j03k07j03k07c03k07c03k07c03k07c03k07c03k01k06c0ac0ac0aC0aC0dk0kK0aP0ap0ap0ap0ap0ap0ap0ap0ak0ak0ak0ak0ak06C05k09k0ak0ak06k04k0ak0ap0ap0ap0ap07c03p08p02p08p02P01P06c01p02p08c02p08c02p07c03p07c03p07c03p07c03p0ap07C03p07C03p07C03p07C03p07C03P07C0aC0aC03P07c03P07c03P07c03p07c03P07c03P07c03P07c0ac03P05j02c03P05j05P05j04s01P05j05P05j05P05j03s02P05j05P05j05K05j05K05j05K05j05K07c03K07c03K08c02K01k01k05c03p01p06c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03s07c03s07c0ac04s06c0ac04s06c04s06C04s06C04u06C0aC0aC0aC0aC0aC03P07C03P07C0aC03P07C03P0aP07C03P07C03P07C03P07C03P07C03P07C03P07C03P07C03P07C03p07C03p07C03p07C03p07C03p07C03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07c03p07C01c02p07C03p07C03p07C03p07C0aC03p1lC14J04U04J06K04J05K05J05K05J01j04K05J05K05J02c03K07c03K07c03K07c03K07c03K07c03K07c03K07c03K07c03K07c03K07c0ac0ac0ac0ac0ac02s08c02s08c02s01P07c02s08c02s08c02s08c01c01s08c02s08c02s08C02s0as08C02s08C02s08C02s08C02s0as0as28s0lp0ap0ap0ap0ap0ap0ap0ap0ap0ap0ap0ap0ap0aP1eK27k01k14p0ap0ap0kp0ap0ap0ap0ap0ap0ak0ak0ak0ak0ak0ak0ak0ak09s01p09s0as0as0as0as0as0as0as0as0as0as0as0as0as0as01p09s0as0as01P09s01p0ap0ap0ap0ap0ap0ap07c03p0ap0ap";
+let stationMap = null;
+function stations() {
+  if (stationMap) return stationMap;
+  stationMap = new Map();
+  for (let i = 0, code = 0; i < CZ_STATIONS.length; i++) {
+    if (CZ_STATIONS[i] === "~") { code += parseInt(CZ_STATIONS.slice(i + 1, i + 5), 36); i += 4; }
+    else { code += parseInt(CZ_STATIONS.slice(i, i + 2), 36); i += 1; }
+    stationMap.set(code, CZ_STATIONS[++i]);
+  }
+  return stationMap;
+}
+// { region, electric } from a train's stops (null without them). The line
+// letter stands in for the region when a train has no stops (L Liberec,
+// M Olomouc, P Plzeň, U Ústí, V Hradec Králové).
+function whereRuns(t) {
+  const m = stations(), tally = new Map();
+  let electric = true, any = false;
+  for (const s of t.stops || []) {
+    const hit = /:CZ:(\d+)$/.exec(s.key || "");
+    const v = hit && m.get(Number(hit[1]));
+    if (!v) continue;
+    any = true;
+    if (v === v.toLowerCase()) electric = false;
+    tally.set(v.toUpperCase(), (tally.get(v.toUpperCase()) || 0) + 1);
+  }
+  const byLine = { L: "L", M: "M", P: "P", U: "U", V: "H" }[(t.route || "")[0]] || null;
+  if (!any) return { region: byLine, electric: null };
+  return { region: [...tally].sort((a, b) => b[1] - a[1])[0][0], electric };
+}
+
+// ---------- Formations ----------
 const PENDOLINO = set("Pendolino: a seven-car tilting electric train", ["czPendoCab", 1], ["czPendoMid", 5], ["czPendoCab", 1]);
-const CD_LOCO = (n) => set("A 109E electric locomotive and coaches", ["cz380", 1], ["czCoach", n]);
-const ELEFANT = set("CityElefant: a three-car double-deck electric unit", ["czElefant471", 1], ["czElefant071", 1], ["czElefant971", 1]);
-const PANTER3 = set("RegioPanter: a three-car electric unit", ["czPanter640", 1], ["czPanterMid", 1], ["czPanter640", 1]);
-const PANTER2 = (who) => set(`RegioPanter: a two-car electric unit${who}`, ["czPanter650", 2]);
-const SHARK = set("RegioShark: a two-car diesel unit", ["czLink", 2]);
-const REGIONOVA = set("Regionova: a two-car railbus", ["czRegionova", 2]);
+const RAILJET = set("railjet: usually a ČD Vectron (some still a 109E) and seven railjet coaches, the driving trailer at the back", ["czVectron", 1], ["czRjCoach", 6], ["czRjCab", 1]);
+const COMFORTJET = set("ComfortJet: a ČD Vectron and nine Siemens cars, the driving trailer at the back (some trains a railjet)", ["czVectron", 1], ["czCjCoach", 8], ["czCjCab", 1]);
+const VECTRON_CD = (n) => set("Usually a ČD Vectron locomotive and long-distance coaches", ["czVectron", 1], ["czCoach", n]);
+const ESO_CD = (n) => set("Usually a class 362 or 363 locomotive (some days a Vectron) and ČD coaches", ["czEso", 1], ["czCoach", n]);
+const NIGHT = set("A locomotive with sleeping, couchette and seated cars (the night train's own railroads' cars)", ["czVectron", 1], ["czCoach", 6]);
+const ELEFANT = set("CityElefant: a three-car double-deck electric unit (two coupled at busy times)", ["czElefant471", 1], ["czElefant071", 1], ["czElefant971", 1]);
+const PANTER3 = set("RegioPanter: usually a three-car electric unit", ["czPanter640", 1], ["czPanterMid", 1], ["czPanter640", 1]);
+const PANTER2 = (who) => set(`RegioPanter: usually a two-car electric unit${who}`, ["czPanter650", 2]);
+const INTER3 = set("InterPanter: a three-car electric unit", ["cz660Cab", 1], ["cz660Mid", 1], ["cz660Cab", 1]);
+const INTER5 = set("Usually an InterPanter (five cars; some trains a locomotive with coaches)", ["cz660Cab", 1], ["cz660Mid", 3], ["cz660Cab", 1]);
+const MORAVIA = set("Moravia: usually a four-car electric unit (some trains two cars)", ["czMoraviaCab", 1], ["czMoraviaMid", 2], ["czMoraviaCab", 1]);
+const SHARK = set("RegioShark (844): a two-car diesel unit", ["czLink", 2]);
+const FOX = set("RegioFox (847): a two-section diesel unit, often two coupled", ["czFox", 2]);
+const FOX_PID = set("RegioFox (847) in PID's colors: a two-section diesel unit", ["czFoxPid", 2]);
+const REGIONOVA = set("Regionova (814): usually a two-car railbus", ["czRegionova", 2]);
 const RS1 = set("Regio-Shuttle RS1: a single diesel railcar", ["czRs1", 1]);
-const VT628 = set("Class 628: a two-car diesel unit", ["cz628", 2]);
+const SPIDER = set("RegioSpider: a single Regio-Shuttle RS1 diesel railcar", ["czRs1", 1]);
+const CAR843 = set("A class 843 diesel railcar, often with a trailer", ["cz843", 1], ["cz943", 1]);
+const CAR842 = set("A class 842 diesel railcar", ["cz842", 1]);
+const RAILBUS = set("A class 810 railbus and its trailer", ["cz810", 1], ["cz010", 1]);
+const VT628 = set("Class 845 (ex-DB 628): usually a two-car diesel unit", ["cz628", 2]);
 const LINT = set("Coradia LINT 41: a two-section diesel unit", ["czLint", 2]);
 const FLIRT = set("Stadler FLIRT: a five-section electric unit", ["czFlirtCab", 1], ["czFlirtMid", 3], ["czFlirtCab", 1]);
-const RJ_TRAIN = set("A Vectron locomotive and RegioJet's yellow coaches", ["czVectron", 1], ["czCoach", 6]);
-const ELF = set("Pesa Elf: a two-car electric unit", ["czElf", 2]);
+const RJ_TRAIN = set("A TRAXX locomotive and RegioJet's yellow coaches", ["czTraxx", 1], ["czCoach", 7]);
+const RJ_R8 = set("A TRAXX locomotive and RegioJet's yellow coaches", ["czTraxx", 1], ["czCoach", 5]);
+const ELF = set("Pesa Elf (654): a two-car electric unit", ["czElf", 2]);
+const ELF3 = set("Pesa Elf (655): a three-car electric unit in PID's colors", ["czElfPid", 1], ["czElfMid", 1], ["czElfPid", 1]);
+const SIRIUS = set("CRRC Sirius (665): a three-car electric unit (one train a locomotive with coaches)", ["czSiriusCab", 1], ["czSiriusMid", 1], ["czSiriusCab", 1]);
+const SPRINTER = set("Usually a RegioSprinter railcar (some trains a class 628 or a railbus)", ["czRegioSprinter", 1]);
 // The formation a reported car's model runs in (for the fleet pages).
-const BY_MODEL = { cz380: CD_LOCO(6), czPendoCab: PENDOLINO, czElefant471: ELEFANT, czPanter640: PANTER3, czPanter650: PANTER2(""), czLink: SHARK,
-  czRegionova: REGIONOVA, czRs1: RS1, cz628: VT628, czLint: LINT, czFlirtCab: FLIRT, czElf: ELF, czVectron: RJ_TRAIN };
+const BY_MODEL = { cz380: VECTRON_CD(7), czPendoCab: PENDOLINO, czElefant471: ELEFANT, czPanter640: PANTER3, czPanter650: PANTER2(""), czLink: SHARK,
+  czRegionova: REGIONOVA, czRs1: RS1, cz628: VT628, czLint: LINT, czFlirtCab: FLIRT, czElf: ELF, czVectron: VECTRON_CD(7), czFox: FOX, czFoxPid: FOX_PID,
+  cz842: CAR842, cz843: CAR843, cz943: CAR843, cz810: RAILBUS, cz010: RAILBUS, cz660Cab: INTER3, czCjCoach: COMFORTJET, czCjCab: COMFORTJET,
+  czMoraviaCab: MORAVIA, czTraxx: RJ_TRAIN, czElfPid: ELF3, czSiriusCab: SIRIUS, czRegioSprinter: SPRINTER, czEso: ESO_CD(6) };
 
-// What usually runs, by line or kind of train. ČD: SuperCity trains are
-// Pendolinos, railjets its 109Es with railjet coaches, the other long-distance
-// trains (EuroCity, InterCity, Ex and R lines, night trains) 109E or other
-// locomotives with coaches; Prague's and Brno's main S lines (S1-S9)
-// CityElefants, the other electric suburban lines RegioPanters, and the
-// branch lines (unnamed Os and Sp trains, lines numbered from 20) diesel
-// RegioSharks and Regionovas. Lines vary with the day's workings; the
-// labels say "usually".
+// ČD's regional trains, by region and whether the line is under wires
+// (ČD's and the regions' published deployments for the 2025/26 timetable,
+// as cs.wikipedia's class articles list them, and the regions' news):
+// Prague's busy S lines (S1, S2, S7, S9, S22) and Ostrava's S1 and S2
+// CityElefants; Brno's S2, S3, S22 and S51 the region's Moravia units;
+// the other electric lines RegioPanters, three-car (640) in Central
+// Bohemia, Olomouc, Zlín, Pardubice and Moravia-Silesia, two-car (650) in
+// South Bohemia, Plzeň, Vysočina, Karlovy Vary and Ústí. Off the wires:
+// RegioFoxes (847) in PID's colors on Prague's S3, S5, S6, S8, S50, S65,
+// S75, R24, R43 and R45, RegioSpiders (ex-German RS1s) on the Benešov
+// branches and from Kralupy to Louny and Velvary, Regionovas (814) on
+// most other Central Bohemian, South Bohemian, Ústí and Moravian-Silesian
+// branches; RegioFoxes in Hradec Králové, Pardubice and Vysočina; RegioSharks
+// (844) around Plzeň, Karlovy Vary and in Zlín; 842s and 843s around Brno
+// and Olomouc; the RS1s ČD bought for Liberec there; 810 railbuses on the
+// few branches still theirs (Pečky-Kouřim, Prostějov-Senice-Červenka,
+// Hanušovice-Staré Město, Loket-Nová Role, Karlovy Vary-Merklín, Bzenec-
+// Moravský Písek). Workings vary from day to day; the labels say so.
+function cdRegional(t, r, where) {
+  const { region, electric } = where;
+  const ends = `${t.origin || ""} ${t.destination || ""}`;
+  if (electric !== false) {
+    if (region === "A" || region === "S") return /^(S1|S2|S7|S9|S22|R42|R44|R49)$/.test(r) ? ELEFANT : r === "S12" ? REGIONOVA : PANTER3;
+    if (region === "T") return /^(S1|S2)$/.test(r) ? ELEFANT : PANTER3;
+    if (region === "B") return /^(S2|S3|S22|S51)$/.test(r) ? MORAVIA : PANTER3;
+    if (/[MZEH]/.test(region || "")) return PANTER3;
+    if (region === "U" && r === "U1") return PANTER3;
+    if (electric) return PANTER2("");
+  }
+  // Off the wires (or not known).
+  switch (region) {
+    case "A": case "S":
+      if (/^(S3|S5|S6|S8|S50|S65|S75|R24|R43|R45|T4|S54)$/.test(r)) return FOX_PID;
+      if (/^(S98|S99|S44|S40|U40)$/.test(r)) return SPIDER;
+      if (/^(S11|S57)$/.test(r)) return RAILBUS;
+      return REGIONOVA;
+    case "B": case "J": if (/^(R11|R54)$/.test(r)) return CAR843;
+      if (region === "J") return FOX;
+      return /^(S6|S42)$/.test(r) ? CAR843 : /^S61$/.test(r) ? RAILBUS : /^S81$/.test(r) ? REGIONOVA : CAR842;
+    case "C": return /^(S9|S14|S66)$/.test(r) ? FOX : REGIONOVA;
+    case "T": return /^(S5|S6)$/.test(r) && /Ostrava|Frýdek|Frýdlant|Ostravice/.test(ends) ? CAR842 : r === "R27" ? CAR843 : REGIONOVA;
+    case "M":
+      if (/^(M41|M42|M62|M14)$/.test(r)) return RAILBUS;
+      if (/^(M44|M61|M65|S43)$/.test(r)) return REGIONOVA;
+      if (/^(S4|Sp4)$/.test(r)) return SHARK;
+      return CAR843;
+    case "Z": return /^(S6|S43)$/.test(r) ? REGIONOVA : /^S5$/.test(r) ? CAR843 : SHARK;
+    case "E": return /Heřmanův Městec|Holice|Moravany|Chrudim/.test(ends) ? REGIONOVA : FOX;
+    case "H": return /^(V31|V34|V40|V42|V43|V50|V51|L5|S21)$/.test(r) ? REGIONOVA : FOX;
+    case "P":
+      if (/^(P3|P4)$/.test(r)) return SHARK;
+      if (/^(P13|P14|P22)$/.test(r)) return CAR842;
+      if (/^(P24|R16|Spěšný)$/.test(r)) return FOX;
+      return REGIONOVA;
+    case "K": return /Loket|Nová Role|Merklín|Horní Slavkov/.test(ends) ? RAILBUS : /Chomutov|Potůčky/.test(ends) ? REGIONOVA : SHARK;
+    case "L": return /^(L9|L18|L5)$/.test(r) ? REGIONOVA : RS1;
+    case "U": return r === "U40" ? SPIDER : REGIONOVA;
+    default: return REGIONOVA;
+  }
+}
+
 export const TYPICAL = {
   czcd: (t, reported) => {
     if (BY_MODEL[reported]) return BY_MODEL[reported];
-    const r = t.route || "", n = lineNo(r);
+    const r = t.route || "", where = whereRuns(t), ends = `${t.origin || ""} ${t.destination || ""}`;
+    // Long distance: Pendolinos on the SuperCity; ComfortJets on the
+    // Berlin and Hamburg trains (Ex5 and the EuroCitys via Děčín), to
+    // Vienna, Bratislava and Budapest (Ex3) and on the Rožmberk (Ex7);
+    // railjets Prague-Ostrava and to Vienna and Graz; the other Ex and R
+    // trains a locomotive with coaches: Vectrons on the Ex lines, 362s and
+    // 363s (and Vectrons) on the R lines; InterPanters on R13 Brno-Olomouc
+    // and R10 Prague-Hradec Králové.
     if (r === "SuperCity") return PENDOLINO;
     if (r === "railjet") return RAILJET;
-    if (/^(EuroCity|InterCity|Expres|EuroNight|Nightjet|Rychlík)$/.test(r) || /^(Ex|R)\d/.test(r)) return CD_LOCO(r === "Rychlík" || /^R\d/.test(r) ? 5 : 7);
-    if (/^S\d/.test(r) && n <= 9) return ELEFANT;
-    if (/^[A-Z]+\d/.test(r) && n < 20) return /^S\d/.test(r) ? PANTER3 : PANTER2("");
-    if (r === "Osobní" || r === "Spěšný") return REGIONOVA;
-    return SHARK;
+    if (r === "Ex5" || r === "Ex3" || r === "Ex7" || (/^(EuroCity|InterCity)$/.test(r) && /Schandau|Děčín|Kúty|Břeclav/.test(ends))) return COMFORTJET;
+    if (/^(EuroNight|Nightjet)$/.test(r)) return NIGHT;
+    if (r === "R13") return INTER3;
+    if (r === "R10" && where.electric !== false) return INTER5;
+    if (/^(R41|R61|RE20|R33)$/.test(r)) return where.electric === false ? cdRegional(t, r, where) : /^(R33|RE20)$/.test(r) ? PANTER2("") : PANTER3;
+    if (/^(R42|R43|R44|R45|R49|R24|R27|R54)$/.test(r)) return cdRegional(t, r, where);
+    if ((r === "Ex6" || r === "EuroCity") && /Domažlice|Furth/.test(ends)) return set("A locomotive and coaches (beyond Plzeň the line has no wires; not verified which locomotive)", ["czVectron", 1], ["czCoach", 5]);
+    if (/^(EuroCity|InterCity|Expres)$/.test(r) || /^Ex\d/.test(r)) return where.electric === false ? cdRegional(t, r, where) : VECTRON_CD(7);
+    if (r === "R17" || r === "R18") return ESO_CD(5);
+    if (r === "Rychlík" || /^R\d/.test(r)) return where.electric === false ? cdRegional(t, r, where) : ESO_CD(5);
+    return cdRegional(t, r, where);
   },
-  // RegioJet: its long-distance trains are locomotive-hauled yellow coaches,
-  // as are R8 and R23; its Ústí-region and other regional lines Pesa Elfs.
+  // RegioJet (cs.wikipedia's fleet table, 6/2026): its long-distance trains
+  // and R8 TRAXX locomotives with its yellow coaches; R23 the leased CRRC
+  // Sirius units; Prague's S49 and S61 three-car Elfs in PID's colors; its
+  // Ústí-region lines (U1, U3, U5, U7, U13, U16) two-car Elfs.
   czregiojet: (t, reported) => {
     if (BY_MODEL[reported]) return BY_MODEL[reported];
     const r = t.route || "";
     if (r === "RegioJet") return RJ_TRAIN;
-    if (/^R\d/.test(r)) return set("A locomotive and RegioJet's yellow coaches", ["czVectron", 1], ["czCoach", 5]);
+    if (r === "R23") return SIRIUS;
+    if (/^R\d/.test(r)) return RJ_R8;
+    if (/^S\d/.test(r)) return ELF3;
     return ELF;
   },
-  // Leo Express: its own FLIRTs on Prague-Ostrava; leased LINT 41s on its
-  // regional trains in the Pardubice and Zlín regions.
+  // Leo Express: its own FLIRTs on Prague-Ostrava; leased LINT 41s (and a
+  // LINT 27) on its regional trains in the Pardubice region (ERA's 2024
+  // service report).
   czleo: (t, reported) => {
     if (BY_MODEL[reported]) return BY_MODEL[reported];
     const r = t.route || "";
@@ -710,19 +1161,32 @@ export const TYPICAL = {
     if (r === "EuroCity" || r === "Expres") return set("A leased Vectron locomotive and coaches", ["czVectron", 1], ["czCoach", 5]);
     return LINT;
   },
-  // Arriva: RegioPanters on the Plzeň-region electric lines (P), class 845
-  // (ex-DB 628) diesels on its express and other lines.
+  // Arriva vlaky (cs.wikipedia "Arriva vlaky"): RegioPanters (ex-ČD 650s) on
+  // P1J Plzeň-Horažďovice předměstí; its class 845s (ex-DB 628) on R14,
+  // R21, R22, R24, R26 and the Liberec-region lines; Leo Express's LINTs,
+  // subcontracted, on its Zlín-region lines; 845s on its South Moravian
+  // lines.
   czarriva: (t, reported) => {
     if (BY_MODEL[reported]) return BY_MODEL[reported];
-    return /^P\d/.test(t.route || "") ? PANTER2(" (Arriva's ex-ČD 650s)") : VT628;
+    const r = t.route || "", { region } = whereRuns(t);
+    if (r === "P1J") return PANTER2(" (Arriva's ex-ČD 650s)");
+    if (region === "Z" || /^(S2|S5|S6|S22|S23|S53|Sp5)$/.test(r)) return set("Coradia LINT 41: a two-section diesel unit, run for Arriva by Leo Express", ["czLint", 2]);
+    return VT628;
   },
-  // GW Train Regio: modernised RS1s (841.2) on its Pošumaví P lines, 628s on
-  // the express and Ústí-region lines; railbuses and RS1s elsewhere.
+  // GW Train Regio (cs.wikipedia "GW Train Regio"): modernised RS1s (841.2)
+  // on P11 and P23; class 628s on R25, U52 and T8; RegioSprinters on its
+  // South Bohemian lines (S4, S7, S8) and Karlovy Vary-Mariánské Lázně;
+  // a railbus and its trailer or a leased RS1 on Sokolov-Kraslice; a
+  // Regionova on D66 to Lubawka, a single Regionova-type car (816) on S17.
   czgwtrain: (t, reported) => {
     if (BY_MODEL[reported]) return BY_MODEL[reported];
-    const r = t.route || "";
-    if (/^(R|U|T|D)\d/.test(r)) return VT628;
-    return RS1;
+    const r = t.route || "", ends = `${t.origin || ""} ${t.destination || ""}`;
+    if (/^(R25|U52|T8)$/.test(r)) return VT628;
+    if (/^(P11|P23)$/.test(r)) return set("Regio-Shuttle RS1 (841.2): a single diesel railcar", ["czRs1", 1]);
+    if (r === "D66") return set("Regionova (814): a two-car railbus", ["czRegionova", 2]);
+    if (r === "S17") return set("A single Regionova-type railcar with a cab at each end (816)", ["cz816", 1]);
+    if (/Kraslice|Klingenthal/.test(ends)) return set("A class 810 railbus and trailer (some trains a leased RS1)", ["cz810", 1], ["cz010", 1]);
+    return SPRINTER;
   },
 };
 
@@ -800,4 +1264,48 @@ export const FACTS = {
     about: "Leo Express's dark FLIRTs, trimmed in copper and fitted for long distance with Economy, Business and Premium classes, run its Prague–Ostrava trains." },
   czFlirtMid: { model: "Stadler FLIRT (class 480)", type: "Electric multiple unit", builder: "Stadler Rail", built: "2012", fleet: "5 five-car units", topSpeedMph: 99.4,
     source: `${WP}Leo_Express`, about: "An intermediate section of a Leo Express FLIRT; sections share trucks at each joint." },
+  czFox: { model: "RegioFox (Pesa Link II, class 847)", type: "Diesel multiple unit", builder: "Pesa Bydgoszcz", built: "2022–2026", fleet: "106 ordered, 847.001–106",
+    topSpeedMph: 74.6, powerHp: 1006, seats: 115, lengthFt: 145.9, source: cs("Motorová_jednotka_847"),
+    about: "ČD's commonest new diesel: two articulated sections with an MTU engine under each, replacing railbuses and older railcars across Central Bohemia, Hradec Králové, Pardubice, Vysočina, South Bohemia and Plzeň." },
+  "czFoxPid@czcd": { model: "RegioFox (class 847) in PID's colors", type: "Diesel multiple unit", builder: "Pesa Bydgoszcz", built: "2023–2026", fleet: "38 planned for Central Bohemia by the end of 2026",
+    topSpeedMph: 74.6, seats: 115, lengthFt: 145.9, source: "https://pid.cz/do-strednich-cech-prijizdeji-dalsi-regiofoxy-nove-vlaky-budou-vozit-cestujici-do-melnika-a-mlade-boleslavi/",
+    about: "The Central Bohemian RegioFoxes, paid for by the region and painted in Prague Integrated Transport's red and gray, run R43 to Mladá Boleslav, S3 to Mělník and the lines around Beroun, Rakovník and Kladno." },
+  cz842: { model: "Class 842", type: "Diesel railcar", builder: "Moravskoslezská vagónka, Studénka", built: "1988–1994", fleet: "37, 842.001–037", topSpeedMph: 62.1, seats: 64,
+    lengthFt: 82.7, source: cs("Motorový_vůz_842"), about: "A single railcar with a cab at each end, on regional lines around Brno, Ostrava and Plzeň." },
+  cz843: { model: "Class 843", type: "Diesel railcar", builder: "Moravskoslezská vagónka, Studénka", built: "1995–1997", fleet: "31, 843.001–031", topSpeedMph: 68.4, powerHp: 805,
+    lengthFt: 82.7, source: cs("Motorový_vůz_843"), about: "The 842's successor with a luggage room and two engines, often running with a 943 driving trailer: R27 Olomouc–Krnov–Ostrava, R54 Brno–Třebíč and Brno's S6 and S42." },
+  cz943: { model: "Class 943", type: "Driving trailer", builder: "Moravskoslezská vagónka, Studénka", built: "2006–2007", lengthFt: 82.7, source: cs("Motorový_vůz_843"),
+    about: "The 843's driving trailer, the same body without engines." },
+  cz810: { model: "Class 810", type: "Diesel railbus", builder: "Vagónka Studénka", built: "1975–1982", fleet: "About 40 still in ČD's regular service in 2026", topSpeedMph: 49.7,
+    powerHp: 208, seats: 55, lengthFt: 45.8, source: cs("Motorový_vůz_810"),
+    about: "The two-axle railbus that once ran almost every Czech branch line, now down to a few: Pečky–Kouřim, Prostějov–Senice–Červenka, Hanušovice–Staré Město, Loket–Nová Role and seasonal lines." },
+  cz010: { model: "Btax trailer (ex-010)", type: "Railbus trailer", builder: "Vagónka Studénka", built: "1970s–1980s", lengthFt: 45.8, source: cs("Motorový_vůz_810"),
+    about: "The railbus's unpowered trailer, with its own diesel heating." },
+  cz660Cab: { model: "InterPanter (classes 660.0 and 660.1)", type: "Electric multiple unit", builder: "Škoda Transportation", built: "2015–2016", fleet: "4 three-car and 10 five-car units",
+    topSpeedMph: 99.4, source: "https://ceskedrahy.cz/en/interpanter-line-r13", about: "The RegioPanter's long-distance version, on R13 Brno–Olomouc and other R lines." },
+  czCjCoach: { model: "ComfortJet", type: "Push-pull trainset", builder: "Siemens Mobility and Škoda Group", built: "2023–2026", fleet: "20 nine-car sets",
+    topSpeedMph: 142.9, seats: 555, source: "https://www.cd.cz/nase-vlaky/comfortjet/vlak/-40084/",
+    about: "ČD's newest long-distance trains, pushed and pulled by a Vectron: Prague–Berlin–Hamburg–Copenhagen and Prague–Vienna–Bratislava–Budapest, and some domestic expresses." },
+  czMoraviaCab: { model: "Moravia (classes 530 and 550)", type: "Electric multiple unit", builder: "Škoda Transportation", built: "2022–2023", fleet: "31 four-car and 6 two-car units",
+    seats: 333, source: cs("Moravia_(elektrická_jednotka)"), about: "The South Moravian Region's own RegioPanter-family units, run by ČD on Brno's S2, S3 and S51." },
+  czTraxx: { model: "Bombardier TRAXX 3 MS (388.2)", type: "Electric locomotive", builder: "Bombardier (Alstom)", built: "2020–2023", fleet: "31 (and 4 TRAXX MS2e, 386.2)",
+    topSpeedMph: 99.4, powerHp: 8583, lengthFt: 62.0, source: cs("RegioJet"), about: "RegioJet's own multi-system locomotives, hauling its yellow trains from Prague to Ostrava, Košice, Bratislava and Vienna, and R8." },
+  czElfPid: { model: "Pesa Elf.eu (class 655)", type: "Electric multiple unit", builder: "Pesa Bydgoszcz", built: "2024–2025", fleet: "7 three-car units", seats: 231,
+    topSpeedMph: 99.4, source: cs("RegioJet"), about: "RegioJet's three-car Elfs in PID's colors for Prague's S49 and S61, in service since April 2025." },
+  czSiriusCab: { model: "CRRC Sirius (ZEMU03, class 665)", type: "Electric multiple unit", builder: "CRRC Zhuzhou", built: "2019–2021", fleet: "3, leased",
+    source: `${WP}CRRC_ZEMU03`, about: "Built for Leo Express and leased to RegioJet, which runs them on R23 Kolín–Ústí nad Labem since December 2024." },
+  czRegioSprinter: { model: "Duewag RegioSprinter", type: "Diesel railcar", builder: "Duewag", built: "1995–1996", fleet: "16, from Rurtalbahn", lengthFt: 81.4,
+    source: "https://de.wikipedia.org/wiki/Duewag_RegioSprinter", about: "Three-module low-floor railcars GW Train Regio bought from Germany for its South Bohemian lines and Karlovy Vary–Mariánské Lázně." },
+  czEso: { model: "Škoda 69E (classes 362 and 363)", type: "Electric locomotive", builder: "Škoda Plzeň", built: "1980–1990", fleet: "181 built", topSpeedMph: 74.6,
+    powerHp: 4083, lengthFt: 55.1, source: `${WP}ČD_Class_363`,
+    about: "The dual-system \"Eso\" that still hauls many of ČD's R trains (Prague–České Budějovice, –Plzeň, –Brno, Ústí–Cheb); the 362s are 363s rebuilt for 140 km/h." },
+  cz816: { model: "Class 816", type: "Diesel railcar", builder: "Rebuilt from an 810", lengthFt: 46.7, source: cs("GW_Train_Regio"),
+    about: "A single Regionova-type railcar with a cab at each end; GW Train Regio runs one on Milotice nad Opavou–Vrbno pod Pradědem." },
 };
+const unitPart = (facts, name) => ({ ...facts, model: `${facts.model}, ${name}` });
+FACTS.czFoxPid = FACTS["czFoxPid@czcd"];
+FACTS.cz660Mid = unitPart(FACTS.cz660Cab, "intermediate car");
+FACTS.czCjCab = unitPart(FACTS.czCjCoach, "driving trailer");
+FACTS.czMoraviaMid = unitPart(FACTS.czMoraviaCab, "intermediate car");
+FACTS.czElfMid = unitPart(FACTS.czElfPid, "middle car");
+FACTS.czSiriusMid = unitPart(FACTS.czSiriusCab, "middle car");

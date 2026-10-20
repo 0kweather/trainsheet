@@ -204,6 +204,43 @@ const b7 = (c) => {
   });
 };
 
+// --- The sleeping cars of the night trains (WLAB2, Strømmen's Type 7
+// body, 1980s, rebuilt; Norske tog leases them to Vy for the Bergen and
+// Sørland lines and to SJ Nord for the Dovre and Nordland lines): the B7's
+// body and running gear, a corridor along one side and, on the other, a
+// small window to each two-berth compartment, closer together; the
+// operator's paint as its coaches.
+const wlab = (c) => {
+  const k = liv(c);
+  return coachCar(c, {
+    roof: 12.9, sill: 3.9, end: 0.6, endR: 1.0, eave: 12.1, roofBand: ROOF, trucks: { centers: 56.0, wb: 8.2, d: 36 }, base: k.body,
+    stripes: [[7.1, 2.9, k.band], [0, 4.6, k.deep], [4.6, 0.2, "rgba(0,0,0,0.25)"]],
+    livery: (c) => k.decor(c, c.L, "coach") + rect(5.8, 7.1, c.L - 11.6, 2.9, k.band) + k.mark(c, c.L / 2, 5.4, 1.1) +
+      letters(c, 9.6, 5.4, 0.7, "SOVEVOGN", "#e3eeea", { weight: 700, spacing: 0.08 }),
+    rows: [{ a: 6.2, b: c.L - 6.2, y: 7.35, w: 2.9, h: 2.4, pitch: 3.85, r: 0.3 }],
+    doors: [{ x: 1.6, w: 2.6, y: 4.05, h: 6.9 }, { x: c.L - 4.2, w: 2.6, y: 4.05, h: 6.9 }], badge: false,
+    extra: (c) => hvac(3.0, 12.9, 8) + hvac(c.L - 11.0, 12.9, 8) + buffers(0, -1) + buffers(c.L, 1) + boxes(17, c.L - 17, 3.9, 3, 0.7, "#2f3338"),
+  });
+};
+
+// --- The Flåm Line's train (Vy, Myrdal-Flåm): an El 18 at each end of
+// older NSB coaches (Type 3 and Type 5 bodies, about 23.5 m, side doors at
+// the ends, big droplight windows), all in the line's dark green with
+// "Flåmsbana" on the side (photographs; en.wikipedia "Flåm Line").
+const FLAM = "#1d3a2b";
+const flamCoach = (c) => coachCar(c, {
+  roof: 12.6, sill: 3.9, end: 0.6, endR: 1.0, eave: 11.9, roofBand: "#5c6168", trucks: { centers: 52.0, wb: 8.2, d: 36 }, base: FLAM,
+  stripes: [[0, 4.4, "#16201b"], [4.4, 0.15, "#c8b98a"]],
+  livery: (c) => letters(c, c.L / 2, 5.6, 0.95, "Flåmsbana", "#e9e2c8", { weight: 600, italic: true }),
+  rows: [{ a: 5.2, b: c.L - 5.2, y: 7.2, w: 4.2, h: 3.2, pitch: 5.1, r: 0.4 }],
+  doors: [{ x: 1.4, w: 2.4, y: 4.05, h: 6.6 }, { x: c.L - 3.8, w: 2.4, y: 4.05, h: 6.6 }], badge: false,
+  extra: (c) => buffers(0, -1) + buffers(c.L, 1) + boxes(16, c.L - 16, 3.9, 2, 0.6, "#2f3338") + hvac(c.L / 2 - 4, 12.6, 8, 0.5),
+});
+// The Flåm Line's El 18s are in the same green, the name on the side.
+const el18Flam = (c) => lok2000(c, (h) => ({ body: FLAM, roof: "#5c6168",
+  livery: (h, L) => rect(0, 0, L, 5.2, "#16201b") + rect(0, 5.2, L, 0.15, "#c8b98a"),
+  mark: (h) => letters(h, 22.0, 7.4, 1.2, "Flåmsbana", "#e9e2c8", { weight: 600, italic: true }) }));
+
 // --- Henschel Di 4 (5, 4.651-4.655, 1980-81): a 20.8 m diesel-electric
 // locomotive with a cab at each end, an EMD engine and generator inside,
 // Co-Co bogies; the radiator grilles high on the side, the exhaust and
@@ -275,6 +312,9 @@ export const TYPES = {
   noB7: { name: "Type 7 (B7) coach", kind: "coach" },
   noDi4: { name: "Di 4 diesel locomotive", kind: "diesel" },
   noType93: { name: "Type 93 (Bombardier Talent) car", kind: "emu" },
+  noWlab: { name: "Sleeping car (WLAB2)", kind: "coach", amenities: ["sleepers"] },
+  noFlamCoach: { name: "Flåm Line coach", kind: "coach" },
+  noEl18Flam: { name: "El 18 electric locomotive (Flåm Line)", kind: "electric", pan: true },
 };
 
 const M = (draw, len, oneEnd = false) => ({ draw, len, oneEnd, variant: null });
@@ -298,6 +338,9 @@ export const MODELS = {
   noB7: M(b7, 80.4),
   noDi4: M((c) => di4(c) + di4Trucks(c.L), 68.2),
   noType93: M(type93, 62.7, true),
+  noWlab: M(wlab, 80.4),
+  noFlamCoach: M(flamCoach, 77.1),
+  noEl18Flam: M(el18Flam, 60.7),
 };
 
 // [first, last, type]: locomotive numbers, and Flytoget's units as their
@@ -328,27 +371,35 @@ const T78_SET = set("Four-car Type 78 (CAF Oaris)", ["noType78", 1], ["noType78M
 const EL18_SET = set("El 18 locomotive with Type 7 coaches", ["noEl18", 1], ["noB7", 6]);
 const DI4_SET = set("Di 4 locomotive with Type 7 coaches", ["noDi4", 1], ["noB7", 4]);
 const T93_SET = set("Two-car Type 93 (Talent)", ["noType93", 2]);
+// The night trains (Bergen, Sørland, Dovre and Nordland lines): the day
+// train's locomotive and coaches with sleeping cars.
+const NIGHT = (loco) => set(`${loco === "noDi4" ? "Di 4" : "El 18"} locomotive with Type 7 coaches and sleeping cars`, [loco, 1], ["noWlab", 3], ["noB7", 4]);
+const isNight = (t) => /^(405|406|475|476|605|606|725|726)$/.test(String(t.number || ""));
+const FLAM_SET = set("Flåm Line: an El 18 at each end of the line's green coaches", ["noEl18Flam", 1], ["noFlamCoach", 5], ["noEl18Flam", 1]);
 const BY_TYPE = {
   noType73Cab: T73_SET, noType73Mid: T73_SET, noType72Cab: T72_SET, noType72Mid: T72_SET, noType74Cab: FLIRT5(74), noType74Mid: FLIRT5(74),
   noType75Cab: FLIRT5(75), noType75Mid: FLIRT5(75), noType76Cab: T76, noType76Mid: T76, noType76Power: T76, noType71: T71_SET, noType71Mid: T71_SET,
   noType78: T78_SET, noType78Mid: T78_SET, noEl18: EL18_SET, noB7: EL18_SET, noDi4: DI4_SET, noType93: T93_SET,
+  noWlab: NIGHT("noEl18"), noFlamCoach: FLAM_SET, noEl18Flam: FLAM_SET,
 };
 export const TYPICAL = {
   vy: (t, reported) => {
     const r = t.route || "";
     if (BY_TYPE[reported]) return BY_TYPE[reported];
-    if (r === "F4") return EL18_SET;
+    if (r === "F4") return isNight(t) ? NIGHT("noEl18") : EL18_SET;
+    if (r === "R45") return FLAM_SET;
+    if (r === "RE20" && /Göteborg|Malmö/.test(`${t.origin || ""} ${t.destination || ""}`)) return T73_SET;
     if (r === "F1") return T73_SET;
     if (r === "L1") return T72_SET;
     return /^R[EX]/.test(r) ? FLIRT5(74) : FLIRT5(75);
   },
-  goaheadnorge: (t, reported) => BY_TYPE[reported] || (t.route === "L5" ? T72_SET : T73_SET),
+  goaheadnorge: (t, reported) => BY_TYPE[reported] || (t.route === "L5" ? T72_SET : t.route === "F5" && isNight(t) ? NIGHT("noEl18") : T73_SET),
   flytoget: (t, reported) => BY_TYPE[reported] || T71_SET,
   sjnord: (t, reported) => {
     const r = t.route || "";
     if (BY_TYPE[reported]) return BY_TYPE[reported];
-    if (r === "F6") return EL18_SET;
-    if (r === "F7") return DI4_SET;
+    if (r === "F6") return isNight(t) ? NIGHT("noEl18") : EL18_SET;
+    if (r === "F7") return isNight(t) ? NIGHT("noDi4") : DI4_SET;
     if (r === "R70" || r === "R71") return T76;
     return T93_SET;
   },
