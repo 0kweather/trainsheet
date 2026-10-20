@@ -208,18 +208,20 @@ const comT = (c) => comCar({ ...c, cabL: false, cabR: false }, false);
 // with a blue band under the windshield (PT on it) and a white bumper.
 const SIE = { roof: 12.6, sill: 3.75, trucks: { centers: 52.5, wb: 8.53, d: 33.5 }, diaphragm: [4.0, 11.6] };
 const sieDoor = (x) => ({ x, w: 4.6, y0: 3.85, y1: 10.8, leaves: 2, glassY: 0.48, glassH: 0.38, grabs: false, fill: "rgba(0,0,0,0.03)" });
-const SIE_WIN = { y: 6.75, w: 4.3, h: 3.35, r: 0.6 };
+const SIE_WIN = { y: 6.75, w: 5.2, h: 3.35, r: 0.6 };
 function sieCar(c, cab) {
   const L = c.L;
-  const doors = cab ? [sieDoor(17.2), sieDoor(56.6)] : [sieDoor(16.6), sieDoor(L - 21.2)];
-  const xs = cab ? [10.4, ...fit(21.8, 56.6, SIE_WIN.w, 5), ...fit(61.2, L - 7.6, SIE_WIN.w, 2)] :
-    [2.6, 8.8, ...fit(21.2, L - 21.2, SIE_WIN.w, 6), L - 13.2, L - 7.0];
+  // Doors at about a quarter and three quarters of the car; four windows
+  // between them, two beyond.
+  const doors = cab ? [sieDoor(18.7), sieDoor(54.7)] : [sieDoor(17.2), sieDoor(L - 21.8)];
+  const xs = cab ? [11.6, ...fit(23.3, 54.7, SIE_WIN.w, 4), ...fit(59.3, L - 7.4, SIE_WIN.w, 2)] :
+    [...fit(0.6, 17.2, SIE_WIN.w, 2), ...fit(21.8, L - 21.8, SIE_WIN.w, 4), ...fit(L - 17.2, L - 0.6, SIE_WIN.w, 2)];
   const rows = [{ ...SIE_WIN, xs }];
   return unit(c, { ...SIE, rows, doors, cabLen: 6.5,
     nose: cab ? [[1.2, 3.75], [0.7, 4.6], [0.6, 6.4], ["q", 0.6, 10.6, 1.2, 11.6], ["q", 2.0, 12.6, 4.0, 12.6]] : null,
     paint: (c, g) => {
       let s = rect(0, 0, L, 17, MT.steel) + rect(0, 11.15, L, 2, MT.sky) + rect(0, 11.05, L, 0.1, "#1a64ad");
-      if (cab) s += facets(6.0, 3.75, 24.0, 11.15, MT_FACETS, 7, { rows: 3 }) + facets(L - 8.0, 3.75, L, 11.15, MT_FACETS, 8, { rows: 3, cols: 2 }) +
+      if (cab) s += facets(6.0, 3.75, 25.4, 11.15, MT_FACETS, 7, { rows: 3 }) + facets(L - 8.0, 3.75, L, 11.15, MT_FACETS, 8, { rows: 3, cols: 2 }) +
         path(poly([[0, 0], [7.2, 0], [7.2, 4.4], ["q", 6.0, 4.8, 3.0, 4.6], [0, 4.6]]), "#f1f2f3") + path(poly([[0, 4.6], [3.0, 4.6], ["q", 6.0, 4.8, 7.2, 4.4], [7.2, 17], [0, 17]]), MT.yellow) +
         path(poly([[0, 4.75], ["q", 2.4, 4.9, 3.6, 6.3], [3.6, 6.6], [0, 6.6]]), MT.blue);
       else s += facets(0, 3.75, 7.0, 11.15, MT_FACETS, 9, { rows: 3, cols: 2 }) + facets(L - 7.0, 3.75, L, 11.15, MT_FACETS, 10, { rows: 3, cols: 2 });
@@ -254,7 +256,7 @@ const XT_WIN = { y: 6.85, w: 4.2, h: 3.05, r: 0.35 };
 function xtCar(c, cab) {
   const L = c.L;
   const doors = cab ? [xtDoor(12.8), xtDoor(39.6), xtDoor(70.0)] : [xtDoor(4.6), xtDoor(L / 2 - 2.15), xtDoor(L - 8.9)];
-  const xs = cab ? [...fit(17.1, 39.6, XT_WIN.w, 4), ...fit(43.9, 70.0, XT_WIN.w, 5)] : [...fit(8.9, L / 2 - 2.15, XT_WIN.w, 5), ...fit(L / 2 + 2.15, L - 8.9, XT_WIN.w, 5)];
+  const xs = cab ? [...fit(17.1, 39.6, XT_WIN.w, 4), ...fit(43.9, 70.0, XT_WIN.w, 4)] : [...fit(8.9, L / 2 - 2.15, XT_WIN.w, 4), ...fit(L / 2 + 2.15, L - 8.9, XT_WIN.w, 4)];
   const rows = [{ ...XT_WIN, xs }];
   return unit(c, { ...XT, trucks: { centers: cab ? 54 : 49, wb: 7.22, d: 35 }, rows, doors, cabLen: 6.5,
     nose: cab ? [[1.0, 3.55], [0.75, 4.4], [0.75, 10.9], ["q", 0.8, 12.6, 2.4, 12.95], [3.6, 12.95]] : null,
@@ -660,7 +662,7 @@ export const TYPICAL = {
     if (reported === "ptvN") return NSET;
     if (reported === "ptvSprinter") return set("Sprinter diesel railcars, usually two", ["ptvSprinter", 2]);
     if (r === "Swan Hill line") return { ...NSET, label: "N class locomotive with an N set (some trains a VLocity)" };
-    if (r === "Albury line") return vlocity(2, "Standard-gauge VLocity three-car sets, usually two coupled");
+    if (r === "Albury line") return vlocity(2, "Standard-gauge VLocity three-car sets, one or two coupled");
     if (/^(Maryborough|Echuca|Ararat) line$/.test(r)) return vlocity(1, "VLocity three-car set (sometimes two)");
     return vlocity(2, "VLocity three-car sets, usually two coupled (one or three at some times)");
   },
