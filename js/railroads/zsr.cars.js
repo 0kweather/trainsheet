@@ -247,7 +247,9 @@ export const TYPICAL = {
     if (r === "Regionálny rýchlik") return set("Usually a Vectron (383) locomotive and ZSSK coaches", ["czVectron", 1], ["czCoach", 4]);
     if (r === "Expres") return ZSSK_LOCO(7);
     if (/^(EuroCity|SuperCity)$/.test(r) && /Praha/.test(ends)) return r === "SuperCity" ? set("Pendolino (ČD): a seven-car tilting electric train", ["czPendoCab", 1], ["czPendoMid", 5], ["czPendoCab", 1])
-      : set("Usually a ČD Vectron and ČD and ZSSK coaches", ["czVectron", 1], ["czCoach", 7]);
+      // (The ČD Vectron in ČD's paint and ČD's coaches in theirs: until
+      // October 2026 they were all drawn in ZSSK's.)
+      : set("Usually a ČD Vectron and ČD and ZSSK coaches", ["cdVectron", 1], ["cdCoach", 2], ["czCoach", 5]);
     if (/^(EuroCity|InterCity|EuroNight|Rýchlik|Zrýchlený vlak|Regionálny rýchlik)$/.test(r) && r !== "Zrýchlený vlak") {
       if (where.electric === false) return ZSSK_757(r === "Rýchlik" ? 5 : 4);
       return ZSSK_ESO(r === "EuroNight" ? 7 : r === "Regionálny rýchlik" ? 4 : 6);
