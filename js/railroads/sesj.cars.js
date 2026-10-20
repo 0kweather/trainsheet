@@ -12,11 +12,11 @@
 // InterCity and the night trains: SJ's own in black, and since December
 // 2024 the Trafikverket-owned night trains to Luleå and Narvik in their gray
 // and red. Snälltåget runs red Vectrons with white coaches, Tågab Rc3s with
-// stainless coaches, Vy Tåg Värmlandstrafik's yellow Reginas on Oslo–
-// Karlstad–Stockholm (and Vy's own FLIRTs on Oslo–Göteborg–Malmö), Arlanda
-// Express its seven X3s. SJ's Zefiro Express (X250, first trains planned for
-// December 2027) and CAF X45s (autumn 2027) are not in service yet, and
-// FlixTrain left Sweden in January 2024, so none of them is drawn.
+// stainless coaches, MTRX (VR's since August 2024) its six FLIRTs, now in
+// VR's green, Arlanda Express its seven X3s. SJ's Zefiro Express (X250,
+// first trains planned for December 2027) and CAF X45s (autumn 2027) are not
+// in service yet, and FlixTrain left Sweden in January 2024, so none of them
+// is drawn. Vy's trains into Sweden are Entur's (entur.cars.js).
 
 import { bilevel, cabUnit } from "../carmodels.js?v=dev";
 import { rect, circle, path, line, lines, poly, slats, win, truck, pantograph, C } from "../carart.js?v=dev";
@@ -283,8 +283,8 @@ const r12Trv = (c) => coach7(c, { paint: "trv", doors: [1.25, c.L - 3.85], rows:
 // ===================== Bombardier Regina (X55, X52) =====================
 
 // --- Bombardier Regina: SJ 3000 (X55, 20 four-car sets 3344-3363, 2010-13)
-// and the regional X52s that Vy Tåg runs for Värmlandstrafik and SJ on
-// Göteborg–Karlstad. A 2-car Regina is 53.9 m, a 3-car 80.5 m, an X55 107.1
+// and the four three-car X52s (9077-9080, Västtrafik's and Transitio's) that
+// SJ runs on Göteborg–Karlstad. A 2-car Regina is 53.9 m, a 3-car 80.5 m, an X55 107.1
 // m (Swedish Wikipedia), so an end car is 26.95 m and a middle car 26.6 m;
 // 3.45 m wide, the widest Swedish train; bogies 19.0 m apart, 2.7 m
 // wheelbase, 840 mm wheels; floor 1150 mm; about 4.1 m to the roof, scaled
@@ -292,36 +292,38 @@ const r12Trv = (c) => coach7(c, { paint: "trv", doors: [1.25, c.L - 3.85], rows:
 // coupler under a black cover; a cab door, then the windows, a double plug
 // door at each end of the car. Every X55 bogie is powered but the bistro
 // car's. SJ 3000: painted silver, the windows a dark band, the nose's
-// lower face darker gray with SJ on it. Värmlandstrafik's: warm white, the
-// roof and a band over the windows yellow, sweeping down over the
-// windshield, a green line under the windows rising up the nose.
+// lower face darker gray with SJ on it. The X52s wear Västtrafik's paint:
+// white, the roof and the top of the side light blue, sweeping down beside
+// the windshield, the windows in a black band, the windshield in a black
+// mask.
 const RG_ROOF = 13.45, RG_SILL = 3.1;
 const RG = { roof: RG_ROOF, sill: RG_SILL, cornerR: 1.1, end: 0.5, trucks: { centers: ft(19.0), wb: ft(2.7), d: 33.1 }, diaphragm: [3.9, 12.2], badge: false };
 const RG_NOSE = [[3.4, RG_SILL], [1.1, 3.15], ["q", 0.35, 3.5, 0.35, 4.6], [0.5, 6.6], ["q", 0.8, 7.9, 1.8, 8.6], [5.2, 12.1], ["q", 6.5, RG_ROOF, 9.6, RG_ROOF]];
 const RG_PAINT = {
   sj: { body: "#b9bec4", roof: "#a3a9b0", band: "#23262b", face: "#70757c", door: "#b0b6bc", skirt: "#3a3e44" },
-  vt: { body: "#eceae3", roof: "#f0c419", band: "#23262b", face: "#eceae3", door: "#e4e2da", skirt: "#3a3e44", line: "#2f9a43" },
+  vt: { body: "#f3f5f6", roof: "#2f9be2", band: "#1c1e21", face: "#f3f5f6", door: "#e8ebed", skirt: "#232528" },
 };
 const rgDoor = (x) => ({ x, w: 4.3, y0: 3.3, y1: 10.9, leaves: 2, glassY: 0.5, glassH: 0.36, grabs: false });
 function regina(c, part, paint) {
   const L = c.L, k = RG_PAINT[paint], cab = part === "cab", vt = paint === "vt";
   const pitch = vt ? 5.4 : 6.9, w = vt ? 4.6 : 6.2;
   const xs = cab ? seq(vt ? 18.4 : 13.6, pitch, vt ? 10 : 9) : part === "bistro" ? [...seq(10.0, 6.9, 5), ...seq(48.0, 8.0, 3)] : seq(10.0, 6.9, 10);
-  // SJ's end car: a crew door behind the cab; Värmlandstrafik's: a
-  // passenger door there instead.
+  // SJ's end car: a crew door behind the cab; the X52's: a passenger door
+  // there instead.
   const doors = cab ? [L - 11.5, ...(vt ? [10.6] : [])] : [2.6, L - 7.0];
-  const band = [xs[0] - 0.5, xs[xs.length - 1] + w + 0.5];
+  const band = vt ? [0, L] : [xs[0] - 0.5, xs[xs.length - 1] + w + 0.5];
   return bilevel({ ...c, cabL: cab && c.cabL, cabR: false }, { ...RG, nose: cab ? RG_NOSE : null, cabLen: 9,
     paint: (c, g) => {
       let s = rect(0, 0, L, 17, k.body) + rect(band[0], 7.0, band[1] - band[0], 3.7, k.band, 0, 'rx="0.5"') + rect(0, 11.9, L, 3, k.roof) + line(0, 11.9, L, 11.9, "rgba(0,0,0,0.18)", 0.5) +
         rect(0, 0, L, RG_SILL + 0.45, k.skirt);
-      if (vt) s += rect(0, 10.9, L, 1.0, k.roof) + rect(0, 6.35, L, 0.35, k.line);
+      if (vt) s += rect(0, 10.95, L, 1.0, k.roof);
       for (const x of doors) s += rect(x - 0.2, RG_SILL, 4.7, 8.0, k.door);
       if (cab) {
         // The nose: no window band ahead of the cab door; SJ's darker lower
-        // face, or Värmlandstrafik's yellow swept down to the windshield and
-        // the green line rising to the headlights.
-        s += vt ? path(poly([[0, 13.6], [0, 9.0], [1.9, 9.0], [6.5, 11.3], [16.0, 11.3], [16.0, 13.6]]), k.roof) + path("M0 5.9L4.0 5.9Q8.0 6.3 13.0 6.35L13.0 6.7Q8.0 6.65 4.0 6.3L0 6.3Z", k.line)
+        // face, or Västtrafik's blue swept down beside the windshield in its
+        // black mask.
+        s += vt ? rect(0, 7.0, 9.4, 3.7, k.body) + path(poly([[0, 13.6], [0, 9.6], [1.6, 9.6], [5.6, 12.4], [9.6, 12.0], [12.0, 10.95], [16.0, 10.95], [16.0, 13.6]]), k.roof) +
+            path(poly([[1.55, 8.45], [5.3, 12.05], [8.4, 12.05], [8.4, 8.45]]), k.band)
           : path(poly([[0, 3.6], [2.6, 3.6], [2.0, 8.4], [0, 8.4]]), k.face);
         s += path(poly([[1.9, 8.75], [5.15, 11.75], [7.9, 11.75], [7.9, 8.75]]), C.glass) + path(poly([[2.3, 9.0], [3.6, 10.2], [4.3, 10.2], [3.0, 9.0]]), C.glassLight);
       }
@@ -333,7 +335,7 @@ function regina(c, part, paint) {
       let s = boxes(17.0, L - 17.0, RG_SILL, 4, 1.05) + hvac(cab ? 22.0 : 12.0, RG_ROOF, 11) + roofCover(cab ? 40.0 : 44.0, RG_ROOF, 14, 0.5);
       if (cab && !c.mirrored) s += pantograph(L - 14.0, RG_ROOF, { facing: -1 }) + panGear(L - 14.0, RG_ROOF, -1);
       if (cab) s += horns(10.4, RG_ROOF - 0.02);
-      const mark = vt ? letters(c, cab ? 30.0 : L / 2, 5.0, 0.95, "Värmlandstrafik", "#2f6f3a", { weight: 600 })
+      const mark = vt ? letters(c, cab ? 30.0 : L / 2, 5.0, 0.9, "Västtrafik", "#1d4f91", { weight: 600 })
         : letters(c, cab ? 15.5 : 10.0, 5.4, 1.1, "SJ", "#ffffff", { weight: 800 });
       return s + mark + (part === "bistro" ? letters(c, 60.0, 5.2, 0.8, "Bistro", "#2c3038", { weight: 600 }) : "");
     },
@@ -519,16 +521,31 @@ const TGW = (xs, w = 3.9) => ({ xs, y: 7.0, w, h: 3.0, r: 0.35 });
 const tgB1 = (c) => tagabCoach(c, { rows: [TGW(seq(8.8, 6.15, 10), 4.2)], small: [[5.0, 1.4]] });
 const tgA2 = (c) => tagabCoach(c, { first: true, rows: [TGW(seq(9.0, 7.0, 9), 4.6)], small: [[5.0, 1.4]] });
 
-// ===================== Vy =====================
+// ===================== MTRX (VR) =====================
 
-// --- Stadler FLIRT, Vy's Type 74 (BM74, 54 five-car units, 2010-22; 105.5
-// m), on Oslo–Göteborg and on to Malmö: the FLIRT sections of
-// digitraffic.cars.js in Vy's deep green, its name big and pale on the cab
-// sections, the black mask round the windshield (as entur.cars.js).
-const VY = { body: "#0f5247", roof: "#8f979f", skirt: "#0a3a33", door: "#17675a", mask: "#17191c",
-  paint: (c, g, part) => rect(0, 4.55, g.L, 0.22, "#7cc5a6") +
-    (part === "cab" ? letters(c, 21.65, 8.3, 3.4, "vy", "#e3eeea", { weight: 800, spacing: -0.14, stretch: 1.1 }) + rect(0, 3.0, 1.6, 2.4, "#0a3a33") : "") };
-const vyFlirtCab = (c) => flirt(c, "cab", VY), vyFlirtMid = (c) => flirt(c, "mid", VY);
+// --- Stadler FLIRT Nordic, X74 (6 five-car units, 001-006, 2014-15; built
+// for MTR Express, VR's since August 2024): 105.5 m, Bo'2'2'Bo'+2'2'Bo',
+// 4500 kW, 200 km/h (järnväg.net); the FLIRT sections of
+// digitraffic.cars.js, the café in the middle section. Being wrapped in
+// VR's colors since August 2024: the cab sections VR green with VR in
+// white behind the door and white speed lines thickening toward the rear,
+// the other sections white streaked with green (some sets still show
+// MTR's red and black behind green cabs).
+const VR_GREEN = "#1fa65a", VR_DEEP = "#14824a";
+const vrStreaks = (x0, x1, fromGreen) => {
+  let s = "";
+  for (let i = 0; i < 9; i++) {
+    const y = 4.4 + i * 0.95, h = 0.12 + i * 0.06;
+    s += rect(x0, y, x1 - x0, h, fromGreen ? "#ffffff" : VR_GREEN, 0, 'opacity="0.85"');
+  }
+  return s;
+};
+const X74 = { body: "#f3f5f4", roof: "#8f979f", skirt: "#2a2d31", door: null, mask: "#17191c",
+  paint: (c, g, part) => part === "cab"
+    ? rect(0, 0, g.L, 17, VR_GREEN) + rect(0, 0, g.L, 3.55, VR_DEEP) + vrStreaks(30.0, g.L, true) + rect(0, 12.95, g.L, 3, "#8f979f") +
+      letters(c, 21.6, 7.6, 1.9, "VR", "#ffffff", { weight: 800, spacing: -0.05, stretch: 1.1 })
+    : vrStreaks(0, 12.0, false) + vrStreaks(g.L - 12.0, g.L, false) + rect(0, 3.55, g.L, 0.4, VR_GREEN) };
+const x74Cab = (c) => flirt(c, "cab", X74), x74Mid = (c) => flirt(c, "mid", X74);
 
 // ===================== The registry =====================
 
@@ -541,7 +558,7 @@ export const TYPES = {
   seX55Cab: { name: "SJ 3000 (X55) end car", kind: "emu" },
   seX55Mid: { name: "SJ 3000 (X55) car", kind: "emu" },
   seX55Bistro: { name: "SJ 3000 (X55) bistro car", kind: "emu", amenities: ["cafe"] },
-  seX52Cab: { name: "Regina (X52) car", kind: "emu" },
+  seX52Cab: { name: "Regina (X52) end car", kind: "emu" },
   seX52Mid: { name: "Regina (X52) middle car", kind: "emu" },
   seX40Cab: { name: "X40 double-deck end car", kind: "emu" },
   seX40Mid: { name: "X40 double-deck middle car", kind: "emu" },
@@ -567,8 +584,8 @@ export const TYPES = {
   seRc3: { name: "Rc3 electric locomotive", kind: "electric", pan: true },
   seTgB1: { name: "B1 second-class coach", kind: "coach" },
   seTgA2: { name: "A2 first-class coach", kind: "coach" },
-  seBM74Cab: { name: "Type 74 (Stadler FLIRT) cab section", kind: "emu", pan: true },
-  seBM74Mid: { name: "Type 74 (Stadler FLIRT) section", kind: "emu", pan: true },
+  seX74Cab: { name: "X74 (Stadler FLIRT) cab section", kind: "emu", pan: true },
+  seX74Mid: { name: "X74 (Stadler FLIRT) section", kind: "emu", pan: true },
 };
 
 const M = (draw, len, oneEnd = false) => ({ draw, len, oneEnd, variant: null });
@@ -608,73 +625,87 @@ export const MODELS = {
   seRc3: M(rc3Tagab, ft(15.52)),
   seTgB1: M(tgB1, ft(24.1)),
   seTgA2: M(tgA2, ft(24.1)),
-  seBM74Cab: M(vyFlirtCab, 70.5, true),
-  seBM74Mid: M(vyFlirtMid, 51.5),
+  seX74Cab: M(x74Cab, 70.5, true),
+  seX74Mid: M(x74Mid, 51.5),
 };
 
 // [first, last, type]: unit, power-car and locomotive numbers as
 // järnväg.net lists them (an X55's or X40's set number; Arlanda Express's
-// units 1-7; the Rc6s Trafikverket owns, which it lists as 14 of 1323-1382,
-// taken here as 1323-1336; Tågab's Rc3s, numbered among the Rc2s they were
-// rebuilt from; Värmlandstrafik's Reginas, 90xx).
+// units 1-7; MTRX's 001-006; the Rc6s Trafikverket owns, which it lists as
+// 14 of 1323-1382, taken here as 1323-1336; Tågab's Rc3s, numbered among
+// the Rc2s they were rebuilt from). Neither Trafikverket's feed nor the
+// timetable names a train's units, so these only list each railroad's
+// fleet on its page; every train is drawn by TYPICAL.
 export const FLEETS = {
   sj: [[2001, 2043, "seX2"], [2088, 2088, "seX2"], [2501, 2544, "seUB2X"], [2601, 2624, "seURB2"], [2701, 2754, "seUA2"], [2801, 2821, "seUA2"], [2822, 2882, "seUB2"],
     [3344, 3363, "seX55Cab"], [3301, 3343, "seX40Cab"], [9077, 9080, "seX52Cab"], [1323, 1336, "seRc6Trv"], [1337, 1422, "seRc6"]],
   arlandaexpress: [[1, 7, "seX3Cab"]],
+  mtrx: [[1, 6, "seX74Cab"]],
   tagab: [[1027, 1136, "seRc3"]],
-  vytag: [[9040, 9090, "seX52Cab"]],
 };
 
-// What runs where (SJ's and the others' published fleets, järnväg.net's
-// operator pages): SJ's Snabbtåg is an X2000 south and west of Stockholm
-// and an SJ 3000 north (Sundsvall, Umeå, Östersund, Falun, Mora) and to
-// Karlstad; its Regional and many InterCity trains are X40s, three-car
-// sets often with a two-car one; the rest of InterCity is an Rc6 with
-// 1980s coaches, and the night trains an Rc6 with couchettes and sleeping
-// cars, Trafikverket's gray ones to Luleå and Narvik. Göteborg–Karlstad is
-// a yellow Regina run with Västtrafik and Värmlandstrafik.
+// What runs where, by the timetable's route and train number (contract of
+// scripts/railroads/sweden.py: a 5-digit number is a variant of the 4-digit
+// one after its first digit). SJ Snabbtåg: SJ 3000s on the trains north of
+// Stockholm (560-599 to Sundsvall, Umeå, Östersund and Duved, 89 Duved–
+// Östersund) and to Uddevalla (443), X2000s elsewhere (Göteborg, Malmö,
+// Karlstad, Oslo; SJ 3000s stand in, especially on Göteborg–Malmö). SJ
+// InterCity: an Rc6 with 1980s coaches, but Linköping–Gävle (264-271) runs
+// X40s, and Luleå–Narvik (98-99) Trafikverket's cars. SJ Nattåg: Trafikverket's
+// gray and red set to Umeå, Luleå and Narvik (91-94), SJ's black cars to
+// Malmö (1-2) and Duved (70-71). SJ Regional: X40s, three-car sets often
+// coupled to a two-car one, but Göteborg–Karlstad (3950-3979) the blue
+// Reginas. Snälltåget's day and night trains, Tågab, MTRX and Arlanda
+// Express each run one kind of train.
 const set = (label, ...units) => ({ label, units });
 const X2_SET = set("X2000: power car, five cars and a driving trailer", ["seX2", 1], ["seUA2", 1], ["seUB2", 1], ["seURB2", 1], ["seUB2", 2], ["seUB2X", 1]);
-const X55_SET = set("Four-car SJ 3000 (X55)", ["seX55Cab", 1], ["seX55Mid", 1], ["seX55Bistro", 1], ["seX55Cab", 1]);
-const X40_SET = set("Three-car X40 double-decker, often with another set", ["seX40Cab", 1], ["seX40Mid", 1], ["seX40Cab", 1]);
-const X40_2 = set("Two-car X40 double-decker", ["seX40Cab", 2]);
-const X52_3 = set("Three-car Regina (X52) in Värmlandstrafik's yellow", ["seX52Cab", 1], ["seX52Mid", 1], ["seX52Cab", 1]);
-const X52_2 = set("Two-car Regina (X52), often two together", ["seX52Cab", 2]);
+const X2_OR_X55 = set("X2000 (sometimes an SJ 3000): power car, five cars and a driving trailer", ...X2_SET.units);
+const X55_SET = set("Four-car SJ 3000 (X55), sometimes two", ["seX55Cab", 1], ["seX55Mid", 1], ["seX55Bistro", 1], ["seX55Cab", 1]);
+const X40_SET = set("Three-car X40 double-decker, often with a two-car set", ["seX40Cab", 1], ["seX40Mid", 1], ["seX40Cab", 1]);
+const X52_3 = set("Three-car Regina (X52) in Västtrafik's colors", ["seX52Cab", 1], ["seX52Mid", 1], ["seX52Cab", 1]);
 const IC_SET = set("Rc6 locomotive with InterCity coaches, usually 5 to 7", ["seRc6", 1], ["seA7", 1], ["seB7", 2], ["seRB7", 1], ["seB7", 1], ["seBF7", 1]);
+const IC_NORTH = set("Rc6 locomotive with Trafikverket's coaches and bistro car", ["seRc6Trv", 1], ["seB2Trv", 2], ["seR12Trv", 1], ["seB2Trv", 1]);
 const NIGHT_NORTH = set("Rc6 locomotive with Trafikverket's night-train cars (seats, bistro, couchettes, sleepers), about 10 cars",
   ["seRc6Trv", 1], ["seB2Trv", 2], ["seR12Trv", 1], ["seBC4Trv", 2], ["seWL4Trv", 1], ["seWL6Trv", 3]);
-const NIGHT_SJ = set("Rc6 locomotive with seats, couchettes and sleeping cars", ["seRc6", 1], ["seB7", 2], ["seRB7", 1], ["seBC4", 2], ["seWL4", 2]);
+const NIGHT_SJ = set("Rc6 locomotive with seats, a bistro, couchettes and sleeping cars", ["seRc6", 1], ["seB7", 2], ["seRB7", 1], ["seBC4", 2], ["seWL4", 2]);
 const X3_SET = set("Four-car X3", ["seX3Cab", 1], ["seX3Mid", 2], ["seX3Cab", 1]);
+const X74_SET = set("Five-car X74 (Stadler FLIRT)", ["seX74Cab", 1], ["seX74Mid", 3], ["seX74Cab", 1]);
 const SN_DAY = set("Vectron locomotive with coaches and a dining car, usually 6 to 8", ["se193", 1], ["seSnBmpz", 3], ["seSnWRbmz", 1], ["seSnBmpz", 2]);
-const SN_NIGHT = set("Vectron locomotive with coaches, couchette cars and a dining car", ["se193", 1], ["seSnBmpz", 2], ["seSnWRbmz", 1], ["seSnBvcmz", 4]);
+const SN_NIGHT = set("Vectron locomotive with coaches, a dining car and couchette cars", ["se193", 1], ["seSnBmpz", 2], ["seSnWRbmz", 1], ["seSnBvcmz", 4]);
 const TG_SET = set("Rc3 locomotive with stainless coaches, usually 4 or 5", ["seRc3", 1], ["seTgA2", 1], ["seTgB1", 3]);
-const BM74_SET = set("Five-car Type 74 FLIRT", ["seBM74Cab", 1], ["seBM74Mid", 3], ["seBM74Cab", 1]);
 const BY_TYPE = { seX2: X2_SET, seUA2: X2_SET, seUB2: X2_SET, seURB2: X2_SET, seUB2X: X2_SET, seX55Cab: X55_SET, seX55Mid: X55_SET, seX55Bistro: X55_SET,
   seX40Cab: X40_SET, seX40Mid: X40_SET, seX52Cab: X52_3, seX52Mid: X52_3, seRc6: IC_SET, seA7: IC_SET, seB7: IC_SET, seBF7: IC_SET, seRB7: IC_SET,
   seRc6Trv: NIGHT_NORTH, seB2Trv: NIGHT_NORTH, seR12Trv: NIGHT_NORTH, seBC4Trv: NIGHT_NORTH, seWL4Trv: NIGHT_NORTH, seWL6Trv: NIGHT_NORTH, seBC4: NIGHT_SJ, seWL4: NIGHT_SJ,
-  seX3Cab: X3_SET, seX3Mid: X3_SET, se193: SN_DAY, seSnBmpz: SN_DAY, seSnWRbmz: SN_DAY, seSnBvcmz: SN_NIGHT, seRc3: TG_SET, seTgB1: TG_SET, seTgA2: TG_SET,
-  seBM74Cab: BM74_SET, seBM74Mid: BM74_SET };
-const text = (t) => `${t.route || ""} ${t.product || ""} ${t.destination || ""} ${t.origin || ""}`;
-const NORTH = /Luleå|Narvik|Kiruna|Boden|Abisko|Gällivare|Riksgränsen/i;
-const NIGHT = /natt|night|sleeper/i;
-// SJ 3000 country: the lines north and northwest of Stockholm, and Karlstad.
-const X55_LAND = /Sundsvall|Umeå|Örnsköldsvik|Härnösand|Östersund|Åre|Duved|Storlien|Falun|Mora|Borlänge|Gävle|Hudiksvall|Karlstad|Uddevalla|Kristinehamn/i;
+  seX3Cab: X3_SET, seX3Mid: X3_SET, seX74Cab: X74_SET, seX74Mid: X74_SET, se193: SN_DAY, seSnBmpz: SN_DAY, seSnWRbmz: SN_DAY, seSnBvcmz: SN_NIGHT,
+  seRc3: TG_SET, seTgB1: TG_SET, seTgA2: TG_SET };
+// The train number, a 5-digit variant read as its 4-digit original.
+const num = (t) => {
+  const n = Number(String(t.number || "").replace(/\D/g, ""));
+  return n >= 10000 ? n % 10000 : n;
+};
+const kind = (t) => `${t.route || ""} ${t.product || ""}`;
+const within = (n, ...ranges) => ranges.some(([a, b]) => n >= a && n <= b);
 export const TYPICAL = {
   sj: (t, reported) => {
-    // An X40's set number says whether it has two cars or three.
-    if (reported === "seX40Cab") return (t.cars?.numbers || []).some((n) => n >= 3311 && n <= 3337) ? X40_SET : X40_2;
     if (BY_TYPE[reported]) return BY_TYPE[reported];
-    const s = text(t);
-    if (NIGHT.test(s)) return NORTH.test(s) ? NIGHT_NORTH : NIGHT_SJ;
-    if (/Göteborg/i.test(s) && /Karlstad/i.test(s) && !/Stockholm/i.test(s)) return X52_3;
-    if (/regional|\bR\b/i.test(s)) return X40_SET;
-    if (/intercity|\bIC\b/i.test(s)) return /Ljusdal|Gävle|Linköping|Västerås|Örebro|Uppsala/i.test(s) ? X40_SET : IC_SET;
-    return X55_LAND.test(s) ? X55_SET : X2_SET;
+    const k = kind(t), n = num(t), to = t.destination || "";
+    if (/natt|night/i.test(k)) return within(n, [91, 94]) || /Umeå|Luleå|Narvik|Kiruna|Boden/i.test(to) ? NIGHT_NORTH : NIGHT_SJ;
+    if (/intercity/i.test(k)) {
+      if (within(n, [264, 271])) return X40_SET;
+      if (within(n, [98, 99]) || /Narvik|Kiruna|Luleå/i.test(to)) return IC_NORTH;
+      return IC_SET;
+    }
+    if (/snabb/i.test(k)) {
+      if (n === 89 || n === 443 || within(n, [560, 599]) || /Sundsvall|Umeå|Östersund|Duved|Åre|Uddevalla/i.test(to)) return X55_SET;
+      return within(n, [480, 496]) ? X2_OR_X55 : X2_SET;
+    }
+    if (within(n, [3950, 3979]) || /Karlstad|Kristinehamn|Kil|Öxnered|Trollhättan/i.test(to)) return X52_3;
+    return X40_SET;
   },
-  arlandaexpress: (t, reported) => BY_TYPE[reported] || X3_SET,
-  snalltaget: (t, reported) => BY_TYPE[reported] || (NIGHT.test(text(t)) || /Berlin|Åre|Duved|Storlien|Hamburg/i.test(text(t)) ? SN_NIGHT : SN_DAY),
+  snalltaget: (t, reported) => BY_TYPE[reported] || (/natt|night|euronight/i.test(kind(t)) || /Berlin|Dresden|Storlien|Åre|Innsbruck|Salzburg/i.test(t.destination || "") ? SN_NIGHT : SN_DAY),
   tagab: (t, reported) => BY_TYPE[reported] || TG_SET,
-  vytag: (t, reported) => BY_TYPE[reported] || (/Malmö|Göteborg|Halden|Fredrikstad/i.test(text(t)) && !/Karlstad|Stockholm/i.test(text(t)) ? BM74_SET : X52_2),
+  mtrx: (t, reported) => BY_TYPE[reported] || X74_SET,
+  arlandaexpress: (t, reported) => BY_TYPE[reported] || X3_SET,
 };
 
 // Fact sheets in mph, hp and ft, from the published km/h, kW and m.
@@ -712,6 +743,40 @@ export const FACTS = {
     about: "A second-class coach that Trafikverket leases to SJ for the night trains to upper Norrland.", source: JV + "vagnguide/b2" },
   seR12Trv: { model: "R12 bistro car", type: "Bistro car", built: "1968–1969 (rebuilt)", seats: 39, topSpeedMph: 99.4, lengthFt: 79.1,
     about: "The bistro of the night trains to upper Norrland, owned by Trafikverket.", source: JV + "vagnguide/r12" },
+  seX55Cab: { model: "Bombardier Regina, SJ 3000 (X55)", type: "Electric multiple unit", builder: "Bombardier, Hennigsdorf", built: "2010–2013",
+    fleet: "20 four-car sets, 3344–3363", topSpeedMph: 124.3, powerHp: 4264, seats: 245, lengthFt: 351.4,
+    about: "SJ's long-distance version of the wide-bodied Regina, 2+2 seats, a bistro in the third car, every bogie powered but the bistro car's. It runs SJ's high-speed trains north of Stockholm, to Sundsvall, Umeå, Östersund and Duved, and stands in for X2000s elsewhere.",
+    source: JV + "vagnguide/x55" },
+  seX52Cab: { model: "Bombardier Regina (X52)", type: "Electric multiple unit", builder: "Bombardier", built: "2000–2013", fleet: "4 three-car sets on Göteborg–Karlstad, 9077–9080",
+    topSpeedMph: 124.3, powerHp: 2843, lengthFt: 264.1,
+    about: "Regional Reginas owned by Västtrafik and Transitio, run by SJ between Göteborg and Karlstad together with Västtrafik and Värmlandstrafik, in Västtrafik's white and blue.",
+    source: JV + "vagnguide/x50" },
+  seX40Cab: { model: "Alstom Coradia Duplex (X40)", type: "Double-deck electric multiple unit", builder: "Alstom, Salzgitter", built: "2004–2008",
+    fleet: "43 sets: 16 two-car, 27 three-car (3301–3343)", topSpeedMph: 124.3, powerHp: 3420, seats: 233, lengthFt: 267.4,
+    about: "SJ's double-decker for regional and shorter InterCity trains: Stockholm–Västerås–Örebro–Göteborg, Linköping–Gävle–Ljusdal and Göteborg–Kalmar. VR FleetCare is refurbishing the three-car sets in 2024–28.",
+    source: JV + "vagnguide/x40" },
+  seX3Cab: { model: "Alstom X3", type: "Electric multiple unit", builder: "Alstom, Birmingham", built: "1998–1999", fleet: "7 four-car units, 1–7",
+    topSpeedMph: 124.3, powerHp: 3004, seats: 228, lengthFt: 305.4,
+    about: "Arlanda Express's airport train between Stockholm C and Arlanda, every 15 minutes in about 20 minutes, at up to 200 km/h. Its floors are level with the high platforms at both ends.",
+    source: JV + "vagnguide/x3" },
+  seX74Cab: { model: "Stadler FLIRT Nordic (X74)", type: "Electric multiple unit", builder: "Stadler Rail", built: "2014–2015", fleet: "6 five-car units, 001–006",
+    topSpeedMph: 124.3, powerHp: 6035, seats: 244, lengthFt: 346.1,
+    about: "Built for MTR Express, the first competitor to SJ's high-speed trains between Stockholm and Göteborg (2015). Finland's VR bought the company in 2024 and is repainting the trains in its green.",
+    source: JV + "vagnguide/x74" },
+  se193: { model: "Siemens Vectron (193)", type: "Electric locomotive", builder: "Siemens Mobility", built: "2011–2024", fleet: "7 leased by Snälltåget",
+    topSpeedMph: 124.3, powerHp: 8583, lengthFt: 62.3,
+    about: "Snälltåget has run its own trains with Vectrons leased from ELL since 2016, painted red with Snälltåget three times on one side (and Loket on the other).",
+    source: JV + "lokguide/193" },
+  seSnBmpz: { model: "Bmpz coach", type: "Coach", built: "1973–1979 (for ÖBB)", seats: 74, lengthFt: 86.6,
+    about: "Open second-class coaches bought from Austria's ÖBB for Snälltåget's day and night trains.", source: JV + "vagnguide/bmpz" },
+  seSnBvcmz: { model: "Couchette car (Bvcmz, BC2)", type: "Couchette car", built: "1966–1972", lengthFt: 86.6,
+    about: "Six-berth compartments on Snälltåget's night trains to Berlin, Dresden and the mountains of Jämtland.", source: JV + "vagnguide/bvcmz" },
+  seSnWRbmz: { model: "WRbmz dining car", type: "Dining car", built: "1973–1979 (rebuilt)", seats: 42, lengthFt: 86.6,
+    about: "The restaurant car that runs in most Snälltåget trains.", source: JV + "vagnguide/wrbmz" },
+  seTgB1: { model: "B1 coach", type: "Coach", builder: "ASJ and others", built: "1960–1968", seats: 62, lengthFt: 79.1,
+    about: "One of SJ's 1960s stainless coaches, rebuilt for Tågab's InterCity trains.", source: JV + "vagnguide/b1" },
+  seTgA2: { model: "A2 coach", type: "Coach", built: "1963–1968", seats: 40, lengthFt: 79.1,
+    about: "First class on Tågab's trains, a 1960s SJ stainless coach.", source: JV + "vagnguide/a2" },
 };
 const part = (facts, name) => ({ ...facts, model: `${facts.model}, ${name}` });
 FACTS.seUA2 = part(FACTS.seX2, "first-class car (UA2)");
@@ -721,3 +786,9 @@ FACTS.seUB2X = part(FACTS.seX2, "driving trailer (UB2X)");
 FACTS.seRc6Trv = FACTS.seRc6;
 FACTS.seBC4Trv = FACTS.seBC4;
 FACTS.seWL4Trv = FACTS.seWL4;
+FACTS.seX55Mid = part(FACTS.seX55Cab, "middle car");
+FACTS.seX55Bistro = part(FACTS.seX55Cab, "bistro car");
+FACTS.seX52Mid = part(FACTS.seX52Cab, "middle car");
+FACTS.seX40Mid = part(FACTS.seX40Cab, "middle car");
+FACTS.seX3Mid = part(FACTS.seX3Cab, "middle car");
+FACTS.seX74Mid = part(FACTS.seX74Cab, "intermediate section");
