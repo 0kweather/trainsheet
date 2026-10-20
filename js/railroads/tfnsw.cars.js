@@ -245,8 +245,8 @@ const MIL = { roof: mm(4381), sill: 3.55, trucks: { centers: 51.4, wb: 7.55, d: 
   nose: [[1.2, 3.55], [0.5, 4.0], [0.5, 6.4], ["q", 0.6, 7.2, 1.3, 7.8], [3.4, 12.5], ["q", 4.2, mm(4381), 6.0, mm(4381)]], cabLen: 8,
   doorFill: () => SYD.yellow,
   windows: (p, car) => [...deckRows(p.deck, { n: 5, w: 5.8, up: [9.95, 2.35], low: [3.1, 2.6] }), endRow(p.ends[0], car.cab ? 1.6 : 2.0, 6.4, 3.6), endRow(p.ends[1], 2.0, 6.4, 3.6)],
-  cab: (c) => path(poly([[1.5, 8.1], [3.3, 12.0], ["q", 3.8, 12.9, 4.8, 12.9], [6.9, 12.9], [6.9, 8.1]]), SYD.black) +
-    path(poly([[2.1, 9.1], [3.4, 11.9], [6.6, 11.9], [6.6, 9.1]]), C.glass) + path(poly([[2.6, 10.5], [3.4, 11.9], [6.6, 11.9], [6.6, 10.5]]), C.glassLight) +
+  cab: (c) => path(poly([[0.9, 6.9], [5.4, 6.85], ["q", 7.5, 7.1, 7.65, 8.8], [7.65, 12.2], [3.25, 12.2], [1.3, 7.8]]), SYD.black) +
+    path(poly([[2.0, 8.6], [3.5, 11.8], [7.3, 11.8], [7.3, 9.0], ["q", 6.6, 8.6, 5.0, 8.6]]), C.glass) + path(poly([[2.7, 10.3], [3.5, 11.8], [7.3, 11.8], [7.3, 10.3]]), C.glassLight) +
     rect(4.4, 12.2, 2.2, 0.45, "#14171a", 0, 'rx="0.1"') + rect(4.6, 12.3, 1.5, 0.25, "#f5a623") + wiper(2.4, 9.3, 3.3, 11.2) +
     rect(0.55, 4.5, 1.2, 0.8, "#c3c8cd", 0.35, 'rx="0.3"') + circle(1.0, 4.9, 0.25, "#fff6d0") +
     coupler(0, 2.9, 1.8) + skirt(1.2, 7.2, 3.55) + win(7.5, 7.6, 1.2, 3.2, 0.3) + rect(7.3, 4.0, 1.8, 7.4, "none", 0.5, 'rx="0.2"'),
@@ -256,14 +256,15 @@ const MIL = { roof: mm(4381), sill: 3.55, trucks: { centers: 51.4, wb: 7.55, d: 
     const [a, z] = car.plan.deck;
     s += rect(a - 0.1, 9.75, z - a + 0.2, 2.75, SYD.band) + rect(a - 0.1, 2.9, z - a + 0.2, 3.0, SYD.band);
     // The yellow band edging the front's black mask, sweeping down the nose.
-    if (car.cab) s += path(poly([[1.0, 7.4], ["q", 2.6, 7.6, 3.4, 6.4], [4.3, 4.6], [5.2, 4.6], [4.1, 6.8], ["q", 3.2, 8.4, 1.3, 8.4]]), SYD.yellow) +
-      path(poly([[3.0, 12.7], [7.4, 12.7], [7.4, 8.0], ["q", 7.5, 6.6, 6.6, 6.2], [5.6, 5.6], [5.1, 6.2], ["q", 6.4, 7.0, 6.6, 8.1], [6.6, 12.1], [3.3, 12.1]]), SYD.yellow) +
-      path(poly([[3.1, 13.2], ["q", 3.8, mm(4381), 5.2, mm(4381)], [8.0, mm(4381)], [8.0, 13.0]]), SYD.yellow);
+    // The front: the yellow cap over the roof's leading edge and the
+    // yellow border down the side of the black mask to the nose.
+    if (car.cab) s += path(poly([[2.6, 12.2], [8.3, 12.2], [8.3, 15], [2.6, 15]]), SYD.yellow) +
+      path("M8.3 12.4L8.3 8.6Q8.1 6.5 5.6 6.1L0.4 6.2L0.4 6.9L5.4 6.85Q7.5 7.1 7.65 8.8L7.65 12.4Z", SYD.yellow);
     return s;
   },
-  detail: (c, g, car) => (car.cab ? transport(c, 11.6, 7.3, 0.9, "") : "") + eave(g, car, 13.0),
+  detail: (c, g, car) => transport(c, car.plan.deck[0] + 4.0, 7.9, 0.85, "Sydney Trains") + eave(g, car, 13.0),
 };
-const millennium = (kind) => (c) => deckCar(MIL, { cab: kind === "d", motor: kind === "n", pan: kind === "d" ? 11.2 : null })(c);
+const millennium = (kind) => (c) => deckCar(MIL, { cab: kind === "d", motor: kind === "n", pan: kind === "d" ? c.L - 17 : null })(c);
 
 // --- Tangara T sets (A Goninan & Co, Broadmeadow, 1987-95; 109 sets in
 // service as fixed pairs of four-car units, eight cars): D-N-N-D, the
@@ -278,7 +279,7 @@ const millennium = (kind) => (c) => deckCar(MIL, { cab: kind === "d", motor: kin
 const TAN = { roof: mm(4413), sill: 3.55, trucks: { centers: 51.0, wb: 7.55, d: 37 }, acW: 7.5,
   nose: [[0.7, 3.55], [0.45, 3.9], [0.45, 12.9], ["q", 0.5, 14.0, 1.6, 14.3], ["q", 2.2, mm(4413), 3.0, mm(4413)]], cabLen: 7,
   doorFill: (c) => (c.newPaint ? SYD.burnt : SYD.yellow),
-  windows: (p, car) => [...deckRows(p.deck, { n: 6, w: 4.6, up: [9.9, 2.5], low: [3.1, 2.75], r: 0.4 }), endRow(p.ends[0], car.cab ? 1.8 : 3.4, 6.5, 3.4), endRow(p.ends[1], 3.4, 6.5, 3.4)],
+  windows: (p, car) => [...deckRows(p.deck, { n: 6, w: 5.4, up: [9.85, 2.7], low: [3.0, 2.9], r: 0.25 }), endRow(p.ends[0], car.cab ? 1.8 : 3.4, 6.5, 3.4), endRow(p.ends[1], 3.4, 6.5, 3.4)],
   cab: (c, g, car) => {
     const face = car.newPaint ? SYD.burnt : SYD.yellow;
     return rect(0.45, 7.2, 0.35, 5.6, C.glass) + rect(0.45, 3.9, 0.35, 3.1, face) + rect(0.42, 3.55, 0.45, 1.6, SYD.black) +
@@ -297,9 +298,10 @@ const TAN = { roof: mm(4413), sill: 3.55, trucks: { centers: 51.0, wb: 7.55, d: 
     if (car.cab) s += path(poly([[0, 0], [1.25, 0], [1.25, 13.6], ["q", 1.25, 14.2, 2.0, 14.3], [3.2, 14.3], [3.2, 18], [0, 18]]), car.newPaint ? SYD.burnt : SYD.yellow);
     return s;
   },
-  detail: (c, g, car) => (car.cab ? transport(c, 9.6, 8.1, 0.9, "") : "") + eave(g, car, 13.2),
+  detail: (c, g, car) => (car.cab ? transport(c, 11.6, 11.1, 0.7, "") : "") + eave(g, car, 13.2) +
+    lines([[car.cab ? 7.2 : 1.0, 3.75, car.plan.deck[0] - 0.3, 3.75], [car.plan.deck[1] + 0.3, 3.75, g.L - 1.0, 3.75], [car.plan.deck[0] + 0.5, 2.2, car.plan.deck[1] - 0.5, 2.2]], SYD.yellow, 0.9),
 };
-const tangara = (kind) => (c) => deckCar(TAN, { cab: kind === "d", motor: kind === "n", pan: kind === "d" ? 10.4 : null, newPaint: false })(c);
+const tangara = (kind) => (c) => deckCar(TAN, { cab: kind === "d", motor: kind === "n", pan: kind === "d" ? c.L - 8.4 : null, newPaint: false })(c);
 
 // --- OSCAR H sets (UGL Rail, Broadmeadow, 2006-12; H1-H55): four cars,
 // OD-ON-ONL-OD, the driving trailers 20.34 m, the motor cars 20.435 m (the
@@ -328,18 +330,20 @@ const OSC = { roof: mm(4403), sill: 3.55, trucks: { centers: 51.0, wb: 7.55, d: 
     let s = body(L, car, SYD.silver, SYD.roof, 13.3);
     const [a, z] = car.plan.deck;
     s += rect(a - 0.1, 9.7, z - a + 0.2, 2.85, SYD.band) + rect(a - 0.1, 2.9, z - a + 0.2, 3.15, SYD.band);
-    if (!sub) s += rect(0, 6.35, L, 0.18, SYD.blue);
     if (car.cab) {
       // The fibreglass front back to the crew door: its color, the mask
       // under the windshield, the roof cap.
       s += rect(0, 0, 8.3, 18, sub ? SYD.orange : SYD.yellow) +
-        path(poly([[0, 7.0], [1.2, 7.0], ["q", 4.0, 7.0, 6.4, 8.4], [6.4, 12.4], [0, 12.4]]), sub ? SYD.black : SYD.blue) +
-        path(poly([[0, 13.0], [8.3, 13.0], [8.3, 18], [0, 18]]), sub ? SYD.black : SYD.blue);
+        path(poly([[0, 7.0], [1.0, 7.0], ["q", 2.6, 7.2, 3.0, 8.6], [3.0, 12.4], [0, 12.4]]), sub ? SYD.black : SYD.blue) +
+        (sub ? path(poly([[0, 13.0], [8.3, 13.0], [8.3, 18], [0, 18]]), SYD.black) : path(poly([[0, 12.9], [2.4, 12.9], ["q", 3.4, 13.6, 3.6, 18], [0, 18]]), SYD.blue));
     }
     return s;
   },
-  detail: (c, g, car) => (car.cab ? transport(c, 13.4, 7.6, 0.9, c.agency === "sydneytrains" ? "Sydney Trains" : "NSW TrainLink") : "") +
-    eave(g, car, 13.0),
+  // The name on the panel between the crew door and the first passenger
+  // door; a yellow line low along the side (the intercity paint).
+  detail: (c, g, car) => (car.cab ? transport(c, 12.6, 10.6, 0.7, c.agency === "sydneytrains" ? "Sydney Trains" : "NSW TrainLink") : "") +
+    eave(g, car, 13.0) + (c.agency === "sydneytrains" ? "" : lines([[car.cab ? 8.4 : 1.0, 3.75, car.plan.deck[0] - 0.3, 3.75], [car.plan.deck[1] + 0.3, 3.75, g.L - 1.0, 3.75],
+      [car.plan.deck[0] + 0.5, 2.2, car.plan.deck[1] - 0.5, 2.2]], SYD.yellow, 0.9)),
 };
 const oscarPan = (c) => (c.index === 1 ? 7.5 : c.index === c.count - 2 ? c.L - 7.5 : null);
 const oscar = (kind) => (c) => deckCar(OSC, { cab: kind === "d", motor: kind === "n", pan: kind === "n" ? oscarPan(c) : null })(c);
@@ -481,10 +485,10 @@ const railLen = mm(25250);
 const xRows = (xs, y = 7.2, w = 3.9, h = 2.8) => [{ xs, y, w, h, r: 0.35 }];
 // The Endeavour's cab: blue over a yellow band, the blue carried back to the
 // first door; under it the black skirt.
-const endeavourCab = (L) => path(poly([[0, 3.7], [8.4, 3.7], [8.4, 18], [0, 18]]), TL.royal) + rect(0, 5.5, 8.4, 1.5, TL.yellow) + rect(0, 0, 8.4, 4.4, "#1e2125");
+const endeavourCab = (L) => path(poly([[0, 3.7], [12.6, 3.7], [12.6, 18], [0, 18]]), TL.royal) + path(poly([[0, 5.4], [2.2, 5.4], ["q", 2.9, 6.2, 2.2, 7.1], [0, 7.1]]), TL.yellow) + rect(0, 0, 12.6, 4.4, "#1e2125");
 const endeavourCar = married(railcar(XPL, {
   cab: true, cabPaint: endeavourCab,
-  rows: xRows(seq(13.4, 5.6, 10)), doors: [plug(9.2), plug(railLen - 4.0)],
+  rows: xRows(seq(13.6, 6.1, 10), 7.2, 4.3, 2.8), doors: [plug(8.6), plug(railLen - 4.0)],
   gear: [[17, 12.5, 2.0, "e"], [30.5, 6, 1.6, "g"], [37.5, 8, 1.3, "t"], [47, 5, 1.3, "b"], [53, 5, 1.1, "b"]],
   onRoof: (c, g) => roofGrille(19, 9, g.roof) + exhaust(30, g.roof) + roofGrille(50, 12, g.roof, 0.45),
   mark: (c) => transport(c, 44, 5.4, 0.8, "NSW TrainLink", "#2b2f34", TL.red),
@@ -503,6 +507,7 @@ const endeavourCar = married(railcar(XPL, {
 // doors.
 const xplorerCab = (L) => path(poly([[0, 3.7], [10.6, 3.7], [10.6, 6.0], [14.2, 12.4], [14.2, 18], [0, 18]]), TL.blue) +
   path(poly([[10.6, 6.6], [14.2, 12.4], [14.2, 11.6], [11.3, 6.6]]), "#7fd3f2") + path(poly([[11.3, 5.2], [14.6, 10.6], [14.6, 9.8], [12.0, 5.2]]), "#5ec4ea") +
+  path(poly([[12.0, 3.8], [15.0, 8.6], [15.0, 7.9], [12.7, 3.8]]), "#9fdcf5") +
   path(poly([[0, 7.9], [0.9, 7.9], [0.9, 12.6], [0, 12.6]]), TL.yellow) + rect(0, 0, 12, 4.3, "#1e2125");
 const skyBand = (L) => rect(0, 6.95, L, 3.3, TL.sky) + rect(0, 10.25, L, 0.15, "#3a9cc4");
 const xplorer = (kind) => railcar(XPL, kind === "b" ? {
@@ -513,7 +518,7 @@ const xplorer = (kind) => railcar(XPL, kind === "b" ? {
   mark: (c) => transport(c, 40, 5.3, 0.8, "NSW TrainLink", "#2b2f34", TL.red),
 } : {
   cab: true, paintBand: skyBand, cabPaint: xplorerCab,
-  rows: xRows([15.6, 21.2, 26.8, 32.4, ...(kind === "a" ? [] : [38.0, 43.6]), 49.2, 54.8, 60.4, 66.0, 71.6], 7.2, 3.9, 2.75), doors: [plug(9.6), plug(railLen - 4.0)],
+  rows: xRows([15.6, 21.2, 26.8, 32.4, ...(kind === "a" ? [] : [38.0, 43.6]), 49.2, 54.8, 60.4, 66.0, 71.6], 7.2, 3.9, 2.75), doors: [plug(8.0, 2.9, 3.9, 10.9, TL.blue), plug(railLen - 4.0)],
   gear: [[17, 12.5, 2.0, "e"], [30.5, 6, 1.6, "g"], [37.5, 8, 1.3, "t"], [47, 5, 1.3, "b"]],
   onRoof: (c, g) => roofGrille(19, 9, g.roof) + exhaust(30, g.roof) + roofGrille(50, 12, g.roof, 0.45) + rect(5.6, g.roof - 0.05, 0.5, 0.6, "#3a3f45"),
   // The EA's buffet: a louvered panel where the windows stop.
@@ -539,19 +544,20 @@ const HUN = { ...XPL, roof: mm(4240), sill: 3.7, trucks: { centers: 58.6, wb: 8.
   paint: (c, g, car) => {
     const L = g.L;
     let s = rect(0, 0, L, 18, "#bfc3c7") + rect(0, 12.6, L, 2, "#8f969d") + rect(0, 0, L, 3.95, "#2a2d31");
-    s += rect(0, 6.85, L, 3.45, TL.red) + rect(0, 6.75, L, 0.1, "#9a2b1d");
-    if (car.cab) s += path(poly([[0, 3.7], [12.8, 3.7], [12.8, 7.2], [15.2, 13.3], [15.2, 18], [0, 18]]), TL.red) +
+    s += rect(22.6, 6.85, L - 22.6, 3.45, TL.red) + rect(22.6, 6.75, L - 22.6, 0.1, "#9a2b1d");
+    if (car.cab) s += path(poly([[0, 3.7], [11.4, 3.7], [11.4, 6.0], [13.4, 13.3], [13.4, 18], [0, 18]]), TL.red) +
       path(poly([[0, 3.7], [1.6, 3.7], [1.6, 8.2], [0.9, 8.2], [0.9, 12.6], ["q", 1.8, 13.4, 3.6, 13.6], [4.8, 13.6], [4.8, 18], [0, 18]]), TL.yellow) +
-      rect(15.2, 3.7, 5.0, 14.3, "#d5d8db") + rect(0, 0, 4.8, 4.4, "#1e2125");
+      path(poly([[11.4, 3.7], [17.6, 3.7], [17.6, 13.3], [13.4, 13.3], [11.4, 6.0]]), "#d5d8db") + rect(0, 0, 4.8, 4.4, "#1e2125");
     return s;
   },
 };
 const hunterCar = married(railcar(HUN, {
   cab: true,
-  rows: xRows([22.6, 27.9, 33.2, 38.5, 49.0, 54.3, 59.6, 64.9, 70.2], 7.15, 4.0, 2.85), doors: [plug(9.0, 3.0, 3.9, 11.0, TL.red), { ...plug(railLen - 6.4, 5.0), leaves: 2 }],
+  rows: xRows([23.6, 29.0, 34.4, 39.8, 50.6, 56.0, 61.4, 66.8, 72.2], 7.15, 4.2, 2.85),
+  doors: [plug(8.3, 2.6, 3.9, 11.0, TL.red), { ...plug(17.9, 4.6), leaves: 2 }, plug(railLen - 4.0)],
   gear: [[17, 13, 2.1, "e"], [31, 6, 1.7, "g"], [38, 8, 1.3, "t"], [48, 5, 1.3, "b"]],
   onRoof: (c, g) => roofGrille(18, 10, g.roof) + exhaust(30.5, g.roof) + roofGrille(48, 12, g.roof, 0.5),
-  mark: (c) => rect(43.9, 7.1, 3.0, 2.9, "#5a6068", 0.4) + slats(44.0, 7.2, 2.8, 2.7, 0.3, "rgba(255,255,255,0.3)") + transport(c, 18.6, 5.6, 0.9, "NSW TrainLink", "#c8102e", TL.red),
+  mark: (c) => rect(45.6, 7.1, 3.6, 2.9, "#5a6068", 0.4) + slats(45.7, 7.2, 3.4, 2.7, 0.3, "rgba(255,255,255,0.3)") + transport(c, 15.4, 9.2, 0.8, "NSW TrainLink", "#c8102e", TL.red),
 }));
 
 // --- XPT (Comeng, Granville, 1981-93; ABB, Dandenong, power cars XP2015-
@@ -570,41 +576,47 @@ const hunterCar = married(railcar(HUN, {
 // cars and six carriages have worn the 1982 State Rail red, black and
 // silver since April 2026, for the Grafton XPT; not drawn.)
 const XPT = { roof: mm(4220), sill: 4.0, cornerR: 0.8, end: 0.5, trucks: { centers: 32.6, wb: 8.5, d: 40, kind: "loco" }, diaphragm: [4.4, 11.6], badge: false,
-  nose: [[0.9, 4.0], [0.4, 5.6], ["q", 0.45, 7.6, 1.6, 8.6], [3.6, 11.4], ["q", 4.6, 13.0, 6.4, 13.6], ["q", 7.6, mm(4220), 9.4, mm(4220)]], cabLen: 9 };
+  nose: [[1.4, 4.0], [0.45, 5.4], ["q", 0.35, 7.0, 1.1, 7.9], [2.1, 9.0], [4.0, 11.6], ["q", 5.0, 13.2, 7.0, 13.7], ["q", 8.0, mm(4220), 9.6, mm(4220)]], cabLen: 10 };
 const xptPower = (c0) => {
   const c = { ...c0, cabL: true };
   return bilevel(c, {
-    ...XPT, roofItems: [], rows: [], doors: [plug(10.6, 2.2, 4.3, 11.4, "rgba(0,0,0,0.08)")],
+    ...XPT, roofItems: [], rows: [], doors: [plug(11.4, 2.2, 4.3, 11.4, "rgba(0,0,0,0.08)")],
     paint: (c, g) => {
       const L = g.L;
-      let s = rect(0, 0, L, 18, TL.blue) + rect(0, 0, L, 4.3, "#1e2125") + rect(0, 13.3, L, 2, "#2c3542");
-      // The white wave and the teal stripe inside it, rising toward the cab.
-      s += path(`M${L} 5.2L${L} 10.6Q${L - 8} 10.8 ${L - 16} 9.8Q24 8.4 16 4.6L13.4 4.3L${L} 4.3Z`, "#f3f4f5") +
-        path(`M${L} 8.0L${L} 9.6Q${L - 9} 9.8 ${L - 17} 8.8Q25 7.4 19.0 4.9L21.6 5.0Q27 7.0 ${L - 16} 7.9Q${L - 8} 8.4 ${L} 8.0Z`, TL.teal);
-      // The front: black below the headlights, yellow above.
-      s += path(poly([[0, 0], [5.6, 0], [5.6, 5.4], ["q", 2.4, 5.6, 0, 5.8]]), "#1e2125") +
-        path(poly([[1.0, 8.4], ["q", 4.0, 9.2, 6.2, 10.6], [8.6, 13.1], [8.6, 18], [0, 18], [0, 8.4]]), TL.yellow);
+      let s = rect(0, 0, L, 18, TL.blue) + rect(0, 0, L, 4.3, "#1e2125") + rect(0, 13.35, L, 2, "#283041");
+      // The white wave from a point at the cab door's foot, widening back
+      // to the rear end; the teal stripe in its upper half.
+      s += path(`M13.8 4.35Q19 8.6 25 9.9Q32 10.5 ${L} 10.6L${L} 6.1Q36 6.0 30 5.6Q21 5.0 13.8 4.35Z`, "#f3f4f5") +
+        path(`M18.5 5.6Q24 8.4 30 9.2Q36 9.9 ${L} 10.2L${L} 8.8Q38 8.7 32 8.2Q25 7.4 18.5 5.6Z`, "#4bb3e0");
+      // The front: black below the headlights, yellow from under the
+      // windshield over the cab roof, back past the windshield's corner.
+      s += path(poly([[0, 0], [7.8, 0], [7.8, 4.3], ["q", 3.0, 4.5, 0.4, 5.7], [0, 5.7]]), "#1e2125") +
+        path(poly([[0.9, 7.7], ["q", 4.0, 8.0, 6.0, 9.6], [7.4, 11.4], ["q", 8.0, 12.4, 8.0, 13.4], [8.4, 18], [0, 18], [0, 7.7]]), TL.yellow);
       return s;
     },
-    // The nose's lower half: a black fairing down over the coupler to the
-    // plow.
-    cab: () => path(poly([[0.9, 4.05], [7.2, 4.05], [7.2, 1.3], [3.2, 1.2], [1.4, 1.5], [0.6, 2.6]]), "#1e2125", 0.5) + lines([[1.0, 2.2, 7.0, 2.2]], "#4a5057", 0.6) +
-      path(poly([[1.5, 8.9], [3.4, 11.3], ["q", 3.8, 11.8, 4.6, 11.8], [6.0, 11.8], [6.0, 9.7], ["q", 3.6, 8.9, 1.5, 8.9]]), C.glass) +
-      path(poly([[2.3, 9.9], [3.4, 11.3], [5.8, 11.3], [5.8, 9.9]]), C.glassLight) + wiper(2.0, 9.1, 3.2, 10.9) +
-      lamp(0.5, 6.6, 0.6, 0.45) + lamp(0.46, 5.9, 0.6, 0.4, "#e23b2e") +
-      // Cab side window; the vents in the yellow cap.
-      win(7.0, 9.2, 2.6, 2.3, 0.35) + rect(4.6, 12.6, 2.4, 0.55, "#2a2d31", 0, 'rx="0.15"') + slats(4.7, 12.65, 2.2, 0.45, 0.4, "rgba(255,255,255,0.35)") +
-      rect(7.6, mm(4220) - 0.05, 0.7, 0.45, "#2a2d31") + rect(8.6, mm(4220) - 0.05, 0.7, 0.45, "#2a2d31"),
+    // The nose's lower half, a black fairing over the coupler down to the
+    // plow; the windshield framed in a pale gasket; the headlights under it.
+    cab: () => path(poly([[0.45, 5.4], [7.8, 5.0], [7.8, 1.3], [3.4, 1.1], [1.0, 1.4], ["q", 0.3, 2.2, 0.3, 3.4], ["q", 0.32, 4.6, 0.45, 5.4]]), "#1e2125") + path("M0.3 3.4Q0.32 4.6 0.45 5.4", "none", 0.6) +
+      lines([[1.2, 2.0, 7.6, 2.0]], "#3d4248", 0.6) + path("M1.0 1.4Q0.3 2.2 0.3 3.4", "none", 0.6) +
+      path(poly([[1.9, 8.75], [3.9, 11.35], ["q", 4.3, 11.9, 5.2, 11.9], [7.0, 11.9], [7.0, 10.6], ["q", 5.0, 9.1, 1.9, 8.75]]), "#e9ecef") +
+      path(poly([[2.2, 8.95], [4.0, 11.25], ["q", 4.35, 11.7, 5.2, 11.7], [6.8, 11.7], [6.8, 10.7], ["q", 4.9, 9.3, 2.2, 8.95]]), C.glass) +
+      path(poly([[3.1, 10.0], [4.0, 11.2], [6.6, 11.2], [6.6, 10.6], ["q", 5.6, 10.0, 3.1, 10.0]]), C.glassLight) + wiper(2.6, 9.1, 3.8, 10.8) +
+      lamp(0.42, 6.55, 0.6, 0.45) + lamp(0.42, 5.95, 0.6, 0.35, "#e23b2e") +
+      // Cab side window; the vents in the yellow cap; the horns on the roof.
+      win(8.6, 9.0, 2.4, 2.4, 0.35) + rect(5.0, 12.65, 2.4, 0.55, "#2a2d31", 0, 'rx="0.15"') + slats(5.1, 12.7, 2.2, 0.45, 0.4, "rgba(255,255,255,0.35)") +
+      horns(8.4, mm(4220)),
     extra: (c, g) => {
       const L = g.L;
       // Side grilles: the radiator's big louvers at the back, the air
       // intakes ahead of them.
-      let s = rect(L - 15.8, 7.3, 4.8, 4.0, "#2a4fa8", 0.4) + slats(L - 15.7, 7.4, 4.6, 3.8, 0.3, "rgba(0,0,0,0.35)") +
-        rect(L - 15.8, 4.6, 4.8, 2.2, "#2a4fa8", 0.4) + slats(L - 15.7, 4.7, 4.6, 2.0, 0.3, "rgba(0,0,0,0.35)");
+      let s = rect(L - 12.6, 7.2, 5.0, 4.6, "#2a4fa8", 0.4) + slats(L - 12.5, 7.3, 4.8, 4.4, 0.3, "rgba(0,0,0,0.35)") +
+        rect(L - 12.6, 4.7, 5.0, 2.0, "#2a4fa8", 0.4) + slats(L - 12.5, 4.8, 4.8, 1.8, 0.3, "rgba(0,0,0,0.35)");
       // Roof: the radiator fan and its grilled housing at the back, the
       // exhaust ahead of it.
-      s += path(poly([[L - 22, g.roof - 0.05], [L - 21.4, g.roof + 0.6], [L - 3.0, g.roof + 0.6], [L - 1.6, g.roof - 0.05]]), "#3a4352", 0.4) + slats(L - 21, g.roof + 0.05, 18.6, 0.5, 0.45, "rgba(255,255,255,0.18)") +
-        exhaust(L - 27, g.roof);
+      // The engine room's roof: a long grilled hatch over the engine and
+      // the cooler group, the exhaust through it.
+      s += path(poly([[16, g.roof - 0.05], [16.8, g.roof + 0.55], [L - 2.4, g.roof + 0.55], [L - 1.2, g.roof - 0.05]]), "#2f3644", 0.4) + slats(17, g.roof + 0.04, L - 19.6, 0.45, 0.45, "rgba(255,255,255,0.16)") +
+        exhaust(L - 30, g.roof + 0.5);
       // Under the frame: the fuel tank between the trucks, the battery box.
       s += gear(XPT.sill, [[20.6, 14, 1.7, "t"], [36.0, 3.0, 1.0, "b"]]);
       return s;
@@ -617,18 +629,18 @@ const xptCar = (kind) => (c0) => {
   const doors = [plug(1.4, 2.4, 4.4, 11.0, "rgba(0,0,0,0.06)"), plug(L - 3.8, 2.4, 4.4, 11.0, "rgba(0,0,0,0.06)")];
   // Window bays: the XAM's compartments have one window each (narrower),
   // the XBR's buffet a gap, the XFH's luggage room its own door.
-  const bays = kind === "xam" ? seq(6.0, 6.95, 10).map((x) => [x, 3.3]) : kind === "xfh" ? seq(25.5, 4.05, 12).map((x) => [x, 3.3])
-    : kind === "xbr" ? [...seq(6.4, 4.05, 9).map((x) => [x, 3.3]), ...seq(57.5, 4.05, 4).map((x) => [x, 3.3])] : seq(6.4, 4.05, 17).map((x) => [x, 3.3]);
+  const bays = kind === "xam" ? seq(6.4, 7.0, 10).map((x) => [x, 3.4]) : kind === "xfh" ? seq(23.4, 5.45, 10).map((x) => [x, 4.9])
+    : kind === "xbr" ? [...seq(6.0, 5.45, 6).map((x) => [x, 4.9]), ...seq(62.0, 5.45, 3).map((x) => [x, 4.9])] : seq(6.0, 5.45, 13).map((x) => [x, 4.9]);
   return bilevel(c, {
     roof: mm(4040), sill: 3.9, cornerR: 0.8, end: 0.5, trucks: { centers: 56.0, wb: 8.5, d: 36 }, diaphragm: [4.3, 11.6], badge: false, roofItems: [],
     rows: bays.map(([x, w]) => ({ xs: [x], y: 7.2, w, h: 2.6, r: 0.3 })),
     doors: kind === "xfh" ? [...doors, { x: 13.0, w: 4.6, y0: 4.4, y1: 10.9, leaves: 2, glass: false, glassY: 0.6, glassH: 0.2, grabs: false, fill: "rgba(0,0,0,0.06)" }] : doors,
-    paint: (c, g) => rect(0, 0, L, 18, SYD.silver) + ribs(0, L, 4.2, 6.6) + ribs(0, L, 10.5, 12.3) + rect(0, 12.5, L, 2, "#9aa1a8") + rect(0, 0, L, 4.25, "#2a2d31") +
-      rect(0, 6.85, L, 3.3, TL.teal) + rect(0, 6.75, L, 0.1, "#1d6f7c"),
+    paint: (c, g) => rect(0, 0, L, 18, SYD.silver) + ribs(0, L, 4.2, 6.6) + ribs(0, L, 10.5, 12.3) + rect(0, 12.5, L, 2, "#5d646c") + rect(0, 0, L, 4.25, "#2a2d31") +
+      rect(0, 6.85, L, 3.3, "#6ec3e6") + rect(0, 6.75, L, 0.1, "#2f86b0") + rect(0, 10.15, L, 0.1, "#2f86b0"),
     extra: (c, g) => {
       let s = gear(3.9, [[20, 6, 1.3, "b"], [27, 7, 1.0, "t"], [36, 5, 1.2, "b"], [43, 6, 1.0, "t"], [51, 5, 1.3, "b"]]) + doorTrim(doors, 3.9);
       s += rect(4, g.roof - 0.05, 10, 0.5, "#a3aab2", 0.4, 'rx="0.12"') + rect(L - 14, g.roof - 0.05, 10, 0.5, "#a3aab2", 0.4, 'rx="0.12"');
-      if (kind === "xbr") s += rect(43.4, 7.0, 13.4, 3.0, "#24282d", 0.3) + letters(c, 50.1, 8.5, 0.8, "Buffet", "#ffffff", { weight: 600 });
+      if (kind === "xbr") s += rect(39.4, 7.1, 20.0, 2.8, "#24282d", 0.3) + rect(48.6, 7.3, 2.0, 2.4, C.glass, 0.3);
       return s + transport(c, L / 2, 5.4, 0.8, "NSW TrainLink", "#2b2f34", TL.red);
     },
   });
@@ -705,7 +717,7 @@ const set = (label, ...units) => ({ label, units });
 const four = (d, n) => [[d, 1], [n, 2], [d, 1]];
 // A set type's train of n cars: four-car sets coupled in pairs, the
 // Mariyung's six-car sets (DD-DNL-DT-DN-DND-DDA) leading a four in ten.
-function sydneySets(f, n) {
+function sydneySets(f, n, run = "") {
   const k = (x) => (x === 4 ? "4 cars" : `${x} cars`);
   switch (f) {
     case "B": return set("Waratah Series 2 (B set), 8 cars", ["nswWaratah2D", 1], ["nswWaratah2N", 2], ["nswWaratah2T", 2], ["nswWaratah2N", 2], ["nswWaratah2D", 1]);
@@ -733,18 +745,25 @@ function sydneySets(f, n) {
     case "X": {
       // The trip id counts every vehicle (the Brisbane XPT, seven: two power
       // cars and five carriages).
-      const m = Math.max(3, Math.min(7, (n || 7) - 2));
-      const cars = [["nswXfh", 1], ["nswXf", m >= 5 ? 2 : 1], ...(m >= 6 ? [["nswXam", m - 5]] : []), ["nswXbr", 1], ["nswXl", m >= 4 ? 1 : 0]].filter(([, x]) => x > 0);
-      return set(`XPT, two power cars and ${m} carriages`, ["nswXptPower", 1], ...cars, ["nswXptPower", 1]);
+      // The overnight trains (Brisbane, NT31/32, and Melbourne's night
+      // train, ST23/24) carry sleeping cars in place of an economy car.
+      const m = Math.max(3, Math.min(7, (n || 7) - 2)), night = /^(NT3[12]|ST2[34])$/.test(run);
+      const sleepers = night ? Math.max(1, m - 4) : m >= 6 ? m - 5 : 0, economy = Math.max(1, m - 2 - sleepers - (m >= 4 ? 1 : 0));
+      const cars = [["nswXfh", 1], ["nswXf", economy - 1], ["nswXbr", 1], ["nswXl", m >= 4 ? 1 : 0], ["nswXam", sleepers]].filter(([, x]) => x > 0);
+      return set(`XPT, two power cars and ${m} carriages${sleepers ? " (sleeping cars at the back)" : ""}`, ["nswXptPower", 1], ...cars, ["nswXptPower", 1]);
     }
     default: return null;
   }
 }
+// The set type: the plug-in's letter (t.fleet; a railroad page's roster
+// train carries fleet: true instead, which isn't one), else what a reported
+// car number says.
+const setType = (t, reported) => (typeof t.setType === "string" ? t.setType : typeof t.fleet === "string" ? t.fleet : REPORTED[reported] || null);
 const REPORTED = { nswXptPower: "X", nswXf: "X", nswXfh: "X", nswXl: "X", nswXbr: "X", nswXam: "X", nswXplorerA: "P", nswXplorerB: "P", nswXplorerC: "P",
   nswEndeavour: "N", nswHunter: "J" };
 export const TYPICAL = {
   sydneytrains: (t, reported) => {
-    const s = sydneySets(t.fleet || REPORTED[reported], t.carCount);
+    const s = sydneySets(setType(t, reported), t.carCount, t.number || "");
     if (s) return s;
     const r = t.route || "";
     // By line: Waratahs run most of every line; the Millenniums the T6
@@ -756,15 +775,15 @@ export const TYPICAL = {
       ["nswWaratahD", 1], ["nswWaratahN", 2], ["nswWaratahT", 2], ["nswWaratahN", 2], ["nswWaratahD", 1]);
   },
   nswtrainlink: (t, reported) => {
-    const s = sydneySets(t.fleet || REPORTED[reported], t.carCount);
+    const s = sydneySets(setType(t, reported), t.carCount, t.number || "");
     if (s) return s;
     const r = t.route || "", n = t.number || "";
     // The diesel shuttles beyond the wires run under their own letters.
     if (/^(WN|KN|SN)\d/.test(n) || r === "Southern Highlands Line") return set("Usually an Endeavour railcar, 2 or 4 cars", ["nswEndeavour", 2]);
     if (r === "Hunter Line" || /^V\d{3}$/.test(n)) return set("Usually a Hunter railcar, 2 cars (some Endeavours)", ["nswHunter", 2]);
-    if (/^(NT|ST|WP2)\d/.test(n) || r === "North Coast Line") return sydneySets("X", 7);
+    if (/^(NT|ST|WP2)\d/.test(n) || r === "North Coast Line") return sydneySets("X", 7, n);
     if (/^(NP|SP|WP4)\d/.test(n) || r === "North Western Line") return sydneySets("P", 0);
-    if (r === "Western Line" || r === "Southern Line") return sydneySets("X", 7);
+    if (r === "Western Line" || r === "Southern Line") return sydneySets("X", 7, n);
     if (r === "South Coast Line") return set("Usually a Mariyung (D set) or OSCAR (H set), 4 to 8 cars", ...four("nswMarD", "nswMarN"), ...four("nswMarD", "nswMarN"));
     return set("Usually a Mariyung (D set), 8 or 10 cars (some OSCAR sets)", ["nswMarD", 1], ["nswMarN", 4], ["nswMarD", 1], ...four("nswMarD", "nswMarN"));
   },
