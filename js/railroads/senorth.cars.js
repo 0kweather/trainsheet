@@ -639,7 +639,7 @@ export const FACTS = {
     source: "https://stadlerrail.com/api/docs/x/5408827293/kiss_ab-transitio_en.pdf" },
   seReginaA: { model: "Bombardier Regina", type: "Electric multiple unit", builder: "Bombardier, Kalmar", built: "2000–2011",
     fleet: "63 owned by Transitio, as X50–X54", topSpeedMph: 124.3, powerHp: 2132, seats: 170, lengthFt: 176.8,
-    about: "Sweden's widest train, 3.45 m, with five seats abreast. Regional authorities run it across the country: Tåg i Bergslagen's lines from Gävle, Mora and Örebro, Norrtåg's north of Umeå, Värmlandstrafik's Karlstad trains and a few of Mälartåg's.",
+    about: "Sweden's widest train, 3.45 m, with five seats abreast. Regional authorities run it across the country: Tåg i Bergslagen's lines from Gävle, Mora and Örebro, Norrtåg's north of Umeå, X-Tåget's from Gävle to Ljusdal and Sundsvall, Värmlandstrafik's Karlstad trains and a few of Mälartåg's.",
     source: WIKI + "Bombardier_Regina" },
   seY31: { model: "Bombardier Itino (Y31)", type: "Diesel multiple unit", builder: "Bombardier", built: "2002–2010",
     fleet: "24 Y31; Värmlandstrafik runs five", topSpeedMph: 87, powerHp: 1287, seats: 86, lengthFt: 126.0,
