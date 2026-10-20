@@ -196,9 +196,12 @@ const WAR = { roof: mm(4410), sill: 3.55, trucks: { centers: 51.6, wb: mm(2300) 
   nose: [[1.0, 3.55], [0.55, 4.0], [0.55, 7.0], ["q", 0.6, 7.8, 1.2, 8.2], [2.3, 12.6], ["q", 2.8, 14.1, 4.4, mm(4410)]], cabLen: 7,
   doorFill: () => SYD.yellow,
   windows: (p, car) => [...deckRows(p.deck, { n: 5, w: 6.5 }), car.cab ? null : endRow(p.ends[0], 5.2), endRow(p.ends[1], 5.2)].filter(Boolean),
-  cab: (c, g, car) => path(poly([[1.25, 8.4], [2.3, 12.4], ["q", 2.55, 13.1, 3.3, 13.1], [4.4, 13.1], [4.4, 8.4]]), C.glass) +
-    path(poly([[1.8, 10.4], [2.35, 12.5], [4.3, 12.5], [4.3, 10.4]]), C.glassLight) + rect(2.9, 13.3, 1.5, 0.45, "#14171a", 0, 'rx="0.1"') + rect(3.0, 13.4, 1.1, 0.25, "#f5a623") +
-    wiper(1.5, 8.7, 2.3, 10.6) + line(1.25, 8.4, 4.4, 8.4, "#0b0d0f", 0.6) +
+  // The windshield, raked back on the front, is seen edge-on from the side:
+  // a strip of glass along the slope in its black frame; above it the
+  // destination display under the cap.
+  cab: (c, g, car) => path(poly([[1.15, 8.3], [2.25, 12.5], ["q", 2.45, 13.0, 3.0, 13.0], [3.5, 13.0], [2.4, 8.3]]), "#14171a") +
+    path(poly([[1.45, 8.55], [2.4, 12.2], [3.1, 12.2], [2.2, 8.55]]), C.glass) + path(poly([[1.95, 10.5], [2.4, 12.2], [3.1, 12.2], [2.65, 10.5]]), C.glassLight) +
+    wiper(1.6, 8.8, 2.1, 10.6) +
     // The headlight column at the front corner (three lamps), a marker light
     // over it, the lower lamp in the bumper.
     rect(0.6, 5.9, 0.7, 1.9, "#e6e9ec", 0.35, 'rx="0.3"') + circle(0.95, 7.35, 0.2, "#fff6d0") + circle(0.95, 6.85, 0.2, "#fff6d0") + circle(0.95, 6.35, 0.2, "#fff6d0") +
@@ -317,13 +320,16 @@ const tangara = (kind) => (c) => deckCar(TAN, { cab: kind === "d", motor: kind =
 const OSC = { roof: mm(4403), sill: 3.55, trucks: { centers: 51.0, wb: 7.55, d: 37 }, acW: 8.0,
   nose: [[1.0, 3.55], [0.5, 3.9], [0.5, 7.3], ["q", 0.55, 8.3, 1.1, 8.9], [2.2, 12.6], ["q", 2.8, 14.1, 4.6, mm(4403)]], cabLen: 8,
   doorFill: (c) => (c.agency === "sydneytrains" ? SYD.orange : SYD.yellow),
-  windows: (p, car) => [...deckRows(p.deck, { n: 5, w: 5.9, up: [9.9, 2.45], low: [3.1, 2.75] }), endRow(p.ends[0], car.cab ? 2.0 : 4.6, 6.5, 3.3), endRow(p.ends[1], 4.6, 6.5, 3.3)],
+  windows: (p, car) => [...deckRows(p.deck, { n: 5, w: 5.9, up: [9.9, 2.45], low: [3.1, 2.75] }), car.cab ? null : endRow(p.ends[0], 4.6, 6.5, 3.3), endRow(p.ends[1], 4.6, 6.5, 3.3)].filter(Boolean),
   cab: (c, g, car) => {
     const sub = c.agency === "sydneytrains";
-    return path(poly([[1.3, 9.0], [2.3, 12.4], [6.1, 12.4], [6.1, 9.0]]), C.glass) + path(poly([[1.8, 10.6], [2.3, 12.4], [6.1, 12.4], [6.1, 10.6]]), C.glassLight) +
-      wiper(1.6, 9.2, 2.3, 11.2) + rect(3.6, 12.75, 2.4, 0.45, "#14171a", 0, 'rx="0.1"') + rect(3.8, 12.85, 1.6, 0.25, "#f5a623") +
+    // The windshield edge-on along the front's rake; behind the front
+    // corner the cab's big side window, dark-framed (photographs at Central,
+    // 2017-24).
+    return path(poly([[1.1, 8.9], [2.2, 12.6], [3.0, 12.6], [2.1, 8.9]]), "#14171a") + path(poly([[1.35, 9.2], [2.3, 12.3], [2.8, 12.3], [1.95, 9.2]]), C.glass) +
+      wiper(1.5, 9.3, 2.0, 11.0) + path(poly([[3.4, 7.6], [7.9, 7.6], [7.9, 12.4], [4.4, 12.4], ["q", 3.4, 12.4, 3.4, 11.4]]), "#14171a") + win(3.7, 7.9, 3.9, 4.2, 0.4) +
       rect(0.5, 4.0, 0.9, 1.3, sub ? SYD.black : "#2b2e33", 0, 'rx="0.15"') + circle(0.85, 4.65, 0.24, "#fff6d0") + circle(1.6, 13.6, 0.22, "#fff6d0") +
-      coupler(0, 2.9, 1.8) + skirt(1.0, 6.6, 3.55) + win(6.6, 7.8, 1.3, 3.4, 0.3) + rect(8.6, 4.0, 2.1, 7.6, "none", 0.5, 'rx="0.2"') + win(8.9, 8.2, 1.4, 2.5, 0.25);
+      coupler(0, 2.9, 1.8) + skirt(1.0, 6.6, 3.55) + rect(8.6, 4.0, 2.1, 7.6, "none", 0.5, 'rx="0.2"') + win(8.9, 8.2, 1.4, 2.5, 0.25);
   },
   paint: (c, g, car) => {
     const L = g.L, sub = c.agency === "sydneytrains";
@@ -341,7 +347,7 @@ const OSC = { roof: mm(4403), sill: 3.55, trucks: { centers: 51.0, wb: 7.55, d: 
   },
   // The name on the panel between the crew door and the first passenger
   // door; a yellow line low along the side (the intercity paint).
-  detail: (c, g, car) => (car.cab ? transport(c, 12.6, 10.6, 0.7, c.agency === "sydneytrains" ? "Sydney Trains" : "NSW TrainLink") : "") +
+  detail: (c, g, car) => (car.cab ? transport(c, 13.0, 9.2, 0.62, c.agency === "sydneytrains" ? "Sydney Trains" : "NSW TrainLink") : "") +
     eave(g, car, 13.0) + (c.agency === "sydneytrains" ? "" : lines([[car.cab ? 8.4 : 1.0, 3.75, car.plan.deck[0] - 0.3, 3.75], [car.plan.deck[1] + 0.3, 3.75, g.L - 1.0, 3.75],
       [car.plan.deck[0] + 0.5, 2.2, car.plan.deck[1] - 0.5, 2.2]], SYD.yellow, 0.9)),
 };
@@ -372,7 +378,7 @@ const MAR = { roof: mm(4402), sill: 3.6, trucks: { centers: 51.4, wb: 8.2, d: 37
     wiper(2.0, 8.6, 2.6, 10.6) + rect(3.6, 13.0, 2.8, 0.5, "#14171a", 0, 'rx="0.1"') + rect(3.8, 13.1, 2.0, 0.28, "#f04b35") +
     rect(2.6, 14.05, 1.4, 0.35, "#1d2026", 0, 'rx="0.12"') + circle(3.3, 14.2, 0.14, "#fff6d0") +
     rect(0.42, 4.0, 1.4, 1.7, "#b9bdc2", 0.4, 'rx="0.35"') + circle(0.9, 4.5, 0.2, "#fff6d0") + circle(0.9, 5.15, 0.18, "#e23b2e") +
-    coupler(0, 2.9, 1.6) + skirt(1.4, 7.4, 3.6, "#2b2e33") + win(7.1, 8.0, 1.3, 3.6, 0.3) + rect(9.5, 4.1, 2.0, 7.4, "none", 0.5, 'rx="0.2"'),
+    coupler(0, 2.9, 1.6) + skirt(1.4, 7.4, 3.6, "#2b2e33") + win(7.1, 8.0, 1.3, 3.6, 0.3),
   paint: (c, g, car) => {
     const L = g.L;
     let s = body(L, car, "#c6cacf", "#d4d7db", 13.5);
@@ -386,7 +392,7 @@ const MAR = { roof: mm(4402), sill: 3.6, trucks: { centers: 51.4, wb: 8.2, d: 37
         path(poly([[0, 5.6], [1.2, 5.6], ["q", 3.4, 5.7, 4.0, 7.9], [1.2, 7.7], [0, 7.7]]), TL.red) + line(0.5, 7.75, 3.8, 7.95, "#ffffff", 0.9) +
         rect(0, 3.6, 2.0, 2.0, "#c3c7cb") +
         // The cab side behind the windshield, black to the first door.
-        path(poly([[7.0, 6.6], ["q", 9.0, 7.0, 9.6, 8.6], [14.9, 8.6], [14.9, 13.4], [7.0, 13.4]]), "#1b1d21");
+        path(poly([[6.8, 7.6], [14.9, 4.3], [14.9, 13.6], [6.8, 13.6]]), "#1b1d21");
     }
     return s;
   },
@@ -438,6 +444,10 @@ const plug = (x, w = 2.9, y0 = 3.9, y1 = 10.9, fill = TL.yellow) => ({ x, w, y0,
 
 // A diesel railcar (one car) on bilevel(): spec gives the body (roof,
 // sill, trucks, nose, cabLen), car its windows, doors, gear, roof and paint.
+// A driving car inside the train (two Xplorers run as one) faces the set
+// it leads, as the double-deckers' do.
+const oriented = (draw) => (c) => (facesBack(c) && !c.mirrored
+  ? `<g transform="matrix(-1 0 0 1 ${c.L} 0)">${draw({ ...c, mirrored: true, coupledL: c.coupledR, coupledR: c.coupledL })}</g>` : draw(c));
 const railcar = (spec, car) => (c0) => {
   const c = car.cab ? { ...c0, cabL: true } : { ...c0, cabL: false, cabR: false };
   return bilevel(c, {
@@ -688,7 +698,7 @@ export const MODELS = {
   nswOscarD: M(oscar("d"), mm(20340), true, (c) => `${c.agency} ${facing(c)}`), nswOscarN: M(oscar("n"), mm(20435), false, (c) => `${c.agency} ${pos(c)}`),
   nswMarD: M(mariyung("d"), mm(20435), true, facing), nswMarN: M(mariyung("n"), mm(20340)),
   nswEndeavour: M(endeavourCar, railLen), nswHunter: M(hunterCar, railLen),
-  nswXplorerA: M(xplorer("a"), railLen, true), nswXplorerB: M(xplorer("b"), railLen), nswXplorerC: M(xplorer("c"), railLen, true),
+  nswXplorerA: M(oriented(xplorer("a")), railLen, true, facing), nswXplorerB: M(xplorer("b"), railLen), nswXplorerC: M(oriented(xplorer("c")), railLen, true, facing),
   nswXptPower: M(xptPower, 56.92, true),
   nswXf: M(xptCar("xf"), 79.4), nswXfh: M(xptCar("xfh"), 79.4), nswXl: M(xptCar("xl"), 79.4), nswXbr: M(xptCar("xbr"), 79.4), nswXam: M(xptCar("xam"), 79.4),
 };
@@ -760,7 +770,8 @@ function sydneySets(f, n, run = "") {
 // car number says.
 const setType = (t, reported) => (typeof t.setType === "string" ? t.setType : typeof t.fleet === "string" ? t.fleet : REPORTED[reported] || null);
 const REPORTED = { nswXptPower: "X", nswXf: "X", nswXfh: "X", nswXl: "X", nswXbr: "X", nswXam: "X", nswXplorerA: "P", nswXplorerB: "P", nswXplorerC: "P",
-  nswEndeavour: "N", nswHunter: "J" };
+  nswEndeavour: "N", nswHunter: "J", nswOscarD: "H", nswOscarN: "H", nswMilD: "M", nswMilN: "M", nswTanD: "T", nswTanN: "T",
+  nswWaratahD: "A", nswWaratahN: "A", nswWaratahT: "A", nswWaratah2D: "B", nswWaratah2N: "B", nswWaratah2T: "B", nswMarD: "D", nswMarN: "D" };
 export const TYPICAL = {
   sydneytrains: (t, reported) => {
     const s = sydneySets(setType(t, reported), t.carCount, t.number || "");
