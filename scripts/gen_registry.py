@@ -90,7 +90,13 @@ def main():
                     fail(mid, f"agency {aid} has no {key}")
             if a["kind"] not in KINDS or not re.fullmatch(r"#[0-9a-f]{6}", a["color"]) or not re.fullmatch(r"[A-Z]{2}", a["country"]):
                 fail(mid, f"agency {aid}: kind, color (#rrggbb) or country (ISO 3166 alpha-2) is off")
-            agencies[aid] = {**a, "bbox": boxes.get(aid) or a.get("bbox")}
+            box = boxes.get(aid) or a.get("bbox")
+            # "clip": its stations abroad (a timetable's through trains to
+            # Paris or Vienna) don't stretch its extent past its own box.
+            if a.get("clip") and a.get("bbox") and box is not a["bbox"]:
+                own = a["bbox"]
+                box = [max(box[0], own[0]), max(box[1], own[1]), min(box[2], own[2]), min(box[3], own[3])]
+            agencies[aid] = {**a, "bbox": box}
         relay = getattr(mod, "RELAY", {})
         custom = hasattr(mod, "relay_fetch")
         if custom and not (ROOT / "relay" / "feeds" / f"{mid}.js").exists():

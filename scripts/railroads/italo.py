@@ -13,7 +13,7 @@ BBOX = [7.6, 38.0, 13.8, 46.6]
 
 AGENCIES = {
     "italo": {"name": "Italo", "short": "Italo", "region": "Italy", "country": "IT", "color": "#a6192e",
-              "kind": "intercity", "tz": "Europe/Rome", "credit": CREDIT, "license": None, "bbox": BBOX,
+              "kind": "intercity", "tz": "Europe/Rome", "credit": CREDIT, "license": None, "bbox": BBOX, "clip": True, "cars": True,
               "after": "trenitaliaic"},
 }
 SOURCES = [{"id": "italo", "agencies": ["italo"], "format": "timetable", "interval": 60, "scope": "view"}]

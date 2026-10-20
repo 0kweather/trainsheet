@@ -10,7 +10,7 @@ AGENCIES = {
                  "color": "#c2185b", "kind": "commuter", "tz": "Europe/Rome",
                  "credit": {"label": "Provincia di Trento open data (Trentino Trasporti)",
                             "href": "https://dati.trentino.it/dataset/trasporti-pubblici-del-trentino-formato-gtfs"},
-                 "license": "CC BY 4.0", "bbox": BBOX, "after": "arst"},
+                 "license": "CC BY 4.0", "bbox": BBOX, "clip": True, "cars": True, "after": "arst"},
 }
 SOURCES = [{"id": "trentino", "agencies": ["trentino"], "format": "timetable", "interval": 60, "scope": "view"}]
 

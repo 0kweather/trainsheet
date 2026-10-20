@@ -21,7 +21,7 @@ AGENCIES = {
             "color": "#00843d", "kind": "commuter", "tz": "Europe/Rome",
             "credit": {"label": "STA Südtiroler Transportstrukturen (Open Data Hub)",
                        "href": "https://gtfs.api.opendatahub.com/v1/dataset/sta-time-tables"},
-            "license": "CC0", "bbox": BBOX, "after": "trenord"},
+            "license": "CC0", "bbox": BBOX, "clip": True, "cars": True, "after": "trenord"},
 }
 SOURCES = [{"id": "sta", "agencies": ["sta"], "format": "timetable", "interval": 60, "scope": "view"}]
 

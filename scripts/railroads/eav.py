@@ -14,7 +14,7 @@ AGENCIES = {
     "eav": {"name": "EAV", "short": "EAV", "region": "Naples", "country": "IT", "color": "#0a3d91",
             "kind": "commuter", "tz": "Europe/Rome",
             "credit": {"label": "EAV open data", "href": "https://www.eavsrl.it/open-data/"},
-            "license": "IODL 2.0", "bbox": BBOX, "after": "sta"},
+            "license": "IODL 2.0", "bbox": BBOX, "clip": True, "cars": True, "after": "sta"},
 }
 SOURCES = [{"id": "eav", "agencies": ["eav"], "format": "timetable", "interval": 60, "scope": "view"}]
 

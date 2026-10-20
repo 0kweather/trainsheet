@@ -13,7 +13,7 @@ AGENCIES = {
     "arst": {"name": "ARST trains", "short": "ARST", "region": "Sardinia", "country": "IT", "color": "#38761d",
              "kind": "commuter", "tz": "Europe/Rome",
              "credit": {"label": "ARST (Sardegna Mobilità open data)", "href": "https://www.sardegnamobilita.it/open-data/quadri-orari-arst"},
-             "license": "CC BY 4.0", "bbox": BBOX, "after": "eav"},
+             "license": "CC BY 4.0", "bbox": BBOX, "clip": True, "cars": True, "after": "eav"},
 }
 SOURCES = [{"id": "arst", "agencies": ["arst"], "format": "timetable", "interval": 60, "scope": "view"}]
 
