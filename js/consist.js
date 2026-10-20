@@ -51,9 +51,13 @@ const FLEETS = {
     [1500, 1533, "singleCab"], [1600, 1652, "single"],
     [200, 258, "single"], [350, 389, "single"], [500, 542, "single"], [600, 653, "single"],
   ],
-  // MARC's single-level MARC II cars, GP39s and HHP-8s have no drawing yet.
+  // MARC (Wikipedia, "MARC Train", 2026): MP36PH-3C 10-35, GP39PH-3C 70-75,
+  // SC-44 80-87, HHP-8 4910-4915 (4914 stripped for parts); MARC II coaches
+  // 7700-7735 and 7791-7799, cab cars 7745-7756 (stored) and 7757-7762;
+  // Kawasaki bi-levels 7800-7896, MultiLevels 8000-8094.
   marc: [
-    [10, 35, "mp36"], [80, 87, "charger"],
+    [10, 35, "mp36"], [70, 75, "gp39"], [80, 87, "charger"], [4910, 4913, "hhp8"], [4915, 4915, "hhp8"],
+    [7700, 7735, "marcII"], [7791, 7799, "marcII"], [7745, 7762, "marcIICab"],
     [7800, 7834, "bilevel"], [7845, 7858, "bilevelCab"], [7870, 7876, "bilevel"], [7890, 7896, "bilevel"],
     [8000, 8034, "multilevel"], [8045, 8059, "multilevelCab"], [8090, 8094, "multilevel"],
   ],
@@ -159,6 +163,8 @@ const TYPES = {
   sd70mac: { name: "SD70MAC diesel locomotive", kind: "diesel" },
   gp38: { name: "GP38-2 diesel locomotive", kind: "diesel" },
   gp402: { name: "GP40-2 diesel locomotive", kind: "diesel" },
+  gp39: { name: "GP39PH-3C diesel locomotive", kind: "diesel" },
+  hhp8: { name: "HHP-8 electric locomotive", kind: "electric", pan: true },
   // Electric and diesel multiple units
   silverliner4: { name: "Silverliner IV", kind: "emu", pan: true },
   silverliner5: { name: "Silverliner V", kind: "emu", pan: true },
@@ -201,6 +207,8 @@ const TYPES = {
   shorelinerCab: { name: "Shoreliner cab car", kind: "coach", cab: true },
   mafersa: { name: "Mafersa coach", kind: "coach" },
   mafersaCab: { name: "Mafersa cab car", kind: "coach", cab: true },
+  marcII: { name: "MARC II coach", kind: "coach" },
+  marcIICab: { name: "MARC II cab car", kind: "coach", cab: true },
   nsTrailer: { name: "Nippon Sharyo trailer car", kind: "coach" },
   coach: { name: "Coach", kind: "coach" },
   buddBaggage: { name: "Baggage car", kind: "coach", baggage: true },
@@ -518,15 +526,21 @@ function typicalFor(t, reported) {
     case "marc": {
       // Penn Line: mostly SC-44 Chargers (some HHP-8 electrics), its rush-hour
       // trains mostly Kawasaki bi-levels, MultiLevels at other times. Camden
-      // and Brunswick: MP36s (Chargers too on the Brunswick) with MultiLevels.
+      // and Brunswick: MP36s (Chargers too on the Brunswick, now and then a
+      // GP39) with MultiLevels, some trains with the single-level MARC II
+      // cars. The reported locomotive or car picks.
       const route = t.route || "";
-      const loco = ["mp36", "charger"].includes(reported) ? reported : /Penn/i.test(route) ? "charger" : "mp36";
+      const locos = { mp36: "MP36PH", charger: "SC-44 Charger", hhp8: "HHP-8", gp39: "GP39PH-3C" };
+      const loco = locos[reported] ? reported : /Penn/i.test(route) ? "charger" : "mp36";
+      const name = locos[loco];
+      if (reported === "marcII" || reported === "marcIICab") {
+        return set(`${name} locomotive with single-level MARC II coaches and a cab car`, [loco === "hhp8" ? "mp36" : loco, 1], ["marcII", 3], ["marcIICab", 1]);
+      }
       const kawasaki = ["bilevel", "bilevelCab"].includes(reported) || (/Penn/i.test(route) && !["multilevel", "multilevelCab"].includes(reported));
-      const name = loco === "charger" ? "SC-44 Charger" : "MP36PH";
       if (kawasaki) return set(`${name} locomotive with Kawasaki bi-levels (MultiLevels on some trains)`, [loco, 1], ["bilevel", 5], ["bilevelCab", 1]);
       return /Camden/i.test(route)
-        ? set(`${name} locomotive with MultiLevel coaches (or Kawasaki bi-levels)`, [loco, 1], ["multilevel", 3], ["multilevelCab", 1])
-        : set(`${name} locomotive with MultiLevel coaches`, [loco, 1], ["multilevel", 4], ["multilevelCab", 1]);
+        ? set(`${name} locomotive with MultiLevel coaches (or Kawasaki bi-levels, or MARC II single-level cars)`, [loco, 1], ["multilevel", 3], ["multilevelCab", 1])
+        : set(`${name} locomotive with MultiLevel coaches${/Brunswick/i.test(route) ? " (some trains MARC II single-level cars)" : ""}`, [loco, 1], ["multilevel", 4], ["multilevelCab", 1]);
     }
     case "septa": return set("Silverliner IV or V cars, usually 2 to 6", ["silverliner4", 4]);
     case "njt": return set("Electric or dual-mode locomotive with MultiLevel coaches", ["alp46", 1], ["multilevel", 5], ["multilevelCab", 1]);

@@ -1375,6 +1375,42 @@ function marcKawPaint(c, g) {
 export const marcKawasaki = (c) => bilevel(c, { ...MARC_KAW, paint: marcKawPaint });
 export const marcKawasakiCab = (c) => bilevel(c, { ...MARC_KAW, paint: marcKawPaint, cab: marcCabEnd(7.0, 8.4) });
 
+// --- MARC II (Sumitomo, built by Nippon Sharyo): single-level coaches,
+// IIA 7700-7715 (1985-87), IIB 7716-7735 and 7791-7799 and cab cars
+// 7757-7762 (1991-93, overhauled by Bombardier 2009-11); the IIA cab cars
+// 7745-7756 are stored. They still run on the Brunswick and Camden lines
+// (Frederick, August 2024; Camden, May 2026). No published dimensions: drawn
+// at 85 ft, the length of every American commuter coach of their day, and
+// to the height of the MultiLevels they run with as photographs show them
+// (about 13 ft 6 in). Fluted stainless sides and roof, a smooth band through
+// the windows: a long row of narrow windows, one per seat row; a vestibule
+// at each end (the NTSB's Silver Spring report: two doors a side, at the
+// ends). The MARC plate, blue over orange with the name in white, beside
+// the door at one end. The cab car's flat end carries blue and yellow
+// chevrons across its lower half, seen side-on as a ladder at the corner.
+const MARC2 = {
+  roof: 13.5, sill: 3.9, cornerR: 1.4, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6, diaphragm: [4.25, 12.2],
+  rows: [{ xs: seq(9.4, 3.8, 18), y: 7.2, w: 2.25, h: 2.75, r: 0.25 }],
+  doors: [{ x: 1.3, w: 2.6, y0: 4.0, y1: 11.1, glassY: 0.55, glassH: 0.3 }, { x: 81.1, w: 2.6, y0: 4.0, y1: 11.1, glassY: 0.55, glassH: 0.3 }],
+  roofItems: [[33, 19, 0.45]], badge: false,
+};
+function marc2Paint(c, g) {
+  const L = g.L;
+  let s = rect(0, 0, L, 17, "#d5d9de") + flutes(0, L, 4.15, 6.75, 0.27) + flutes(0, L, 10.35, 12.1, 0.27);
+  s += rect(0, 12.2, L, 2, C.steelShade) + flutes(0, L, 12.3, 13.4, 0.3);
+  return s + line(0, 6.95, L, 6.95, "rgba(0,0,0,0.16)", 0.5) + line(0, 10.2, L, 10.2, "rgba(0,0,0,0.16)", 0.5);
+}
+// The MARC plate between the door and the first window, w ft wide.
+const marc2Plate = (c, x) => rect(x, 7.3, 3.6, 2.4, MARC.blue, 0, 'rx="0.12"') + rect(x, 7.3, 3.6, 0.7, MARC.orange) + badge(c, x + 1.8, 8.85, 0.72, { dark: true });
+export const marc2 = (c) => bilevel(c, { ...MARC2, paint: marc2Paint, extra: (c) => marc2Plate(c, 4.6) });
+export const marc2Cab = (c) => bilevel(c, { ...MARC2, paint: marc2Paint, cabLen: 4,
+  extra: (c) => marc2Plate(c, c.cabL ? 76.9 : 4.6),
+  cab: (c, { x0 }) => {
+    let s = rect(x0, 4.3, 0.42, 8.6, "#c9cdd2");
+    for (let k = 0; k < 4; k++) s += rect(x0, 5.0 + k * 0.6, 0.44, 0.6, k % 2 ? "#f2c230" : MARC.blue);
+    return s + rect(x0 + 0.9, 7.5, 2.3, 2.3, C.glass, 0, `rx="0.25" stroke="${C.gasket}" stroke-width="0.6"`) + rect(x0 + 1.0, 13.4, 1.8, 0.5, "currentColor", 0, 'rx="0.2"');
+  } });
+
 // --- Bombardier/Alstom MultiLevel (NJ Transit 7000-7767; MultiLevel III
 // 8000s, the same body): 85 ft, 14 ft 6 in so it clears the Hudson tunnels.
 // Low end roofs over the trucks rise to the full height over the two decks.
@@ -3443,6 +3479,14 @@ const ON = { gold: "#febc11", navy: "#00285e" };
 // GP38-2 and GP40-2 (Ontario Northland 1800-1809; Alaska Railroad
 // 3001-3015): the standard cab, narrow and squared, over a low short hood;
 // 59 ft 2 in; two roof fans on the GP38-2, three on the GP40-2.
+// MARC's GP39PH-3Cs (70-75: GP40s rebuilt by Morrison-Knudsen in 1987-88 as
+// GP39H-2s with a head-end-power set, rebuilt again by Progress Rail in
+// 2023) on the same body, 59 ft 2 in, 15 ft 5 in over the cab (The Diesel
+// Shop; Wikipedia, "MARC Train"). From photographs (Odenton 2014, Camden
+// May 2026): light gray; a blue band over an orange stripe along the hood
+// and cab, turning down the side of the short hood to the deck; the hood
+// top and cab roof blue; a blue frame edged in white; orange handrails;
+// MARC big in blue on the hood behind the cab.
 export function gp40(c, { std = false, fans = 3 } = {}) {
   const { L } = c, deck = 4.85, cabRoof = std ? 15.33 : 15.4, hood = 13.95, cabEnd = std ? 14.6 : 14.2;
   let s = "";
@@ -3456,7 +3500,7 @@ export function gp40(c, { std = false, fans = 3 } = {}) {
     ? poly([[2.6, deck], [2.6, 10.6], ["q", 2.6, 11.1, 3.1, 11.1], [8.5, 11.1], [8.9, 14.8], ["q", 9.0, cabRoof, 9.7, cabRoof], [cabEnd - 0.6, cabRoof], ["q", cabEnd, cabRoof, cabEnd, 14.7], [cabEnd, deck]])
     : poly([[2.6, deck], [2.6, 9.0], ["q", 2.7, 9.6, 3.4, 9.7], [6.4, 10.0], [6.9, 14.8], ["q", 7.0, cabRoof, 7.8, cabRoof], [13.4, cabRoof], ["q", 14.2, cabRoof, 14.2, 14.6], [14.2, deck]]);
   const hoodD = poly([[cabEnd, deck], [cabEnd, hood - 0.5], ["q", cabEnd, hood, cabEnd + 0.5, hood], [L - 16.5, hood], [L - 16.0, hood + 0.55], [L - 3.6, hood + 0.55], ["q", L - 3.2, hood + 0.55, L - 3.2, hood], [L - 3.2, deck]]);
-  const mbta = c.agency === "mbta", ct = c.agency === "ctrail", ak = c.agency === "alaska", on = c.agency === "ontarionorthland";
+  const mbta = c.agency === "mbta", ct = c.agency === "ctrail", ak = c.agency === "alaska", on = c.agency === "ontarionorthland", marc = c.agency === "marc";
   // MBTA: the cab purple with a yellow-edged silver band at nose height.
   // On the hood a yellow-edged diagonal runs from the roof behind the cab
   // down to a purple band along the middle of the hood; ahead of it purple,
@@ -3476,8 +3520,11 @@ export function gp40(c, { std = false, fans = 3 } = {}) {
     : ak ? (w) => akLocoPaint(L, deck, hood, cabEnd, [8.5, 11.1, 11.5]) + w
     : on ? (w) => rect(0, 0, L, 17, ON.gold) + path(poly([[24.6, 0], [25.6, 0], [29.8, 17], [28.8, 17]]), "#f4f5f6") +
       path(poly([[25.6, 0], [L + 1, 0], [L + 1, 17], [29.8, 17]]), ON.navy) + w
+    : marc ? (w) => rect(0, 0, L, 17, MARC.silver) + rect(cabEnd, hood - 0.5, L, 2, MARC.blue) + rect(0, cabRoof - 0.4, cabEnd + 1, 2, MARC.blue) +
+      rect(8.5, 8.0, L, 2.0, MARC.blue) + rect(8.5, 7.3, L, 0.7, MARC.orange) +
+      path(poly([[8.6, 10.0], [8.6, 8.0], [6.6, deck], [3.9, deck]]), MARC.blue) + path(poly([[8.6, 8.0], [8.6, 7.3], [7.4, deck], [6.6, deck]]), MARC.orange) + w
     : (w) => rect(0, 0, L, 17, c.color || "#1f5fad") + w;
-  s += path(frame, on ? ON.navy : C.black) + (ct ? ctDashes(2.0, L - 2.0, 3.95) : rect(1.2, 3.75, L - 2.4, 0.4, ak ? AK.yellow : on ? ON.gold : MBTA.yellow, 0, 'opacity="0.9"'));
+  s += path(frame, on ? ON.navy : marc ? MARC.blue : C.black) + (ct ? ctDashes(2.0, L - 2.0, 3.95) : rect(1.2, 3.75, L - 2.4, 0.4, ak ? AK.yellow : on ? ON.gold : marc ? "#eef0f2" : MBTA.yellow, 0, 'opacity="0.9"'));
   s += path(hoodD, MBTA.silver) + clipped(hoodD, paint(mbta ? tDisc(32.5, 7.9, 0.62) +
     '<text transform="translate(32.3 10.05) scale(1 -1)" font-size="1.1" text-anchor="middle" letter-spacing="0.75" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" fill="#a52a4a">MBTA</text>' : ""));
   // Hood doors, radiator grilles, dynamic brake, fans.
@@ -3492,12 +3539,13 @@ export function gp40(c, { std = false, fans = 3 } = {}) {
   if (ct) s += badge(c, 10.6, 7.6, 1.0, { dark: true });
   if (ak) s += akHoodName(c, 36.5, deck, hood) + badge(c, 11.6, 8.7, 1.9);
   if (on) s += badge(c, L - 19.5, 9.6, 0.95, { logo: "ontarionorthland", dark: true });
+  if (marc) s += badge(c, 22.5, 11.4, 1.7);
   s += outlineOf(hoodD) + outlineOf(cab) + outlineOf(frame);
   // Handrails along the walkway.
   const posts = [];
   for (let x = 15; x < L - 3; x += 6.2) posts.push([x, deck, x, deck + 3.1]);
   posts.push([cabEnd + 0.2, deck + 3.1, L - 2.0, deck + 3.1], [L - 2.0, deck, L - 2.0, deck + 3.1], [2.0, deck, 2.0, deck + 3.1], [2.0, deck + 3.1, 2.6, deck + 3.1]);
-  s += lines(posts, ct ? "#e9ecef" : ak ? AK.yellow : "currentColor", 0.6);
+  s += lines(posts, ct ? "#e9ecef" : ak ? AK.yellow : marc ? MARC.orange : "currentColor", 0.6);
   s += rect(8.5, cabRoof - 0.05, 1.1, 0.35, "currentColor");
   return s;
 }
@@ -3644,6 +3692,45 @@ export function sd70mach(c) {
   s += lines(posts, ak ? AK.yellow : "currentColor", 0.6);
   s += rect(9.5, cabRoof - 0.05, 1.2, 0.35, "currentColor");                              // horn
   return s;
+}
+
+// --- Bombardier-Alstom HHP-8 (MARC 4910-4915, 1999-2001, refurbished
+// 2017-18; 4914 stripped for parts, the rest on the Penn Line in 2026 until
+// battery locomotives replace them): 67 ft 1 in over couplers, 14 ft 2 in
+// tall, trucks 35 ft 3 in apart, 9 ft 4 in wheelbase, 40 in wheels
+// (Wikipedia, "Bombardier-Alstom HHP-8"). The Acela power car's family: a
+// cab at each end under a long sloping nose and a two-pane windshield,
+// straight sides with a big ribbed intake panel high in the middle, a crew
+// door behind each cab, two pantographs on the roof between them.
+// MARC, from a photograph (Odenton, February 2026): silver; each nose and
+// cab dark blue down to an orange line along the bottom of the body, its
+// edge curving up behind the cab side window to the roof; a blue roof edge;
+// MARC in blue italic low on the side toward the No. 2 end.
+export function hhp8(c) {
+  const { L } = c, sill = 4.1, roof = 14.17;
+  const X = (v, right) => (right ? L - v : v);
+  const end = (right) => [[2.3, sill], [1.25, 5.1], [1.1, 6.9], [1.6, 8.5], [5.4, 12.7], ["q", 6.4, roof, 8.6, roof]].map((p) => (p[0] === "q" ? ["q", X(p[1], right), p[2], X(p[3], right), p[4]] : [X(p[0], right), p[1]]));
+  const d = poly([...end(false), ...reversePath(end(true))]);
+  let s = pilot(1.25, sill) + pilot(1.25, sill, L);
+  s += rect(18, 1.7, L - 36, sill - 1.7, "currentColor", 0, 'opacity="0.82" rx="0.3"');                    // transformer and tanks
+  s += truck(L / 2 - 17.63, { wb: 9.33, d: 40, kind: "loco", top: sill }) + truck(L / 2 + 17.63, { wb: 9.33, d: 40, kind: "loco", top: sill });
+  let liv = rect(0, 0, L, roof + 1, MARC.silver) + rect(0, roof - 0.7, L, 1.5, MARC.blue);
+  for (const right of [false, true]) {
+    const cab = `M${X(0, right)} 0L${X(0, right)} ${roof + 1}L${X(14.2, right)} ${roof + 1}L${X(14.2, right)} 13.4Q${X(13.2, right)} 10.0 ${X(10.6, right)} 8.4Q${X(7.0, right)} 6.4 ${X(0, right)} 5.5Z`;
+    liv += path(cab, MARC.indigo) + path(`M${X(14.2, right)} 13.4Q${X(13.2, right)} 10.0 ${X(10.6, right)} 8.4Q${X(7.0, right)} 6.4 ${X(0, right)} 5.5`, "none", 0, `stroke="${MARC.orange}" stroke-width="0.35"`);
+    // The windshield on the slope, the cab side window behind it.
+    liv += path(poly([[X(1.8, right), 8.9], [X(5.2, right), 12.6], [X(6.4, right), 12.6], [X(6.4, right), 8.9]]), C.black);
+    liv += path(poly([[X(2.2, right), 9.15], [X(5.25, right), 12.35], [X(5.9, right), 12.35], [X(5.9, right), 9.15]]), C.glass);
+    liv += win(Math.min(X(7.0, right), X(9.4, right)), 10.2, 2.4, 1.9, 0.3);
+  }
+  liv += rect(0, sill + 0.3, L, 0.3, MARC.orange);
+  s += path(d, MARC.silver) + clipped(d, liv);
+  for (const x of [14.6, L - 14.6 - 2.2]) s += door(x, sill + 0.4, 2.2, 7.4, { glassY: 0.72, glassH: 0.18 });
+  s += rect(19.5, 8.6, L - 39, 4.6, "rgba(20,22,25,0.32)", 0.45, 'rx="0.2"') + slats(19.5, 8.6, L - 39, 4.6, 0.32, "rgba(255,255,255,0.25)");
+  s += rect(L / 2 - 8, roof - 0.05, 16, 0.4, C.steelDark, 0.4, 'rx="0.15"');
+  s += pantograph(20.5, roof, { up: false }) + pantograph(L - 20.5, roof, { up: true, facing: -1 });
+  s += badge(c, L - 21.5, 6.6, 1.5);
+  return s + outlineOf(d);
 }
 
 // --- Bombardier ALP-46 (NJ Transit 4600-4664): 64 ft, a cab at each end,
@@ -4001,6 +4088,10 @@ export const MODELS = {
   sd70mac: M(sd70mach, 74, true),                // the Alaska Railroad's, drawn on the SD70MACH
   gp38: M((c) => gp40(c, { std: true, fans: 2 }), 59.17, true),
   gp402: M((c) => gp40(c, { std: true }), 59.17, true),
+  gp39: M((c) => gp40(c, { std: true }), 59.17, true),     // MARC's GP39PH-3Cs: the GP40-2's body
+  hhp8: M(hhp8, 67.08),
+  marcII: M(marc2, 85),
+  marcIICab: M(marc2Cab, 85, true),
   akCoach: M(akCoach, 85),
   akDiner: M(akDiner, 85),
   akBaggage: M(akBaggage, 85),
