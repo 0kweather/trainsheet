@@ -1264,4 +1264,48 @@ export const FACTS = {
     about: "Leo Express's dark FLIRTs, trimmed in copper and fitted for long distance with Economy, Business and Premium classes, run its Prague–Ostrava trains." },
   czFlirtMid: { model: "Stadler FLIRT (class 480)", type: "Electric multiple unit", builder: "Stadler Rail", built: "2012", fleet: "5 five-car units", topSpeedMph: 99.4,
     source: `${WP}Leo_Express`, about: "An intermediate section of a Leo Express FLIRT; sections share trucks at each joint." },
+  czFox: { model: "RegioFox (Pesa Link II, class 847)", type: "Diesel multiple unit", builder: "Pesa Bydgoszcz", built: "2022–2026", fleet: "106 ordered, 847.001–106",
+    topSpeedMph: 74.6, powerHp: 1006, seats: 115, lengthFt: 145.9, source: cs("Motorová_jednotka_847"),
+    about: "ČD's commonest new diesel: two articulated sections with an MTU engine under each, replacing railbuses and older railcars across Central Bohemia, Hradec Králové, Pardubice, Vysočina, South Bohemia and Plzeň." },
+  "czFoxPid@czcd": { model: "RegioFox (class 847) in PID's colors", type: "Diesel multiple unit", builder: "Pesa Bydgoszcz", built: "2023–2026", fleet: "38 planned for Central Bohemia by the end of 2026",
+    topSpeedMph: 74.6, seats: 115, lengthFt: 145.9, source: "https://pid.cz/do-strednich-cech-prijizdeji-dalsi-regiofoxy-nove-vlaky-budou-vozit-cestujici-do-melnika-a-mlade-boleslavi/",
+    about: "The Central Bohemian RegioFoxes, paid for by the region and painted in Prague Integrated Transport's red and gray, run R43 to Mladá Boleslav, S3 to Mělník and the lines around Beroun, Rakovník and Kladno." },
+  cz842: { model: "Class 842", type: "Diesel railcar", builder: "Moravskoslezská vagónka, Studénka", built: "1988–1994", fleet: "37, 842.001–037", topSpeedMph: 62.1, seats: 64,
+    lengthFt: 82.7, source: cs("Motorový_vůz_842"), about: "A single railcar with a cab at each end, on regional lines around Brno, Ostrava and Plzeň." },
+  cz843: { model: "Class 843", type: "Diesel railcar", builder: "Moravskoslezská vagónka, Studénka", built: "1995–1997", fleet: "31, 843.001–031", topSpeedMph: 68.4, powerHp: 805,
+    lengthFt: 82.7, source: cs("Motorový_vůz_843"), about: "The 842's successor with a luggage room and two engines, often running with a 943 driving trailer: R27 Olomouc–Krnov–Ostrava, R54 Brno–Třebíč and Brno's S6 and S42." },
+  cz943: { model: "Class 943", type: "Driving trailer", builder: "Moravskoslezská vagónka, Studénka", built: "2006–2007", lengthFt: 82.7, source: cs("Motorový_vůz_843"),
+    about: "The 843's driving trailer, the same body without engines." },
+  cz810: { model: "Class 810", type: "Diesel railbus", builder: "Vagónka Studénka", built: "1975–1982", fleet: "About 40 still in ČD's regular service in 2026", topSpeedMph: 49.7,
+    powerHp: 208, seats: 55, lengthFt: 45.8, source: cs("Motorový_vůz_810"),
+    about: "The two-axle railbus that once ran almost every Czech branch line, now down to a few: Pečky–Kouřim, Prostějov–Senice–Červenka, Hanušovice–Staré Město, Loket–Nová Role and seasonal lines." },
+  cz010: { model: "Btax trailer (ex-010)", type: "Railbus trailer", builder: "Vagónka Studénka", built: "1970s–1980s", lengthFt: 45.8, source: cs("Motorový_vůz_810"),
+    about: "The railbus's unpowered trailer, with its own diesel heating." },
+  cz660Cab: { model: "InterPanter (classes 660.0 and 660.1)", type: "Electric multiple unit", builder: "Škoda Transportation", built: "2015–2016", fleet: "4 three-car and 10 five-car units",
+    topSpeedMph: 99.4, source: "https://ceskedrahy.cz/en/interpanter-line-r13", about: "The RegioPanter's long-distance version, on R13 Brno–Olomouc and other R lines." },
+  czCjCoach: { model: "ComfortJet", type: "Push-pull trainset", builder: "Siemens Mobility and Škoda Group", built: "2023–2026", fleet: "20 nine-car sets",
+    topSpeedMph: 142.9, seats: 555, source: "https://www.cd.cz/nase-vlaky/comfortjet/vlak/-40084/",
+    about: "ČD's newest long-distance trains, pushed and pulled by a Vectron: Prague–Berlin–Hamburg–Copenhagen and Prague–Vienna–Bratislava–Budapest, and some domestic expresses." },
+  czMoraviaCab: { model: "Moravia (classes 530 and 550)", type: "Electric multiple unit", builder: "Škoda Transportation", built: "2022–2023", fleet: "31 four-car and 6 two-car units",
+    seats: 333, source: cs("Moravia_(elektrická_jednotka)"), about: "The South Moravian Region's own RegioPanter-family units, run by ČD on Brno's S2, S3 and S51." },
+  czTraxx: { model: "Bombardier TRAXX 3 MS (388.2)", type: "Electric locomotive", builder: "Bombardier (Alstom)", built: "2020–2023", fleet: "31 (and 4 TRAXX MS2e, 386.2)",
+    topSpeedMph: 99.4, powerHp: 8583, lengthFt: 62.0, source: cs("RegioJet"), about: "RegioJet's own multi-system locomotives, hauling its yellow trains from Prague to Ostrava, Košice, Bratislava and Vienna, and R8." },
+  czElfPid: { model: "Pesa Elf.eu (class 655)", type: "Electric multiple unit", builder: "Pesa Bydgoszcz", built: "2024–2025", fleet: "7 three-car units", seats: 231,
+    topSpeedMph: 99.4, source: cs("RegioJet"), about: "RegioJet's three-car Elfs in PID's colors for Prague's S49 and S61, in service since April 2025." },
+  czSiriusCab: { model: "CRRC Sirius (ZEMU03, class 665)", type: "Electric multiple unit", builder: "CRRC Zhuzhou", built: "2019–2021", fleet: "3, leased",
+    source: `${WP}CRRC_ZEMU03`, about: "Built for Leo Express and leased to RegioJet, which runs them on R23 Kolín–Ústí nad Labem since December 2024." },
+  czRegioSprinter: { model: "Duewag RegioSprinter", type: "Diesel railcar", builder: "Duewag", built: "1995–1996", fleet: "16, from Rurtalbahn", lengthFt: 81.4,
+    source: "https://de.wikipedia.org/wiki/Duewag_RegioSprinter", about: "Three-module low-floor railcars GW Train Regio bought from Germany for its South Bohemian lines and Karlovy Vary–Mariánské Lázně." },
+  czEso: { model: "Škoda 69E (classes 362 and 363)", type: "Electric locomotive", builder: "Škoda Plzeň", built: "1980–1990", fleet: "181 built", topSpeedMph: 74.6,
+    powerHp: 4083, lengthFt: 55.1, source: `${WP}ČD_Class_363`,
+    about: "The dual-system \"Eso\" that still hauls many of ČD's R trains (Prague–České Budějovice, –Plzeň, –Brno, Ústí–Cheb); the 362s are 363s rebuilt for 140 km/h." },
+  cz816: { model: "Class 816", type: "Diesel railcar", builder: "Rebuilt from an 810", lengthFt: 46.7, source: cs("GW_Train_Regio"),
+    about: "A single Regionova-type railcar with a cab at each end; GW Train Regio runs one on Milotice nad Opavou–Vrbno pod Pradědem." },
 };
+const unitPart = (facts, name) => ({ ...facts, model: `${facts.model}, ${name}` });
+FACTS.czFoxPid = FACTS["czFoxPid@czcd"];
+FACTS.cz660Mid = unitPart(FACTS.cz660Cab, "intermediate car");
+FACTS.czCjCab = unitPart(FACTS.czCjCoach, "driving trailer");
+FACTS.czMoraviaMid = unitPart(FACTS.czMoraviaCab, "intermediate car");
+FACTS.czElfMid = unitPart(FACTS.czElfPid, "middle car");
+FACTS.czSiriusMid = unitPart(FACTS.czSiriusCab, "middle car");
