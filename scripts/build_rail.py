@@ -1437,8 +1437,10 @@ def build_regions(only=None):
         here = [m for m in mods if m.RAIL["region"] == region]
         for m in here:
             segments += plugin_track(m, fetch=not OFFLINE and (not only or plugin_id(m) == only))
+        # A region whose plug-ins have no track of their own (Italy's, built
+        # from Geofabrik's tiles alone) gets it all from routing its timetables.
+        route_timetables(segments, here)
         if segments:
-            route_timetables(segments, here)
             write_region(region, finish(segments))
 
 
