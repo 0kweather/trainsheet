@@ -1,12 +1,12 @@
 # Trainsheet
 
-A live map of passenger trains across the United States and Canada: Amtrak, VIA and Brightline plus the commuter railroads that publish real-time positions, and railroads in thirteen more countries whose live positions are public, all on one map.
+A live map of passenger trains across the United States and Canada: Amtrak, VIA and Brightline plus the commuter railroads that publish real-time positions, and railroads in seventeen more countries: those whose live positions are public, Italy's from its timetables, and those (Australia's New South Wales and Victoria, New Zealand, Sweden) whose free keys switch on live positions, placed from their timetables until then; all on one map.
 
 **Live site:** https://0kweather.github.io/trainsheet/
 
 ## What's on the map
 
-Grouped by country. The only keys are the free ones marked "free key" (Metra, 511 SF Bay, Metrolink), which the relay sends once set; every railroad outside the US and Canada uses public data that needs no key, registration or approval.
+Grouped by country. The only keys are the free ones marked "free key", which the relay sends once set (the list is under [Turning on the relay feeds](#turning-on-the-relay-feeds)). Until its key is set, a keyed railroad that has a public timetable is placed from that timetable, its page saying so ("Placed from the timetable until its API key is set"), and switches to its live feed the moment the relay has the key. Every other railroad uses public data that needs no key, registration or approval.
 
 ### United States
 
@@ -33,8 +33,10 @@ Grouped by country. The only keys are the free ones marked "free key" (Metra, 51
 | SunRail | Orlando | sunrail.com's train status, plus its timetable | direct |
 | Rail Runner Express | New Mexico | Timetable only (no live data published); positions estimated | direct |
 | ACE (Altamont Corridor Express) | Stockton–San Jose | 511 SF Bay GTFS-realtime | relay + free key |
-| Coaster, Sprinter | San Diego | NCTD's timetable; positions estimated (live data needs a Swiftly key) | direct |
-| Trinity Railway Express, TEXRail, DART Silver Line, A-train | Dallas–Fort Worth | Each railroad's timetable; positions estimated (no public live data) | direct |
+| Coaster, Sprinter | San Diego | NCTD GTFS-realtime through Swiftly; until the key is set, NCTD's timetable, positions estimated | relay + free key |
+| A-train | Denton | DCTA GTFS-realtime through Swiftly; until the key is set, DCTA's timetable, positions estimated | relay + free key |
+| Trinity Railway Express, TEXRail, DART Silver Line | Dallas–Fort Worth | Each railroad's timetable; positions estimated (no public live data) | direct |
+| WES Commuter Rail | Portland | TriMet GTFS-realtime; until the key is set, TriMet's timetable | relay + free key |
 | WeGo Star | Nashville | WeGo's timetable; positions estimated (not in WeGo's live feed) | direct |
 | Alaska Railroad | Anchorage–Fairbanks | The Alaska Railroad's timetable; positions estimated | direct |
 
@@ -47,6 +49,7 @@ Grouped by country. The only keys are the free ones marked "free key" (Metra, 51
 | UP Express | Toronto | Metrolinx's timetable; positions estimated (not in GO Tracker) | direct |
 | exo | Montréal | exo.quebec's live map (scraped by the relay), plus exo's timetable | relay |
 | Polar Bear Express (Ontario Northland) | Cochrane–Moosonee | Ontario Northland's timetable; positions estimated | direct |
+| West Coast Express | Vancouver | TransLink GTFS-realtime; until the key is set, TransLink's timetable (TransLink's live feeds may carry buses only, so it may stay timetable-placed) | relay + free key |
 
 ### Elsewhere
 
@@ -57,6 +60,8 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | Argentina | Trenes Argentinos (Roca, Sarmiento, Mitre, San Martín, Belgrano Sur, Tren de la Costa) | Buenos Aires | SOFSE's station arrivals (GPS positions), 21 stations gathered by the relay; Buenos Aires Data's timetable for stations and lines only (it ran out in 2020, so no "later today") | relay |
 | Australia | Queensland Rail City network | Brisbane, South East Queensland | Translink GTFS-realtime (rail) | relay |
 | Australia | Adelaide Metro trains | Adelaide | Adelaide Metro GTFS-realtime, kept to the train routes by the relay | relay |
+| Australia | Sydney Trains, NSW TrainLink (intercity lines, XPT, Xplorer, Endeavour, Hunter) | New South Wales | Transport for NSW GTFS-realtime (Sydney Trains v2 with each train's set type, NSW Trains v1); placed from TfNSW's timetable until the key is set | relay + free key |
+| Australia | Metro Trains Melbourne, V/Line | Victoria | Transport Victoria GTFS-realtime (Metro's whole train, V/Line's lead unit); placed from its timetable until the key is set | relay + free key |
 | Czechia | České dráhy, RegioJet, Leo Express, Arriva vlaky, GW Train Regio | Czechia | The Oběhy project's GTFS and GTFS-realtime of the national CZPTT timetable and SŽ's positions | relay |
 | Estonia | Elron | Estonia | Elron's own live map (elron.ee), plus the ministry's timetable | relay |
 | Finland | VR (long distance), commuter trains (HSL and VR) | Finland | Fintraffic's Digitraffic train locations and GTFS-realtime trip updates | relay |
@@ -67,17 +72,19 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | Italy | Trenord, South Tyrol's trains (SAD, ÖBB), EAV (Naples), ARST (Sardinia), Trento–Malè–Mezzana | Lombardy, South Tyrol, Campania, Sardinia, Trentino | Placed from each one's open GTFS timetable | — |
 | Latvia | Vivi | Latvia | The Pieturas app's Baltic GTFS-realtime (Vivi's trains only), plus Vivi's timetable | relay |
 | Malaysia | KTMB (ETS, Intercity), KTM Komuter | Peninsular Malaysia | data.gov.my GTFS-realtime (positions only; fetched by each browser, since the API allows 4 requests a minute per address) | direct |
+| New Zealand | AT Metro, Te Huia | Auckland, Hamilton–Auckland | Auckland Transport GTFS-realtime (trains only, with their units); placed from AT's timetable until the key is set | relay + free key |
+| New Zealand | Metlink (Kāpiti, Hutt Valley, Melling, Johnsonville, Wairarapa) | Wellington | Metlink GTFS-realtime (rail); placed from Metlink's timetable until the key is set | relay + free key |
 | Norway | Vy, Go-Ahead Norge, Flytoget, SJ Nord | Norway | Entur GTFS-realtime (SJ Nord sends no positions, and Entur's GTFS-realtime has none of its delays yet: placed from its timetable, shown as scheduled) | relay |
 | Slovakia | ZSSK, RegioJet, Leo Express | Slovakia | Community GTFS-realtime (jbb.ghsq.de, station reports), plus ŽSR's timetable | relay |
 | Spain | Renfe (AVE, Avlo, Alvia, Avant, Euromed, regional), Renfe Cercanías and Rodalies | Spain | Renfe's open GTFS-realtime | relay |
 | Spain | FGC (Barcelona–Vallès, Llobregat–Anoia) | Catalonia | FGC's Geotren positions on its open-data portal | relay |
+| Sweden | SJ, Snälltåget, Tågab, VR Snabbtåg (ex-MTRX), Arlanda Express, SL Pendeltåg, Mälartåg, Östgötapendeln, Tåg i Bergslagen, Norrtåg, Värmlandstrafik, X-Tåget, Pågatåg, Öresundståg, Västtågen, Krösatåg | Sweden | Trafikverket's open API (train positions and announcements, joined by the relay); placed from Samtrafiken's GTFS Sweden 3 timetable until the key is set | relay + free key |
 
 "Relay" feeds don't send the CORS headers a browser needs, and keyed feeds can't put their key in a public web page, so both go through a tiny Cloudflare Worker (below). Without it, the site still shows everything marked "—" or "direct" (fetched by each browser itself, as KTMB is, or placed from the timetable).
 
 Northstar (Minneapolis) ended rail service; its route is now a bus, so it isn't shown. Ontario Northland's Northlander is in its timetable file ahead of its return but isn't carrying passengers yet, so only the Polar Bear Express is shown. Trains that Amtrak runs or that share Amtrak's feed (e.g., Amtrak's own Hartford Line and Valley Flyer trips) do show up.
 
 **Not yet covered:**
-- West Coast Express and WES: they need keys.
 - Ontario Northland's live feed: its GTFS-realtime carries only motor coaches (no Polar Bear position has been seen), and its stations sit inside the default US view, so a live source would be polled for every US viewer. The Polar Bear stays placed from its timetable.
 - Tshiuetin (Sept-Îles–Schefferville): its only live source is a Samsara fleet viewer whose robots.txt and terms forbid automated access, and its timetable is posted only as monthly images.
 - Italo's live data: its tracker's terms (italotreno.com, Note legali §7) allow only personal, non-commercial use, so Italo is placed from its timetable alone. Italy publishes no live train positions openly; ViaggiaTreno's own terms forbid reusing its data, and a Rome court (Trenitalia v. GoBright, 4 September 2019) allowed it only "in misura non sostanziale", so the relay can ask it for one opened train at a time and never polls it (relay/feeds/viaggiatreno.js); that's switched off for now, because ViaggiaTreno's CDN refuses every request from Cloudflare's network.
@@ -125,8 +132,17 @@ then open http://localhost:8000. To try the relay feeds locally, run `python3 sc
    - `METRA_API_TOKEN`: https://metra.com/developers
    - `API_511_KEY`: https://511.org/open-data/token (Caltrain + SMART)
    - `METROLINK_API_KEY`: https://metrolinktrains.com/about/gtfs/
+   - `SWIFTLY_NCTD_KEY`: COASTER and SPRINTER, through Swiftly; request a key at https://www.goswift.ly/realtime-api-key (agency NCTD, granted at NCTD's discretion)
+   - `SWIFTLY_DCTA_KEY`: the A-train, through Swiftly; DCTA's "Swiftly API Request Form" at https://www.dcta.net/resources/open-data (the relay assumes Swiftly's agency key `dcta`: check it against the key's email)
+   - `TRIMET_APP_ID`: https://developer.trimet.org/appid/registration/ (WES)
+   - `TRANSLINK_API_KEY`: https://developer.translink.ca (West Coast Express; 1,000 requests a day, so the relay keeps its answer three minutes)
+   - `TFNSW_API_KEY`: https://opendata.transport.nsw.gov.au (an application with the Public Transport realtime APIs; Sydney Trains, NSW TrainLink)
+   - `VIC_OPENDATA_KEY`: https://opendata.transport.vic.gov.au (Metro Trains Melbourne, V/Line; sent as the `KeyId` header)
+   - `AT_API_KEY`: https://dev-portal.at.govt.nz (subscribe to the Realtime API; AT Metro, Te Huia; 35,000 calls a week, so the relay keeps its answer a minute)
+   - `METLINK_API_KEY`: https://opendata.metlink.org.nz (Metlink)
+   - `TRAFIKVERKET_API_KEY`: https://data.trafikverket.se (Sweden)
 
-   No railroad outside the US and Canada needs one.
+   Every other railroad outside the US and Canada needs none. Until a railroad's key is set, it is placed from its timetable.
 4. Put the Worker's URL in `config.js` (`window.TRAINSHEET_RELAY = "https://trainsheet-relay.<you>.workers.dev"`) and push.
 
 The relay only serves the feeds listed in `relay/worker.js` and `relay/feeds/index.js` (it is not an open proxy) and caches each one for 15 seconds, or for the time a plug-in's `RELAY` entry sets (`ttl`, 15 seconds to ten minutes). That copy is kept in the memory of one Worker instance (the edge cache does nothing on workers.dev), so a feed's server sees a few requests per ttl for each instance serving viewers: about one per busy Cloudflare location, sometimes more, however many people each serves. Plug-in feeds send an identifying User-Agent. A Cron Trigger (every five minutes, in `wrangler.toml`) records the tracks posted at the big terminals in the Worker's Durable Object, for usual tracks; it keeps three weeks.
@@ -183,7 +199,9 @@ Data outside the US and Canada, credited on the map with each railroad:
 - Entur, NLOD, the Norwegian Licence for Open Government Data (Norway).
 - Renfe (data.renfe.com), CC BY 4.0; FGC Open Data (dadesobertes.fgc.cat), CC BY 4.0 (Spain).
 - Iarnród Éireann's realtime API; National Transport Authority / Transport for Ireland timetable, CC BY 4.0 (Ireland).
-- Translink (Queensland), CC BY 4.0; Adelaide Metro – Department for Infrastructure and Transport, South Australia, CC BY 3.0 AU (Australia).
+- Translink (Queensland), CC BY 4.0; Adelaide Metro – Department for Infrastructure and Transport, South Australia, CC BY 3.0 AU; Transport for NSW, CC BY 4.0; Transport Victoria (opendata.transport.vic.gov.au), CC BY 4.0 (Australia).
+- Auckland Transport, CC BY 4.0; Metlink (Greater Wellington Regional Council), CC BY 4.0 (New Zealand).
+- Trafikverket, CC0; Samtrafiken / Trafiklab GTFS Sweden 3, CC0 1.0, read from the Mobility Database's copy (Sweden).
 - data.gov.my, CC BY 4.0 (Malaysia).
 - ŽSR timetable (data.slovensko.sk), CC BY 1.0; live positions from jbb.ghsq.de (Slovakia).
 - Buenos Aires Data timetable, CC BY 2.5 AR; live data from SOFSE / Trenes Argentinos (Argentina).
