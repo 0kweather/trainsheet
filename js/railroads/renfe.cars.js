@@ -783,6 +783,39 @@ export const rf453 = (c) => unit({ ...c, cabL: false, cabR: false }, { roof: 14.
   ac: [[3, 8, 0.6, 13.4], [c.L - 11, 8, 0.6, 13.4]], gear: [[3.4, 3, 1.0, "b"], [c.L - 6.4, 3, 1.0, "b"]],
 });
 
+// --- Series 470 (CAF, Macosa and ATEINSA, 1980s; 47 still running in
+// 2026) and 440R (the 440s rebuilt for regional and Intercity work, 7 left;
+// Railvolution's fleet survey, 2024): three-car electric units of the 440
+// family, a motor car with the pantograph, a trailer and a cab trailer, 75 m,
+// 3 kV DC, 140 km/h (160 for the 440R). Two single plug doors a side on each
+// car near its ends, windows between in a dark band. The 470s on León-Gijón
+// over the Pajares pass, Valladolid-Santander and the Valencia and Córdoba
+// regionals; the 440Rs on Bilbao-Miranda and Vitoria-San Sebastián. The 470's
+// flat front, its windshield and the two marker windows in a black mask; the
+// 440R's front rebuilt with a sloping windshield. Media Distancia's paint
+// (photograph of a 470 at Pajares, Commons): white, the orange line over the
+// aubergine stripe under the windows.
+const S470 = { roof: 12.9, sill: 3.7, cornerR: 1.0, end: 0.6, trucks: { centers: 55, wb: 8.5, d: 34 }, diaphragm: [3.9, 11.9], badge: false };
+const rf470Of = (rebuilt) => (c) => unit({ ...c, cabL: true, cabR: false }, { ...S470,
+  nose: rebuilt ? [[0.9, 3.7], [0.7, 7.4], ["q", 0.9, 8.6, 1.8, 9.6], [3.0, 11.8], ["q", 3.6, 12.9, 5.2, 12.9]]
+    : [[0.8, 3.7], [0.6, 10.6], ["q", 0.7, 12.2, 1.8, 12.7], ["q", 2.6, 12.9, 4.0, 12.9]],
+  rows: [{ xs: seq(10.6, 5.2, 11), y: 7.3, w: 4.2, h: 2.6, r: 0.35 }],
+  doors: [s120Door(6.2), s120Door(c.L - 4.4)], cabLen: 5,
+  paint: (c, g) => rfPaint(g.L, { y: 5.4, roof: 12.1, skirt: 3.7, band: [10.0, 7.1, 3.0, 5.0] }) +
+    (rebuilt ? path("M0.8 7.6Q1.6 9.2 3.0 11.8L4.6 12.4L4.6 7.6Z", "#16181b") : path("M0.6 7.4L0.6 11.9L4.6 11.9L4.6 7.4Z", "#16181b")) + renfeWord(c, 2.6, 6.2, 0.6),
+  cabArt: () => (rebuilt ? path(poly([[1.4, 8.0], [2.8, 11.2], [4.4, 11.8], [4.4, 8.0]]), C.glass) : path(poly([[0.7, 8.2], [0.75, 11.0], [4.2, 11.0], [4.2, 8.2]]), C.glass)) +
+    sign(1.4, 11.3, 2.4, 0.4),
+  front: { lamp: [0.7, 5.6], coupler: [0, 2.9], skirt: [[0.8, 3.7], [1.0, 1.6], [4.8, 1.6], [5.2, 3.7]], horn: [5.0, 12.9], wiper: [1.2, 8.2, 2.0, 10.6] },
+  ac: [[20, 10, 0.6]], gear: [[18, 8, 1.6, "g"], [27, 7, 1.3, "b"], [41, 8, 1.6, "g"], [50, 5, 1.0, "t"]],
+  onRoof: (c, g) => panGear(g.L - 13, 12.9) + cover(32, 12.9, 14, 0.5) + slats(32.5, 13.0, 13, 0.3, 0.5, "rgba(0,0,0,0.35)"),
+});
+export const rf470Cab = rf470Of(false), rf440RCab = rf470Of(true);
+export const rf470 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...S470,
+  rows: [{ xs: seq(6.4, 5.2, 13), y: 7.3, w: 4.2, h: 2.6, r: 0.35 }],
+  doors: [s120Door(1.6), s120Door(c.L - 4.4)], paint: (c, g) => rfPaint(g.L, { y: 5.4, roof: 12.1, skirt: 3.7, band: [5.8, 7.1, 3.0, 5.0] }),
+  ac: [[7, 10, 0.6], [c.L - 17, 10, 0.6]], gear: [[20, 7, 1.2, "b"], [30, 6, 1.0, "t"], [40, 7, 1.2, "b"]],
+});
+
 export const TYPES = {
   rf103Cab: { name: "Series 103 end car", kind: "emu", amenities: ["first", "cafe"] },
   rf103: { name: "Series 103 car", kind: "emu", amenities: ["first", "cafe"] },
@@ -825,6 +858,9 @@ export const TYPES = {
   rf598: { name: "Series 598 middle car", kind: "emu" },
   rf453Cab: { name: "Series 453 (Stadler) motor car", kind: "emu", pan: true },
   rf453: { name: "Series 453 double-deck trailer", kind: "bilevel", emu: true },
+  rf470Cab: { name: "Series 470 end car", kind: "emu", pan: true },
+  rf470: { name: "Series 470 trailer", kind: "emu" },
+  rf440RCab: { name: "Series 440R end car", kind: "emu", pan: true },
 };
 // oneEnd: single-cab equipment, drawn cab-left and mirrored at the back of
 // a train. variant: Avlo's purple and Rodalies' orange are the same cars
@@ -854,13 +890,15 @@ export const MODELS = {
   rf594Cab: M(rf594Cab, 77.7, true),
   rf598Cab: M(rf598Cab, 84.0, true), rf598: M(rf598, 81.1),
   rf453Cab: M(rf453Cab, 73.4, true), rf453: M(rf453, 86.9),
+  rf470Cab: M(rf470Cab, 82.0, true), rf470: M(rf470, 82.0), rf440RCab: M(rf440RCab, 82.0, true),
 };
 
 const set = (label, ...units) => ({ label, units });
 const sets = {
   s103: set("Series 103 (Siemens Velaro) trainset, 8 cars", ["rf103Cab", 1], ["rf103", 6], ["rf103Cab", 1]),
   s112: set("Series 112 or 102 (Talgo 350) trainset: two power cars and twelve coaches", ["rf112Power", 1], ["rf112Coach", 12], ["rf112Power", 1]),
-  avlo: set("Avlo Series 112 (Talgo 350) trainset, some Avlo trains Series 106", ["rf112Power", 1], ["rf112Coach", 12], ["rf112Power", 1]),
+  avlo: set("Avlo Series 112 (Talgo 350) trainset", ["rf112Power", 1], ["rf112Coach", 12], ["rf112Power", 1]),
+  avlo106: set("Avlo Series 106 (Talgo Avril) trainset", ["rf106Power", 1], ["rf106Coach", 12], ["rf106Power", 1]),
   s106: set("Series 106 (Talgo Avril) trainset: two power cars and twelve coaches", ["rf106Power", 1], ["rf106Coach", 12], ["rf106Power", 1]),
   s100: set("Series 100 trainset: two power cars and eight trailers (some trains Series 102 or 112)", ["rf100Power", 1], ["rf100", 8], ["rf100Power", 1]),
   s130: set("Series 130 (Talgo 250) trainset: two power cars and eleven coaches", ["rf130Power", 1], ["rf130Coach", 11], ["rf130Power", 1]),
@@ -873,7 +911,9 @@ const sets = {
   s120: set("Series 120 (CAF) four-car unit, sometimes two coupled", ["rf120Cab", 1], ["rf120", 2], ["rf120Cab", 1]),
   s121: set("Series 121 (CAF) four-car unit, sometimes two coupled", ["rf120Cab", 1], ["rf120", 2], ["rf120Cab", 1]),
   s104: set("Series 104 or 114 four-car unit", ["rf104Cab", 1], ["rf104", 2], ["rf104Cab", 1]),
-  s449: set("Series 449 five-car electric unit (older 440 and 470 units on some lines)", ["rf449Cab", 1], ["rf449", 3], ["rf449Cab", 1]),
+  s449: set("Series 449 five-car electric unit", ["rf449Cab", 1], ["rf449", 3], ["rf449Cab", 1]),
+  s470: set("Series 470 three-car electric unit", ["rf470Cab", 1], ["rf470", 1], ["rf470Cab", 1]),
+  s440R: set("Series 440R three-car electric unit", ["rf440RCab", 1], ["rf470", 1], ["rf440RCab", 1]),
   s599: set("Series 599 three-car diesel unit", ["rf599Cab", 1], ["rf599", 1], ["rf599Cab", 1]),
   civia: set("Civia electric unit, usually 5 cars (some trains Series 446 or 447)", ["rfCiviaCab", 1], ["rfCivia", 3], ["rfCiviaCab", 1]),
   s447: set("Series 447 three-car unit, often two coupled (some trains Civia)", ["rf447Cab", 1], ["rf447", 1], ["rf447Cab", 1]),
@@ -899,7 +939,9 @@ export const TYPICAL = {
         if (/Sevilla/.test(e) && /Madrid/.test(e)) return sets.s100;
         return sets.s112;
       case "AVE Internacional": return sets.s106;
-      case "Avlo": return sets.avlo;
+      // Avlo's Series 112s run to Andalusia; its 106s everywhere else
+      // (Madrid-Barcelona, the Levante, Galicia and Asturias).
+      case "Avlo": return /Sevilla|M[áa]laga|C[óo]rdoba|Granada/.test(e) ? sets.avlo : sets.avlo106;
       // Railvolution's survey of Renfe's fleet (April 2024): the hybrid 730s
       // to Badajoz and Almería, 120s to Pamplona, Logroño, Irún and Hendaye,
       // 121s to Huelva and Salamanca; 130s elsewhere.
@@ -914,12 +956,16 @@ export const TYPICAL = {
         if (/Cartagena|Albacete/.test(e)) return sets.talgo334;
         if (/Barcelona/.test(e) && /Val[eè]ncia|Alicante|Alacant/.test(e)) return sets.talgo252;
         if (/Badajoz|Almer[íi]a|C[áa]ceres/.test(e)) return sets.s730;
+        if (/Bilbao|San Sebasti|Donostia/.test(e) && /Miranda|Vitoria/.test(e)) return sets.s440R;
         return sets.s130;
       case "Avant": case "Avant Exprés": return /Lleida|Ourense|Coru|Santiago|Vigo|Pontevedra|Calatayud|Zaragoza/.test(e) ? sets.s121 : sets.s104;
       default:
         if (/Canfranc|Jaca|Huesca/.test(e) && /Zaragoza|Canfranc|Jaca/.test(e)) return sets.s594;
         if (/Sevilla|Huelva|C[áa]diz|C[áa]ceres|Ronda/.test(e) && DIESEL.test(e)) return set("Series 598 three-car diesel unit (some trains Series 599)", ...sets.s598.units);
-        return DIESEL.test(e) ? sets.s599 : sets.s449;
+        if (DIESEL.test(e)) return sets.s599;
+        // The older 470s where Railvolution's survey and Wikipedia place them.
+        if ((/Le[óo]n/.test(e) && /Gij[óo]n|Oviedo/.test(e)) || (/Santander/.test(e) && /Valladolid|Palencia|Reinosa/.test(e)) || /Rabanales|Villarrubia/.test(e)) return sets.s470;
+        return sets.s449;
     }
   },
   cercanias: (t) => {
@@ -1048,6 +1094,12 @@ export const FACTS = {
     topSpeedMph: kmh(160), powerHp: kw(1352), lengthFt: 84, about: "Three-car diesel units, now on Seville's Cercanías C-3 and Media Distancia and Intercity trains in Andalusia and Extremadura.", source: `${ES}Serie_598_de_Renfe` },
   rf598: { model: "Series 598 middle car", type: "Diesel multiple unit", builder: "CAF", built: "2004", fleet: "21 three-car units",
     topSpeedMph: kmh(160), lengthFt: 81.1, about: "The trailer of a 598, between its two motor cars.", source: `${ES}Serie_598_de_Renfe` },
+  rf470Cab: { model: "Series 470", type: "Electric multiple unit", builder: "CAF, Macosa and ATEINSA", built: "1980s", fleet: "47 in service",
+    topSpeedMph: kmh(140), lengthFt: 82, about: "Three-car regional units of the 440 family, still on León–Gijón over the Pajares pass, Valladolid–Santander and regional lines around Valencia and Córdoba.", source: `${WP}Renfe_Operadora` },
+  rf470: { model: "Series 440R/470 trailer", type: "Electric multiple unit", builder: "CAF, Macosa and ATEINSA", built: "1980s",
+    lengthFt: 82, about: "The middle car of a 470 or 440R.", source: `${WP}Renfe_Operadora` },
+  rf440RCab: { model: "Series 440R", type: "Electric multiple unit", builder: "CAF, Macosa and ATEINSA (rebuilt)", built: "1970s–80s, rebuilt 1990s", fleet: "7 in service",
+    topSpeedMph: kmh(160), lengthFt: 82, about: "Series 440 units rebuilt with a new front and interior for regional and Intercity work; the last run Bilbao–Miranda de Ebro and Vitoria–San Sebastián.", source: `${WP}Renfe_Operadora` },
   rf453Cab: { model: "Stadler Series 453", type: "Electric multiple unit", builder: "Stadler", built: "2025–2026", fleet: "79 ordered",
     lengthFt: 73.4, about: "Madrid's new Cercanías trains: single-deck FLIRT motor cars at the ends and KISS double-deck trailers between them. In passenger service on the C-7 since August 2026.", source: `${WP}Renfe_Operadora` },
   rf453: { model: "Stadler Series 453 trailer", type: "Double-deck electric multiple unit", builder: "Stadler", built: "2025–2026", fleet: "79 ordered",
