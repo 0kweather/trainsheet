@@ -6,6 +6,7 @@ import { fetchFeed as fgc } from "./fgc.js";
 import { fetchFeed as hellenictrain } from "./hellenictrain.js";
 import { fetchFeed as israelrail } from "./israelrail.js";
 import { fetchFeed as trenesba } from "./trenesba.js";
+import { fetchFeed as viaggiatreno } from "./viaggiatreno.js";
 
 export const FEEDS = {
   adelaidemetro: {"also": ["https://gtfs.adelaidemetro.com.au/v1/realtime/trip_updates"], "format": "pb", "routes": ["BEL", "FLNDRS", "GAW", "GAWC", "GRNG", "NOAR", "OSBORN", "OUTHA", "PTDOCK", "SALIS", "SEAFRD"], "ttl": 20, "ua": true, "url": "https://gtfs.adelaidemetro.com.au/v1/realtime/vehicle_positions"},
@@ -25,6 +26,7 @@ export const FEEDS = {
   translinkseq: {"also": ["https://gtfsrt.api.translink.com.au/api/realtime/SEQ/TripUpdates/Rail"], "format": "pb", "ttl": 15, "ua": true, "url": "https://gtfsrt.api.translink.com.au/api/realtime/SEQ/VehiclePositions/Rail"},
   trenesba: {"format": "json", "ttl": 60, "ua": true, "fetchFeed": trenesba },
   trirail: {"format": "pb", "url": "https://gtfsr.tri-rail.com/download.aspx?file=position_updates.pb"},
+  viaggiatreno: {"detail": true, "format": "json", "ttl": 90, "fetchFeed": viaggiatreno },
   vivi: {"format": "pb", "ttl": 60, "ua": true, "url": "https://gsvalbe.id.lv/pieturas/dati/gtfs-rt.pb", "vehicles": "^pv-"},
   vy: {"also": ["https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=VYG"], "format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "ttl": 30, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions?datasource=VYG", "vehicles": "."},
   zsr: {"also": ["https://jbb.ghsq.de/gtfs/zsr/TripUpdates"], "format": "pb", "ttl": 60, "ua": true, "url": "https://jbb.ghsq.de/gtfs/zsr/VehiclePositions"},

@@ -7,9 +7,11 @@ then set window.TRAINSHEET_RELAY = "http://127.0.0.1:8787" in config.js.
 Keyed feeds read the same environment variables as the Worker's secrets
 (METRA_API_TOKEN, API_511_KEY, METROLINK_API_KEY, SWIFTLY_NCTD_KEY, SWIFTLY_DCTA_KEY). NJ Transit and GO Transit (scraped from their websites) are Worker-only.
 The railroad plug-ins' feeds (scripts/railroads/*.py) are read from their
-RELAY specs and relay_fetch handlers directly, each kept for its own ttl.
+RELAY specs and relay_fetch handlers directly, each kept for its own ttl,
+and so are their detail sources (DETAILS: one train a request, as
+/feed/<id>?train=<number>&date=<yyyy-mm-dd>[&from=<origin name>]).
 """
-import json, os, re, sys, time, urllib.parse, urllib.request
+import json, os, re, sys, time, unicodedata, urllib.parse, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from railroads import load
@@ -68,7 +70,26 @@ def plugin_feed(mod, sid, p):
     return spec
 
 
+def detail_feed(mod, sid, d):
+    """A plug-in's detail source, like the Worker's: its relay_fetch, given
+    the one train asked for (detail_query)."""
+    return lambda e: {"detail": True, "ttl": d.get("ttl", CACHE_SECONDS), "fetch": lambda query: mod.relay_fetch(e, sid, query)}
+
+
+def detail_query(params):
+    """As relay/worker.js's detailQuery: the train's number and day, and the
+    name of the station it starts from as a name key; None if it's off."""
+    train, date = params.get("train", [""])[0], params.get("date", [""])[0]
+    if not re.fullmatch(r"\d{1,6}", train) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        return None
+    frm = unicodedata.normalize("NFD", params.get("from", [""])[0])
+    frm = re.sub(r"[^a-z0-9]", "", re.sub(r"[\u0300-\u036f]", "", frm).lower())[:40]
+    return {"train": str(int(train)), "date": date, "from": frm}
+
+
 for mod in load():
+    for sid, d in getattr(mod, "DETAILS", {}).items():
+        FEEDS[sid] = detail_feed(mod, sid, d)
     relay = getattr(mod, "RELAY", {})
     for s in getattr(mod, "SOURCES", []):
         if s.get("relay"):
@@ -160,15 +181,23 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/status":
             feeds = {k: bool(f(env)) for k, f in FEEDS.items()}
             return self.send(200, json.dumps({"feeds": feeds}).encode(), "application/json")
-        name = self.path.removeprefix("/feed/")
+        path, _, qs = self.path.partition("?")
+        name = path.removeprefix("/feed/")
         spec = FEEDS.get(name, lambda e: None)(env)
-        if not self.path.startswith("/feed/") or not spec:
+        if not path.startswith("/feed/") or not spec:
             return self.send(404, b"Unknown or unconfigured feed")
-        hit = cache.get(name)
+        query = detail_query(urllib.parse.parse_qs(qs)) if spec.get("detail") else None
+        if spec.get("detail") and not query:
+            return self.send(400, b"Ask for one train: ?train=<number>&date=<yyyy-mm-dd>")
+        key = f"{name}?{urllib.parse.urlencode(query)}" if query else name
+        hit = cache.get(key)
         if hit and time.time() - hit[0] < spec.get("ttl", CACHE_SECONDS):
             return self.send(200, hit[1], hit[2])
         try:
-            if spec.get("fetch"):
+            if query:
+                body, ctype = spec["fetch"](query)
+                print(f"upstream detail {key}", flush=True)
+            elif spec.get("fetch"):
                 body, ctype = spec["fetch"]()
             else:
                 body, ctype = get(spec["url"], spec.get("headers", {}))
@@ -186,7 +215,7 @@ class Handler(BaseHTTPRequestHandler):
             body = keep_routes(body, spec["routes"])
         if spec.get("vehicles"):
             body = keep_vehicles(body, spec["vehicles"])
-        cache[name] = (time.time(), body, ctype)
+        cache[key] = (time.time(), body, ctype)
         self.send(200, body, ctype)
 
 

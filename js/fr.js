@@ -126,6 +126,7 @@ export default {
   "Estimated": "Estimée",
   "from predicted times": "d’après les heures prévues",
   "Estimated from predicted times": "Estimée d’après les heures prévues",
+  "Last reported at {station}, {time}": "Dernier signalement à {station}, {time}",
   "GPS": "GPS",
   "mph": "mi/h",
   "hp": "ch",

@@ -878,6 +878,111 @@ export async function timetableTrains(agency) {
   return out;
 }
 
+// ---------- One train, on request (a railroad's detail source) ----------
+
+// A railroad's plug-in may name a detail source (AGENCIES[a].detail, a
+// relay plug-in's DETAILS): the relay answers for one train, asked for only
+// while a viewer has it open or tracked (app.js), in one shape whatever the
+// source, with times in epoch seconds (arr and dep as timetabled):
+//   { found, number, date, origin, destination, delay (minutes), cancelled,
+//     departed, arrived, last: { station, at } | null,
+//     stops: [{ name, arr, dep, actualArr, actualDep, platform, cancelled }] }
+const stationKey = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const titleCase = (s) => String(s || "").toLowerCase().replace(/(^|[\s'.(/-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+
+// Where the relay answers for train t (its number, the day it set out in its
+// railroad's zone, and the station it starts from), or null.
+export function detailUrl(t, relayBase) {
+  const src = AGENCIES[t.agency]?.detail;
+  if (!src || !relayBase || !/^\d{1,6}$/.test(String(t.number || ""))) return null;
+  const s0 = (t._sched || t._progress?.stops)?.[0];
+  const first = s0 ? s0.scheduled || evTime(s0) : t.stops?.[0] ? Date.parse(t.stops[0].scheduled || t.stops[0].time) / 1000 : nowSec();
+  const tz = AGENCIES[t.agency].tz || t.stops?.[0]?.tz || "UTC";
+  const date = dateFormat({ timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }, "en-CA").format(new Date(first * 1000));
+  const q = new URLSearchParams({ train: String(t.number), date });
+  if (t.origin) q.set("from", t.origin);
+  return `${relayBase.replace(/\/$/, "")}/feed/${src}?${q}`;
+}
+
+export async function fetchDetail(url) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// Each of `mine` ({ name, arr, dep }) to the index of the same stop in
+// `theirs`, or -1: in order, by name or by a timetabled time within 90 s
+// (the two may spell a station differently).
+function matchStops(mine, theirs) {
+  const near = (a, b) => a != null && b != null && Math.abs(a - b) <= 90;
+  let j = 0;
+  return mine.map((m) => {
+    for (let k = j; k < theirs.length; k++) {
+      const x = theirs[k];
+      if (stationKey(x.name) === stationKey(m.name) || near(x.dep, m.dep) || near(x.arr, m.arr)) {
+        j = k + 1;
+        return k;
+      }
+    }
+    return -1;
+  });
+}
+
+// Merges a detail answer into train t: its delay (or cancellation), where it
+// was last reported, its platforms and, for a train placed from its
+// timetable, its stop times (as they happened, and as timetabled plus the
+// delay ahead, never earlier than now while it hasn't got there) and its
+// place from them. It can be applied again: the timetable's own times are
+// kept (t._sched). True if t has a place.
+export function applyDetail(t, d, now = nowSec()) {
+  if (!d?.found) return false;
+  const late = d.cancelled ? null : d.delay ?? null;
+  t.cancelled = Boolean(d.cancelled);
+  t.delayMin = late;
+  t.statusText = d.cancelled ? "Cancelled" : late != null ? delayText(late) : t.statusText;
+  const theirs = d.stops || [];
+  const sched = t._progress ? (t._sched ??= t._progress.stops) : null;
+  if (sched) {
+    const lookup = t._progress.lookup;
+    const idx = matchStops(sched.map((s) => ({ name: lookup[s.stopId]?.[0], arr: s.arrival?.time ?? null, dep: s.scheduled ?? s.departure?.time ?? null })), theirs);
+    // The last stop it has reached: the last with a time it happened, or
+    // the station it was last reported at (reached then, if no time says so).
+    const lastAt = d.last?.at && stationKey(d.last.station);
+    let reached = -1, seenAt = -1;
+    idx.forEach((k, i) => {
+      if (k >= 0 && (theirs[k].actualArr || theirs[k].actualDep)) reached = i;
+      if (k >= 0 && lastAt && stationKey(theirs[k].name) === lastAt) seenAt = i;
+    });
+    if (seenAt > reached) reached = seenAt;
+    else seenAt = -1;
+    const shift = (late || 0) * 60;
+    const at = (actual, planned, ahead) => actual ?? (planned == null ? null : ahead && !d.arrived ? Math.max(planned + shift, now) : planned + shift);
+    const shifted = sched.map((s, i) => {
+      const x = idx[i] >= 0 ? (i === seenAt ? { ...theirs[idx[i]], actualArr: d.last.at } : theirs[idx[i]]) : null;
+      const dep = at(x?.actualDep, s.departure?.time, i >= reached);
+      const arr = x?.actualDep && !x.actualArr ? Math.min(at(null, s.arrival?.time, false) ?? dep, dep) : at(x?.actualArr, s.arrival?.time, i > reached);
+      return { ...s, arrival: { time: arr ?? dep }, departure: { time: Math.max(dep ?? arr, arr ?? dep) }, track: x?.platform || s.track || null, skipped: Boolean(x?.cancelled) };
+    });
+    t._progress = { stops: shifted, lookup };
+    const prog = tripProgress(shifted, now, lookup);
+    if (!prog) return false;
+    const nextStop = prog.dwelling ? prog.at : prog.next;
+    t.lat = prog.lat;
+    t.lon = prog.lon;
+    t.bearing = prog.bearing ?? t.bearing;
+    t.leg = prog.leg || null;
+    t.nextStop = lookup[nextStop.stopId][0];
+    t.stops = mtaStops(t.agency, prog.list, lookup, now, nextStop, prog.dwelling ? prog.at : null, t.stops?.[0]?.tz || AGENCIES[t.agency].tz);
+  } else if (t.stops) {
+    const idx = matchStops(t.stops.map((s) => ({ name: s.name, arr: null, dep: s.scheduled ? Date.parse(s.scheduled) / 1000 : null })), theirs);
+    t.stops.forEach((s, i) => { if (idx[i] >= 0 && theirs[idx[i]].platform) s.track = theirs[idx[i]].platform; });
+  }
+  // Where it was last reported, named as its stops are.
+  const seen = d.last?.station && t.stops?.find((s) => stationKey(s.name) === stationKey(d.last.station));
+  t.reported = d.last?.at ? { station: seen ? seen.name : titleCase(d.last.station), at: d.last.at * 1000 } : null;
+  return true;
+}
+
 // ---------- South Shore Line (its ETA SPOT tracker) ----------
 
 // The tracker South Shore links from its site: each train's position, number,
@@ -1355,10 +1460,11 @@ export function creditOf(src, timetable = false) {
   return { label: `${a.short} timetable`, href: a.credit?.href || src.credit.href, license: a.license ?? src.credit.license ?? null };
 }
 
-// The source's trains: from its feed, or with `timetable`, from each of its
-// railroads' timetables (estimated, as every timetable-placed train is).
+// The source's trains: from its feed, or with `timetable` (its key isn't set
+// yet), or for a railroad with no live data (format "timetable"), from each
+// of its railroads' timetables (estimated, as every timetable-placed train is).
 export async function fetchSource(src, relayBase, timetable = false) {
-  if (timetable) return (await Promise.all(src.agencies.map((a) => timetableTrains(a)))).flat();
+  if (timetable || src.format === "timetable") return (await Promise.all(src.agencies.map((a) => timetableTrains(a)))).flat();
   // A plug-in's parser file loads alongside its first fetch.
   const parser = src.parse ? null : PARSERS[src.module]().then((m) => (src.parse = m.parse[src.id]));
   parser?.catch(() => {}); // a failed load is reported by the await below

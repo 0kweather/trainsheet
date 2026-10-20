@@ -11,6 +11,7 @@ import { DATA_REGIONS } from "./railroads/index.js?v=dev";
 
 const MIN_ZOOM = 4.5;
 const files = new Map(); // "region/kind" -> promise of the file (null: none)
+let track = (p) => p; // handed each fetch while it's out (see watchData)
 const loaded = new Map(); // region -> promise of its data, handed to add() once
 
 // Does [west, south, east, north] meet the view's? The view's longitudes can
@@ -31,8 +32,8 @@ function file(r, kind) {
   const k = `${r.region}/${kind}`;
   if (!files.has(k)) {
     files.set(k, !r.files.includes(kind) ? Promise.resolve(null)
-      : fetch(`data/regions/${r.region}/${kind}.json?v=dev`)
-        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+      : track(fetch(`data/regions/${r.region}/${kind}.json?v=dev`)
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))))
         .catch((err) => {
           console.warn(`region ${r.region} ${kind}`, err);
           files.delete(k);
@@ -75,9 +76,11 @@ export function loadRegion(r) {
 export const loadAll = () => Promise.all(DATA_REGIONS.map(loadRegion));
 export const loadFor = (agency) => loadRegion(regionOf(agency));
 
-// Watch the map, and load each region's data the first time it shows.
-export function watchData(map, onRegion) {
+// Watch the map, and load each region's data the first time it shows;
+// tracking(promise) is handed each file's fetch while it's out.
+export function watchData(map, onRegion, tracking) {
   add = onRegion;
+  if (tracking) track = tracking;
   const check = () => {
     const bounds = map.getBounds(), center = map.getCenter();
     const view = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];

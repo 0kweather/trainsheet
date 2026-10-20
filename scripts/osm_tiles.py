@@ -4,7 +4,7 @@ the public Overpass servers, which are often too busy to answer a tile.
 Each extract is downloaded, cut down with osmium to its railway=rail and
 railway=narrow_gauge ways (then deleted), and the ways kept are the ones
 build_rail.py's ROUTE_WAYS selects: no service tag, usage not industrial,
-military, tourism or test. They're written as the one-degree tiles
+military or test. They're written as the one-degree tiles
 build_rail.py routes over (scripts/.osm-cache/route-tile-<x>-<y>.json, in
 Overpass's answer format), every way in each tile it touches, so a tile at a
 border holds both countries' track. Needs osmium (brew install osmium-tool).
@@ -34,10 +34,15 @@ EXTRACTS = [
     "europe/finland", "europe/norway", "europe/sweden",
     "europe/estonia", "europe/latvia", "europe/lithuania",
     "europe/greece", "europe/ireland-and-northern-ireland",
+    "europe/italy", "europe/switzerland", "europe/slovenia",
+    "europe/france/provence-alpes-cote-d-azur", "europe/france/rhone-alpes", "europe/germany/baden-wuerttemberg",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
-SKIP_USAGE = re.compile(r"^(industrial|military|tourism|test)$")
+# Tourist lines stay: build_rail.py routes only the hops a timetable runs, so
+# a line OSM tags as tourist (Sardinia's Mandas–Isili) is drawn only where a
+# scheduled train uses it.
+SKIP_USAGE = re.compile(r"^(industrial|military|test)$")
 
 
 def osmium(*args):
