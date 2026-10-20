@@ -2509,7 +2509,7 @@ function routeHtml({ from, to }) {
         <span><span class="title">${esc(fmtTime(r.departAt, r.fromTz))} – ${esc(fmtTime(r.arriveAt, r.toTz))}</span><br><span class="sub">${esc([r.route, a.short, fmtSpan(Date.parse(r.arriveAt) - Date.parse(r.departAt))].filter(Boolean).join(" · "))}</span></span>
         ${live ? statusSpan(live, "status") : "<span></span>"}
       </button>${addBtn(hasTrip(r.agency, r.number, day), `data-add-route="${i}"`, name)}</div>`;
-  }).join("") + (got.exact ? "" : `<p class="results-more">${T("That day is past the timetable Trainsheet has, so these are the trains on that weekday now. Check again closer to the day.")}</p>`);
+  }).join("") + (got.exact ? "" : `<p class="results-more">${T("Trains on that weekday, as the timetable runs now.")}</p>`);
 }
 let laterShown = new Map(); // a train later today's key -> the train, as Browse lists them
 
@@ -2658,11 +2658,35 @@ function loadSchedule(id) {
   }
   return schedulePromises.get(id);
 }
+// A day's runs in a railroad's timetable (runs(number), and every run with
+// its number, all()): within the two weeks the file covers, from each run's
+// days; after them, from the railroad's own calendar (tt.ahead, as far ahead
+// as it publishes: a year for Amtrak), so a timetable change (a train that
+// starts running in a month) is known; past that, or for a file without
+// one, the same weekday's in the second week (exact: false).
 function timetableDay(tt, day) {
   const [y, m, d] = tt.start.split("-").map(Number), [Y, M, D] = day.split("-").map(Number);
   const diff = Math.round((Date.UTC(Y, M - 1, D) - Date.UTC(y, m - 1, d)) / 86400000);
-  const exact = diff >= 0 && diff <= 13;
-  return { idx: exact ? diff : 7 + ((diff % 7) + 7) % 7, exact, base: serviceStart(Date.UTC(Y, M - 1, D), tt.tz) };
+  const base = serviceStart(Date.UTC(Y, M - 1, D), tt.tz);
+  const ahead = tt.ahead;
+  let runs, exact = true, numbers = () => Object.keys(tt.trips || {});
+  if (diff >= 0 && diff <= 13) {
+    runs = (n) => (tt.trips[n] || []).filter(([days]) => days & (1 << diff));
+  } else if (ahead && diff > 13 && day <= ahead.until) {
+    const wd = (new Date(Date.UTC(Y, M - 1, D)).getUTCDay() + 6) % 7; // Monday first, as the calendar has it
+    const on = new Set();
+    ahead.services.forEach(([from, to, days, added, dropped], i) => {
+      if (!dropped?.includes(day) && (added?.includes(day) || (from && day >= from && day <= to && (days >> wd) & 1))) on.add(i);
+    });
+    runs = (n) => (ahead.trips[n] || []).filter(([svcs]) => svcs.some((i) => on.has(i)))
+      .map(([, run]) => (typeof run === "number" ? tt.trips[n][run] : [0, run[0], run[1]]));
+    numbers = () => Object.keys(ahead.trips);
+  } else {
+    const idx = 7 + ((diff % 7) + 7) % 7;
+    exact = false;
+    runs = (n) => (tt.trips[n] || []).filter(([days]) => days & (1 << idx));
+  }
+  return { exact, base, runs, all: () => numbers().flatMap((n) => runs(n).map(([, line, stops]) => [n, line, stops])) };
 }
 const memberOf = (st, agency) => st?.members.filter((m) => m.agency === agency) || [];
 async function findTrains(fromId, toId, day) {
@@ -2679,17 +2703,15 @@ async function findTrains(fromId, toId, day) {
     if (!day_.exact) exact = false;
     // That day's runs that reach the first station before midnight, and the
     // day before's that reach it after (an overnight train).
-    const days_ = [[day_.idx, 0], ...(day_.idx > 0 ? [[day_.idx - 1, 1]] : [])];
-    for (const [key, runs] of Object.entries(tt.trips)) {
-      for (const [days, line, stops] of runs) {
-        for (const [idx, before] of days_) {
-          if (!(days & (1 << idx))) continue;
+    for (const [dd, before] of [[day_, 0], [timetableDay(tt, addDaysIso(day, -1)), 1]]) {
+      for (const [key, line, stops] of dd.all()) {
+        {
           const i = stops.findIndex(([sid]) => a.some((m) => m.id === sid));
           const j = i < 0 ? -1 : stops.findIndex(([sid], k) => k > i && b.some((m) => m.id === sid));
           if (j < 0) continue;
           const dep = stops[i][2] ?? stops[i][1], arr = stops[j][1] ?? stops[j][2];
           if (before ? dep < 1440 : dep >= 1440) continue;
-          const base = day_.base - before * 86400000;
+          const base = dd.base;
           const ma = a.find((m) => m.id === stops[i][0]), mb = b.find((m) => m.id === stops[j][0]);
           out.push({
             agency, number: tt.unnumbered ? null : key, route: line || null,
@@ -2712,10 +2734,9 @@ async function findTrains(fromId, toId, day) {
 // stops: [{ key, name, at, tz }] }].
 async function trainRuns(agency, number, day) {
   const tt = number && (await loadSchedule(agency));
-  const runs = tt?.trips?.[number];
-  if (!runs) return [];
+  if (!tt?.trips) return [];
   const d = timetableDay(tt, day);
-  return runs.filter(([days]) => days & (1 << d.idx)).map(([, line, stops]) => ({
+  return d.runs(number).map(([, line, stops]) => ({
     route: line || null,
     stops: stops.map(([sid, arr, dep], i) => {
       const st = stationFor(agency, sid), m = st?.members.find((x) => x.agency === agency && x.id === sid);
