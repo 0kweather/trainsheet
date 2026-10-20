@@ -1682,7 +1682,9 @@ function sourceAvailability(src) {
   const off = !RELAY ? T("Needs the relay (see README)")
     : state.relayFeeds && !state.relayFeeds[src.id] ? (src.needsKey ? T("Needs a free API key") : T("Not enabled on relay"))
     : null;
-  if (!off) return { ok: true };
+  // A feed waiting on its key isn't asked for before the relay says it has
+  // the key: until then its trains come from the timetable too.
+  if (!off && !(src.untilKey === "timetable" && !state.relayFeeds)) return { ok: true };
   if (src.untilKey === "timetable") return { ok: true, timetable: true, reason: T("Placed from the timetable until its API key is set") };
   return { ok: false, reason: off };
 }
