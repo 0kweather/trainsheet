@@ -23,8 +23,8 @@ function contains(b, lon, lat) {
 }
 
 // Watch the map, and call add(geojson, region) once for each region's track
-// as it arrives.
-export function watchRegions(map, add) {
+// as it arrives; track(promise) is handed each fetch while it's out.
+export function watchRegions(map, add, track = (p) => p) {
   const check = () => {
     const bounds = map.getBounds(), center = map.getCenter();
     const view = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
@@ -32,8 +32,8 @@ export function watchRegions(map, add) {
     for (const r of RAIL_REGIONS) {
       if (asked.has(r.region) || !meets(r.bbox, view) || !(near || contains(r.bbox, center.lng, center.lat))) continue;
       asked.add(r.region);
-      fetch(`${r.file}?v=dev`)
-        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+      track(fetch(`${r.file}?v=dev`)
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))))
         .then((geojson) => add(geojson, r))
         .catch((err) => {
           console.warn(`rail region ${r.region}`, err);

@@ -343,8 +343,97 @@ function discRadiusAt(z) {
   return s[s.length - 1][1];
 }
 
+// ---------- Fading in ----------
+// Track, stations and trains fade in as they arrive instead of popping in.
+// Each feature names its group ("g", a railroad), and a group that wasn't
+// drawn a moment ago is drawn at its feature-state "f", eased from 0 to 1.
+// None fades in before the basemap has drawn, and while a region's track or
+// stations, or a railroad's first trains, are still on the way (a move that
+// brings several countries in) they wait for one another, up to FADE_HOLD_MS.
+const FADE_MS = 450, FADE_HOLD_MS = 1500;
+const FADE = ["coalesce", ["feature-state", "f"], 1];
+let drawnGroups = {}; // source -> the groups drawn in it
+let fadeWaiting = new Map(); // "source|group" -> [source, group], at 0
+let fadeWaitingSince = 0, fadeTimer = 0, fadeTurn = 0;
+const fadeTurns = new Map(); // "source|group" -> the fade easing it
+let arriving = 0; // region files and first feeds on their way
+let basemapDrawn = false;
+map.once("load", () => (basemapDrawn = true));
+setTimeout(() => (basemapDrawn = true), 5000); // a slow basemap holds nothing up for long
+// Counts a fetch the fades wait on while it's out.
+function arrival(promise) {
+  arriving++;
+  const done = () => {
+    arriving--;
+    startFades();
+  };
+  promise.then(done, done);
+  return promise;
+}
+const groupsOf = (collection) => new Set(collection.features.map((f) => f.properties.g));
+// A source added with what it holds drawn as it is (a theme change redraws
+// the map without fading it back in).
+function addFadedSource(id, collection, opts = {}) {
+  map.addSource(id, { type: "geojson", data: collection, promoteId: "g", ...opts });
+  drawnGroups[id] = groupsOf(collection);
+}
+function setFaded(id, collection) {
+  const src = map.getSource(id);
+  if (!src) return;
+  const groups = groupsOf(collection), drawn = drawnGroups[id] || new Set();
+  for (const g of groups) {
+    if (drawn.has(g) || fadeWaiting.has(`${id}|${g}`)) continue;
+    map.setFeatureState({ source: id, id: g }, { f: 0 });
+    fadeWaiting.set(`${id}|${g}`, [id, g]);
+    fadeTurns.delete(`${id}|${g}`); // a fade still easing it stops
+  }
+  drawnGroups[id] = groups;
+  src.setData(collection);
+  startFades();
+}
+function startFades() {
+  clearTimeout(fadeTimer);
+  if (!fadeWaiting.size) return;
+  fadeWaitingSince ||= performance.now();
+  if (!basemapDrawn || (arriving > 0 && performance.now() - fadeWaitingSince < FADE_HOLD_MS)) {
+    fadeTimer = setTimeout(startFades, 100);
+    return;
+  }
+  const batch = [...fadeWaiting], turn = ++fadeTurn;
+  fadeWaiting = new Map();
+  fadeWaitingSince = 0;
+  for (const [k] of batch) fadeTurns.set(k, turn);
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const t0 = performance.now();
+  const step = () => {
+    const k = still ? 1 : Math.min(1, (performance.now() - t0) / FADE_MS);
+    for (const [key, [source, id]] of batch) {
+      if (fadeTurns.get(key) !== turn || !map.getSource(source)) continue;
+      if (k < 1) map.setFeatureState({ source, id }, { f: 1 - (1 - k) ** 3 });
+      else {
+        map.removeFeatureState({ source, id }, "f");
+        fadeTurns.delete(key);
+      }
+    }
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+// A station's opacity: one spread out to a later zoom (its "z") is drawn
+// from a zoom before it, fading in to be whole there (the zoom buttons land
+// on whole zooms). Too faint to see, it isn't hovered or tapped (shownAt).
+function zoomFade(from) {
+  const stops = [];
+  for (let k = Math.floor(from) - 1; k <= ALL_SHOWN; k++) stops.push(k, ["*", ["case", [">", ["get", "z"], k], 0, 1], FADE]);
+  return ["interpolate", ["linear"], ["zoom"], ...stops];
+}
+const shownAt = (f) => !(f.properties.z > map.getZoom() + 0.5);
+
 const MUTED_LAYERS = /^(transportation|building|landuse|landcover|park|aeroway)$/;
 function addLayers() {
+  drawnGroups = {};
+  fadeWaiting = new Map();
+  fadeTurns.clear();
   addImages();
   const colors = themeColors();
   // Our layers go above every basemap shape (roads, buildings, water) but below
@@ -387,7 +476,7 @@ function addLayers() {
   // Passenger rail network (USDOT NTAD), colored by the railroads that run on
   // each stretch. Track shared by several railroads (up to three) is drawn as
   // parallel strands, one color each, centered on the real alignment.
-  map.addSource("rail", { type: "geojson", data: railCollection(), tolerance: 0.6 });
+  addFadedSource("rail", railCollection(), { tolerance: 0.6 });
   const STRAND = [[3, 1], [6, 1.6], [9, 2.4], [12, 3.4], [15, 5]]; // [zoom, strand width px]
   const byZoom = (f) => ["interpolate", ["linear"], ["zoom"], ...STRAND.flatMap(([z, w]) => [z, f(w)])];
   map.addLayer({
@@ -397,7 +486,7 @@ function addLayers() {
     minzoom: 6,
     filter: ["!", ["has", "h"]], // hidden pieces are parallel duplicates kept for routing
     layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": colors.railCasing, "line-width": byZoom((w) => ["+", ["*", ["get", "n"], w], 2]) },
+    paint: { "line-color": colors.railCasing, "line-width": byZoom((w) => ["+", ["*", ["get", "n"], w], 2]), "line-opacity": FADE },
   }, firstSymbol);
   ["a", "b", "c"].forEach((prop, slot) => {
     map.addLayer({
@@ -408,7 +497,7 @@ function addLayers() {
       layout: { "line-join": "round", "line-cap": "butt" },
       paint: {
         "line-color": networkColor(prop),
-        "line-opacity": colors.railOpacity,
+        "line-opacity": ["*", colors.railOpacity, FADE],
         "line-width": byZoom((w) => w),
         // Strand i of n sits (i - (n-1)/2) strand-widths off the centerline.
         "line-offset": byZoom((w) => ["*", ["-", slot, ["/", ["-", ["get", "n"], 1], 2]], w]),
@@ -526,30 +615,35 @@ function addLayers() {
 
   // Stations sit under the trains. Intercity stops appear from regional zoom,
   // commuter stops once you're looking at a metro area.
-  map.addSource("stations", { type: "geojson", data: stationCollection() });
-  const stationPaint = (r) => ({
+  addFadedSource("stations", stationCollection());
+  const stationPaint = (r, from) => ({
     "circle-radius": r,
     "circle-color": colors.stationFill,
     "circle-stroke-color": ["get", "color"],
     "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 5, 1.3, 12, 2.2],
+    "circle-opacity": zoomFade(from),
+    "circle-stroke-opacity": zoomFade(from),
   });
+  // Each station from the zoom before the one stationCollection() spreads it
+  // out to (fading in, see zoomFade), and its name from that zoom.
+  const spreadTo = (prop) => [">=", ["zoom"], prop === "z" ? ["-", ["get", "z"], 1] : ["get", prop]];
   map.addLayer({
     id: "tt-stations-minor",
     layout: { visibility: state.showStations ? "visible" : "none" },
     type: "circle",
     source: "stations",
-    minzoom: 8,
-    filter: ["!", ["get", "major"]],
-    paint: stationPaint(["interpolate", ["linear"], ["zoom"], 8, 2.2, 12, 5, 15, 7]),
+    minzoom: DOT_FLOOR.minor,
+    filter: ["all", ["!", ["get", "major"]], spreadTo("z")],
+    paint: stationPaint(["interpolate", ["linear"], ["zoom"], 8, 2.2, 12, 5, 15, 7], DOT_FLOOR.minor),
   });
   map.addLayer({
     id: "tt-stations-major",
     layout: { visibility: state.showStations ? "visible" : "none" },
     type: "circle",
     source: "stations",
-    minzoom: 4.5,
-    filter: ["get", "major"],
-    paint: stationPaint(["interpolate", ["linear"], ["zoom"], 4.5, 1.8, 8, 3.6, 12, 6, 15, 8]),
+    minzoom: DOT_FLOOR.major,
+    filter: ["all", ["get", "major"], spreadTo("z")],
+    paint: stationPaint(["interpolate", ["linear"], ["zoom"], 4.5, 1.8, 8, 3.6, 12, 6, 15, 8], DOT_FLOOR.major),
   });
   // Selected station: a ping, a soft shadow, then a white disc ringed in the
   // station's color, lifted above the map.
@@ -580,20 +674,18 @@ function addLayers() {
       "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 4, 2.5, 12, 3.5],
     },
   });
-  // Station names (most of the basemap's place names are hidden): the
-  // busiest stations at every zoom, every intercity station from zoom 7, and
-  // every station from zoom 9. Labels that would collide are dropped, busiest
-  // stations first in line.
+  // Station names (most of the basemap's place names are hidden), spread
+  // out as stationCollection() does: the busiest stations' from 4.5,
+  // intercity stations' from 7 and the rest from 9 where there's room. Labels
+  // that would collide are dropped, busiest stations first in line.
   map.addLayer({
     id: "tt-station-labels",
     type: "symbol",
     source: "stations",
-    minzoom: 4.5,
+    minzoom: LABEL_FLOOR.top,
+    filter: spreadTo("lz"),
     layout: {
-      "text-field": ["step", ["zoom"],
-        ["case", ["get", "top"], ["get", "name"], ""],                 // busiest stations
-        7, ["case", ["any", ["get", "top"], ["get", "major"]], ["get", "name"], ""], // + every intercity station
-        9, ["get", "name"]],                                           // every station
+      "text-field": ["get", "name"],
       "text-font": ["case", ["get", "top"], ["literal", ["Noto Sans Bold"]], ["literal", ["Noto Sans Regular"]]],
       "text-size": ["interpolate", ["linear"], ["zoom"], 4.5, 10, 9, 11, 15, 13],
       "text-max-width": 8,
@@ -607,6 +699,7 @@ function addLayers() {
       "text-color": ["case", ["get", "major"], colors.text, colors.stationText],
       "text-halo-color": colors.halo,
       "text-halo-width": 1.5,
+      "text-opacity": FADE, // and MapLibre's own fade as a name comes in
     },
   });
 
@@ -621,7 +714,7 @@ function addLayers() {
     paint: { "line-color": ["get", "color"], "line-width": ["interpolate", ["linear"], ["zoom"], 11, 2, 16, 3.5] },
   }, "tt-station-ping");
 
-  map.addSource("trains", { type: "geojson", data: featureCollection() });
+  addFadedSource("trains", featureCollection());
 
   // Selected and tracked trains: a ping ring under an enlarged marker.
   const trainSel = ["==", ["get", "id"], ""];
@@ -646,7 +739,7 @@ function addLayers() {
       "icon-ignore-placement": true,
       "symbol-sort-key": ["get", "drawOrder"],
     },
-    paint: { "icon-opacity": ["case", ["get", "stale"], 0.45, 1] },
+    paint: { "icon-opacity": ["*", ["case", ["get", "stale"], 0.45, 1], FADE] },
   });
 
   // Each train is labeled with its plate once there's room for it. Plates
@@ -671,7 +764,7 @@ function addLayers() {
       "text-padding": 2,
       "symbol-sort-key": ["get", "labelOrder"],
     },
-    paint: { "text-color": "#121417" },
+    paint: { "text-color": "#121417", "text-opacity": FADE, "icon-opacity": FADE },
   });
 
   map.addLayer({
@@ -757,6 +850,7 @@ function featureCollection() {
         stale: Date.now() - t.updated > STALE_MS && !t.estimated,
         drawOrder: intercity ? 1 : 0,
         labelOrder: intercity ? 0 : 1,
+        g: t.agency,
       },
     });
   }
@@ -764,7 +858,7 @@ function featureCollection() {
 }
 
 function redraw() {
-  map.getSource("trains")?.setData(featureCollection());
+  setFaded("trains", featureCollection());
 }
 
 // ---------- The selected train's route ----------
@@ -914,25 +1008,83 @@ function stationLinesText(st, agencies = st.agencies) {
   return out.length > 2 ? `${out.slice(0, 2).join(" · ")} +${out.length - 2} more` : out.join(" · ");
 }
 
+// Stations are spread out so the map stays readable where a railroad stops
+// everywhere (Czechia's 1,800 intercity stops), the way a basemap thins its
+// place names: busiest first, each station shows from the zoom at which it
+// sits STATION_GAP px from every busier one showing by then, and its name
+// LABEL_GAP px from every busier name. Never before its layer's own zoom
+// (intercity stations from 4.5, the rest from 8; names from 7 and 9, the
+// busiest from 4.5), and every one by ALL_SHOWN. Whole zooms, as the layers'
+// filters see them.
+const STATION_GAP = 26, LABEL_GAP = 60, ALL_SHOWN = 13;
+const DOT_FLOOR = { major: 4.5, minor: 8 }, LABEL_FLOOR = { top: 4.5, major: 7, minor: 9 };
+const mercX = (lon) => (lon + 180) / 360;
+const mercY = (lat) => {
+  const s = Math.sin((Math.max(-85, Math.min(85, lat)) * Math.PI) / 180);
+  return 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI);
+};
+// Sets item[key] for each item, in order of priority: floorOf(item), or the
+// first whole zoom it's gap px from every earlier item showing by then.
+function spreadOut(items, gap, key, floorOf) {
+  // Two items further apart than this (in world widths) are gap px apart by
+  // zoom 4.5, before any floor: a grid of it finds the rest.
+  const reach = gap / (512 * 2 ** 4.5);
+  // Squared, the distance two items must be apart to be gap px apart at zoom z.
+  const clear2 = (z) => (gap / (512 * 2 ** z)) ** 2;
+  const grid = new Map(); // cell -> items placed in it
+  for (const it of items) {
+    let z = floorOf(it), mine = clear2(z);
+    const cx = Math.floor(it.x / reach), cy = Math.floor(it.y / reach);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (const o of grid.get((cx + dx) * 65536 + cy + dy) || []) {
+          // Too close at both their zooms: it waits until they're gap px apart.
+          const d2 = (o.x - it.x) ** 2 + (o.y - it.y) ** 2;
+          if (d2 >= mine || d2 >= o.clear2) continue;
+          z = d2 ? Math.min(ALL_SHOWN, Math.ceil(Math.log2(gap / (512 * Math.sqrt(d2))))) : ALL_SHOWN;
+          mine = clear2(z);
+        }
+      }
+    }
+    it[key] = z;
+    it.clear2 = mine;
+    const c = cx * 65536 + cy;
+    if (!grid.has(c)) grid.set(c, []);
+    grid.get(c).push(it);
+  }
+}
+
 function stationCollection() {
-  const features = [];
+  const items = [];
   for (const st of state.stations.values()) {
     const shown = stationAgencies(st);
     if (!shown.length) continue;
     const pos = stationPos(st);
-    features.push({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [pos.lon, pos.lat] },
-      properties: {
-        id: st.id,
-        name: st.name,
-        major: st.major && shown.some((a) => AGENCIES[a].kind === "intercity"),
-        color: AGENCIES[shown[0]].color,
-        rank: st.rank,
-        top: !!st.top,
-      },
-    });
+    const major = st.major && shown.some((a) => AGENCIES[a].kind === "intercity");
+    items.push({ st, shown, pos, major, top: !!st.top, x: mercX(pos.lon), y: mercY(pos.lat), dot: 0, label: 0, clear2: 0 });
   }
+  items.sort((a, b) => b.top - a.top || b.st.rank - a.st.rank || (a.st.id < b.st.id ? -1 : 1));
+  const dotFloor = (it) => (it.major ? DOT_FLOOR.major : DOT_FLOOR.minor);
+  spreadOut(items, STATION_GAP, "dot", dotFloor);
+  // A name never shows before its station, except the busiest commuter
+  // stations', named before their railroads' stations show at all.
+  spreadOut(items, LABEL_GAP, "label", (it) => Math.max(it.top ? LABEL_FLOOR.top : it.major ? LABEL_FLOOR.major : LABEL_FLOOR.minor, it.top && !it.major ? 0 : it.dot));
+  // Drawn least busy first, so a busier station sits on top where they meet.
+  const features = items.reverse().map(({ st, shown, pos, major, top, dot, label }) => ({
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [pos.lon, pos.lat] },
+    properties: {
+      id: st.id,
+      name: st.name,
+      major,
+      color: AGENCIES[shown[0]].color,
+      rank: st.rank,
+      top,
+      z: dot > dotFloor({ major }) ? dot : 0, // 0: from its layer's own zoom
+      lz: label > LABEL_FLOOR.top ? label : 0,
+      g: shown[0], // fades in with its railroad (see setFaded)
+    },
+  }));
   return { type: "FeatureCollection", features };
 }
 
@@ -967,7 +1119,7 @@ function railCollection() {
     const p = f.properties;
     const nets = [p.a, p.b, p.c].filter((n) => n && networkShown(n));
     if (!nets.length) continue;
-    const props = { n: nets.length, a: nets[0], b: nets[1], c: nets[2] };
+    const props = { n: nets.length, a: nets[0], b: nets[1], c: nets[2], g: nets[0] };
     if (p.h) props.h = 1;
     features.push({ type: "Feature", geometry: f.geometry, properties: props });
   }
@@ -975,7 +1127,7 @@ function railCollection() {
 }
 
 function redrawRail() {
-  map.getSource("rail")?.setData(railCollection());
+  setFaded("rail", railCollection());
   redrawDisruptions();
   applyFocus();
 }
@@ -1121,7 +1273,7 @@ function disruptionCard(id) {
 }
 
 function redrawStations() {
-  map.getSource("stations")?.setData(stationCollection());
+  setFaded("stations", stationCollection());
   map.getSource("footprints")?.setData(footprintCollection());
 }
 
@@ -1207,7 +1359,7 @@ function loadRailRegions() {
       redrawRail();
       state.rail.add(geojson);
       resnap();
-    }))
+    }, arrival))
     .catch((err) => console.warn("rail regions", err));
 }
 
@@ -1219,7 +1371,7 @@ let regionData = null;
 function dataRegions() {
   if (!DATA_REGIONS.length) return null;
   return (regionData ??= import("./regiondata.js?v=dev").then((m) => {
-    m.watchData(map, addRegion);
+    m.watchData(map, addRegion, arrival);
     return m;
   }).catch((err) => {
     console.warn("data regions", err);
@@ -1497,7 +1649,9 @@ async function poll(src, attempt = 0, once = false) {
   if ((once || sourceWanted(src)) && (!document.hidden || !state.sourceStatus[src.id]?.at)) {
     polling.add(src.id);
     try {
-      state.bySource[src.id] = await fetchSource(src, RELAY);
+      // A railroad's first trains are waited for by the fades (see arrival()).
+      const fetching = fetchSource(src, RELAY);
+      state.bySource[src.id] = await (state.sourceStatus[src.id]?.at ? fetching : arrival(fetching));
       state.sourceStatus[src.id] = { status: "ok", at: Date.now() };
       attempt = 0;
     } catch (err) {
@@ -5086,7 +5240,7 @@ map.on("mousemove", (e) => {
   // A train or station under the pointer (or its callout) wins over the track.
   const over = ["tt-trains", ...STATION_LAYERS, "tt-station-selected-label"].filter((l) => map.getLayer(l));
   const near = [[e.point.x - 8, e.point.y - 8], [e.point.x + 8, e.point.y + 8]];
-  if (hoverStation || map.queryRenderedFeatures(near, { layers: over }).length) {
+  if (hoverStation || map.queryRenderedFeatures(near, { layers: over }).some(shownAt)) {
     if (popup._railHover) popup.remove();
     popup._railHover = false;
     return;
@@ -5121,7 +5275,7 @@ function applyStationCallouts() {
   if (!map.getLayer("tt-station-selected-label")) return;
   const ids = [state.station, hoverStation].filter(Boolean);
   map.setFilter("tt-station-selected-label", ["in", ["get", "id"], ["literal", ids]]);
-  map.setFilter("tt-station-labels", ["!", ["in", ["get", "id"], ["literal", ids]]]);
+  map.setFilter("tt-station-labels", ["all", [">=", ["zoom"], ["get", "lz"]], ["!", ["in", ["get", "id"], ["literal", ids]]]]);
 }
 function hoverStationTo(id) {
   if (id === hoverStation) return;
@@ -5142,7 +5296,7 @@ map.on("click", (e) => {
   }).sort((a, b) => a[1] - b[1])[0]?.[0];
   const train = nearest(map.queryRenderedFeatures(box, { layers: ["tt-trains", "tt-labels"].filter((l) => map.getLayer(l)) }));
   if (train) return select(train.properties.id);
-  const station = map.queryRenderedFeatures(box, { layers: [...STATION_LAYERS, "tt-station-selected-label"].filter((l) => map.getLayer(l)) })[0];
+  const station = map.queryRenderedFeatures(box, { layers: [...STATION_LAYERS, "tt-station-selected-label"].filter((l) => map.getLayer(l)) }).find(shownAt);
   if (station) return selectStation(station.properties.id);
   // A disruption, tapped (phones have no hover): its card, until the next tap.
   const broken = map.getLayer("tt-disruption-gap") && map.queryRenderedFeatures([[e.point.x - 8, e.point.y - 8], [e.point.x + 8, e.point.y + 8]], { layers: ["tt-disruption-gap"] })[0];
@@ -5168,8 +5322,9 @@ function goHome() {
 for (const layer of STATION_LAYERS) {
   map.on("mousemove", layer, (e) => {
     if (map.queryRenderedFeatures(e.point, { layers: ["tt-trains"] }).length) return;
-    map.getCanvas().style.cursor = "pointer";
-    if (canHover) hoverStationTo(e.features[0].properties.id);
+    const f = e.features.find(shownAt);
+    map.getCanvas().style.cursor = f ? "pointer" : "";
+    if (canHover) hoverStationTo(f?.properties.id ?? null);
   });
   map.on("mouseleave", layer, () => {
     map.getCanvas().style.cursor = "";
