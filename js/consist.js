@@ -26,7 +26,7 @@ const FLEETS = {
     [2301, 2310, "bilevelCab"], [421, 423, "bilevelCab"]],
   sprinter: [[4001, 4012, "desiro"]],
   upx: [[1001, 1012, "upxCar"], [3001, 3006, "upxMid"]],
-  ontarionorthland: [[1800, 1809, "gp38"], [416, 417, "onBaggage"], [650, 661, "onCoach"], [750, 750, "onDiner"]],
+  ontarionorthland: [[1800, 1809, "gp38"], [203, 203, "onApu"], [416, 417, "onBaggage"], [650, 661, "onCoach"], [750, 750, "onDiner"]],
   // Alaska Railroad (its roster, alaskarails.org, September 2026): HEP
   // SD70MACs 4317-4328, GP40-2s 3001-3015; baggage cars 100-103, coaches
   // 205-210, café 301, diners 401 and 451-452, Budd domes 521-523, GoldStar
@@ -275,6 +275,9 @@ const TYPES = {
   onCoach: { name: "Rebuilt RTC-85 coach", kind: "coach" },
   onDiner: { name: "Rebuilt RTC-85 dining car", kind: "coach" },
   onBaggage: { name: "Baggage car", kind: "coach", baggage: true },
+  onApu: { name: "Power car (rebuilt F9B)", kind: "diesel" },
+  chainCar: { name: "Flat car with vehicles", kind: "freight" },
+  boxcar: { name: "Boxcar (freight and mail)", kind: "freight" },
   // Other
   autorack: { name: "Auto carrier", kind: "autorack" },
 };
@@ -670,11 +673,13 @@ function typicalFor(t, reported) {
     // WeGo Star (Nashville–Lebanon): an F40 at the Lebanon end with Budd
     // gallery cars and a cab car, usually 3 cars behind it.
     case "star": return set("F40PH locomotive with gallery bi-levels and a cab car", ["f40", 1], ["gallery", 2], ["galleryCab", 1]);
-    // Polar Bear Express (Cochrane–Moosonee): a mixed train, a GP38-2 (or
-    // two) with freight cars and a power car ahead of the baggage car,
-    // coaches and dining car; the freight cars are left out here.
-    case "ontarionorthland": return set("GP38-2 locomotive with a baggage car, rebuilt coaches and a dining car (freight cars too, not drawn)",
-      ["gp38", 1], ["onBaggage", 1], ["onCoach", 3], ["onDiner", 1]);
+    // Polar Bear Express (Cochrane–Moosonee): a mixed train, usually two
+    // GP38-2s with the chain cars carrying vehicles and a boxcar for freight
+    // and mail behind them, then the power car (APU 203), the baggage car,
+    // coaches and the dining car; about 14 cars (railpictures.net,
+    // 2008-2021).
+    case "ontarionorthland": return set("GP38-2 locomotives with vehicle flat cars and a boxcar, the power car, a baggage car, rebuilt coaches and a dining car",
+      ["gp38", 2], ["chainCar", 2], ["boxcar", 1], ["onApu", 1], ["onBaggage", 1], ["onCoach", 3], ["onDiner", 1]);
     // Alaska Railroad (its schedules and roster; seat61; Wikipedia, 2026).
     // Hurricane Turn: a GP40-2, a baggage car, two coaches and a cab car
     // rebuilt from an F40PH at the far end. Aurora Winter Train (September to

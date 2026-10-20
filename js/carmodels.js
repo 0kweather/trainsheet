@@ -2704,6 +2704,78 @@ export const onDiner = (c) => bilevel(c, { ...RTC, paint: rtcPaint, badge: rtcEm
   rows: [{ xs: seq(6.0, 4.15, 8), y: 7.1, w: 3.3, h: 2.6, r: 0.35 }, { xs: [48.5, 61.0], y: 7.1, w: 4.6, h: 2.6, r: 0.35 }, { xs: [70.0, 74.5], y: 8.4, w: 1.6, h: 1.3, r: 0.2 }] });
 export const onBaggage = (c) => bilevel(c, { ...RTC, paint: rtcPaint, badge: { ...rtcEmblem, y: 7.6, h: 2.8 },
   doors: [{ x: 15.0, w: 6.5, y0: 3.95, y1: 11.2, glass: false, grabs: false }, { x: 63.5, w: 6.5, y0: 3.95, y1: 11.2, glass: false, grabs: false }], rows: [] });
+// The Polar Bear Express is a mixed train: behind the locomotives, flat
+// "chain cars" carrying the vehicles that can't drive to Moosonee, a boxcar
+// for freight and mail, and the train's power car (railpictures.net,
+// 2008-2021; Ontario Northland).
+// APU 203, the power car: an EMD F9B booster unit (ex-Milwaukee Road),
+// rebuilt in 1991 as a generator car for the passenger cars: the cabless
+// F-unit body, 50 ft 8 in over the couplers and about 15 ft tall, its
+// rounded roof, a long louvered filter grille high along the side, a door
+// in each flat end; Blomberg trucks. Still in Ontario Northland's older
+// dress in 2021 (Feronia, March 2021): cream, a band of ribbed light gray
+// along the bottom, an orange, a sky blue and a dark blue stripe slanting
+// up into the ON chevron behind the grilles; "203 Ontario Northland" small
+// under them.
+export function onApu(c) {
+  const { L } = c, sill = 4.3, roof = 15.0;
+  const d = poly([[0.9, sill], [L - 0.9, sill], [L - 0.9, roof - 1.6], ["q", L - 0.9, roof, L - 2.6, roof], [2.6, roof], ["q", 0.9, roof, 0.9, roof - 1.6]]);
+  let s = truck(L / 2 - 15.0, { wb: 9.0, d: 40, kind: "loco", top: sill }) + truck(L / 2 + 15.0, { wb: 9.0, d: 40, kind: "loco", top: sill });
+  s += path(poly([[16, sill], [L - 16, sill], [L - 16, 2.4], ["q", L - 16, 1.6, L - 16.8, 1.6], [16.8, 1.6], ["q", 16, 1.6, 16, 2.4]]), "currentColor", 0, 'opacity="0.82"');
+  let liv = rect(0, 0, L, 17, "#ece6d6") + rect(0, 0, L, 6.6, "#c9ccd0") + lines(Array.from({ length: 6 }, (_, k) => [0, 4.7 + k * 0.32, L, 4.7 + k * 0.32]), "rgba(0,0,0,0.14)", 0.5);
+  liv += rect(0, 6.6, L, 0.18, "#8d939a");
+  liv += path(poly([[19.5, 6.8], [23.6, 6.8], [24.6, 10.4], [20.5, 10.4]]), "#e8822a") + path(poly([[23.6, 6.8], [25.4, 6.8], [26.4, 10.4], [24.6, 10.4]]), "#7fb1d8");
+  liv += path(poly([[26.0, 6.8], [27.1, 6.8], [28.1, 10.4], [27.0, 10.4]]), "#2c4a8c") + rect(27.1, 7.4, L - 30, 0.25, "#9aa2ab");
+  liv += path(poly([[29.6, 8.0], [30.9, 8.0], [31.9, 9.0], [30.9, 10.0], [29.6, 10.0], [30.6, 9.0]]), "#2c4a8c") + path(poly([[31.6, 8.0], [32.9, 8.0], [33.9, 9.0], [32.9, 10.0], [31.6, 10.0], [32.6, 9.0]]), "#2c4a8c");
+  liv += rect(0, roof - 1.2, L, 1.5, "rgba(0,0,0,0.08)");
+  s += path(d, "#ece6d6") + clipped(d, liv);
+  s += rect(5.0, 11.0, L - 14, 2.4, "rgba(20,22,25,0.5)", 0.4) + slats(5.0, 11.0, L - 14, 2.4, 0.35, "rgba(255,255,255,0.22)");
+  s += goLetters(c, 11.5, 9.9, 0.55, "203 Ontario Northland", "#2a2d31", { weight: 500 });
+  for (const x of [1.4, L - 3.4]) s += rect(x, sill + 0.4, 2.0, 6.0, "none", 0.45, 'rx="0.12"');
+  for (const x of [18, 24, 30]) s += path(`M${x - 1.8} ${roof}Q${x} ${roof + 0.7} ${x + 1.8} ${roof}Z`, C.steelDark, 0.4);
+  s += rect(36, roof - 0.05, 1.2, 0.6, "currentColor");                                               // the generator's exhaust
+  return s + outlineOf(d);
+}
+// A road vehicle on a flat car, seen from the side: body, glass, wheels.
+// kind 0: a pickup; 1: a sport-utility vehicle. x: its rear bumper, y: deck.
+function vehicle(x, y, kind, color) {
+  const w = kind ? 15.8 : 18.6, h = kind ? 5.9 : 6.2;
+  const body = kind
+    ? poly([[x, y + 1.2], [x, y + 3.6], [x + 0.6, h + y - 0.3], [x + 11.3, h + y - 0.2], [x + 13.0, y + 3.7], [x + w, y + 3.4], [x + w, y + 1.2]])
+    : poly([[x, y + 1.2], [x, y + 3.5], [x + 6.9, y + 3.5], [x + 7.4, h + y - 0.2], [x + 12.4, h + y - 0.2], [x + 14.4, y + 3.8], [x + w, y + 3.4], [x + w, y + 1.2]]);
+  let s = path(body, color, 0.5);
+  s += kind ? path(poly([[x + 1.4, y + 3.8], [x + 1.8, h + y - 0.7], [x + 10.9, h + y - 0.6], [x + 12.4, y + 3.8]]), C.glass)
+    : path(poly([[x + 7.9, y + 3.8], [x + 8.2, h + y - 0.7], [x + 12.1, h + y - 0.6], [x + 13.8, y + 3.8]]), C.glass);
+  for (const wx of kind ? [x + 2.9, x + w - 3.0] : [x + 3.2, x + w - 3.4]) s += circle(wx, y + 1.25, 1.25, "currentColor") + circle(wx, y + 1.25, 0.6, C.steelDark);
+  return s;
+}
+// The chain cars: 89 ft flat cars (bulkheadless, chain tie-downs along
+// the side sill), each with four vehicles; the colors are what anyone ships.
+const VEHICLE_COLORS = ["#8e1f24", "#d5d8dc", "#2b2f36", "#5d6b7a", "#e9e9e6", "#24324f"];
+export function chainCar(c) {
+  const { L } = c, deck = 3.95;
+  let s = truck(L / 2 - 33, { wb: 5.8, d: 36, top: 3.2 }) + truck(L / 2 + 33, { wb: 5.8, d: 36, top: 3.2 });
+  s += path(poly([[0.9, deck], [L - 0.9, deck], [L - 0.9, 3.3], [L - 12, 2.6], [12, 2.6], [0.9, 3.3]]), "#2c2f33", 0.5);   // fish-belly side sill
+  s += lines(Array.from({ length: 22 }, (_, k) => [3 + k * 3.9, 3.1, 3 + k * 3.9, deck - 0.1]), "rgba(255,255,255,0.18)", 0.5);
+  s += rect(0.4, 2.6, 1.0, 0.6, "currentColor") + rect(L - 1.4, 2.6, 1.0, 0.6, "currentColor");
+  const k0 = (c.index ?? 0) % VEHICLE_COLORS.length;
+  [1.8, 22.2, 43.4, 66.2].forEach((x, i) => { s += vehicle(x, deck, (i + k0) % 2, VEHICLE_COLORS[(i + k0) % VEHICLE_COLORS.length]); });
+  return s;
+}
+// A 50 ft boxcar (the express and mail car): ribbed steel sides in boxcar
+// red, a plug door mid-car, a running board end ladder; 15 ft 6 in tall.
+export function boxcar(c) {
+  const { L } = c, sill = 3.6, roof = 15.5;
+  const d = poly([[1.0, sill], [L - 1.0, sill], [L - 1.0, roof - 0.4], [L - 1.4, roof], [1.4, roof], [1.0, roof - 0.4]]);
+  let s = truck(L / 2 - 20.2, { wb: 5.8, d: 36, top: 3.2 }) + truck(L / 2 + 20.2, { wb: 5.8, d: 36, top: 3.2 });
+  s += rect(0, 2.55, 1.2, 0.6, "currentColor") + rect(L - 1.2, 2.55, 1.2, 0.6, "currentColor");      // couplers
+  let liv = rect(0, 0, L, 17, "#7a2e24") + lines(Array.from({ length: 16 }, (_, k) => [2.5 + k * 3.05, sill + 0.2, 2.5 + k * 3.05, roof - 0.3]), "rgba(0,0,0,0.22)", 0.7);
+  s += path(d, "#7a2e24") + clipped(d, liv);
+  s += rect(L / 2 - 5, sill + 0.1, 10, roof - sill - 0.7, "#6e2920", 0.6) + lines([[L / 2, sill + 0.3, L / 2, roof - 0.9]], "rgba(0,0,0,0.3)", 0.6);
+  s += lines([[L / 2 - 6.0, sill + 2, L / 2 + 6.0, sill + 2], [L / 2 - 6.0, roof - 1.4, L / 2 + 6.0, roof - 1.4]], "#3a3d41", 1.1);
+  s += lines([[1.4, 4.4, 1.4, 12.4], [L - 1.4, 4.4, L - 1.4, 12.4]].concat(Array.from({ length: 6 }, (_, k) => [1.1, 5 + k * 1.3, 1.9, 5 + k * 1.3])), "#e8e2d2", 0.6);
+  return s + outlineOf(d);
+}
 
 // ===================== VIA Rail's Budd stainless fleet =====================
 // Budd lightweights built for Canadian Pacific (1954-55), rebuilt for head-end
@@ -4234,6 +4306,9 @@ export const MODELS = {
   onCoach: M(onCoach, 85),
   onDiner: M(onDiner, 85),
   onBaggage: M(onBaggage, 85),
+  onApu: M(onApu, 50.67),
+  chainCar: M(chainCar, 89, false, (c) => String((c.index ?? 0) % VEHICLE_COLORS.length)),
+  boxcar: M(boxcar, 55.5),
   amfleet: M(amfleet1, 85.33),
   amfleet2: M(amfleet2, 85.33),
   amfleetBusiness: M(amfleetBusiness, 85.33),
