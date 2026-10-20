@@ -27,7 +27,12 @@ const FLEETS = {
   sprinter: [[4001, 4012, "desiro"]],
   upx: [[1001, 1012, "upxCar"], [3001, 3006, "upxMid"]],
   ontarionorthland: [[1800, 1809, "gp38"], [416, 417, "onBaggage"], [650, 661, "onCoach"], [750, 750, "onDiner"]],
-  alaska: [[4317, 4328, "sd70mac"], [3001, 3015, "gp402"], [205, 210, "akCoach"]],
+  // Alaska Railroad (its roster, alaskarails.org, September 2026): HEP
+  // SD70MACs 4317-4328, GP40-2s 3001-3015; baggage cars 100-103, coaches
+  // 205-210, café 301, diners 401 and 451-452, Budd domes 521-523, GoldStar
+  // domes 651-656, DMU 751.
+  alaska: [[4317, 4328, "sd70mac"], [3001, 3015, "gp402"], [100, 103, "akBaggage"], [205, 210, "akCoach"], [301, 301, "akDiner"],
+    [401, 401, "akDiner"], [451, 452, "akDiner"], [521, 523, "akDome"], [651, 656, "akGoldStar"], [751, 751, "akDmu"]],
   star: [[120, 122, "f40"], [381, 381, "f40"], [701, 733, "gallery"], [790, 795, "galleryCab"]],
   texrail: [[101, 108, "flirtCar"]],
   silverline: [[901, 908, "flirtCar"]],
@@ -263,6 +268,10 @@ const TYPES = {
   akCoach: { name: "Coach", kind: "coach" },
   akDiner: { name: "Café or dining car", kind: "coach" },
   akBaggage: { name: "Baggage car", kind: "coach", baggage: true },
+  akDome: { name: "Budd dome coach", kind: "coach", dome: true },
+  akGoldStar: { name: "GoldStar dome car", kind: "coach", dome: true },
+  akDmu: { name: "Colorado Railcar DMU", kind: "emu" },
+  akCab: { name: "Cab car (rebuilt F40PH)", kind: "diesel" },
   onCoach: { name: "Rebuilt RTC-85 coach", kind: "coach" },
   onDiner: { name: "Rebuilt RTC-85 dining car", kind: "coach" },
   onBaggage: { name: "Baggage car", kind: "coach", baggage: true },
@@ -666,16 +675,27 @@ function typicalFor(t, reported) {
     // coaches and dining car; the freight cars are left out here.
     case "ontarionorthland": return set("GP38-2 locomotive with a baggage car, rebuilt coaches and a dining car (freight cars too, not drawn)",
       ["gp38", 1], ["onBaggage", 1], ["onCoach", 3], ["onDiner", 1]);
-    // Alaska Railroad. Aurora Winter Train (Anchorage–Fairbanks, weekends
-    // in winter): an SD70MAC with a baggage car, a café or dining car and
-    // coaches. Hurricane Turn: a GP40-2 with a coach and one of the F40s
-    // rebuilt as power and cab cars (P31, P32) at the far end. The summer
-    // trains (Denali Star, Coastal Classic, Glacier Discovery) add domes,
-    // drawn here as coaches.
-    case "alaska":
-      if (/Hurricane/.test(t.route || "")) return set("GP40-2 locomotive with a coach and an F40 power and cab car", ["gp402", 1], ["akCoach", 1], ["f40", 1]);
-      if (/Aurora/.test(t.route || "")) return set("SD70MAC locomotive with a baggage car, a café car and coaches", ["sd70mac", 1], ["akBaggage", 1], ["akDiner", 1], ["akCoach", 3]);
-      return set("SD70MAC locomotive with coaches, a dining car and dome cars (domes drawn as coaches)", ["sd70mac", 1], ["akBaggage", 1], ["akCoach", 3], ["akDiner", 1], ["akCoach", 2]);
+    // Alaska Railroad (its schedules and roster; seat61; Wikipedia, 2026).
+    // Hurricane Turn: a GP40-2, a baggage car, two coaches and a cab car
+    // rebuilt from an F40PH at the far end. Aurora Winter Train (September to
+    // May): an SD70MAC with a baggage car, a dining car and coaches. Denali
+    // Star (May to September): two SD70MACs, a baggage car, the GoldStar
+    // domes, then a café, a dome and coaches; Coastal Classic the same,
+    // shorter. Glacier Discovery: DMU 751 leading coaches and a baggage car,
+    // a GP38-2 at the rear. A reported car or locomotive only one train
+    // has picks that train.
+    case "alaska": {
+      const r = t.route || "";
+      if (/Hurricane/.test(r) || reported === "gp402") return set("GP40-2 locomotive with a baggage car, two coaches and a cab car rebuilt from an F40PH",
+        ["gp402", 1], ["akBaggage", 1], ["akCoach", 2], ["akCab", 1]);
+      if (/Denali/.test(r) || reported === "akGoldStar" || reported === "akDome") return set("SD70MAC locomotives with a baggage car, GoldStar domes, a café car, a dome and coaches (private Wilderness Express domes behind some trains)",
+        ["sd70mac", 2], ["akBaggage", 1], ["akGoldStar", 2], ["akDiner", 1], ["akDome", 1], ["akCoach", 3]);
+      if (/Coastal/.test(r)) return set("SD70MAC locomotives with a baggage car, a GoldStar dome, a café car and coaches",
+        ["sd70mac", 2], ["akBaggage", 1], ["akGoldStar", 1], ["akDiner", 1], ["akCoach", 3]);
+      if (/Glacier/.test(r) || reported === "akDmu") return set("DMU 751 leading coaches and a baggage car, a GP38-2 locomotive at the rear",
+        ["akDmu", 1], ["akCoach", 2], ["akBaggage", 1], ["gp38", 1]);
+      return set("SD70MAC locomotive with a baggage car, a dining car and coaches", ["sd70mac", 1], ["akBaggage", 1], ["akDiner", 1], ["akCoach", 3]);
+    }
     default: return TYPICAL[t.agency]?.(t, reported) || null;
   }
 }

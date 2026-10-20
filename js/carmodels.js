@@ -909,7 +909,7 @@ export function bilevel(c, spec) {
   }
   s += path(d, spec.base ?? C.steel) + clipped(d, liv);
   for (const dr of spec.doors || []) {
-    s += door(dr.x, dr.y0, dr.w, dr.y1 - dr.y0, { leaves: dr.leaves ?? 1, glassY: dr.glassY ?? 0.45, glassH: dr.glassH ?? 0.38, grabs: dr.grabs ?? true, ...(dr.fill ? { fill: dr.fill } : {}) });
+    s += door(dr.x, dr.y0, dr.w, dr.y1 - dr.y0, { leaves: dr.leaves ?? 1, glassY: dr.glassY ?? 0.45, glassH: dr.glassH ?? 0.38, grabs: dr.grabs ?? true, glass: dr.glass ?? true, ...(dr.fill ? { fill: dr.fill } : {}) });
   }
   for (const [x, w, h, y = roof] of spec.roofItems || []) s += rect(x, y - 0.05, w, h, C.steelDark, 0.4, 'rx="0.2"');
   if (spec.extra) s += spec.extra(c, g);
@@ -2568,26 +2568,122 @@ export const airoCab = (c) => bilevel({ ...c, cabL: true }, {
 });
 
 // ===================== Alaska Railroad =====================
-// Its passenger cars (Enprotech coaches 205-210, 1990s; the café and dining
-// cars and baggage cars in the same dress): 85 ft, about 14 ft tall, a
-// vestibule at each end, a dozen big picture windows. Navy; a ribbed silver
-// roof over a thin yellow eave stripe; a wide yellow band from the window
-// sills two thirds of the way down the lower side; ALASKA in navy on the
-// yellow, the railroad's emblem by the vestibule at window height.
-const AKCAR = { roof: 14.0, sill: 3.9, cornerR: 1.1, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6, diaphragm: [4.25, 12.6],
-  doors: [{ x: 1.3, w: 2.6, y0: 4.0, y1: 11.1, glassY: 0.55, glassH: 0.3 }, { x: 81.1, w: 2.6, y0: 4.0, y1: 11.1, glassY: 0.55, glassH: 0.3 }],
-  roofItems: [[36, 13, 0.4]] };
-const akCarPaint = (c, g) => rect(0, 0, g.L, 17, AK.navy) + rect(0, 12.9, g.L, 3, "#c3c8cd") + flutes(0, g.L, 13.0, 14.2, 0.3) +
-  rect(0, 12.35, g.L, 0.3, AK.yellow) + rect(0, 5.0, g.L, 2.25, AK.yellow);
-const akName = (x) => ({ x, y: 6.12, h: 1.6, logo: "alaska-word" });
-export const akCoach = (c) => bilevel(c, { ...AKCAR, paint: akCarPaint, badge: [akName(42.5), { x: 6.4, y: 8.9, h: 1.9 }],
-  rows: [{ xs: seq(9.0, 5.75, 12), y: 7.45, w: 5.0, h: 3.0, r: 0.4 }] });
-// Café and dining cars: the dining room's windows, the kitchen end's few small ones.
-export const akDiner = (c) => bilevel(c, { ...AKCAR, paint: akCarPaint, badge: [akName(30), { x: 6.4, y: 8.9, h: 1.9 }],
-  rows: [{ xs: seq(9.0, 5.75, 8), y: 7.45, w: 5.0, h: 3.0, r: 0.4 }, { xs: [57.5, 64.0, 70.5], y: 8.6, w: 1.8, h: 1.5, r: 0.2 }] });
-// Baggage car: no windows, a wide door each side of the middle.
-export const akBaggage = (c) => bilevel(c, { ...AKCAR, paint: akCarPaint, badge: [{ ...akName(42.5), h: 2.0 }],
-  doors: [{ x: 15.5, w: 7.0, y0: 4.0, y1: 11.6, glass: false, grabs: false }, { x: 62.5, w: 7.0, y0: 4.0, y1: 11.6, glass: false, grabs: false }], rows: [] });
+// Its passenger cars, from the railroad's own drawings and painting
+// specification (Alaska Railroad Engineering: "ARR 205-210 Paint and
+// Repairs", 2022; "ARR 451" and "ARR 521, 522, 523 Styling", 2016;
+// "ARR 751 DMU", 2025; vestibule upgrade and paint specification for
+// 651-656, 2020): blue all over, roof too, with two yellow stripes the
+// length of the side, 21 7/8 in wide from 57 1/4 to 79 1/8 in above the rail
+// and 3 7/8 in wide from 131 7/8 to 135 3/4 in; ALASKA in blue on the wide
+// stripe at the left end of each side, 9 1/4 in tall and 10 ft 3 in long,
+// centered over the truck (the road number at the right end); the 24 in
+// ARR roundel 18 in from the right end of the side, centered on the blue,
+// where it fits; silver trucks, a black underframe.
+const AK_STRIPES = (L) => rect(0, 0, L, 19, AK.navy) + rect(0, 4.77, L, 1.82, AK.yellow) + rect(0, 10.99, L, 0.32, AK.yellow);
+// ALASKA as painted: an extended slab serif, stretched to its 10 ft 3 in.
+const akLetters = (c, x, text = "ALASKA", w = 10.25, h = 0.77, y = 5.69) =>
+  `<text transform="translate(${x} ${y}) scale(${c.mirrored ? -1 : 1} -1)" y="${(h * 0.36).toFixed(2)}" font-size="${h}" text-anchor="middle" ` +
+  `textLength="${w}" lengthAdjust="spacingAndGlyphs" font-weight="700" font-family="Clarendon, Rockwell, Georgia, Times New Roman, serif" fill="${AK.navy}">${text}</text>`;
+const akRoundel = (c, x) => badge(c, x, 8.79, 2.0);
+const akDoor = (x) => ({ x, w: 2.6, y0: 4.0, y1: 11.1, glassY: 0.55, glassH: 0.3 });
+const AKCAR = { roof: 13.83, sill: 3.9, cornerR: 1.1, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6, diaphragm: [4.25, 12.6],
+  roofItems: [[36, 13, 0.4]], badge: false };
+const akCarPaint = (c, g) => AK_STRIPES(g.L) + rect(0, g.roof - 0.8, g.L, 1.2, "rgba(0,0,0,0.12)");
+// Paired picture windows: a mullion down the middle.
+const pairs = (xs, y, w, h) => xs.map((x) => win(x, y, w, h, 0.3) + line(x + w / 2, y + 0.06, x + w / 2, y + h - 0.06, C.gasket, 0.9)).join("");
+// Coaches 205-210 (Daewoo, 1989): 85 ft, 13 ft 10 in; one vestibule a side,
+// at opposite corners (this side's at the B end, on the left); a single
+// window, then ten paired picture windows 4 ft tall; trucks about 57 ft
+// 9 in apart.
+export const akCoach = (c) => bilevel(c, { ...AKCAR, paint: akCarPaint, trucks: { ...AKCAR.trucks, centers: 57.8 },
+  doors: [akDoor(1.4)], rows: [{ xs: [13.15], y: 6.8, w: 2.6, h: 3.55, r: 0.3 }],
+  extra: (c) => pairs(seq(18.2, 6.37, 10), 6.8, 5.39, 3.55) + akLetters(c, 13.6) + akRoundel(c, 82.0) });
+// Dining and café cars (451-452, Pullman-Standard 1958; 401 and 301,
+// Daewoo, alike outside): no side door; the kitchen in the middle; at each
+// end of it a group of big windows (three toward the A end, four toward
+// the B), small transom windows above each; the roundel at each end.
+export const akDiner = (c) => bilevel(c, { ...AKCAR, paint: akCarPaint,
+  rows: [{ xs: [7.08, 13.97, 20.86, 51.5, 58.3, 65.2, 72.1], y: 6.75, w: 5.35, h: 3.75, r: 0.35 },
+    { xs: [7.08, 13.97, 20.86, 51.5, 58.3, 65.2, 72.1], y: 11.6, w: 5.35, h: 1.05, r: 0.25 }],
+  extra: (c) => akLetters(c, 12.75) + akRoundel(c, 3.4) + akRoundel(c, 81.6) });
+// Baggage cars 100-103 (85 ft; they carry the generators that power the
+// train): no windows, two baggage doors a side either side of the middle.
+export const akBaggage = (c) => bilevel(c, { ...AKCAR, paint: akCarPaint,
+  doors: [{ x: 28.0, w: 6.6, y0: 4.0, y1: 11.4, glass: false, grabs: false }, { x: 51.3, w: 6.6, y0: 4.0, y1: 11.4, glass: false, grabs: false }], rows: [],
+  extra: (c) => akLetters(c, 12.75) + akRoundel(c, 81.6) + rect(60.5, 1.4, 11, 2.4, "currentColor", 0, 'opacity="0.8" rx="0.2"') });
+// Budd dome coaches 521-523 (1954, ex-SP&S, Northern Pacific, Burlington
+// Northern and Amtrak): 85 ft, 82 ft 10 in over the end sills, trucks 59 ft
+// 6 in apart, a fluted roof 13 ft 3 in up and the dome to 15 ft 8 in, over
+// the middle from 22 to 47 ft: six panes a side in two rows and an angled
+// pane at each end. Below, nine windows single and paired, the vestibule at
+// the right end, the roundel beside it.
+export const akDome = (c) => bilevel(c, { ...AKCAR, roof: 13.25, paint: (c, g) => AK_STRIPES(g.L) + flutes(0, g.L, 12.0, 13.25, 0.28),
+  doors: [akDoor(80.5)],
+  rows: [{ xs: [4.07, 16.68, 44.5, 69.3], y: 6.98, w: 3.2, h: 2.07, r: 0.3 }, { xs: [28.0, 38.0], y: 6.98, w: 2.8, h: 1.42, r: 0.25 }],
+  extra: (c) => {
+    const a = 22.0, b = 46.9, roof = 13.25, top = 15.7;
+    let s = path(poly([[a, roof - 0.05], [a + 2.2, top - 0.4], ["q", a + 2.6, top, a + 3.4, top], [b - 3.4, top], ["q", b - 2.6, top, b - 2.2, top - 0.4], [b, roof - 0.05]]), AK.navy, 0.8);
+    s += path(poly([[a + 0.7, roof + 0.2], [a + 2.25, top - 0.55], [a + 2.75, top - 0.55], [a + 2.75, roof + 0.2]]), C.glass);
+    s += path(poly([[b - 0.7, roof + 0.2], [b - 2.25, top - 0.55], [b - 2.75, top - 0.55], [b - 2.75, roof + 0.2]]), C.glass);
+    for (let i = 0; i < 6; i++) {
+      const x = 25.2 + i * 3.17;
+      s += win(x, roof + 0.2, 2.9, 1.25, 0.15) + win(x, roof + 1.55, 2.9, 0.65, 0.12);
+    }
+    return s + pairs([9.37, 53.6, 62.0], 6.98, 5.3, 2.07) + akLetters(c, 12.75) + akRoundel(c, 77.9);
+  } });
+// GoldStar dome cars 651-656 (Colorado Railcar "Ultra Domes", 2005-08): 89
+// ft over the couplers, 18 ft 0.5 in tall; the upper level a dining-room-
+// length dome of glass curving into the roof, eleven bays a side, and an
+// open platform at the rear end (the car runs behind the baggage car with
+// the platform facing back), its railing under the roof; below, the dining
+// room's windows and the kitchen, the vestibule and its stairs under the
+// platform. Trucks 63 ft 6 in apart, as under the railroad's other 89 ft
+// Colorado Railcar body, DMU 751.
+export function akGoldStar(c) {
+  const { L } = c, roof = 18.04, belt = 11.31;
+  return bilevel(c, { ...AKCAR, roof, cornerR: 2.4, trucks: { centers: 63.5, wb: 8.5, d: 36 }, diaphragm: [4.25, 13.0],
+    paint: (c, g) => AK_STRIPES(g.L), roofItems: [],
+    doors: [akDoor(L - 4.4)],
+    rows: [{ xs: [36.5, 41.6, 46.7], y: 6.95, w: 3.6, h: 2.9, r: 0.3 }, { xs: [53.0, 59.4], y: 6.95, w: 4.8, h: 2.9, r: 0.3 }, { xs: [67.0], y: 7.9, w: 1.8, h: 1.6, r: 0.2 }],
+    extra: (c) => {
+      // The dome glass: tall curved bays, lighter where the glass turns into the roof.
+      let s = "";
+      for (let i = 0; i < 11; i++) {
+        const x = 2.6 + i * 6.55;
+        s += rect(x, belt + 0.45, 6.1, roof - belt - 1.35, C.glass, 0, `rx="0.6" stroke="${C.gasket}" stroke-width="0.6"`) + rect(x + 0.15, roof - 2.6, 5.8, 1.5, C.glassLight, 0, 'rx="0.5"');
+      }
+      // The open platform: a dark opening under the roof, its railing.
+      const p0 = L - 12.6, p1 = L - 1.6;
+      s += rect(p0, belt + 0.3, p1 - p0, roof - belt - 1.3, "#1a1d21", 0, 'rx="0.4"');
+      const rail = [[p0, belt + 3.3, p1, belt + 3.3], [p0, belt + 1.7, p1, belt + 1.7]];
+      for (let x = p0 + 0.4; x < p1; x += 1.1) rail.push([x, belt + 0.3, x, belt + 3.3]);
+      s += lines(rail, "#c9cdd2", 0.7);
+      return s + akLetters(c, 12.75) + akRoundel(c, L - 6.6);
+    } });
+}
+// DMU 751 (Colorado Railcar, 2009; the Glacier Discovery's lead car,
+// "Chugach Explorer"): 89 ft over the couplers, 86 ft 11 in over the end
+// sills, trucks 63 ft 6 in apart on an 8 ft 6 in wheelbase, about 17 ft 11
+// in tall (Alaska Railroad, "ARR 751 DMU Exterior Elevations", 2025). An
+// upper deck of fourteen big windows the whole length; below, the cab's
+// side window at the F end, three big windows, single ones, a bi-parting
+// door near the R end; CHUGACH EXPLORER on the stripe mid-side, ALASKA
+// toward the R end; equipment skirts with access doors between the trucks.
+export function akDmu(c) {
+  const { L } = c, roof = 17.9;
+  return bilevel({ ...c, cabL: true }, { ...AKCAR, roof, cornerR: 1.6, trucks: { centers: 63.5, wb: 8.5, d: 36 }, diaphragm: [4.25, 13.0],
+    paint: (c, g) => AK_STRIPES(g.L) + rect(0, roof - 0.7, g.L, 1, "rgba(0,0,0,0.12)"), roofItems: [[20, 6, 0.35], [62, 6, 0.35]],
+    doors: [{ x: 65.6, w: 4.0, y0: 4.0, y1: 11.0, leaves: 2, glassY: 0.4, glassH: 0.45, grabs: false }],
+    rows: [{ xs: seq(2.6, 5.92, 14), y: 13.57, w: 4.63, h: 3.09, r: 0.4 }, { xs: [23.0, 28.6, 34.3], y: 6.6, w: 4.6, h: 2.96, r: 0.35 },
+      { xs: [60.6], y: 6.6, w: 2.0, h: 2.96, r: 0.3 }, { xs: [45.9], y: 7.2, w: 2.5, h: 1.9, r: 0.3 }, { xs: [83.3], y: 7.2, w: 2.4, h: 1.9, r: 0.3 }],
+    cabLen: 0,
+    cab: () => win(4.2, 7.2, 2.4, 1.9, 0.3) + rect(0.9, 13.0, 0.5, 0.9, "#f4ecc8", 0, 'rx="0.2"'),
+    extra: (c) => {
+      let s = path(poly([[16.5, 3.9], [72.5, 3.9], [72.5, 1.4], [16.5, 1.4]]), "currentColor", 0, 'opacity="0.78"');
+      for (const x of [24.6, 26.6, 36.0, 38.0, 54.0, 56.0]) s += rect(x, 2.0, 1.6, 1.3, "rgba(255,255,255,0.14)", 0.4);
+      return s + akLetters(c, 41.8, "CHUGACH EXPLORER", 15.4) + akLetters(c, 77.0) + rect(13.5, roof - 0.05, 0.8, 0.35, "currentColor");
+    } });
+}
 
 // ===================== Ontario Northland =====================
 // The Polar Bear Express's cars: Hawker Siddeley RTC-85s, single-level
@@ -4131,6 +4227,10 @@ export const MODELS = {
   akCoach: M(akCoach, 85),
   akDiner: M(akDiner, 85),
   akBaggage: M(akBaggage, 85),
+  akDome: M(akDome, 85),
+  akGoldStar: M(akGoldStar, 89),
+  akDmu: M(akDmu, 89, true),
+  akCab: M(f40ph, 56.17, true),                    // the Hurricane Turn's cab cars: rebuilt F40PHs, drawn as they are
   onCoach: M(onCoach, 85),
   onDiner: M(onDiner, 85),
   onBaggage: M(onBaggage, 85),
