@@ -31,7 +31,7 @@ timetable or Trafikverket's products) and SJ Norge's Trondheim-Storlien
 trains and Vy's Oslo-Stockholm and Oslo-Göteborg trains (Entur's, already on
 the map as sjnord and vy: scripts/railroads/entur.py). Upptåget is no more:
 its Gävle-Uppsala trains run as Mälartåg."""
-import json, re, time, unicodedata, urllib.request
+import datetime, json, re, time, unicodedata, urllib.request
 
 TRAFIKVERKET = {"label": "Trafikverket", "href": "https://data.trafikverket.se"}
 BOX = [10.9, 55.3, 24.2, 69.1]  # Sweden, with Copenhagen and Narvik
@@ -138,7 +138,6 @@ def post(body):
 
 def seconds(iso):
     """Unix seconds of an ISO time with its offset ("2026-10-19T10:20:00.000+02:00")."""
-    import datetime
     return int(datetime.datetime.fromisoformat(re.sub(r"\.\d+", "", iso)).timestamp()) if iso else None
 
 
