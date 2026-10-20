@@ -40,7 +40,7 @@ const plugDoor = (x, sill, top, w = 2.6, fill = IT.deep) => ({ x, w, y0: sill, y
 // c.cls: "club", "prima" or "smart"; car 1 of an EVO is Club and Prima.
 const CLASS_GOLD = "#c9a227";
 const premium = (c) => c.cls === "club" || c.cls === "prima";
-const classBand = (c, L, y) => (premium(c) ? rect(-1, y, L + 2, 0.55, CLASS_GOLD) : "");
+const classBand = (c, L, y) => (premium(c) ? rect(-1, y, L + 2, 0.9, CLASS_GOLD) : "");
 const CLASSES = { club: ["1", "CLUB EXECUTIVE"], prima: ["1", "PRIMA"], smart: ["2", "SMART"] };
 // The numeral on the door (x, w), centered at numY; the name at nameY
 // beside it, on the door's side `side` (1 toward the car's right end in its
@@ -64,7 +64,7 @@ const AGV = { roof: 11.45, sill: 3.3 };
 const NOSE_AGV = [[0.9, 2.5], [0.55, 3.6], ["q", 0.6, 5.2, 2.6, 6.6], [10.4, 9.9], ["q", 15.0, 11.45, 19.5, 11.45]];
 function agvPaint(cab) {
   return (c, g) => {
-    let s = bands(g.L, [[0, 20, IT.red], [10.55, 3, IT.roof], [10.35, 0.2, IT.deep], [0, 3.3, IT.skirt]]) + pinline(g.L, 3.55) + classBand(c, g.L, 9.35);
+    let s = bands(g.L, [[0, 20, IT.red], [10.55, 3, IT.roof], [10.35, 0.2, IT.deep], [0, 3.3, IT.skirt]]) + pinline(g.L, 3.55) + classBand(c, g.L, 9.3);
     // The nose: the red darkens toward the tip; a black mask round the
     // windshield sweeps back along the cab.
     // The 2026 gold band sweeping up from the lower nose toward the windows.
@@ -116,7 +116,7 @@ const EVO = { roof: 13.0, sill: 3.75 };
 const NOSE_EVO = [[1.0, 3.2], [0.7, 4.9], ["q", 0.8, 6.6, 3.0, 7.9], [10.4, 11.6], ["q", 12.6, 13.0, 15.6, 13.0]];
 function evoPaint(cab) {
   return (c, g) => {
-    let s = bands(g.L, [[0, 20, IT.red], [11.95, 3, IT.roof], [11.75, 0.2, IT.deep], [6.55, 3.65, IT.band], [0, 3.75, IT.skirt]]) + pinline(g.L, 4.0) + classBand(c, g.L, 10.75);
+    let s = bands(g.L, [[0, 20, IT.red], [11.95, 3, IT.roof], [11.75, 0.2, IT.deep], [6.55, 3.65, IT.band], [0, 3.75, IT.skirt]]) + pinline(g.L, 4.0) + classBand(c, g.L, 10.6);
     if (cab) s += path("M2.4 7.6Q7.0 9.0 10.4 10.4L13.0 11.6L20.0 11.6L20.0 10.2L22.0 10.2L22.0 6.55L13.2 6.55Q8.8 6.6 5.4 6.2Z", IT.band) +
       path("M-1 3.2L-1 5.3Q3.6 5.6 8.6 5.9L14.0 5.9L14.0 6.25L8.4 6.25Q3.6 6.0 -1 5.8Z", IT.wine);
     return s;
