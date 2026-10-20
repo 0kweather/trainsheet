@@ -107,7 +107,7 @@ const gtwPack = (c) => powerModule(c, { roof: 13.4, sill: 3.4, paint: (L) => ban
 // ---------- Tables ----------
 
 export const TYPES = {
-  staFlirtCab: { name: "Stadler FLIRT end section", kind: "emu", amenities: ["first"] },
+  staFlirtCab: { name: "Stadler FLIRT end section", kind: "emu" },
   staFlirtMid: { name: "Stadler FLIRT intermediate section", kind: "emu", pan: true },
   staStreamCab: { name: "Coradia Stream end car", kind: "emu" },
   staStreamMid: { name: "Coradia Stream intermediate car", kind: "emu", pan: true },
@@ -160,7 +160,7 @@ const flirt = { model: "Stadler FLIRT (ETR 170)", type: "Electric multiple unit"
   topSpeedMph: 99.4, source: `${DE}Stadler_FLIRT` };
 export const FACTS = {
   staFlirtCab: { ...flirt, lengthFt: 348,
-    about: "South Tyrol's FLIRTs, bought in four batches; the first four-section ETR 155s were lengthened to six. They run on both 3 kV DC and Austria's 15 kV, so they reach Innsbruck and Lienz." },
+    about: "South Tyrol's FLIRTs, bought in four batches; the first four-section ETR 155s were lengthened to six. One class, 276 seats. They run on both 3 kV DC and Austria's 15 kV, so they reach Innsbruck and Lienz." },
   staFlirtMid: { ...flirt, about: "An intermediate section of an ETR 170, sharing Jakobs trucks with its neighbours. A 2026 plan modernises all 23 units." },
   staStreamCab: { model: "Alstom Coradia Stream (ETR 160)", type: "Electric multiple unit", builder: "Alstom (Savigliano)", built: "Since 2024", fleet: "21 for South Tyrol and Tyrol",
     topSpeedMph: 99.4, powerHp: 4023, seats: 381, lengthFt: 419.6,

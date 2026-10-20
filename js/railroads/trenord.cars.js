@@ -136,13 +136,27 @@ function rockCab(c) {
     extra: (cc, g) => cover(14, ROCK.roof, 14) + hvac(34, ROCK.roof, 12) + hvac(g.L - 22, ROCK.roof, 10) + boxes(a + 6, b - 6, ROCK.y + 0.05, 2, 0.4) +
       tnName(cc, 40, 9.05, 0.95) + regione(cc, 62, 9.05, 0.42) + plate(cc, g.L - 6.4, 6.2, cc.count === 5 ? "ETR 521" : "ETR 421") });
 }
+// An aircraft pictogram (Trenord's airport-area marking), h ft long,
+// nose to the right.
+const plane = (c, x, y, h, fill) => `<g transform="translate(${x} ${y}) scale(${c.mirrored ? -h : h} ${h})">` +
+  `<path d="M-0.5 -0.04L0.36 -0.04Q0.5 -0.04 0.5 0Q0.5 0.04 0.36 0.04L-0.5 0.04Z" fill="${fill}"/>` +
+  `<path d="M0.08 0.03L-0.12 0.42L-0.02 0.42L0.24 0.03ZM0.08 -0.03L-0.12 -0.42L-0.02 -0.42L0.24 -0.03Z" fill="${fill}"/>` +
+  `<path d="M-0.36 0.03L-0.48 0.18L-0.42 0.18L-0.28 0.03ZM-0.36 -0.03L-0.48 -0.18L-0.42 -0.18L-0.28 -0.03Z" fill="${fill}"/></g>`;
+const AIR_YELLOW = "#f5c400";
+// The airport Caravaggios' (ETR 421 047-054) first-class area: marked
+// outside with a yellow band and aircraft pictograms by the doors.
+function airMark(c, L, a, b) {
+  return rect(a + 5.2, 9.85, b - a - 10.4, 0.4, AIR_YELLOW) + rect(-1, 9.85, a - 3.2, 0.4, AIR_YELLOW) + rect(b + 3.2, 9.85, L - b - 2.2, 0.4, AIR_YELLOW) +
+    [a - 1.6, b + 1.6].map((x) => rect(x - 1.0, 8.2, 2.0, 1.4, AIR_YELLOW, 0, 'rx="0.2"') + plane(c, x, 8.9, 1.5, TN.ink)).join("");
+}
 function rockMid(c) {
   const L = c.L, a = 13.6, b = L - 13.6, pan = c.index === 1 || (c.count === 5 && c.index === 3);
   return deck(c, { ...ROCK, a, b, trucks: [8.0, L - 8.0], doors: [{ x: a + 0.6, w: 4.4, low: true }, { x: b - 5.0, w: 4.4, low: true }], ends: [3.4, b + 4.4],
     paint: rockPaint(false), doorFill: () => TN.door,
     extra: (cc, g) => (pan ? pantograph(g.L / 2 - 8, ROCK.roof + 0.55, { up: true, facing: -1 }) + cover(g.L / 2 - 11, ROCK.roof, 7, 0.55) + hvLine(g.L / 2 - 5, g.L / 2 + 4, ROCK.roof + 0.55) + cover(g.L / 2 + 4, ROCK.roof, 12)
       : hvac(15, ROCK.roof, 12) + cover(g.L / 2 + 2, ROCK.roof, 14)) + boxes(a + 6, b - 6, ROCK.y + 0.05, 2, 0.4) +
-      (cc.index === 1 ? letters(cc, g.L / 2, 8.95, 0.7, cc.route && /^RE5[14]$/.test(cc.route) ? "Malpensa Express" : "Caravaggio", TN.blue, { weight: 600, style: "italic" }) : "") });
+      (cc.air ? airMark(cc, g.L, a, b) + letters(cc, g.L / 2, 8.95, 0.7, "Malpensa Express", TN.blue, { weight: 600, style: "italic" })
+        : cc.index === 1 ? letters(cc, g.L / 2, 8.95, 0.7, "Caravaggio", TN.blue, { weight: 600, style: "italic" }) : "") });
 }
 
 // ---------- Donizetti (Alstom Coradia Stream: ETR 103, 104, 204) ----------
@@ -350,8 +364,9 @@ function vivaltoCab(c) {
 // ---------- Tables ----------
 
 export const TYPES = {
-  tnRockCab: { name: "Caravaggio end car", kind: "bilevel", emu: true, amenities: ["first"] },
+  tnRockCab: { name: "Caravaggio end car", kind: "bilevel", emu: true },
   tnRockMid: { name: "Caravaggio intermediate car", kind: "bilevel", emu: true, pan: true },
+  tnRockAir: { name: "Caravaggio airport car, first class", kind: "bilevel", emu: true, pan: true, amenities: ["first"] },
   tnPopCab: { name: "Donizetti end car", kind: "emu" },
   tnPopMid: { name: "Donizetti intermediate car", kind: "emu", pan: true },
   tnColleoniCab: { name: "Colleoni end car", kind: "emu" },
@@ -373,7 +388,8 @@ const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, v
 const byIndex = (ctx) => ctx.index;
 export const MODELS = {
   tnRockCab: M(rockCab, 92.8, true, (ctx) => `${ctx.count}${ctx.route}`),
-  tnRockMid: M(rockMid, 87.0, false, (ctx) => `${ctx.index}${ctx.count}${ctx.route}`),
+  tnRockMid: M(rockMid, 87.0, false, (ctx) => `${ctx.index}${ctx.count}`),
+  tnRockAir: M((c) => rockMid({ ...c, air: true }), 87.0),
   tnPopCab: M(popCab, 73.5, true, (ctx) => ctx.count),
   tnPopMid: M(popMid, 64.6, false, byIndex),
   tnColleoniCab: M(colleoniCab, 70.2, true),
@@ -403,7 +419,9 @@ export const FLEETS = {
 const set = (label, ...units) => ({ label, units });
 const ROCK4 = set("Caravaggio (ETR 421): a four-car double-deck electric unit", ["tnRockCab", 1], ["tnRockMid", 2], ["tnRockCab", 1]);
 const ROCK5 = set("Caravaggio (ETR 521): a five-car double-deck electric unit", ["tnRockCab", 1], ["tnRockMid", 3], ["tnRockCab", 1]);
-const ROCK_MXP = set("Malpensa Express: an airport Caravaggio (ETR 421), four double-deck cars", ["tnRockCab", 1], ["tnRockMid", 2], ["tnRockCab", 1]);
+// Which car holds the airport units' first-class area isn't published;
+// it's drawn in the second car.
+const ROCK_MXP = set("Malpensa Express: an airport Caravaggio (ETR 421), four double-deck cars, a first-class area in the second", ["tnRockCab", 1], ["tnRockAir", 1], ["tnRockMid", 1], ["tnRockCab", 1]);
 const POP4 = set("Donizetti (ETR 104): a four-car electric unit", ["tnPopCab", 1], ["tnPopMid", 2], ["tnPopCab", 1]);
 const POP3 = set("Donizetti (ETR 103): a three-car electric unit", ["tnPopCab", 1], ["tnPopMid", 1], ["tnPopCab", 1]);
 const COLLEONI = set("Colleoni (ATR 803): a three-car diesel-battery unit", ["tnColleoniCab", 1], ["tnFlirtPack", 1], ["tnColleoniMid", 1], ["tnColleoniCab", 1]);
@@ -415,7 +433,7 @@ const JAZZ6 = set("Coradia Meridian (ETR 526): a six-section electric unit", ["t
 const GTW1 = set("Stadler GTW (ATR 115): a two-section diesel railcar", ["tnGtwCar", 1], ["tnGtwPack", 1], ["tnGtwCar", 1]);
 const GTW2 = set("Stadler GTW (ATR 125): two GTW 2/6 coupled for good", ["tnGtwCar", 1], ["tnGtwPack", 1], ["tnGtwCar", 2], ["tnGtwPack", 1], ["tnGtwCar", 1]);
 const VIVALTO = set("An E.464 locomotive and Vivalto double-deck coaches", ["tn464", 1], ["tnVivalto", 4], ["tnVivaltoCab", 1]);
-const BY_MODEL = { tnJazzCab: JAZZ5, tnGtwCar: GTW1 };
+const BY_MODEL = { tnJazzCab: JAZZ5, tnGtwCar: GTW1, tnRockAir: ROCK_MXP };
 
 // What usually runs, by Trenord's line (its GTFS names them S1-S50, RE1-
 // RE80, R1-R41). The airport lines (RE51 Gallarate-Malpensa-Centrale and
@@ -463,11 +481,13 @@ const pop = { model: "Alstom Donizetti (Coradia Stream; ETR 103, 104, 204)", typ
   fleet: "61", topSpeedMph: 99.4, source: FNM };
 export const FACTS = {
   tnRockCab: { ...rock, seats: 440, lengthFt: 359.6,
-    about: "Trenord's double-deck workhorse, Hitachi's Rock in Lombardy's white, greens and blue: four cars seat 440, five 570. Since 2025 airport versions with luggage racks run the Malpensa Express." },
+    about: "Trenord's double-deck workhorse, Hitachi's Rock in Lombardy's white, greens and blue: four cars seat 440, five 570, one class throughout on the regular units. Since 2025 airport versions with first class run the Malpensa Express." },
   tnRockMid: { ...rock, seats: 570,
-    about: "Most of a Caravaggio's traction gear rides on the roof, which leaves room for big windows on both decks and step-free doors to the lower one." },
+    about: "Most of a Caravaggio's traction gear rides on the roof, which leaves room for big windows on both decks and step-free doors to the lower one. The regular units are one class throughout (563 seats in five cars); only two of the early ones and the airport series have first class." },
+  tnRockAir: { ...rock, fleet: "Airport series ETR 421 047–054 and more, 26 ordered", source: "https://www.trenord.it/news/il-bello-di-trenord/articoli/trenord-vola-con-i-nuovi-caravaggio-aeroportuali",
+    about: "The airport Caravaggios, on the Malpensa Express since March 2025, have first class, luggage racks and black seats in an area marked outside by a yellow band and aircraft pictograms. Since January 2026 second-class tickets are valid on RE54 for some stops, in the area marked for them; the car holding first class isn't published (drawn here in the second)." },
   tnPopCab: { ...pop, seats: 220, lengthFt: 215.6,
-    about: "The single-deck partner of the Caravaggio for lighter lines: three cars (ETR 103) or four (ETR 104, and the ETR 204 with first class). In service with Trenord since July 2020." },
+    about: "The single-deck partner of the Caravaggio for lighter lines: three cars (ETR 103) or four (ETR 104), one class; the ETR 204 version adds a small first-class area and a second toilet. In service with Trenord since July 2020." },
   tnPopMid: { ...pop, about: "Each Donizetti car has two wide doors a side with a step-free entry from the platform." },
   tnColleoniCab: { model: "Stadler Colleoni (FLIRT, ATR 803)", type: "Diesel-battery multiple unit", builder: "Stadler Rail", built: "Since 2022", fleet: "30",
     topSpeedMph: 87, powerHp: 1609, seats: 168, lengthFt: 219.2, source: "https://www.railvolution.net/news/first-new-fnm-flirt-dmu-on-test",

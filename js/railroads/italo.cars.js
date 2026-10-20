@@ -72,8 +72,7 @@ function agvCab(c) {
 }
 function agvMid(c) {
   const L = c.L, k = c.index;
-  // The pantographs ride on cars 3 and 9, the first-class end ("Club" and
-  // "Prima") at car 1.
+  // The pantographs ride on cars 3 and 9.
   const pan = k === 2 || k === 8;
   return unit(c, { roof: AGV.roof, sill: AGV.sill,
     rows: agvRows(5.0, L - 8.0), doors: [plugDoor(L - 5.6, 3.3, 9.6)], trucks: ["start", "end"], wheel: 36, diaphragm: [3.6, 10.4],
@@ -114,7 +113,7 @@ function evoCab(c) {
 }
 function evoMid(c) {
   const L = c.L, k = c.index;
-  // Pantographs on cars 2 and 6 (25 kV and 3 kV), the bar in car 4.
+  // Pantographs on cars 2 and 6 (25 kV and 3 kV).
   const pan = k === 1 || k === 5;
   return unit(c, { roof: EVO.roof, sill: EVO.sill,
     rows: evoRows(7.6, L - 7.6), doors: [plugDoor(1.7, 3.75, 10.9, 2.7, IT.band), plugDoor(L - 4.4, 3.75, 10.9, 2.7, IT.band)], trucks: [9.5, L - 9.5], wheel: 36,
@@ -122,37 +121,55 @@ function evoMid(c) {
     extra: (cc, g) => evoRoof(g.L, 1.2, g.L - 1.2) +
       (pan ? pantograph(g.L * 0.38, EVO.roof + 0.33, { up: k === 1, facing: -1 }) + hvLine(g.L * 0.38 + 3.0, g.L * 0.38 + 10.0, EVO.roof + 0.33) + hvac(g.L - 22, EVO.roof + 0.3, 10, 0.6)
         : hvac(10, EVO.roof + 0.3, 12, 0.6) + hvac(g.L - 22, EVO.roof + 0.3, 10, 0.6)) +
-      boxes(16, g.L - 16, 3.75, 3, 1.3) + (k === 3 ? letters(cc, g.L / 2, 5.25, 0.75, "Italo Café", IT.white, { weight: 600 }) : "") +
+      boxes(16, g.L - 16, 3.75, 3, 1.3) +
       letters(cc, 6.4, 5.2, 0.6, String(k + 1), IT.white, { weight: 600 }) });
 }
 
 // ---------- Tables ----------
 
+// Italo's classes, front to back (car 1 at the front): Club Executive (19
+// seats, eight of them in two private four-seat lounges), Prima (its first
+// class, 2+1) and Smart (2+2). AGV: Club in car 1, Prima in cars 2-5 (4
+// and 5 were Comfort, since merged into Prima), Smart in cars 6-11. EVO:
+// Club and the first Prima seats in car 1, Prima through car 3, Smart in
+// cars 4-7. No class is lettered on the outside (the classes' names are
+// on the end walls inside), so the cars are drawn alike; each class is its
+// own type, placed in the formation, with its own fact sheet.
 export const TYPES = {
-  itAgvCab: { name: "AGV 575 end car", kind: "emu", amenities: ["business", "first"] },
-  itAgvMid: { name: "AGV 575 intermediate car", kind: "emu", pan: true, amenities: ["cafe"] },
-  itEvoCab: { name: "Pendolino EVO end car", kind: "emu", amenities: ["business", "first"] },
-  itEvoMid: { name: "Pendolino EVO intermediate car", kind: "emu", pan: true, amenities: ["cafe"] },
+  itAgvClub: { name: "AGV 575 Club Executive car", kind: "emu", amenities: ["business"] },
+  itAgvPrima: { name: "AGV 575 Prima car", kind: "emu", pan: true, amenities: ["first"] },
+  itAgvMid: { name: "AGV 575 Smart car", kind: "emu", pan: true },
+  itAgvCab: { name: "AGV 575 Smart end car", kind: "emu" },
+  itEvoClub: { name: "Pendolino EVO Club Executive and Prima car", kind: "emu", amenities: ["business", "first"] },
+  itEvoPrima: { name: "Pendolino EVO Prima car", kind: "emu", pan: true, amenities: ["first"] },
+  itEvoMid: { name: "Pendolino EVO Smart car", kind: "emu", pan: true },
+  itEvoCab: { name: "Pendolino EVO Smart end car", kind: "emu" },
 };
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
 const byIndex = (ctx) => ctx.index;
 export const MODELS = {
-  itAgvCab: M(agvCab, 72.5, true),
+  itAgvClub: M(agvCab, 72.5, true),
+  itAgvPrima: M(agvMid, 56.8, false, byIndex),
   itAgvMid: M(agvMid, 56.8, false, byIndex),
-  itEvoCab: M(evoCab, 92.5, true),
+  itAgvCab: M(agvCab, 72.5, true),
+  itEvoClub: M(evoCab, 92.5, true),
+  itEvoPrima: M(evoMid, 85.0, false, byIndex),
   itEvoMid: M(evoMid, 85.0, false, byIndex),
+  itEvoCab: M(evoCab, 92.5, true),
 };
 
 // Units by number (class and serial run together): AGV 575 001-025, ETR
 // 675 001-026. Italo's feed names no unit; these are for the fleet pages.
 export const FLEETS = {
-  italo: [[575001, 575025, "itAgvCab"], [675001, 675026, "itEvoCab"]],
+  italo: [[575001, 575025, "itAgvClub"], [675001, 675026, "itEvoClub"]],
 };
 
 const set = (label, ...units) => ({ label, units });
-const AGV575 = set("AGV 575: an eleven-car articulated high-speed train", ["itAgvCab", 1], ["itAgvMid", 9], ["itAgvCab", 1]);
-const EVO675 = set("Pendolino EVO (ETR 675): a seven-car high-speed train", ["itEvoCab", 1], ["itEvoMid", 5], ["itEvoCab", 1]);
-const BY_MODEL = { itAgvCab: AGV575, itAgvMid: AGV575, itEvoCab: EVO675, itEvoMid: EVO675 };
+const AGV575 = set("AGV 575: eleven articulated cars; Club Executive in car 1, Prima in cars 2-5, Smart behind",
+  ["itAgvClub", 1], ["itAgvPrima", 4], ["itAgvMid", 5], ["itAgvCab", 1]);
+const EVO675 = set("Pendolino EVO (ETR 675): seven cars; Club Executive and Prima in car 1, Prima in cars 2-3, Smart behind",
+  ["itEvoClub", 1], ["itEvoPrima", 2], ["itEvoMid", 3], ["itEvoCab", 1]);
+const BY_MODEL = { itAgvClub: AGV575, itAgvPrima: AGV575, itAgvMid: AGV575, itAgvCab: AGV575, itEvoClub: EVO675, itEvoPrima: EVO675, itEvoMid: EVO675, itEvoCab: EVO675 };
 
 // By the reported unit; else by train number. Italo publishes no unit
 // rosters: its 25 AGVs (300 km/h) and 26 EVOs (250 km/h) both run the
@@ -168,19 +185,28 @@ export const TYPICAL = {
   },
 };
 
-const WP = "https://en.wikipedia.org/wiki/";
-const ITW = "https://it.wikipedia.org/wiki/";
+const ITALO = "https://www.italotreno.com/it/il-treno/ambienti-di-viaggio";
+const AGV_CARS = "https://ledicoferroviaire.mediarail.be/agv-en/";
+const EVO_CARS = "https://www.ferrovie.it/portale/articoli/6704";
+const agv = { model: "Alstom AGV 575 (ETR 575)", type: "High-speed electric multiple unit", builder: "Alstom (La Rochelle and Savigliano)", built: "2010–2012",
+  fleet: "25 eleven-car units", topSpeedMph: 186, powerHp: 10192, seats: 460 };
+const evo = { model: "Alstom Pendolino EVO (ETR 675)", type: "High-speed electric multiple unit", builder: "Alstom (Savigliano)", built: "Since 2015",
+  fleet: "26 seven-car units", topSpeedMph: 155, powerHp: 7376, seats: 472 };
 export const FACTS = {
-  itAgvCab: { model: "Alstom AGV 575 (ETR 575)", type: "High-speed electric multiple unit", builder: "Alstom (La Rochelle and Savigliano)", built: "2010–2012", fleet: "25 eleven-car units",
-    topSpeedMph: 186, powerHp: 10192, seats: 460, lengthFt: 656, source: `${ITW}Elettrotreno_ETR_575`,
-    about: "Italo's first trains, in service since April 2012: eleven articulated cars with the motors spread along the train rather than in power cars. Built for 360 km/h, they run at up to 300 km/h on the high-speed lines." },
-  itAgvMid: { model: "Alstom AGV 575 (ETR 575)", type: "High-speed electric multiple unit", builder: "Alstom (La Rochelle and Savigliano)", built: "2010–2012", fleet: "25 eleven-car units",
-    topSpeedMph: 186, powerHp: 10192, seats: 460, source: `${WP}AGV_(train)`,
-    about: "An AGV's intermediate cars share a truck at each joint. Italo's classes run from Smart through Comfort and Prima to Club Executive." },
-  itEvoCab: { model: "Alstom Pendolino EVO (ETR 675)", type: "High-speed electric multiple unit", builder: "Alstom (Savigliano)", built: "Since 2015", fleet: "26 seven-car units",
-    topSpeedMph: 155, powerHp: 7376, seats: 472, lengthFt: 614.5, source: "https://de.wikipedia.org/wiki/NTV_ETR_675",
-    about: "A non-tilting Pendolino built in Piedmont for Italo, seven cars on their own trucks. In service since December 2017, it runs at up to 250 km/h on the high-speed lines and on Italo's routes beyond them." },
-  itEvoMid: { model: "Alstom Pendolino EVO (ETR 675)", type: "High-speed electric multiple unit", builder: "Alstom (Savigliano)", built: "Since 2015", fleet: "26 seven-car units",
-    topSpeedMph: 155, powerHp: 7376, seats: 472, source: "https://de.wikipedia.org/wiki/NTV_ETR_675",
-    about: "An intermediate car of an EVO; one of them holds Italo's café corner and vending area." },
+  itAgvClub: { ...agv, lengthFt: 656, source: AGV_CARS,
+    about: "Car 1 of Italo's AGV is Club Executive: 19 wide leather seats, eight of them in two private four-seat lounges (salotti) at the back of the car. Italo's first trains, in service since April 2012; built for 360 km/h, they run at up to 300." },
+  itAgvPrima: { ...agv, source: AGV_CARS,
+    about: "Cars 2 to 5 are Prima, Italo's first class, seated 2+1 (cars 4 and 5 were Comfort until it was merged into Prima), with vending machines in car 3. Roughly: Club 19 seats, Prima about 150, Smart about 290." },
+  itAgvMid: { ...agv, source: AGV_CARS,
+    about: "Cars 6 to 10 are Smart, Italo's standard class, seated 2+2, with vending in car 7. The AGV's cars share a truck at each joint." },
+  itAgvCab: { ...agv, source: AGV_CARS,
+    about: "Car 11, Smart, at the back of the train; it once held the Smart Cinema area, since removed." },
+  itEvoClub: { ...evo, lengthFt: 614.5, source: EVO_CARS,
+    about: "Car 1 of the EVO holds Club Executive (19 seats: eight in two private lounges and eleven in an open saloon, 2+1, with a self-service counter) and the first Prima seats. A non-tilting Pendolino, in service since December 2017 at up to 250 km/h." },
+  itEvoPrima: { ...evo, source: EVO_CARS,
+    about: "Prima, Italo's first class, runs from car 1 to car 3 (130 seats at launch, 2+1), with vending in car 3." },
+  itEvoMid: { ...evo, source: EVO_CARS,
+    about: "Smart, the standard class, fills cars 4 to 7 (331 seats at launch, 2+2), with vending in car 6." },
+  itEvoCab: { ...evo, source: ITALO,
+    about: "Car 7, Smart, at the back of the train. Italo's classes today are Club Executive, Prima and Smart." },
 };
