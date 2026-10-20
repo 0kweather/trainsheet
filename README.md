@@ -63,6 +63,8 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | Greece | Hellenic Train | Athens–Thessaloniki axis | railway.gov.gr's public live train tracker (read by the relay), with its timetable as Transitous's GTFS | relay |
 | Ireland | Irish Rail (InterCity, DART, Commuter) | Ireland | Iarnród Éireann's realtime API (positions from signalling), plus the NTA's timetable | relay |
 | Israel | Israel Railways | Israel | The Ministry of Transport's SIRI positions as Hasadna's Open Bus Stride API keeps them (about two minutes behind) | relay |
+| Italy | Trenitalia (Frecce, Intercity, regional trains, Trenitalia Tper's among them), Italo | Italy | Placed from the national timetables Italy's National Access Point publishes (NeTEx, cciss.it); Trenitalia's trains get their delay, last report and platforms from ViaggiaTreno only when someone opens or tracks one (relay, at most 20 trains per visitor in 10 minutes) | relay for delays |
+| Italy | Trenord, South Tyrol's trains (SAD, ÖBB), EAV (Naples), ARST (Sardinia), Trento–Malè–Mezzana | Lombardy, South Tyrol, Campania, Sardinia, Trentino | Placed from each one's open GTFS timetable; Trenord's trains get ViaggiaTreno details when opened, as Trenitalia's do | — (Trenord: relay for delays) |
 | Latvia | Vivi | Latvia | The Pieturas app's Baltic GTFS-realtime (Vivi's trains only), plus Vivi's timetable | relay |
 | Malaysia | KTMB (ETS, Intercity), KTM Komuter | Peninsular Malaysia | data.gov.my GTFS-realtime (positions only; fetched by each browser, since the API allows 4 requests a minute per address) | direct |
 | Norway | Vy, Go-Ahead Norge, Flytoget, SJ Nord | Norway | Entur GTFS-realtime (SJ Nord sends no positions, and Entur's GTFS-realtime has none of its delays yet: placed from its timetable, shown as scheduled) | relay |
@@ -78,6 +80,7 @@ Northstar (Minneapolis) ended rail service; its route is now a bus, so it isn't 
 - West Coast Express and WES: they need keys.
 - Ontario Northland's live feed: its GTFS-realtime carries only motor coaches (no Polar Bear position has been seen), and its stations sit inside the default US view, so a live source would be polled for every US viewer. The Polar Bear stays placed from its timetable.
 - Tshiuetin (Sept-Îles–Schefferville): its only live source is a Samsara fleet viewer whose robots.txt and terms forbid automated access, and its timetable is posted only as monthly images.
+- Italo's live data: its tracker's terms (italotreno.com, Note legali §7) allow only personal, non-commercial use, so Italo is placed from its timetable alone. Italy publishes no live train positions openly; ViaggiaTreno's own terms forbid reusing its data, and a Rome court (Trenitalia v. GoBright, 4 September 2019) allowed it only "in misura non sostanziale", which is why it's asked for one opened train at a time and never polled.
 - MÁV and GYSEV (Hungary): the live positions on mavplusz.hu work without a key, but MÁV's legal notice forbids storing or republishing the site's content, and its own GTFS needs registration.
 
 ## Using it
@@ -184,6 +187,7 @@ Data outside the US and Canada, credited on the map with each railroad:
 - data.gov.my, CC BY 4.0 (Malaysia).
 - ŽSR timetable (data.slovensko.sk), CC BY 1.0; live positions from jbb.ghsq.de (Slovakia).
 - Buenos Aires Data timetable, CC BY 2.5 AR; live data from SOFSE / Trenes Argentinos (Argentina).
+- Trenitalia and Italo timetables from Italy's National Access Point (cciss.it; published with no licence stated); live details of opened trains from Trenitalia's ViaggiaTreno; Regione Lombardia (Trenord), CC BY 4.0; STA – Südtiroler Transportstrukturen via the Open Data Hub, CC0; EAV, Italian Open Data Licence 2.0; ARST via Sardegna Mobilità, CC BY 4.0; Trentino Trasporti, CC BY 4.0 (Italy).
 - Elron and the Regionaal- ja Põllumajandusministeerium, timetable CC0 (Estonia).
 - Vivi timetable and Pieturas live data (gsvalbe.id.lv), credited as Pieturas asks (Latvia).
 - Oběhy (SŽ, CIS JŘ) (Czechia); railway.gov.gr (Greece); Ministry of Transport and Hasadna Open Bus (Israel): no licence published. Railroad logos on the train drawings (`img/logos/`) are the railroads' trademarks, from the public-domain versions on Wikimedia Commons.
