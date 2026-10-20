@@ -674,7 +674,7 @@ export const car943 = (c) => studCar(c, { engine: false, full: true }) + truck(c
 // 810 railbuses; an upright new cab, a folding door behind it. ČD's
 // regional yellow and green: green below a wave that rises to the cab, the
 // name in white on the green.
-function axle(x, sill) {
+export function axle(x, sill) {
   return rect(x - 2.6, 1.6, 5.2, 0.32, "currentColor", 0, 'opacity="0.8"') + circle(x, 1.25, 1.25, "currentColor") + circle(x, 1.25, 1.02, "none", 0, `stroke="${C.steelDark}" stroke-width="0.5" ${STROKE}`) +
     circle(x, 1.25, 0.33, C.steelDark) + rect(x - 0.55, 0.85, 1.1, 0.8, C.steelDark, 0, 'rx="0.14"') + rect(x - 1.2, 1.95, 2.4, sill - 1.95, "currentColor", 0, 'opacity="0.8"') +
     // The leaf spring over the axle box, hung from brackets at each end.
