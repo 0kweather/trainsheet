@@ -1,4 +1,4 @@
-import { AGENCIES, SOURCES, fetchSource, advanceEstimated } from "./sources.js?v=dev";
+import { AGENCIES, SOURCES, fetchSource, advanceEstimated, detailUrl, fetchDetail, applyDetail } from "./sources.js?v=dev";
 import { loadStations, mergeStations, trainsDue, mbtaPredictions, mbtaFacilities, amtrakAddress, meters, norm, fold, stopKey } from "./stations.js?v=dev";
 import { RailIndex, snapToTrack } from "./estimate.js?v=dev";
 import { RAIL_REGIONS, DATA_REGIONS } from "./railroads/index.js?v=dev";
@@ -1338,6 +1338,7 @@ function mergeTrains() {
   for (const list of Object.values(state.bySource)) for (const t of list) state.trains.set(t.id, t);
   applyMtaConsists();
   applyInference();
+  applyDetails();
   computePositions();
   animateTo();
   checkTracked();
@@ -1388,6 +1389,56 @@ setTimeout(loadMtaConsists, 3000);
 // Delays the GPS proves but the railroad hasn't posted yet.
 function applyInference() {
   for (const t of state.trains.values()) state.inferDelays ? inferDelay(t, state.stopPos) : restoreFeed(t);
+}
+
+// ---------- One train's details, on request ----------
+// A railroad whose plug-in names a detail source (AGENCIES[a].detail, e.g.
+// ViaggiaTreno for Trenitalia's) has each train asked for through the relay
+// on its own, only while a viewer has it open or tracks it: once when it's
+// opened or tracked, then every two minutes while it stays so (and not in a
+// background tab, after the first). Nothing is asked for a train nobody
+// opens. The answer (delay, last report, platforms, stop times) is merged
+// into the train at every refresh of its feed (sources.js applyDetail), and
+// kept ten minutes after the train is closed; a train placed from its
+// timetable is placed from the delayed times, and stays on the map while
+// it runs late past its timetabled arrival.
+const DETAIL_MS = 2 * 60 * 1000, DETAIL_KEEP_MS = 10 * 60 * 1000;
+const details = new Map(); // train id -> { tried, at, data, train, busy }
+function refreshDetails() {
+  if (!RELAY || !details.size && !state.selected && !state.tracked.length) return;
+  const wanted = new Set([state.selected, ...state.tracked.map((r) => r.id)].filter(Boolean));
+  for (const id of wanted) {
+    const t = state.trains.get(id) || details.get(id)?.train;
+    const src = t && AGENCIES[t.agency]?.detail;
+    if (!src || !state.relayFeeds?.[src]) continue;
+    const d = details.get(id) || {};
+    if (d.busy || Date.now() - (d.tried || 0) < DETAIL_MS || (document.hidden && d.at)) continue;
+    const url = detailUrl(t, RELAY);
+    if (!url) continue;
+    Object.assign(d, { busy: true, tried: Date.now(), train: d.train || t });
+    details.set(id, d);
+    fetchDetail(url)
+      .then((data) => {
+        Object.assign(d, { data, at: Date.now() });
+        mergeTrains();
+      })
+      .catch((err) => console.warn(`[${src}]`, err.message))
+      .finally(() => (d.busy = false));
+  }
+  for (const [id, d] of details) if (!wanted.has(id) && Date.now() - (d.at || d.tried) > DETAIL_KEEP_MS) details.delete(id);
+}
+setInterval(refreshDetails, 15 * 1000);
+function applyDetails() {
+  for (const [id, d] of details) {
+    if (!d.data?.found || Date.now() - d.at > DETAIL_KEEP_MS) continue;
+    const t = state.trains.get(id);
+    if (t) {
+      applyDetail(t, d.data);
+      d.train = t;
+    } else if (d.train && !d.data.arrived && !d.data.cancelled && applyDetail(d.train, d.data)) {
+      state.trains.set(id, d.train); // running late past its timetable
+    }
+  }
 }
 
 // ---------- Feeds ----------
@@ -1541,6 +1592,7 @@ async function start() {
     }
     for (const src of SOURCES) if (!direct(src) && !sourceAvailability(src).ok) delete state.sourceStatus[src.id];
     startPolls((src) => !direct(src));
+    refreshDetails(); // a train opened from a link before the relay answered
   }
   // A shared link to a train: its railroad may be anywhere.
   if (wanted) wakeSources(true);
@@ -2239,6 +2291,7 @@ function renderCredits() {
 // railroad says if that isn't about lateness ("Held at New Haven", in
 // orange; "At Yonkers"), else nothing.
 function trainStatus(t) {
+  if (t.cancelled) return { text: T("Cancelled"), cls: "warn" };
   if (t.delayMin != null && !Number.isNaN(t.delayMin)) return lateText(t.delayMin);
   if (!t.statusText || /^On time$|late$/.test(t.statusText)) return { text: "", cls: "neutral" };
   return { text: statusLabel(t.statusText), cls: /^Held /.test(t.statusText) ? "warn" : "neutral" };
@@ -2270,7 +2323,9 @@ function factTiles(t) {
     tiles.push(`<div class="ft ft-speed"><span class="ft-label">${T("Speed")}</span><span class="ft-value">${v}<small>${km ? "km/h" : T("mph")}</small></span></div>`);
   }
   const note = t.estimated ? `${T("Estimated from predicted times")} · ${fmtAgo(t.updated)}` : `${T("GPS")} · ${fmtAgo(t.updated)}`;
-  return `<div class="facts">${tiles.length ? `<div class="ft-tiles">${tiles.join("")}</div>` : ""}${likelyLine(t)}<p class="ft-note">${t.estimated ? "" : SIGNAL_ICON}${esc(note)}</p></div>`;
+  // A railroad's own last report of it (a detail source's).
+  const seen = t.reported ? ` · ${T("Last reported at {station}, {time}", { station: t.reported.station, time: fmtTime(new Date(t.reported.at).toISOString(), AGENCIES[t.agency]?.tz) })}` : "";
+  return `<div class="facts">${tiles.length ? `<div class="ft-tiles">${tiles.join("")}</div>` : ""}${likelyLine(t)}<p class="ft-note">${t.estimated ? "" : SIGNAL_ICON}${esc(note + seen)}</p></div>`;
 }
 
 function trainTitle(t) {
@@ -4184,6 +4239,7 @@ function startTracking(t, stopKey, { fromKey = null, riding = false, confirmed =
   checkTracked();
   applySelectionFilter();
   renderAll();
+  refreshDetails();
 }
 
 const rideFrom = (s) => ({ fromKey: s?.key || null, fromName: s?.name || null, departAt: s ? Date.parse(s.dep || s.time) || null : null });
@@ -4744,6 +4800,7 @@ function select(id, { fly = true } = {}) {
     return;
   }
   renderDetail();
+  refreshDetails();
   const t = state.trains.get(id);
   if (t && fly) {
     map.flyTo({
