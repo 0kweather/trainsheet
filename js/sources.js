@@ -790,11 +790,20 @@ export function clockTime(text, ref, tz) {
 // midnight ({ day: the service day's midnight, line, pat }), or null.
 // `slack`: seconds before its first departure and after its last arrival
 // that still count.
+// A day's date where the railroad is ("2026-10-27"), for a second during it.
+const dateFormats = new Map();
+const localDate = (sec, tz) => {
+  let f = dateFormats.get(tz);
+  if (!f) dateFormats.set(tz, (f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" })));
+  return f.format(sec * 1000);
+};
 export function runNow(tt, number, now, slack) {
   const midnight = Math.round(now - localMinutes(now, tt.tz) * 60);
   const start = Date.parse(`${tt.start}T00:00:00Z`) / 1000;
   for (const day of [midnight, midnight - 86400]) {
-    const idx = Math.round((day - start) / 86400);
+    // Counted by the date where the railroad is: from local midnight, a day
+    // east of UTC+12 (New Zealand in summer) would round to the one before.
+    const idx = Math.round((Date.parse(`${localDate(day + 7200, tt.tz)}T00:00:00Z`) / 1000 - start) / 86400);
     // Past the timetable's two weeks: the same weekday in its second week.
     const bit = idx >= 0 && idx < 14 ? idx : 7 + ((((idx - 7) % 7) + 7) % 7);
     const p = (tt.trips[number] || []).find(([mask]) => (mask >> bit) & 1);
