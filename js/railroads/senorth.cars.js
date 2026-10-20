@@ -1,14 +1,15 @@
-// Central and northern Sweden's regional trains (SL's pendeltåg, Upptåget,
-// Mälartåg, Östgötapendeln, Tåg i Bergslagen, Norrtåg and Värmlandstrafik,
-// scripts/railroads/sweden.py): Trainsheet's own side views from each
-// model's published dimensions. Swedish bodies are tall and wide (the
-// loading gauge allows 3.4 m), and most of these trains are owned by
-// Transitio, the regions' leasing company, and painted in the region's
-// colors: SL's white with blue doors, Östgötapendeln's red and orange suns,
-// Norrtåg's royal blue under a yellow band, Mälartåg's cobalt blue over
-// silver, Tåg i Bergslagen's red over white, Värmlandstrafik's yellow and
-// green. Each train is drawn as what typically runs on its line, or as the
-// unit its feed names where it names one.
+// Central and northern Sweden's regional trains (SL's pendeltåg, Mälartåg
+// with the former Upptåget, Östgötapendeln, Tåg i Bergslagen, Norrtåg,
+// Värmlandstrafik and X-Tåget, scripts/railroads/sweden.py): Trainsheet's
+// own side views from each model's published dimensions. Swedish bodies
+// are tall and wide (the loading gauge allows 3.4 m), and most of these
+// trains are owned by Transitio, the regions' leasing company, and painted
+// in the region's colors: SL's white with blue doors, Östgötapendeln's red
+// and orange suns, Norrtåg's royal blue under a yellow band, Mälartåg's
+// cobalt blue over silver, Tåg i Bergslagen's red over white,
+// Värmlandstrafik's yellow and green, X-Tåget's red on anthracite. Sweden's
+// feeds name no units, so each train is drawn as what typically runs on
+// its line, told by its train number.
 
 import { bilevel } from "../carmodels.js?v=dev";
 import { rect, path, line, lines, poly, slats, truck, pantograph, C } from "../carart.js?v=dev";
@@ -180,7 +181,7 @@ const ntPaint = (c, g, part) => {
     s += path("M14.0 10.38L14.0 12.35L8.6 12.35Q6.6 9.6 4.3 7.0Q2.8 5.6 1.2 5.4L1.2 4.3Q3.6 4.6 5.2 6.2Q7.4 8.4 9.6 10.38Z", NT.yellow) +
       path("M9.6 10.38Q7.4 8.4 5.2 6.2Q3.6 4.6 1.2 4.3L1.2 4.05Q3.8 4.3 5.4 6.0Q7.6 8.2 9.9 10.38Z", "#ffffff") +
       path(CN_MASK, NT.deep) +
-      letters(c, 32.0, 6.3, 1.25, "NORR<tspan fill=\"#f6b519\">TÅG</tspan>", "#ffffff", { weight: 800, italic: true, family: SANS }) +
+      letters(c, 31.0, 3.75, 0.95, "NORR<tspan fill=\"#f6b519\">TÅG</tspan>", "#ffffff", { weight: 800, italic: true, family: SANS }) +
       letters(c, 4.6, 3.6, 0.7, "62001 A1", "#ffffff", { weight: 700, family: SANS });
   }
   return s;
@@ -294,77 +295,109 @@ function dosto(c, cab) {
 // ===================== Bombardier Regina (X50-X54) =====================
 
 // --- Bombardier Regina (Kalmar Verkstad, 2000-11; 63 of them Transitio's):
-// two cars of 26.95 m (53.9 m), 3.45 m wide, the widest trains in Sweden
-// (five seats abreast); bogie centers 19.0 m, 2.7 m wheelbase, 840 mm
-// wheels; the floor 1.15 m over the rail, with a low entrance at one end of
-// the B car (sv.wikipedia, "Regina (tåg)"; height about 4.3 m, from
-// photographs). Bo'Bo' + Bo'2': both bogies of the A car powered and the
-// B car's one under its cab. Stainless steel sides, a near-upright rounded
-// nose with a big windshield, the headlights at its lower corners; two
-// plug doors a side on each car, one a third of the way from the cab and
-// one by the inner end; the pantograph on the A car by the joint.
-// Variants: X50 (Mälartåg 9001-9004; Västtrafik), X51 (Tåg i Bergslagen
-// 9007-9025), X52 (200 km/h: Norrtåg 9032-9062, Mälartåg's ex-Upptåget
-// 9064-9066, TiB 9037 and 9039), X53 (Värmlandstrafik), X54 (TiB 9005,
-// 9006, 9056, 9057, 9068) (jarnvag.net).
-// Paint: Tåg i Bergslagen's stainless sides, a red band along the top
-// sweeping down the cab sides, a white front; Mälartåg's red nose and red
-// band, the name on a white panel; Norrtåg's royal blue with the yellow
-// band and a yellow frame round the windshield; Värmlandstrafik's
-// stainless with a yellow frame round the windshield and along the roof
-// edge and a green line at the waist, rising toward the cab.
+// cars of 26.95 m (two-car units 53.9 m, three-car 80.5 m), 3.45 m wide,
+// the widest trains in Sweden (five seats abreast); bogie centers 19.0 m,
+// 2.7 m wheelbase, 840 mm wheels; the floor 1.15 m over the rail, with a
+// low entrance at one end of the B car (sv.wikipedia, "Regina (tåg)";
+// the height, about 4.3 m, from photographs). Bo'Bo' + Bo'2': both bogies
+// of the A car powered and the B car's one under its cab; a three-car
+// unit's middle car (UB) runs on two trailer bogies. Stainless steel
+// sides; a near-upright rounded nose with a big windshield in a black
+// surround, the headlights at its lower corners, a lamp over the glass;
+// behind the cab one tall side window; two plug doors a side on each car,
+// one about a third of the way from the cab and one by the inner end; the
+// pantograph on the A car by the joint, air conditioning over each half
+// of every car. Variants (jarnvag.net): X50 (Mälartåg 9001-9004; X-Tåget
+// 9061), X51 (Tåg i Bergslagen 9007-9025; X-Tåget 9010), X52 (200 km/h:
+// Norrtåg's, 9032-9062, X-Tåget's, 9046 among them, Mälartåg's ex-Upptåget
+// 9064-9066, Tåg i Bergslagen's 9037 and 9039), X53 (Värmlandstrafik's,
+// 9049 among them), X54 (TiB 9005, 9006, 9056, 9057, 9068).
+// Each region's paint, from photographs of 2023-26 (Wikimedia Commons,
+// jarnvag.net): a cab color over the front, a sweep of the trim color up
+// each side of the windshield and along the top of the side, a dark
+// window band. Tåg i Bergslagen: a white cab, red sweeping over the
+// cab roof and along the eaves, stainless sides, its red mark big on the
+// cab side. Mälartåg (2025): the whole cab and the eaves cobalt blue, the
+// sides silver-white, the doors framed in red, its red mark and name.
+// X-Tåget: a white cab with red over its roof, the sides anthracite with
+// a big red X by the cab and red door frames, the name in white. Norrtåg:
+// royal blue, yellow up the windshield's sides and along the eaves.
+// Värmlandstrafik: a white cab, yellow up the windshield's sides and along
+// the eaves, stainless sides, a green line at the waist rising toward
+// the cab.
 const RG = { roof: 14.1, sill: 3.0, cornerR: 1.1, end: 0.55, trucks: { centers: 62.34, wb: 8.86, d: 33 }, diaphragm: [3.8, 12.2], badge: false };
 const RG_NOSE = [[1.25, 3.0], [0.95, 6.2], ["q", 0.95, 8.1, 1.6, 9.0], [3.3, 13.0], ["q", 3.9, 14.1, 5.6, 14.1]];
 const STEEL = "#d3d7db", STEEL_DK = "#b7bdc3";
-const RG_LIV = {
-  tib: { body: STEEL, top: "#d7262f", front: "#f4f4f2", band: "#1d2125", low: "#5e656c", mark: (c) => letters(c, 21.0, 5.0, 1.2, "TiB", "#d7262f", { weight: 800, italic: true, family: SANS }) },
-  malartag: { body: STEEL, top: "#d9232e", front: "#d9232e", band: "#1d2125", low: "#5e656c", line: "#d9232e",
-    mark: (c) => rect(19.0, 4.1, 7.8, 1.9, "#ffffff", 0, 'rx="0.2"') + letters(c, 22.9, 5.05, 0.9, "Mälartåg", "#d9232e", { weight: 700, italic: true, family: SANS }) },
-  upptaget: null,
-  norrtag: { body: NT.blue, top: NT.yellow, front: NT.blue, band: "#14306e", low: NT.deep, white: true,
-    mark: (c) => letters(c, 21.0, 5.0, 1.1, "NORR<tspan fill=\"#f6b519\">TÅG</tspan>", "#ffffff", { weight: 800, italic: true, family: SANS }) },
-  varmlandstrafik: { body: STEEL, top: "#f2b800", front: "#f4f4f2", band: "#1d2125", low: "#5e656c", green: "#22a046",
-    mark: (c) => letters(c, 15.0, 7.0, 0.7, "Värmlandstrafik", "#22a046", { weight: 700, family: SANS }) },
+const RG_MARK = {
+  tib: (c, x, y, h) => letters(c, x, y, h, "TiB", "#d7262f", { weight: 800, italic: true, family: SANS }),
+  malartag: (c, x, y, h) => [[-0.5, 0], [0, 0.45], [0.5, 0]].map(([dx, dy]) => `<circle cx="${x - 3.2 * h + (c.mirrored ? -dx : dx) * h}" cy="${y + dy * h}" r="${0.32 * h}" fill="#e0312b"/>`).join("") +
+    letters(c, x, y, h, "Mälartåg", "#e0312b", { weight: 600, family: SANS }),
+  xtaget: (c, x, y, h) => letters(c, x, y, h, "Xtåget", "#ffffff", { weight: 800, family: SANS, spacing: -0.03 * h }),
+  norrtag: (c, x, y, h) => letters(c, x, y, h, "NORR<tspan fill=\"#f6b519\">TÅG</tspan>", "#ffffff", { weight: 800, italic: true, family: SANS }),
+  varmlandstag: (c, x, y, h) => letters(c, x, y, h, "Värmlandstrafik", "#22a046", { weight: 700, family: SANS }),
 };
-RG_LIV.upptaget = RG_LIV.malartag;
+// body: the sides; cab: the front; trim: the sweep and eaves; band: the
+// window band; low: the skirt; frame: door frames.
+const RG_LIV = {
+  tib: { body: STEEL, cab: "#f4f4f2", trim: "#d7262f", band: "#24282c", low: "#5e656c", roof: "#c2c8ce" },
+  malartag: { body: "#e9ecef", cab: "#2b5bd3", trim: "#2b5bd3", band: "#3a4047", low: "#5e656c", roof: "#2b5bd3", frame: "#e0312b" },
+  xtaget: { body: "#45494e", cab: "#f4f4f2", trim: "#e2232e", band: "#26292d", low: "#33363a", roof: "#c2c8ce", frame: "#e2232e", x: true },
+  norrtag: { body: NT.blue, cab: NT.blue, trim: NT.yellow, band: "#14306e", low: NT.deep, roof: NT.roof, pin: true },
+  varmlandstag: { body: STEEL, cab: "#f4f4f2", trim: "#f2b800", eave: 0.6, band: "#24282c", low: "#5e656c", roof: "#c2c8ce", green: "#22a046" },
+};
 const rgLiv = (c) => RG_LIV[c.agency] || RG_LIV.tib;
+// The side's paint shared by every car: the window band, eaves, skirt,
+// door frames; from x0 on (a cab car's begin behind its cab).
+function rgSide(c, L, k, x0, doors) {
+  let s = rect(0, 0, L, 17, k.body) + rect(0, 12.9, L, 2, k.roof) + line(0, 12.9, L, 12.9, "rgba(0,0,0,0.18)", 0.5) +
+    rect(x0, 6.25, L - x0, 3.75, k.band) + rect(0, 12.9 - (k.eave || 1.8), L, k.eave || 1.8, k.trim) + rect(0, 0, L, 3.4, k.low);
+  if (k.pin) s += rect(0, 10.9, L, 0.2, "#ffffff");
+  if (k.body === STEEL) s += lines([[x0, 4.9, L, 4.9], [x0, 11.0, L, 11.0]], STEEL_DK, 0.5);
+  if (k.green) s += rect(x0, 5.2, L - x0, 0.5, k.green);
+  for (const d of doors) {
+    if (k.frame) s += rect(d.x - 0.3, d.y0, d.w + 0.6, d.y1 - d.y0 + 0.3, k.frame, 0, 'rx="0.3"');
+    s += rect(d.x - 0.05, d.y0, d.w + 0.1, d.y1 - d.y0, k.x ? "#5a5f65" : k.body === NT.blue ? "#2a5cc4" : "#dfe2e5", 0, 'rx="0.2"');
+  }
+  return s;
+}
 const RG_DOOR = (x, low) => ({ x, w: 3.6, y0: low ? 1.95 : 3.77, y1: 10.3 });
+const RG_WIN = { y: 6.55, w: 4.7, h: 3.15, r: 0.35 };
+// car: "A" (motor car, cab), "B" (cab, the low entrance), "M" (middle).
 function regina(c, car) {
-  const L = c.L, k = rgLiv(c), roof = RG.roof, a = car === "A";
-  const doors = [RG_DOOR(28.0, false), RG_DOOR(L - 13.8, !a)];
-  const win = { y: 6.55, w: 4.7, h: 3.15, r: 0.35 };
-  const rows = [{ ...win, xs: even(10.8, 28.0, 2, 4.7) }, { ...win, xs: even(31.6, L - 13.8, 5, 4.7) }, { ...win, xs: [L - 9.0] }];
-  return bilevel({ ...c, cabL: true, cabR: false }, { ...RG, base: k.body, nose: RG_NOSE, cabLen: 7.5, rows,
+  const L = c.L, k = rgLiv(c), roof = RG.roof, cab = car !== "M";
+  const doors = cab ? [RG_DOOR(28.0, false), RG_DOOR(L - 13.8, car === "B")] : [RG_DOOR(9.6, false), RG_DOOR(L - 13.2, false)];
+  const rows = cab ? [{ ...RG_WIN, xs: even(10.8, 28.0, 2, 4.7) }, { ...RG_WIN, xs: even(31.6, L - 13.8, 5, 4.7) }, { ...RG_WIN, xs: [L - 9.0] }]
+    : [{ ...RG_WIN, xs: [3.4] }, { ...RG_WIN, xs: even(13.2, L - 13.2, 9, 4.7) }, { ...RG_WIN, xs: [L - 8.4] }];
+  const mark = RG_MARK[c.agency] || RG_MARK.tib;
+  return bilevel({ ...c, cabL: cab, cabR: false }, { ...RG, base: k.body, nose: cab ? RG_NOSE : null, cabLen: cab ? 7.5 : 0, rows,
     paint: (c, g) => {
-      let s = rect(0, 0, L, 17, k.body) + rect(0, 12.9, L, 2, k.white ? NT.roof : "#c2c8ce") + line(0, 12.9, L, 12.9, "rgba(0,0,0,0.18)", 0.5);
-      // The window band, the roof-edge band, the skirt.
-      s += rect(6.2, 6.25, L - 6.2, 3.75, k.band) + rect(0, 11.1, L, 1.8, k.top) + rect(0, 0, L, 3.4, k.low);
-      if (!k.white && k !== RG_LIV.malartag) s += rect(0, 10.95, L, 0.15, "#ffffff");
-      if (k.white) s += rect(0, 10.9, L, 0.2, "#ffffff");
-      if (k.line) s += rect(0, 5.85, L, 0.4, k.line);
-      if (k.green) s += path(`M${L} 5.7L13.0 5.7Q9.5 5.7 6.0 4.4L6.0 4.0Q9.6 5.2 13.0 5.2L${L} 5.2Z`, k.green);
-      if (!k.white && !k.green) s += lines([[0, 4.9, L, 4.9], [0, 8.1, 6.0, 8.1]], STEEL_DK, 0.5);
-      // The cab: its color over the front and up round the windshield,
-      // the side window behind it.
-      s += path("M0 3.4L0 14.1L8.0 14.1L8.0 11.1Q6.2 11.1 5.0 9.2L3.2 6.0Q2.4 4.6 2.4 3.4Z", k.front) +
-        path("M8.0 11.1Q6.4 11.1 5.2 9.2L3.4 6.0Q2.6 4.6 2.6 3.4L0.9 3.4L0.9 14.1L8.0 14.1Z", k.top, 0, 'opacity="0.0"') +
-        path("M1.5 9.0L3.4 13.1L4.9 13.1Q5.6 13.6 6.8 13.6L7.6 13.6L7.6 12.1Q6.0 11.8 5.0 10.0L3.6 7.3L1.6 7.3Z", k.top) + frames([4.6], 7.0, 1.5, 3.1, 0.15) + k.mark(c);
+      let s = rgSide(c, L, k, cab ? 9.6 : 0, doors);
+      if (cab) {
+        // The cab's color over the front and back to its side window, the
+        // trim sweeping up beside the windshield to the eaves, the black
+        // surround of the glass.
+        s += path("M0 3.4L0 14.2L9.6 14.2L9.6 3.4Z", k.cab) + rect(0, 0, 9.6, 3.4, k.low) +
+          path(poly([[0.95, 5.0], [3.1, 5.0], ["q", 4.3, 8.0, 6.0, 10.4], ["q", 7.0, 11.1, 9.6, 11.1], [9.6, 14.2], [5.4, 14.2], ["q", 3.9, 14.2, 3.2, 12.6], [1.6, 9.0], ["q", 1.0, 7.8, 0.95, 5.0]]), k.trim) +
+          path(poly([[1.3, 8.3], [3.15, 13.0], ["q", 3.6, 13.8, 4.6, 13.8], [5.6, 13.8], [4.7, 12.9], [2.95, 8.3]]), "#16191c") + frames([6.7], 6.9, 1.5, 3.4, 0.15) +
+          (k.x ? path(poly([[12.6, 3.4], [15.6, 3.4], [17.6, 7.0], [19.6, 3.4], [22.6, 3.4], [19.2, 8.4], [22.6, 13.0], [19.6, 13.0], [17.6, 9.8], [15.6, 13.0], [12.6, 13.0], [16.0, 8.4]]), k.trim) : "") +
+          (k.green ? path("M9.6 5.7L9.6 5.2Q6.2 5.1 3.6 3.8L3.2 4.2Q6.0 5.7 9.6 5.7Z", k.green) : "");
+        s += c.agency === "xtaget" ? mark(c, 15.0, 4.6, 1.3) : c.agency === "malartag" ? mark(c, 21.0, 4.4, 0.95) : mark(c, 6.9, 4.5, c.agency === "varmlandstag" ? 0.5 : 1.0);
+      } else if (k.x || c.agency === "malartag") s += mark(c, L / 2, 4.4, 0.95);
       return s;
     },
     extra: (c, g) => {
       let s = "";
       for (const d of doors) s += plug(d.x, d.w, d.y0, d.y1, { glass: [0.42, 0.42] });
       // Underfloor: the traction converter and transformer between the A
-      // car's bogies, auxiliaries and the battery under the B car; the
-      // B car's low entrance step.
-      s += a ? boxes(24.0, 64.0, 3.0, 4, 1.25, "#363a40") : boxes(24.0, 64.0, 3.0, 3, 1.0, "#363a40");
+      // car's bogies, auxiliaries and the battery under the others.
+      s += car === "A" ? boxes(24.0, 64.0, 3.0, 4, 1.25, "#363a40") : boxes(24.0, 64.0, 3.0, 3, 1.0, "#363a40");
       s += hvac(17.0, roof, 10.0, 0.7, "#a7aeb6") + hvac(L - 30.0, roof, 10.0, 0.7, "#a7aeb6");
-      if (a) s += pantograph(L - 10.5, roof, { up: true, facing: -1 }) + panGear(L - 10.5, roof, -1) + roofBox(40.0, roof, 12.0, 0.7, "#5a6067");
+      if (car === "A") s += pantograph(L - 10.5, roof, { up: true, facing: -1 }) + panGear(L - 10.5, roof, -1) + roofBox(40.0, roof, 12.0, 0.7, "#5a6067");
       else s += roofCover(40.0, roof, 14.0, 0.5, "#9aa1a9");
-      return s + horns(5.4, 14.05);
+      return s + (cab ? horns(6.2, 14.05) : "");
     },
-    cab: () => path(poly([[1.85, 9.3], [3.55, 12.95], [6.6, 12.95], [6.6, 9.3]]), C.glass) + path(poly([[2.2, 9.55], [3.1, 11.5], [3.7, 11.5], [2.8, 9.55]]), C.glassLight) +
-      wiper(2.4, 9.5, 3.4, 11.9) + lamp(1.05, 5.5, 0.6, 0.55) + lamp(1.1, 4.7, 0.42, 0.34, RED_LAMP) + lamp(4.6, 13.55, 0.8, 0.28) + emuFront(1.25, 3.0, { coupler: 3.1 }),
+    cab: () => path(poly([[1.6, 8.6], [3.35, 12.75], ["q", 3.7, 13.45, 4.5, 13.45], [5.0, 13.45], [4.3, 12.75], [2.7, 8.6]]), C.glass) + path(poly([[1.9, 8.85], [2.75, 10.9], [3.3, 10.9], [2.45, 8.85]]), C.glassLight) +
+      wiper(2.2, 8.8, 3.2, 11.4) + lamp(1.0, 5.6, 0.75, 0.6) + lamp(1.1, 4.75, 0.45, 0.34, RED_LAMP) + lamp(4.6, 13.55, 0.8, 0.28) + emuFront(1.25, 3.0, { coupler: 3.1 }),
   });
 }
 
@@ -389,7 +422,7 @@ function itino(c) {
   return bilevel({ ...c, cabL: true, cabR: false }, { ...IT, base: VT.body, nose: IT_NOSE, cabLen: 7, rows,
     drop: { a: 21.5, b: L - 5.4, y: 1.35 },
     paint: (c, g) => rect(0, 0, L, 17, VT.body) + rect(0, 11.9, L, 2, VT.roof) + rect(0, 10.9, L, 1.0, VT.yellow) + rect(0, 0, L, 1.6, "#3d4146") +
-      rect(0, 3.3, L, 0.3, VT.green) + rect(door.x - 0.3, door.y0 - 0.1, door.w + 0.6, door.y1 - door.y0 + 0.4, VT.yellow, 0, 'rx="0.3"') +
+      rect(0, 4.4, L, 0.3, VT.green) + rect(door.x - 0.3, door.y0 - 0.1, door.w + 0.6, door.y1 - door.y0 + 0.4, VT.yellow, 0, 'rx="0.3"') +
       path("M0 3.6L0 13L9.0 13L9.0 10.9Q7.6 10.9 6.4 8.0Q5.4 5.6 3.2 4.6Q2.2 4.0 2.0 3.6Z", VT.yellow) + path(poly([[1.45, 7.6], [3.2, 11.3], [6.6, 11.3], [6.6, 7.6]]), "#1f2327") +
       rows.map((r) => frames(r.xs, r.y, r.w, r.h, 0.15)).join("") + letters(c, 30.0, 4.4, 0.7, "Värmlandstrafik", "#ffffff", { weight: 700, family: SANS }),
     extra: (c, g) => truck(13.5, { wb: 8.2, d: 30, top: 2.4 }) + truck(L, { wb: 8.2, d: 30, top: 2.4 }) +
@@ -426,7 +459,7 @@ function x11(c, motor) {
   return bilevel({ ...c, cabL: true, cabR: false }, { ...X11, base: NT.blue, nose: X11_NOSE, cabLen: 5.5, rows,
     paint: (c, g) => rect(0, 0, L, 17, NT.blue) + rect(0, 11.3, L, 2, NT.yellow) + rect(0, 11.1, L, 0.2, "#ffffff") + rect(0, 0, L, 4.3, NT.deep) +
       lines(rib, "#3d6bd0", 0.5) + path("M0 4.2L0 13L5.0 13L5.0 11.3Q3.6 11.3 3.2 9.8L2.6 4.2Z", NT.yellow) +
-      rows.map((r) => frames(r.xs, r.y, r.w, r.h, 0.18, "#8d949c")).join("") + letters(c, 30.0, 10.2, 0.85, "NORR<tspan fill=\"#f6b519\">TÅG</tspan>", "#ffffff", { weight: 800, italic: true, family: SANS }),
+      rows.map((r) => frames(r.xs, r.y, r.w, r.h, 0.18, "#8d949c")).join("") + letters(c, 21.5, 10.55, 0.6, "NORR<tspan fill=\"#f6b519\">TÅG</tspan>", "#ffffff", { weight: 800, italic: true, family: SANS }),
     extra: (c, g) => {
       let s = "";
       for (const d of doors) s += plug(d.x, d.w, 4.1, 10.6, { leaves: 2, glass: [0.45, 0.42] });
@@ -458,6 +491,7 @@ export const TYPES = {
   seEr1Mid: { name: "ER1 (Stadler DOSTO) middle car", kind: "emu" },
   seReginaA: { name: "Regina motor car", kind: "emu" },
   seReginaB: { name: "Regina car", kind: "emu" },
+  seReginaM: { name: "Regina middle car", kind: "emu" },
   seY31: { name: "Itino (Y31) car", kind: "emu" },
   seX11M: { name: "X11 motor car", kind: "emu" },
   seX11T: { name: "X11 trailer car", kind: "emu" },
@@ -484,56 +518,99 @@ export const MODELS = {
   seEr1Mid: M((c) => dosto(c, false), ft(25.555), false, (c) => (c.index >= c.count / 2 ? "b" : "a")),
   seReginaA: M((c) => regina(c, "A"), ft(26.95), true),
   seReginaB: M((c) => regina(c, "B"), ft(26.95), true),
+  seReginaM: M((c) => regina(c, "M"), ft(26.6)),
   seY31: M(itino, ft(19.2), true),
   seX11M: M((c) => x11(c, true), ft(24.93), true),
   seX11T: M((c) => x11(c, false), ft(24.93), true),
 };
 
-// Unit numbers, where a feed reports them (jarnvag.net's fleet lists).
-const REGINA = (from, to) => [from, to, "seReginaA"];
+// Unit numbers (jarnvag.net's fleet lists; for Värmlandstrafik and
+// X-Tåget the units seen in photographs). Neither of Sweden's feeds names
+// a unit today (scripts/railroads/sweden.py), so these only list what each
+// railroad runs; a feed that some day reports units would match them.
+const REGINA = (from, to = from) => [from, to, "seReginaA"];
 export const FLEETS = {
   slpendel: [[6001, 6083, "seX60Cab"], [6084, 6129, "seX60bCab"]],
   ostgotapendeln: [[61201, 61216, "seX61Cab"], [61301, 61302, "seX61Cab"]],
-  norrtag: [[62001, 62012, "seX62Cab"], REGINA(9030, 9063), [3105, 3213, "seX11M"]],
+  norrtag: [[62001, 62012, "seX62Cab"], REGINA(9032, 9062), [3189, 3189, "seX11M"]],
   malartag: [[1, 53, "seEr1Cab"], REGINA(9001, 9004), REGINA(9064, 9066)],
-  upptaget: [[1, 53, "seEr1Cab"], REGINA(9064, 9066)],
-  tib: [[54, 60, "seEr1Cab"], REGINA(9005, 9029), REGINA(9037, 9039), REGINA(9056, 9057), REGINA(9068, 9068)],
-  varmlandstrafik: [REGINA(9040, 9055), REGINA(9081, 9085), [1401, 1429, "seY31"]],
+  tib: [[54, 60, "seEr1Cab"], REGINA(9005, 9029), REGINA(9037, 9039), REGINA(9056, 9057), REGINA(9068)],
+  varmlandstag: [REGINA(9049), [1413, 1421, "seY31"]],
+  xtaget: [REGINA(9010), REGINA(9046), REGINA(9061)],
 };
 
 const set = (label, ...units) => ({ label, units });
-const X60_SET = set("Six-car X60 (Alstom Coradia Nordic); at rush hour often two, 12 cars", ["seX60Cab", 1], ["seX60M", 1], ["seX60M2", 1], ["seX60M3", 1], ["seX60M", 1], ["seX60Cab", 1]);
+const X60_SET = set("Six-car X60 or X60B (Alstom Coradia Nordic); at rush hour often two, 12 cars", ["seX60Cab", 1], ["seX60M", 1], ["seX60M2", 1], ["seX60M3", 1], ["seX60M", 1], ["seX60Cab", 1]);
 const X60B_SET = set("Six-car X60B (Alstom Coradia Nordic)", ["seX60bCab", 1], ["seX60M", 1], ["seX60M2", 1], ["seX60M3", 1], ["seX60M", 1], ["seX60bCab", 1]);
-const X61_SET = set("Four-car X61 (Alstom Coradia Nordic), sometimes two", ["seX61Cab", 1], ["seX61M1", 1], ["seX61M2", 1], ["seX61Cab", 1]);
+const X61_SET = set("Four-car X61 (Alstom Coradia Nordic), at busy times two", ["seX61Cab", 1], ["seX61M1", 1], ["seX61M2", 1], ["seX61Cab", 1]);
 const X62_SET = set("Four-car X62 (Alstom Coradia Nordic)", ["seX62Cab", 1], ["seX62M1", 1], ["seX62M2", 1], ["seX62Cab", 1]);
-const ER1_SET = set("Four-car ER1 (Stadler DOSTO) double-decker, sometimes two", ["seEr1Cab", 1], ["seEr1Mid", 2], ["seEr1Cab", 1]);
-const REGINA_SET = set("Two-car Regina", ["seReginaA", 1], ["seReginaB", 1]);
+const ER1_SET = set("Four-car ER1 (Stadler DOSTO) double-decker, at busy times two", ["seEr1Cab", 1], ["seEr1Mid", 2], ["seEr1Cab", 1]);
+const REGINA_SET = set("Two-car Regina, at busy times two coupled", ["seReginaA", 1], ["seReginaB", 1]);
+const REGINA_X = set("Regina, two or three cars", ["seReginaA", 1], ["seReginaB", 1]);
 const Y31_SET = set("Two-car Itino (Y31) diesel", ["seY31", 2]);
 const X11_SET = set("Two-car X11", ["seX11M", 1], ["seX11T", 1]);
 const BY_TYPE = {
   seX60Cab: X60_SET, seX60M: X60_SET, seX60M2: X60_SET, seX60M3: X60_SET, seX60bCab: X60B_SET,
   seX61Cab: X61_SET, seX61M1: X61_SET, seX61M2: X61_SET, seX62Cab: X62_SET, seX62M1: X62_SET, seX62M2: X62_SET,
-  seEr1Cab: ER1_SET, seEr1Mid: ER1_SET, seReginaA: REGINA_SET, seReginaB: REGINA_SET, seY31: Y31_SET, seX11M: X11_SET, seX11T: X11_SET,
+  seEr1Cab: ER1_SET, seEr1Mid: ER1_SET, seReginaA: REGINA_SET, seReginaB: REGINA_SET, seReginaM: REGINA_SET,
+  seY31: Y31_SET, seX11M: X11_SET, seX11T: X11_SET,
 };
-// Which line runs what (the operators' and Transitio's fleet pages,
-// jarnvag.net, Wikipedia): SL's every line X60s; Östgötapendeln X61s;
-// Mälartåg's and Upptåget's lines ER1s, but the Uven trains (Uppsala-Sala-
-// Västerås-Linköping) and the Sala line Reginas; Tåg i Bergslagen's
-// Bergslagspendeln (Ludvika-Västerås) ER1s, its other lines Reginas;
-// Norrtåg's Mittbanan and the coast (Sundsvall-Östersund-Storlien, Umeå-
-// Sundsvall) X62s, Umeå-Vännäs-Hällnäs X11s, the lines north of Umeå
-// Reginas; Värmlandstrafik's Fryksdal Line (Karlstad-Torsby) Itinos, its
-// other lines Reginas.
+// Which line runs what. Every railroad here is one route name in the
+// timetable (sweden.py: "Mälartåg", "Norrtåg", "Tåg i Bergslagen"...), so
+// the line is told by the advertised train number, as GTFS Sweden 3 numbers
+// them (the timetable of 2026-10-18; a leading 1, 2, 3 or 5 on a five-digit
+// number marks an extra run of the four-digit one), and by the destination
+// when there is no number. The fleets per line, from the operators' and
+// Transitio's fleet pages and jarnvag.net:
+//   Mälartåg: ER1s everywhere but the Uven trains (Uppsala-Sala-Västerås-
+//     Eskilstuna-Linköping, 2100-2199) and Uppsala-Sala-Västerås-Eskilstuna
+//     (8500-8599), which are its nine Reginas' work.
+//   Tåg i Bergslagen: Västerås-Ludvika and Västerås-Fagersta (8000-8099)
+//     its seven ER1s; Gävle-Örebro-Hallsberg-Mjölby, Mora-Borlänge-Sala and
+//     Örebro-Hallsberg-Laxå (8100-8249) Reginas.
+//   Norrtåg: Umeå-Sundsvall (7401-7459) and Sundsvall-Östersund-Storlien
+//     (7499-7559) X62s; Umeå-Vindeln-Hällnäs (7460-7498) X11s; Umeå-Luleå,
+//     Luleå-Kiruna and Luleå-Haparanda (7101-7199) Reginas.
+//   Värmlandstrafik: Charlottenberg-Karlstad-Kristinehamn (8900-8949)
+//     Reginas; Karlstad-Torsby on the unelectrified Fryksdal Line
+//     (8951-8999) Itinos.
+//   SL: X60s on every line; Östgötapendeln X61s; X-Tåget Reginas.
+const num = (t) => {
+  const n = parseInt(String(t.number || "").replace(/\D/g, ""), 10);
+  return Number.isFinite(n) ? (n >= 10000 ? n % 10000 : n) : null;
+};
 const text = (t) => `${t.route || ""} ${t.destination || ""} ${t.origin || ""}`;
+const within = (n, a, b) => n != null && n >= a && n <= b;
 export const TYPICAL = {
   slpendel: (t, reported) => BY_TYPE[reported] || X60_SET,
   ostgotapendeln: (t, reported) => BY_TYPE[reported] || X61_SET,
-  malartag: (t, reported) => BY_TYPE[reported] || (/Uven|UVEN|Sala.*Linköping|Linköping.*Sala/.test(text(t)) ? REGINA_SET : ER1_SET),
-  upptaget: (t, reported) => BY_TYPE[reported] || (/Sala/.test(text(t)) ? REGINA_SET : ER1_SET),
-  tib: (t, reported) => BY_TYPE[reported] || (/Ludvika|Bergslagspendeln/.test(text(t)) && !/Gävle|Örebro|Mjölby/.test(text(t)) ? ER1_SET : REGINA_SET),
-  norrtag: (t, reported) => BY_TYPE[reported] || (/Hällnäs|Vännäs/.test(text(t)) && !/Luleå|Boden/.test(text(t)) ? X11_SET
-    : /Östersund|Storlien|Sundsvall|Härnösand|Kramfors|Örnsköldsvik/.test(text(t)) ? X62_SET : REGINA_SET),
-  varmlandstrafik: (t, reported) => BY_TYPE[reported] || (/Torsby|Sunne|74/.test(text(t)) ? Y31_SET : REGINA_SET),
+  malartag: (t, reported) => {
+    const n = num(t);
+    if (BY_TYPE[reported]) return BY_TYPE[reported];
+    if (n != null) return within(n, 2100, 2199) || within(n, 8500, 8599) ? REGINA_SET : ER1_SET;
+    return /Linköping.*Sala|Sala.*Linköping/.test(text(t)) ? REGINA_SET : ER1_SET;
+  },
+  tib: (t, reported) => {
+    const n = num(t);
+    if (BY_TYPE[reported]) return BY_TYPE[reported];
+    if (n != null) return within(n, 8000, 8099) ? ER1_SET : REGINA_SET;
+    return /Ludvika|Fagersta/.test(text(t)) ? ER1_SET : REGINA_SET;
+  },
+  norrtag: (t, reported) => {
+    const n = num(t);
+    if (BY_TYPE[reported]) return BY_TYPE[reported];
+    if (within(n, 7460, 7498)) return X11_SET;
+    if (within(n, 7401, 7459) || within(n, 7499, 7599)) return X62_SET;
+    if (n != null) return REGINA_SET;
+    return /Hällnäs|Vindeln/.test(text(t)) ? X11_SET : /Östersund|Storlien|Duved|Åre|Bräcke|Ånge|Sundsvall/.test(text(t)) ? X62_SET : REGINA_SET;
+  },
+  varmlandstag: (t, reported) => {
+    const n = num(t);
+    if (BY_TYPE[reported]) return BY_TYPE[reported];
+    if (n != null && within(n, 8900, 8999)) return n >= 8950 ? Y31_SET : REGINA_SET;
+    return /Torsby|Sunne/.test(text(t)) ? Y31_SET : REGINA_SET;
+  },
+  xtaget: (t, reported) => BY_TYPE[reported] || REGINA_X,
 };
 
 // Fact sheets in mph, hp and ft, from the published km/h, kW and m.
@@ -577,4 +654,4 @@ export const FACTS = {
 const part = (facts, name) => ({ ...facts, model: `${facts.model}, ${name}` });
 for (const [k, of, name] of [["seX60M", "seX60Cab", "middle car"], ["seX60M2", "seX60Cab", "middle car"], ["seX60M3", "seX60Cab", "middle car"],
   ["seX61M1", "seX61Cab", "middle car"], ["seX61M2", "seX61Cab", "middle car"], ["seX62M1", "seX62Cab", "middle car"], ["seX62M2", "seX62Cab", "middle car"],
-  ["seEr1Mid", "seEr1Cab", "middle car"], ["seReginaB", "seReginaA", "B car"], ["seX11T", "seX11M", "trailer car"]]) FACTS[k] = part(FACTS[of], name);
+  ["seEr1Mid", "seEr1Cab", "middle car"], ["seReginaB", "seReginaA", "B car"], ["seReginaM", "seReginaA", "middle car"], ["seX11T", "seX11M", "trailer car"]]) FACTS[k] = part(FACTS[of], name);
