@@ -7,6 +7,7 @@ runs on its own.
 """
 import csv, gzip, io, json, pathlib, re, ssl, sys, time, unicodedata, urllib.parse, urllib.request, zipfile
 
+import netex
 from railroads import load
 
 DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
@@ -124,6 +125,9 @@ GTFS = {
 #   "headers":      sent with the feed's download ({"Accept-Encoding":
 #                   "gzip"}, which Finland's Digitraffic requires; a gzipped
 #                   answer is unpacked)
+#   "netex":        the download is NeTEx (Italy's National Access Point's),
+#                   not GTFS: True, or scripts/netex.py's hooks ({"journey",
+#                   "stop_name"}); get_zip converts it to GTFS
 # PLUGINS: each plug-in's railroads, for a build script's --only.
 EXTRAS, PLUGINS = {}, {}
 for _mod in load():
@@ -138,6 +142,10 @@ for _agency in [a for a, f in GTFS.items() if f is None]:  # a plug-in taken out
     del GTFS[_agency]
 TRANSLATE = {GTFS[a][0]: x["translations"] for a, x in EXTRAS.items() if x.get("translations")}
 HEADERS = {GTFS[a][0]: x["headers"] for a, x in EXTRAS.items() if x.get("headers")}
+NETEX = {GTFS[a][0]: x["netex"] for a, x in EXTRAS.items() if x.get("netex")}
+# Each NeTEx download converted once a run, though several railroads share it
+# (Trenitalia's four): {url: GTFS zip bytes}.
+NETEX_GTFS = {}
 
 # A railroad outside the US and Canada (by its AGENCIES country) keeps its
 # rows of the station and timetable files out of the ones every viewer loads
@@ -272,6 +280,10 @@ def get_zip(url, timeout=180, attempts=4, page_link=True):
     current file (the Alaska Railroad's, named by date)."""
     for attempt in range(attempts):
         try:
+            if url in NETEX:  # a NeTEx timetable, as GTFS (scripts/netex.py)
+                if url not in NETEX_GTFS:
+                    NETEX_GTFS[url] = netex.to_gtfs(get_raw(url, timeout), NETEX[url])
+                return zipfile.ZipFile(io.BytesIO(NETEX_GTFS[url]))
             data = get_raw(url, timeout)
             if page_link and data[:2] != b"PK":
                 href = re.search(rb'href="([^"]+\.zip)"', data, re.I).group(1).decode()
