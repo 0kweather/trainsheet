@@ -459,4 +459,28 @@ export const TYPICAL = {
     return { label: `${name} locomotive with three refurbished carriages and an SRV driving car`, units: north ? set.reverse() : set };
   },
 };
-export const FACTS = {};
+const kmh = (v) => Math.round((v / 1.609344) * 10) / 10, kw = (v) => Math.round(v / 0.7457);
+const WP = "https://en.wikipedia.org/wiki/";
+const AM_FACTS = { model: "AM class (CAF Civity)", type: "Electric multiple unit", builder: "CAF (Beasain, Spain; Huehuetoca, Mexico)", built: "2013–2015, 2019–2020, 2022–2026",
+  fleet: "95 three-car units (AM 103–714, 810–973, 1005–1249)", topSpeedMph: kmh(110), powerHp: kw(1520), seats: 230, lengthFt: 236.3,
+  about: "Auckland's electric trains, a driving motor car at each end (the AMP with the pantograph, the AMA without) and a low-floor trailer between, usually run as six cars. Seats are a unit's. The last of the 23 Mexican-built units arrived in 2026, ready for the City Rail Link.",
+  source: `${WP}New_Zealand_AM_class_electric_multiple_unit` };
+const SR_FACTS = { model: "SR carriage (British Rail Mark 2)", type: "Passenger coach", builder: "British Rail; rebuilt by Hillside, refurbished by Hutt Workshops", built: "1971–1975, rebuilt 2001–2005, refurbished 2021",
+  fleet: "Three four-car Te Huia sets", seats: 50, lengthFt: 64.5,
+  about: "Former Auckland suburban carriages (SA class), themselves rebuilt British Rail Mark 2s, refurbished for Te Huia with their sliding doors kept for wheelchairs and bicycles.",
+  source: `${WP}Te_Huia` };
+export const FACTS = {
+  atAmp: AM_FACTS, atAmt: AM_FACTS, atAma: AM_FACTS,
+  thSr: SR_FACTS,
+  thSrc: { ...SR_FACTS, model: "SRC café car (British Rail Mark 2)", seats: 20, about: "Te Huia's café car: a servery, an accessible toilet and 20 seats, rebuilt from an Auckland SA carriage." },
+  thSrv: { ...SR_FACTS, model: "SRV driving car (British Rail Mark 2)", type: "Driving trailer", seats: 28,
+    about: "The cab car at the far end of a Te Huia set from its locomotive, rebuilt from an Auckland SD driving car: cycle storage, a generator room, a staff office and 28 fixed seats." },
+  krDl: { model: "DL class", type: "Diesel-electric locomotive", builder: "CRRC Dalian (MTU engines)", built: "2009–2023", fleet: "73 built",
+    topSpeedMph: kmh(100), powerHp: kw(2700), lengthFt: 60.7,
+    about: "KiwiRail's main North Island locomotive, with a cab at each end. Some, fitted with ETCS and cleared for 100 km/h, took over Te Huia from the DFBs in August 2026.",
+    source: `${WP}New_Zealand_DL_class_locomotive` },
+  krDfb: { model: "DFB class (rebuilt EMD GT22MC)", type: "Diesel-electric locomotive", builder: "General Motors Diesel, London, Ontario", built: "1979–1981, rebuilt 1992–1997",
+    fleet: "DFT/DFB 7008–7348", topSpeedMph: kmh(113), powerHp: kw(1800), lengthFt: 54.8,
+    about: "DF class locomotives rebuilt with turbochargers as DFTs; those fitted with fire suppression for passenger trains are DFBs. They haul the Wairarapa Connection and the Capital Connection.",
+    source: `${WP}New_Zealand_DF_class_locomotive_(1979)` },
+};

@@ -11,7 +11,7 @@
 import { bilevel } from "../carmodels.js?v=dev";
 import { C, rect, circle, path, line, lines, poly, win, slats, pantograph } from "../carart.js?v=dev";
 import { letters, hvac, roofCover, panGear, horns, lamp, RED_LAMP, wiper } from "./digitraffic.cars.js?v=dev";
-import { facing, unitEnd, autoCoupler, underGear, truckGear, aerial, roofCable, leafDoor, dfb, MK2, mk2Gear } from "./aucklandtransport.cars.js?v=dev";
+import { facing, unitEnd, autoCoupler, underGear, truckGear, aerial, roofCable, leafDoor, dfb, MK2, mk2Gear, FACTS as AKL_FACTS } from "./aucklandtransport.cars.js?v=dev";
 
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
@@ -157,10 +157,10 @@ export const TYPICAL = {
       const toWellington = /Wellington/i.test(t.destination || "");
       return { label: "DFB locomotive with Mark 2 carriages, usually 5 to 8", units: [["krDfb", 1], ...(toWellington ? set.slice().reverse() : set)] };
     }
+    // Several units named: that many, coupled. One named says only which
+    // unit leads, not how many follow it.
     const named = Math.min(4, new Set(t.cars?.numbers || []).size);
-    if (named && MATANGI.includes(reported)) {
-      return { label: `Matangi electric train, ${named === 1 ? "one two-car unit (more may be coupled)" : `${named} two-car units`}`, units: units(named) };
-    }
+    if (named > 1 && MATANGI.includes(reported)) return { label: `Matangi electric train, ${named} two-car units coupled`, units: units(named) };
     if (/Johnsonville|Melling/i.test(route)) return { label: "Matangi electric unit, usually 2 cars (4 at busy times)", units: units(1) };
     return { label: "Matangi electric units, usually 4 cars (6 or 8 at peak times)", units: units(2) };
   },
@@ -172,10 +172,15 @@ const MATANGI_FACTS = { model: "FP/FT Matangi", type: "Electric multiple unit", 
   fleet: "83 two-car units (4103–4610, 5010–5396)", topSpeedMph: kmh(95), powerHp: kw(680), seats: 147, lengthFt: 144.5,
   about: "Wellington's suburban trains: a motor car with the pantograph and a low-floor trailer, run singly or two to four coupled on the Kāpiti, Hutt Valley, Melling and Johnsonville lines. Seats are a unit's.",
   source: `${WP}New_Zealand_FP_class_electric_multiple_unit` };
-export const FACTS = {
-  mtFp: MATANGI_FACTS, mtFt: MATANGI_FACTS,
-  wcSw: { model: "SW carriage (British Rail Mark 2)", type: "Passenger coach", builder: "British Rail (Derby); rebuilt by Hillside Engineering", built: "1971–1975, rebuilt 2007",
+const SW_FACTS = { model: "SW carriage (British Rail Mark 2)", type: "Passenger coach", builder: "British Rail (Derby); rebuilt by Hillside Engineering", built: "1971–1975, rebuilt 2007",
     fleet: "18 cars in three sets", topSpeedMph: kmh(100), seats: 64, lengthFt: 64.5,
     about: "The Wairarapa Connection's carriages, British Rail Mark 2s bought by Tranz Rail and rebuilt for New Zealand's narrow gauge. Alstom's Tūhono battery trains are to replace them from about 2030.",
-    source: `${WP}Wairarapa_Connection` },
+    source: `${WP}Wairarapa_Connection` };
+export const FACTS = {
+  mtFp: MATANGI_FACTS, mtFt: MATANGI_FACTS, krDfb: AKL_FACTS.krDfb,
+  wcSw: SW_FACTS,
+  wcSws: { ...SW_FACTS, model: "SWS carriage (British Rail Mark 2)", fleet: "3 cars", seats: 37,
+    about: "The accessible car of each Wairarapa Connection set: a wheelchair hoist, an accessible toilet and a servery." },
+  wcSwg: { ...SW_FACTS, model: "SWG carriage (British Rail Mark 2)", fleet: "3 cars", seats: 37,
+    about: "The Masterton-end car of each Wairarapa Connection set, with a luggage compartment and the generator that powers the train's lighting and air conditioning." },
 };
