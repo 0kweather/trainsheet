@@ -13,7 +13,7 @@ const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * p
 // Pale silver over white, the windows in black with a thin orange line
 // under them, orange doors (red on the Llobregat-Anoia's 213s); black cab
 // fronts, the glass wrapping onto the side.
-const FGC = { white: "#f3f4f5", silver: "#dfe2e5", band: "#1b1d20", orange: "#f39200", red: "#d7261e", roof: "#a9afb6", skirt: "#3a3e44" };
+const FGC = { white: "#f3f4f5", silver: "#dfe2e5", band: "#1b1d20", orange: "#f39200", red: "#d7261e", green: "#76b82a", roof: "#a9afb6", skirt: "#3a3e44" };
 
 // ---------- Detail shared by the drawings ----------
 
@@ -118,6 +118,12 @@ const panGear = (x, roof, facing = -1) => pantograph(x, roof, { up: true, facing
 // FGC's emblem as carried on the cab sides: an orange square with the
 // initials in white (drawn here, not the logo itself).
 const fgcMark = (c, x, y, h, fill = FGC.orange) => rect(x - h / 2, y - h / 2, h, h, fill, 0, 'rx="0.12"') + letters(c, x, y - h * 0.04, h * 0.42, "FGC", "#ffffff", { weight: 800 });
+// FGC's mark since its 2021 identity: a green square with two white hooks
+// linked through each other (drawn simply, not the logo artwork).
+const fgcMark21 = (c, x, y, h) => rect(x - h / 2, y - h / 2, h, h, FGC.green, 0, 'rx="0.1"') +
+  path(`M${x - h * 0.28} ${y + h * 0.05}L${x - h * 0.28} ${y + h * 0.22}Q${x - h * 0.28} ${y + h * 0.3} ${x - h * 0.18} ${y + h * 0.3}L${x + h * 0.12} ${y + h * 0.3}`, "none", 0, `stroke="#ffffff" stroke-width="${h * 0.13}" stroke-linecap="round"`) +
+  path(`M${x + h * 0.28} ${y - h * 0.05}L${x + h * 0.28} ${y - h * 0.22}Q${x + h * 0.28} ${y - h * 0.3} ${x + h * 0.18} ${y - h * 0.3}L${x - h * 0.12} ${y - h * 0.3}`, "none", 0, `stroke="#ffffff" stroke-width="${h * 0.13}" stroke-linecap="round"`) +
+  path(`M${x - h * 0.15} ${y - h * 0.12}L${x + h * 0.15} ${y + h * 0.12}`, "none", 0, `stroke="#ffffff" stroke-width="${h * 0.13}" stroke-linecap="round"`);
 
 function fgcPaint(L, { accent = FGC.orange, cab = false, band = [6.6, 3.4], roof = 12.0, skirt = 3.5, silver = true, mask = 5.0 } = {}) {
   let s = rect(0, 0, L, 17, FGC.white) + (silver ? rect(0, band[0] + band[1], L, 3, FGC.silver) : "") + rect(0, roof, L, 3, FGC.roof) + rect(0, roof - 0.1, L, 0.12, "#848a91") + rect(0, 0, L, skirt, FGC.skirt);
@@ -141,50 +147,60 @@ const flatCab = (top) => () => path(poly([[0.7, 7.2], [1.1, top], [3.6, top], [3
 // only three cars. The same three doors a side, a gangway through.
 // --- Series 115 (Stadler, Valencia, 2021-22): 15 four-car aluminium units,
 // about 80 m, 90 km/h, able to run with the 113s and 114s.
-// Drawn on one body (the 112s plain white above the windows, the 113s to
-// 115s pale silver, the 115's black front reaching further back): a cab end
-// in black, a crew door behind it, the windows
-// in the black band between the doors; air-conditioning at both ends of
-// each roof, the pantograph on the cab car, the traction gear under the
-// floor; the emblem behind the cab.
+// All three are 20 m-class cars with three double doors a side and the
+// windows in a black band between them, so they share one side layout
+// (photographs of 112.51, 113.53, 113.67 and 115.51, Commons, 2016-23);
+// each series has its own front: the 112's blunt one, the 113's rounded
+// one, the 115's long black Stadler mask. A crew door behind the cab;
+// air-conditioning at both ends of each roof, the pantograph on the cab
+// car, the traction gear under the floor; the emblem behind the cab. Paint:
+// the 113s and 114s white over pale silver with orange doors, an orange
+// line under the windows and the orange emblem; the refurbished 112s and
+// the 115s FGC's 2021 look, white with red doors and its green mark. (The
+// 112s and 115s were drawn in the orange paint before, corrected.)
 const BV = { roof: 12.6, sill: 3.5, cornerR: 1.0, end: 0.6, trucks: { centers: 45, wb: 7.9, d: 33 }, diaphragm: [3.8, 11.6], badge: false };
 const bvFront = { lamp: [0.75, 5.2], coupler: [0, 2.85], skirt: [[0.8, 3.5], [1.0, 1.5], [4.6, 1.5], [5.0, 3.5]], horn: [4.4, 12.6], wiper: [1.1, 7.5, 2.0, 10.2] };
-const bvCab = ({ nose, ac, silver = true, mask = 5.0 }) => (c) => unit({ ...c, cabL: true, cabR: false }, { ...BV, nose,
+// new21: the paint of FGC's 2021 identity (red doors, no orange line, the
+// green mark), worn by the refurbished 112s and the 115s.
+const bvCab = ({ nose, ac, silver = true, mask = 5.0, new21 = false }) => (c) => unit({ ...c, cabL: true, cabR: false }, { ...BV, nose,
   rows: [{ xs: [8.4, 20.2, 24.8, 38.2, 42.8, 56.0, 60.6], y: 6.8, w: 3.9, h: 3.0, r: 0.3 }],
-  doors: [crewDoor(5.0), fgcDoor(13.6), fgcDoor(31.6), fgcDoor(49.4)], cabLen: 4, ac,
-  paint: (c, g) => fgcPaint(g.L, { cab: true, silver, mask }) + fgcMark(c, 29.6, 5.0, 1.0) + letters(c, 42.7, 5.0, 0.55, "Generalitat de Catalunya", "#5c636b", { weight: 500 }),
+  doors: [crewDoor(5.0), ...[13.6, 31.6, 49.4].map((x) => fgcDoor(x, new21 ? FGC.red : FGC.orange))], cabLen: 4, ac,
+  paint: (c, g) => fgcPaint(g.L, { cab: true, silver, mask, accent: new21 ? FGC.white : FGC.orange }) + (new21 ? fgcMark21(c, 29.6, 5.0, 1.0) : fgcMark(c, 29.6, 5.0, 1.0)) +
+    letters(c, 42.7, 5.0, 0.55, "Generalitat de Catalunya", "#5c636b", { weight: 500 }),
   cabArt: flatCab(11.0), front: bvFront,
   gear: [[17, 7, 1.4, "g"], [24.6, 5, 1.2, "b"], [30.4, 6, 1.3, "g"], [37, 5, 1.0, "t"], [43, 4, 1.1, "b"]],
   onRoof: (c, g) => panGear(g.L - 11, 12.6) + cover(26, 12.6, 14, 0.5),
 });
-const bvMid = ({ ac, silver = true }) => (c) => unit({ ...c, cabL: false, cabR: false }, { ...BV,
+const bvMid = ({ ac, silver = true, new21 = false }) => (c) => unit({ ...c, cabL: false, cabR: false }, { ...BV,
   rows: [{ xs: [2.2, 15.6, 20.2, 33.6, 38.2, 51.6, 56.2], y: 6.8, w: 3.9, h: 3.0, r: 0.3 }], ac,
-  doors: [fgcDoor(9.0), fgcDoor(27.0), fgcDoor(45.0)],
-  paint: (c, g) => fgcPaint(g.L, { silver }) + fgcMark(c, 25.0, 5.0, 1.0),
+  doors: [9.0, 27.0, 45.0].map((x) => fgcDoor(x, new21 ? FGC.red : FGC.orange)),
+  paint: (c, g) => fgcPaint(g.L, { silver, accent: new21 ? FGC.white : FGC.orange }) + (new21 ? fgcMark21(c, 25.0, 5.0, 1.0) : fgcMark(c, 25.0, 5.0, 1.0)),
   gear: [[15, 7, 1.4, "g"], [22.6, 4, 1.2, "b"], [32, 6, 1.0, "t"], [39, 6, 1.3, "g"]],
   onRoof: (c, g) => cover(24, 12.6, 16, 0.45) + aerial(42, 12.6),
 });
 const BLUNT = [[0.8, 3.5], [0.7, 9.8], ["q", 0.8, 11.8, 2.0, 12.4], ["q", 2.8, 12.6, 4.2, 12.6]];
 const ROUND = [[1.0, 3.5], [0.6, 4.6], ["q", 0.4, 9.4, 1.6, 11.4], ["q", 2.6, 12.6, 4.8, 12.6]];
-export const fgc112Cab = bvCab({ nose: BLUNT, ac: [[6, 9, 0.6], [44, 9, 0.6]], silver: false, mask: 3.4 });
-export const fgc112 = bvMid({ ac: [[5, 9, 0.6], [44, 9, 0.6]], silver: false });
+export const fgc112Cab = bvCab({ nose: BLUNT, ac: [[6, 9, 0.6], [44, 9, 0.6]], silver: false, mask: 3.4, new21: true });
+export const fgc112 = bvMid({ ac: [[5, 9, 0.6], [44, 9, 0.6]], silver: false, new21: true });
 export const fgc113Cab = bvCab({ nose: ROUND, ac: [[8, 12, 0.7], [44, 12, 0.7]] });
 export const fgc113 = bvMid({ ac: [[5, 12, 0.7], [44, 12, 0.7]] });
-export const fgc115Cab = bvCab({ nose: [[1.1, 3.5], [0.6, 4.8], ["q", 0.6, 8.8, 2.0, 11.2], ["q", 3.0, 12.6, 5.6, 12.6]], ac: [[9, 14, 0.75], [42, 14, 0.75]], mask: 6.2 });
-export const fgc115 = bvMid({ ac: [[5, 14, 0.75], [42, 14, 0.75]] });
+export const fgc115Cab = bvCab({ nose: [[1.1, 3.5], [0.6, 4.8], ["q", 0.6, 8.8, 2.0, 11.2], ["q", 3.0, 12.6, 5.6, 12.6]], ac: [[9, 14, 0.75], [42, 14, 0.75]], mask: 6.2, silver: false, new21: true });
+export const fgc115 = bvMid({ ac: [[5, 14, 0.75], [42, 14, 0.75]], silver: false, new21: true });
 
 // --- Series 213 (MTM, Meinfesa, CAF and Adtranz, 1998-2009): 42
 // three-car metre-gauge units on the Llobregat-Anoia line, a motor car
 // with a cab at each end (two doors a side, a pantograph) and a trailer
-// (three doors a side), 1,440 kW, 90 km/h; two coupled at most. Red where
-// the Barcelona-Vallès units have orange.
+// (three doors a side), 1,440 kW, 90 km/h; two coupled at most. White,
+// red doors, a red line low along the side, the green mark (photographs
+// of 213.38 and 213.88, Commons; corrected from a red line under the
+// windows).
 const LA = { roof: 12.2, sill: 3.4, cornerR: 1.0, end: 0.6, trucks: { centers: 43, wb: 7.2, d: 30 }, diaphragm: [3.6, 11.2], badge: false };
 export const fgc213Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...LA,
   nose: [[0.8, 3.4], [0.7, 9.6], ["q", 0.8, 11.5, 1.9, 12.0], ["q", 2.7, 12.2, 4.0, 12.2]],
   rows: [{ xs: [7.6, 22.0, 26.6, 31.2, 35.8, 49.6, 54.2, 58.8], y: 6.7, w: 3.9, h: 2.9, r: 0.3 }],
   doors: [crewDoor(4.4), fgcDoor(13.8, FGC.red), fgcDoor(41.0, FGC.red)], cabLen: 4,
   ac: [[20, 14, 0.6]],
-  paint: (c, g) => fgcPaint(g.L, { accent: FGC.red, cab: true, band: [6.5, 3.3], roof: 11.6, skirt: 3.4 }) + fgcMark(c, 29.0, 4.9, 0.95, FGC.red),
+  paint: (c, g) => fgcPaint(g.L, { accent: FGC.white, cab: true, band: [6.5, 3.3], roof: 11.6, skirt: 3.4 }) + rect(0, 3.95, g.L, 0.4, FGC.red) + fgcMark21(c, 29.0, 5.2, 0.9),
   cabArt: flatCab(10.8), front: { ...bvFront, skirt: [[0.8, 3.4], [1.0, 1.4], [4.4, 1.4], [4.8, 3.4]], horn: [4.2, 12.2] },
   gear: [[16, 8, 1.4, "g"], [25, 6, 1.2, "b"], [32, 6, 1.4, "g"], [39, 5, 1.0, "t"]],
   onRoof: (c, g) => panGear(g.L - 10, 12.2),
@@ -193,7 +209,7 @@ export const fgc213 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...LA,
   rows: [{ xs: [2.2, 15.4, 20.0, 33.0, 37.6, 51.0, 55.6], y: 6.7, w: 3.9, h: 2.9, r: 0.3 }],
   doors: [fgcDoor(8.6, FGC.red), fgcDoor(26.4, FGC.red), fgcDoor(44.6, FGC.red)],
   ac: [[3, 9, 0.6], [50, 9, 0.6]],
-  paint: (c, g) => fgcPaint(g.L, { accent: FGC.red, band: [6.5, 3.3], roof: 11.6, skirt: 3.4 }),
+  paint: (c, g) => fgcPaint(g.L, { accent: FGC.white, band: [6.5, 3.3], roof: 11.6, skirt: 3.4 }) + rect(0, 3.95, g.L, 0.4, FGC.red),
   gear: [[14, 6, 1.2, "b"], [21, 5, 1.0, "t"], [32, 6, 1.2, "b"], [39, 5, 1.0]],
   onRoof: (c, g) => aerial(30, 12.2),
 });
