@@ -419,15 +419,18 @@ function startFades() {
   };
   requestAnimationFrame(step);
 }
-// A station's opacity: one spread out to a later zoom (its "z") is drawn
-// from a zoom before it, fading in to be whole there (the zoom buttons land
-// on whole zooms). Too faint to see, it isn't hovered or tapped (shownAt).
-function zoomFade(from) {
+// A station's or train's opacity (base, at most): one spread out to a later
+// zoom (its "z") is drawn from a zoom before it, fading in to be whole there
+// (the zoom buttons land on whole zooms). Too faint to see, it isn't hovered
+// or tapped (shownAt).
+function zoomFade(from, base = 1) {
   const stops = [];
-  for (let k = Math.floor(from) - 1; k <= ALL_SHOWN; k++) stops.push(k, ["*", ["case", [">", ["get", "z"], k], 0, 1], FADE]);
+  for (let k = Math.floor(from) - 1; k <= ALL_SHOWN; k++) stops.push(k, ["*", base, ["case", [">", ["get", "z"], k], 0, 1], FADE]);
   return ["interpolate", ["linear"], ["zoom"], ...stops];
 }
 const shownAt = (f) => !(f.properties.z > map.getZoom() + 0.5);
+// A station or train shown from the zoom before its own, fading in (zoomFade).
+const SHOWN_FROM_Z = [">=", ["zoom"], ["-", ["get", "z"], 1]];
 
 const MUTED_LAYERS = /^(transportation|building|landuse|landcover|park|aeroway)$/;
 function addLayers() {
@@ -626,7 +629,7 @@ function addLayers() {
   });
   // Each station from the zoom before the one stationCollection() spreads it
   // out to (fading in, see zoomFade), and its name from that zoom.
-  const spreadTo = (prop) => [">=", ["zoom"], prop === "z" ? ["-", ["get", "z"], 1] : ["get", prop]];
+  const spreadTo = (prop) => (prop === "z" ? SHOWN_FROM_Z : [">=", ["zoom"], ["get", prop]]);
   map.addLayer({
     id: "tt-stations-minor",
     layout: { visibility: state.showStations ? "visible" : "none" },
@@ -739,7 +742,8 @@ function addLayers() {
       "icon-ignore-placement": true,
       "symbol-sort-key": ["get", "drawOrder"],
     },
-    paint: { "icon-opacity": ["*", ["case", ["get", "stale"], 0.45, 1], FADE] },
+    filter: SHOWN_FROM_Z, // spread out by importance (spreadTrains)
+    paint: { "icon-opacity": zoomFade(TRAIN_FLOOR, ["case", ["get", "stale"], 0.45, 1]) },
   });
 
   // Each train is labeled with its plate once there's room for it. Plates
@@ -751,7 +755,7 @@ function addLayers() {
     id: "tt-labels",
     type: "symbol",
     source: "trains",
-    filter: [">=", ["zoom"], 8], // zoomed further out, trains are unlabeled arrows
+    filter: ["all", [">=", ["zoom"], 8], [">=", ["zoom"], ["get", "z"]]], // zoomed further out, trains are unlabeled arrows
     layout: {
       "text-field": ["get", "plate"],
       "text-font": ["Noto Sans Bold"],
@@ -831,12 +835,78 @@ function visible(t) {
 // "Fall River/New Bedford"); its number when it has no line.
 const shortLine = (t) => (t.route || "").replace(/\s+(Line|Branch)$/i, "").trim() || t.number || AGENCIES[t.agency].short;
 
+// How much a train matters on a map zoomed out, from its run rather than its
+// railroad's kind: how far it goes (its stops joined up) and how far apart it
+// stops. An AVE (550 km, a stop every 110) or the California Zephyr comes
+// first, then an Ex across Czechia (360 km, every 23), a regional (130 km,
+// every 15), and last a local stopping every couple of kilometers, whichever
+// railroad runs it. Feeds drop the stops a train has passed, so a train
+// keeps the best score its run has had. A train placed from the timetable,
+// or whose fix is old, counts a little less; one calling at a station the
+// rider has looked up a little more.
+const runScores = new Map(); // train id -> { n: stops it was scored from, score }
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+function runScore(t) {
+  const had = runScores.get(t.id);
+  if (had && had.n === t.stops?.length) return had.score;
+  const pts = (t.stops || []).map((s) => s.key && state.stopPos.get(s.key)).filter(Boolean);
+  // Without stops placed (a feed naming only the next stop): by its railroad's kind.
+  if (pts.length < 2) return had?.score ?? (AGENCIES[t.agency].kind === "intercity" ? 0.55 : 0.3);
+  let path = 0;
+  for (let i = 1; i < pts.length; i++) path += meters(pts[i - 1], pts[i]) / 1000;
+  const every = path / (pts.length - 1);
+  // 8 km to 1,000 km, and a stop every 2 km to every 90.
+  const score = 0.45 * clamp01((Math.log2(Math.max(1, path)) - 3) / 7) + 0.55 * clamp01((Math.log2(Math.max(0.1, every)) - 1) / 5.5);
+  runScores.set(t.id, { n: t.stops.length, score: Math.max(score, had?.score ?? 0) });
+  return runScores.get(t.id).score;
+}
+function riderStopKeys() {
+  const keys = new Set();
+  for (const r of state.recents) if (r.kind === "station") for (const k of state.stations.get(r.id)?.keys || []) keys.add(k);
+  return keys;
+}
+function importance(t, riders) {
+  return runScore(t) - (t.estimated ? 0.1 : 0) - (Date.now() - t.updated > STALE_MS && !t.estimated ? 0.1 : 0) +
+    (riders.size && t.stops?.some((s) => riders.has(s.key)) ? 0.25 : 0);
+}
+
+// Trains are spread out as stations are (see spreadOut): most important
+// first, each from the zoom at which it's TRAIN_GAP px from every more
+// important train showing by then, and every one by TRAIN_ALL. The selected
+// and tracked trains show at every zoom. A train on screen keeps its place
+// until another comes well inside its room, so trains passing each other
+// don't blink. Worked out when the trains or which are shown change, from
+// where each is heading, not on every frame of their slide.
+const TRAIN_GAP = 22, TRAIN_ALL = 11, TRAIN_FLOOR = 2;
+let trainZooms = new Map(), trainRanks = new Map(), trainZoomsOf = null, trainZoomsKey = "";
+function spreadTrains(shown) {
+  const key = [shown.length, state.selected, state.railroad, [...state.hidden].join(), state.tracked.map((r) => r.id).join(), state.onlyTracked, state.hideEstimated].join("|");
+  if (trainZoomsOf === state.trains && trainZoomsKey === key) return trainZooms;
+  for (const id of runScores.keys()) if (!state.trains.has(id)) runScores.delete(id);
+  const riders = riderStopKeys(), pinned = new Set([state.selected, ...state.tracked.map((r) => r.id)]);
+  const items = shown.map((t) => {
+    const p = targetOf(t);
+    return { t, pinned: pinned.has(t.id), rank: importance(t, riders), x: mercX(p.lon), y: mercY(p.lat), z: 0, clear2: 0 };
+  });
+  items.sort((a, b) => b.pinned - a.pinned || b.rank - a.rank || (a.t.id < b.t.id ? -1 : 1));
+  const now = map.getZoom(), before = trainZooms;
+  spreadOut(items, TRAIN_GAP, "z", () => TRAIN_FLOOR, {
+    cap: TRAIN_ALL,
+    keep: (it) => it.pinned,
+    slack: (it) => ((before.get(it.t.id) ?? Infinity) <= now ? 0.7 : 1),
+  });
+  trainZooms = new Map(items.map((it) => [it.t.id, it.z > TRAIN_FLOOR ? it.z : 0]));
+  trainRanks = new Map(items.map((it) => [it.t.id, it.rank]));
+  trainZoomsOf = state.trains;
+  trainZoomsKey = key;
+  return trainZooms;
+}
+
 function featureCollection() {
   const features = [];
-  for (const t of state.trains.values()) {
-    if (!visible(t)) continue;
-    const pos = state.display.get(t.id) || targetOf(t);
-    const intercity = AGENCIES[t.agency].kind === "intercity";
+  const shown = [...state.trains.values()].filter(visible), zooms = spreadTrains(shown);
+  for (const t of shown) {
+    const pos = state.display.get(t.id) || targetOf(t), rank = trainRanks.get(t.id) || 0;
     features.push({
       type: "Feature",
       geometry: { type: "Point", coordinates: [pos.lon, pos.lat] },
@@ -848,8 +918,9 @@ function featureCollection() {
         bearing: targetOf(t).bearing ?? 0,
         hasBearing: targetOf(t).bearing != null,
         stale: Date.now() - t.updated > STALE_MS && !t.estimated,
-        drawOrder: intercity ? 1 : 0,
-        labelOrder: intercity ? 0 : 1,
+        drawOrder: rank, // the more important on top
+        labelOrder: -rank, // and its plate placed first
+        z: zooms.get(t.id) || 0, // shown from (see spreadTrains)
         g: t.agency,
       },
     });
@@ -1024,25 +1095,31 @@ const mercY = (lat) => {
   return 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI);
 };
 // Sets item[key] for each item, in order of priority: floorOf(item), or the
-// first whole zoom it's gap px from every earlier item showing by then.
-function spreadOut(items, gap, key, floorOf) {
+// first whole zoom it's gap px from every earlier item showing by then (and
+// by cap, at the latest). An item kept (keep(item)) is never pushed later;
+// one given slack (slack(item), below 1) can sit closer, so what's on screen
+// stays there until it's well inside another's room.
+function spreadOut(items, gap, key, floorOf, { cap = ALL_SHOWN, keep = () => false, slack = () => 1 } = {}) {
   // Two items further apart than this (in world widths) are gap px apart by
-  // zoom 4.5, before any floor: a grid of it finds the rest.
-  const reach = gap / (512 * 2 ** 4.5);
+  // the lowest floor: a grid of it finds the rest.
+  const floors = items.map(floorOf);
+  const reach = gap / (512 * 2 ** floors.reduce((a, b) => Math.min(a, b), 4.5));
   // Squared, the distance two items must be apart to be gap px apart at zoom z.
   const clear2 = (z) => (gap / (512 * 2 ** z)) ** 2;
   const grid = new Map(); // cell -> items placed in it
-  for (const it of items) {
-    let z = floorOf(it), mine = clear2(z);
+  items.forEach((it, i) => {
+    let z = floors[i];
+    const room = slack(it) ** 2;
+    let mine = clear2(z) * room;
     const cx = Math.floor(it.x / reach), cy = Math.floor(it.y / reach);
-    for (let dx = -1; dx <= 1; dx++) {
+    for (let dx = -1; dx <= 1 && !keep(it); dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (const o of grid.get((cx + dx) * 65536 + cy + dy) || []) {
           // Too close at both their zooms: it waits until they're gap px apart.
           const d2 = (o.x - it.x) ** 2 + (o.y - it.y) ** 2;
           if (d2 >= mine || d2 >= o.clear2) continue;
-          z = d2 ? Math.min(ALL_SHOWN, Math.ceil(Math.log2(gap / (512 * Math.sqrt(d2))))) : ALL_SHOWN;
-          mine = clear2(z);
+          z = d2 ? Math.min(cap, Math.ceil(Math.log2(gap * Math.sqrt(room) / (512 * Math.sqrt(d2))))) : cap;
+          mine = clear2(z) * room;
         }
       }
     }
@@ -1051,7 +1128,7 @@ function spreadOut(items, gap, key, floorOf) {
     const c = cx * 65536 + cy;
     if (!grid.has(c)) grid.set(c, []);
     grid.get(c).push(it);
-  }
+  });
 }
 
 function stationCollection() {
@@ -4980,7 +5057,7 @@ function applySelectionFilter() {
   redraw(); // the selected train alone while one is open (visible())
   redrawRoute();
   map.setLayoutProperty("tt-labels", "text-variable-anchor-offset", plateOffset(selected));
-  map.setFilter("tt-labels", state.labels === "none" ? highlighted : ["any", highlighted, [">=", ["zoom"], 8]]);
+  map.setFilter("tt-labels", state.labels === "none" ? highlighted : ["any", highlighted, ["all", [">=", ["zoom"], 8], [">=", ["zoom"], ["get", "z"]]]]);
   map.setLayoutProperty("tt-labels", "symbol-sort-key", ["case", highlighted, -1, ["get", "labelOrder"]]);
   for (const l of ["tt-station-ping", "tt-station-shadow", "tt-station-selected", "tt-footprint-selected"]) {
     map.setFilter(l, ["==", ["get", "id"], sid]);
@@ -5294,7 +5371,7 @@ map.on("click", (e) => {
     const p = map.project(f.geometry.coordinates);
     return [f, (p.x - e.point.x) ** 2 + (p.y - e.point.y) ** 2];
   }).sort((a, b) => a[1] - b[1])[0]?.[0];
-  const train = nearest(map.queryRenderedFeatures(box, { layers: ["tt-trains", "tt-labels"].filter((l) => map.getLayer(l)) }));
+  const train = nearest(map.queryRenderedFeatures(box, { layers: ["tt-trains", "tt-labels"].filter((l) => map.getLayer(l)) }).filter(shownAt));
   if (train) return select(train.properties.id);
   const station = map.queryRenderedFeatures(box, { layers: [...STATION_LAYERS, "tt-station-selected-label"].filter((l) => map.getLayer(l)) }).find(shownAt);
   if (station) return selectStation(station.properties.id);
@@ -5321,7 +5398,7 @@ function goHome() {
 
 for (const layer of STATION_LAYERS) {
   map.on("mousemove", layer, (e) => {
-    if (map.queryRenderedFeatures(e.point, { layers: ["tt-trains"] }).length) return;
+    if (map.queryRenderedFeatures(e.point, { layers: ["tt-trains"] }).some(shownAt)) return;
     const f = e.features.find(shownAt);
     map.getCanvas().style.cursor = f ? "pointer" : "";
     if (canHover) hoverStationTo(f?.properties.id ?? null);
@@ -5333,11 +5410,12 @@ for (const layer of STATION_LAYERS) {
 }
 
 map.on("mousemove", "tt-trains", (e) => {
-  map.getCanvas().style.cursor = "pointer";
-  if (!canHover) return;
-  const t = state.trains.get(e.features[0].properties.id);
+  const f = e.features.find(shownAt);
+  map.getCanvas().style.cursor = f ? "pointer" : "";
+  if (!canHover || !f) return;
+  const t = state.trains.get(f.properties.id);
   if (!t) return;
-  popup.setLngLat(e.features[0].geometry.coordinates);
+  popup.setLngLat(f.geometry.coordinates);
   // Redrawn only when the train or its data changes: the cars are drawings.
   const key = `${t.id}|${t.updated}|${state.units}`;
   if (popup._ttKey !== key) {
