@@ -950,7 +950,7 @@ const BOMB = {
     go: { x: 41.8, y: 8.45, h: 2.3 }, sunrail: { x: 64.3, y: 6.0, h: 2.8 },
     sounder: [{ x: 13.5, y: 5.9, h: 0.9, dark: true }, { x: 67, y: 5.9, h: 0.9, dark: true }, { x: 38.4, y: 3.2, h: 3.5, logo: "sounder-word" }],
     railrunner: rrCarName(c.rrCab ? c.L - 12.1 : 12.1), tre: { x: 27.5, y: 10.25, h: 0.85, logo: "tre-word" },
-    coaster: { x: 8.3, y: 5.3, h: 1.0, logo: "coaster", dark: true } })[c.agency],
+    coaster: { x: 8.3, y: 5.3, h: 1.0, logo: "coaster", dark: true }, caltrain: { x: 16.2, y: 5.6, h: 1.6 } })[c.agency],
   rows: [{ xs: seq(16.9, 5.55, 9), y: 11.6, w: 4.3, h: 2.3, r: 0.35 }, { xs: seq(27.6, 5.55, 4), y: 4.5, w: 4.3, h: 2.5, r: 0.35 },
     { xs: [1.4], y: 6.9, w: 3.9, h: 2.3, r: 0.3 }, { xs: [6.5], y: 6.9, w: 4.3, h: 2.3, r: 0.3 }, { xs: [11.7], y: 6.9, w: 2.9, h: 2.3, r: 0.3 },
     { xs: [68.6], y: 6.9, w: 3.1, h: 2.3, r: 0.3 }, { xs: [73.0], y: 6.9, w: 4.6, h: 2.3, r: 0.3 }, { xs: [79.0], y: 6.9, w: 3.4, h: 2.3, r: 0.3 }],
@@ -1055,6 +1055,15 @@ function bombPaint(c, g) {
     // charcoal skirt.
     case "coaster":
       return rect(0, 0, L, 17, NCTD.blue) + rect(0, 13.95, L, 4, NCTD.teal) + rect(0, 0, L, 3.75, NCTD.skirt) + rect(0, 3.75, L, 0.3, "#f4f5f6");
+    // Caltrain's own BiLevels (coaches 220-236, cab cars 112-120; the
+    // South County Connector's cars since 2024), from photographs (San
+    // Jose, 2009; 22nd Street, 2017; Diridon, 2019): light silver; red over
+    // the roof and down past the upper windows, edged below by a gray line;
+    // a red line along the bottom that kicks up over the A-end section.
+    case "caltrain": {
+      s = rect(0, 0, L, 17, "#c9cdd2") + rect(0, 11.15, L, 6, "#d71920") + rect(0, 11.0, L, 0.15, "#5c6168");
+      return s + path(`M${L + 1} 3.95L15.5 3.95L4.5 7.1L4.0 6.75L15.0 3.55L${L + 1} 3.55Z`, "#d71920");
+    }
     // TRE: white; a red wedge rising from a quarter of the way along to
     // fill the lower level, then navy over the last third, top to bottom,
     // a big white star on it.
@@ -3336,6 +3345,8 @@ export const mp36 = (c) => cabUnit(c, {
   // breaking the band.
   badge: (c) => ({ metra: [{ x: 43.8, y: 7.0, h: 3.7, dark: true }, { x: 10.7, y: 7.5, h: 0.95 }], frontrunner: { x: 47, y: 9.3, h: 0.75 },
     marc: { x: 42.4, y: 7.8, h: 4.0 },
+    // Caltrain: "Cal" and the red disc big mid-hood.
+    caltrain: { x: 36.0, y: 7.8, h: 3.6 },
     // Rail Runner: its name spaced out along the hood behind the roadrunner,
     // NEW MEXICO small over RAIL and EXPRESS under RUNNER. VRE: none (see VRE).
     railrunner: [{ x: 47.5, y: 9.5, h: 1.2, logo: "rail-runner" }, { x: 40.4, y: 10.9, h: 0.42, logo: "new-mexico" }, { x: 52.7, y: 8.2, h: 0.4, logo: "rr-express" }] })[c.agency],
@@ -3360,12 +3371,19 @@ export const mp36 = (c) => cabUnit(c, {
         return s;
       }
       case "caltrain": {
-        // Silver with a black roof, a red stripe along the top of the side, a red
-        // sweep around the headlights on the nose, red sill line.
-        let s = rect(0, 0, L, sp.roof + 1, "#c9cdd2") + rect(0, 13.9, L, 2, "#26292d");
-        s += rect(0, 12.9, L, 0.55, "#c8102e") + rect(0, 0, L, 5.3, "#1d1f22") + rect(0, 5.3, L, 0.32, "#c8102e");
-        s += path("M0 5.9Q7.6 5.9 9.0 8.0Q9.6 9.9 7.6 10.45L0 10.45Z", "#c8102e");
-        return s;
+        // Caltrain 923-928 since their overhaul (Alstom, Mare Island,
+        // 2020-23), from photographs (Santa Clara, December 2024; San Jose
+        // Diridon, 2025): the KISS trains' red, black and silver. Black
+        // over the roof, the hood top and the cab; under it a red band, deep
+        // at the rear and narrowing forward, edged below by a black line,
+        // that sweeps down past the cab door into a red crescent over the
+        // lower cab and nose side; the nose top and front silver-white, the
+        // body silver; a red line along the sill over the black frame.
+        let s = rect(0, 0, L, sp.roof + 1, "#c6cacf") + path(`M0 17L0 10.5L${L} 13.4L${L} 17Z`, "#1d1f22");
+        s += path(`M3.6 10.55L${L} 13.45L${L} 11.1L16 9.75Q14.8 9.6 14.4 8.4Q14 6.2 13.3 4.55L1.5 4.55Q2.4 8.3 3.6 10.55Z`, "#d71920");
+        s += path(`M${L} 11.1L16 9.75Q14.8 9.6 14.4 8.4Q14 6.2 13.3 4.55`, "none", 0, 'stroke="#1d1f22" stroke-width="0.22"');
+        s += path("M0 4.55L2.6 4.55Q5.4 6.6 5.6 10.55L0 10.55Z", "#e7e9eb");
+        return s + rect(0, 4.55, L, 0.4, "#d71920");
       }
       case "frontrunner": {
         // White; on this side a blue cab and a red rear, each ending in a
@@ -3604,7 +3622,9 @@ function f40(c, { mbta = false } = {}) {
   return cabUnit(c, {
     // VIA: a big logo at the rear end of the silver.
     badge: (c) => (c.agency === "via" ? { x: 51.3, y: 8.45, h: 3.0 } : c.agency === "ace" ? null : c.agency === "tre" ? { x: 44, y: 11.2, h: 2.4, logo: "tre-nolabel", dark: true } : c.agency === "star" ? { x: 40.5, y: 8.1, h: 3.4, logo: "star-word" } :
-      c.agency === "alaska" ? [{ x: 34, y: 9.25, h: 2.6, logo: "alaska-word" }, { x: 11.2, y: 7.9, h: 1.8 }] : { x: 48, y: 8.75, h: 2.0, skip: ["mbta"] }),
+      c.agency === "alaska" ? [{ x: 34, y: 9.25, h: 2.6, logo: "alaska-word" }, { x: 11.2, y: 7.9, h: 1.8 }]
+      // Metra: the name big in white on the hood just behind the cab door.
+      : c.agency === "metra" ? { x: 20.6, y: 9.0, h: 2.5, dark: true } : { x: 48, y: 8.75, h: 2.0, skip: ["mbta"] }),
     roof: hood, sill, rearR: 0.9,
     nose: [[2.45, sill], [2.45, 8.3], ["q", 2.5, 8.85, 3.1, 8.95], [6.0, 9.45], [6.3, 9.75], [7.55, 14.75], ["q", 7.75, roof, 8.7, roof], [13.6, roof], [13.75, hood]],
     glass: [[[6.55, 10.35], [7.45, 14.2], [8.0, 14.2], [8.0, 10.35]]],
@@ -3625,6 +3645,14 @@ function f40(c, { mbta = false } = {}) {
       if (c.agency === "ace") return aceF40Paint(c, sp);
       if (c.agency === "tre") return treLocoPaint(sp, 13.75);
       if (c.agency === "alaska") return akLocoPaint(L, sill, hood, 13.75, [7.55, 9.45, 10.35]);
+      if (c.agency === "metra") {
+        // Metra's F40PH-3s (100-149, 215-217 and the F40PH-2s left), as
+        // photographed in 2025-26 (Riverside, Wheaton, Elmhurst, Elburn):
+        // Metra blue all over, a red-orange band along the top of the hood
+        // that covers the cab roof and the number boards over the
+        // windshield; a white line over the black frame.
+        return rect(0, 0, L, 17, METRA_F40.blue) + rect(0, hood - 1.2, L, 3, METRA_F40.red) + rect(0, sill, L, 0.2, "#eef0f2");
+      }
       if (c.agency === "star") {
         // WeGo Star (F40PH 120, F40PHRs 121, 122 and 381): WeGo purple; behind
         // the cab a slant down to the sill, light gray below a white line
@@ -3676,6 +3704,53 @@ function aceOldEmblem(c, x, y) {
 }
 export const f40ph = (c) => f40(c);
 export const f40c = (c) => f40(c, { mbta: true });
+
+// --- EMD F40PHM-3 (Metra 185-204, 206-214: built 1991-92 as F40PHM-2s, the
+// last F40s EMD built, rebuilt to -3 between 2016 and 2020; on the BNSF
+// line): the F40PH's frame, engine room and trucks, 56 ft 2 in over the
+// couplers, but a full-width cab under one flat roof with the hood, the
+// "Winnebago": a near-upright lower face carrying the chevrons, a raked
+// two-pane windshield rounding into the roof (Wikipedia, "EMD F40PH";
+// measured from a side photograph of No. 206, 2010). Two cab side windows,
+// the crew door behind them; an inertial-filter grille high behind the cab,
+// another mid-body, the radiator grilles along the top of the rear body
+// under four roof fans; the fuel tank and a battery box between the trucks.
+// Its paint (No. 189, 2022; No. 180, 2022): Metra's current scheme, as on
+// the MP36s: black above a red-orange stripe split by a dark red pinstripe
+// that runs the length of the side at the windshield's foot and sweeps up
+// over the rear corner; below it silver over the cab, deepening to blue
+// along the hood; a silver cab roof; a white line over the black frame; the
+// name small in blue under the cab windows and big in white at the rear.
+const METRA_F40 = { blue: "#2c63b6", red: "#ee4a26" };
+export const f40phm = (c) => {
+  const roof = 15.05, sill = 4.65;
+  return cabUnit(c, {
+    badge: (c) => (c.agency === "metra" ? [{ x: 44.4, y: 7.6, h: 3.0, dark: true }, { x: 6.2, y: 8.2, h: 0.85 }] : null),
+    roof, sill, rearR: 0.9,
+    nose: [[1.9, sill], [2.15, 8.4], [2.75, 11.9], [4.35, 13.75], ["q", 4.75, roof, 6.2, roof]],
+    glass: [[[2.95, 12.05], [4.35, 13.6], [4.95, 13.6], [4.95, 12.05]]],
+    sideWin: [[5.4, 11.6, 1.2, 1.9], [6.9, 11.6, 1.6, 1.9]],
+    doors: [[9.9, 1.9, sill + 0.2, 13.4]],
+    grilles: [[13.0, 12.2, 5.8, 2.0, 0.32], [27.6, 12.0, 6.2, 1.4, 0.32], [37.4, 12.0, 4.8, 2.0, 0.34], [42.6, 12.0, 4.0, 2.0, 0.34], [47.0, 12.0, 4.9, 2.0, 0.34]],
+    panels: [[19.6, 5.2, 3.0, 6.4], [22.9, 5.2, 3.0, 6.4], [37.4, 5.2, 4.8, 6.4], [42.6, 5.2, 4.0, 6.4]],
+    tank: [18.6, 30.0, 1.5], reservoir: [30.6, 37.0],
+    trucks: { centers: c.L - 23.2, wb: 9.0, d: 40 },
+    roofItems: [[7.6, 3.2, 0.5]], fans: [31.0, 39.6, 44.2, 48.8], horn: 3.6,
+    paint: (c, sp) => {
+      const L = sp.L;
+      if (c.agency !== "metra") return genericPaint(c, sp);
+      const id = `ts-metra-${++clipSeq}`;
+      let s = `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="21" y2="0"><stop offset="0" stop-color="#d4d7db"/><stop offset="1" stop-color="#2459aa"/></linearGradient></defs>`;
+      s += rect(0, 0, L, roof + 1, "#1d1f22") + rect(0, sill, L, 6.6, `url(#${id})`) + rect(0, sill, L, 0.22, "#e9eaec");
+      // The orange stripe and its pinstripe, rising over the rear corner.
+      s += path(`M${L} 14.6Q${L - 3.5} 12.0 ${L - 10} 11.85L0 11.85L0 11.05L${L} 11.05Z`, "#f26b21");
+      s += path(`M${L} 13.3Q${L - 4} 11.5 ${L - 10} 11.45L0 11.45`, "none", 0, 'stroke="#a3161f" stroke-width="0.2"');
+      // The silver cab roof; the lower face red behind the chevrons.
+      s += path(`M0 17L0 13.9L9.4 13.9Q9.9 13.9 9.9 14.4L9.9 17Z`, "#c9cdd2") + path(poly([[0, sill], [2.3, sill], [2.55, 10.9], [0, 10.9]]), "#c8102e");
+      return s;
+    },
+  });
+};
 
 // --- EMD F59PHI (Amtrak California 2001-2015, NCDOT): 58 ft 7 in, Blomberg
 // trucks 35 ft 7 in apart on 40 in wheels. A rounded fiberglass cab: the nose
@@ -4225,8 +4300,9 @@ export function alp45(c) {
   s += lines([[14.1, cove, 14.1, roof], [32.4, cove, 32.4, roof], [56.6, cove, 56.6, low]], "rgba(0,0,0,0.25)", 0.5) + line(4.9, cove, end, cove, "rgba(0,0,0,0.25)", 0.6);
   // Horns on the cab roof; the pantograph over the rear (exo's folded).
   for (const x of [5.6, 6.5, 7.4]) s += rect(x, roof - 0.05, 0.6, 0.45, "currentColor", 0, 'rx="0.15"');
-  // On NJ Transit's diesel lines the pantograph stays down.
-  s += pantograph(61.5, low, { up: njt && !/Pascack|Port Jervis|Main\/Bergen|Raritan|Atlantic City/.test(c.route || ""), facing: 1 });
+  // On NJ Transit's diesel lines, and on a train that never runs under the
+  // wires (wires: false, the Bay Head shuttles), the pantograph stays down.
+  s += pantograph(61.5, low, { up: njt && c.wires !== false && !/Pascack|Port Jervis|Main\/Bergen|Raritan|Atlantic City/.test(c.route || ""), facing: 1 });
   // NJ Transit's name under the cab window. exo's wordmark is on the nose
   // front only (not seen side-on).
   if (njt) s += badge(c, 7.4, 6.45, 0.8, { logo: "njt-word" });
@@ -4374,6 +4450,7 @@ export const MODELS = {
   bl36: M(bl36, 67.3, true),
   f40: M(f40ph, 56.17, true),
   f40c: M(f40c, 64.25, true),
+  f40phm: M(f40phm, 56.17, true),
   f59: M(f59, 58.58, true),
   gp40: M(gp40, 64, true),
   gp40h: M(gp40, 64, true),                       // CT Rail's GP40-3Hs, drawn on the GP40MC
