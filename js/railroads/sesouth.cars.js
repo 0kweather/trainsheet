@@ -362,7 +362,7 @@ const x10 = (cls) => married((c) => {
       // The cab: the front's upper half yellow back to the crew door.
       s += path(poly([[0, 7.6], [ft(1.45), 7.6], [ft(1.45), 13], [0, 13]]), k.top) + rect(0, 3.3, ft(1.45), 4.3, k.front) + (kros ? rect(0, 3.3, ft(1.45), 0.55, k.line) : rect(0, 5.55, ft(1.45), 0.5, k.line));
       s += wins.slice(1).map((x) => rect(x - 0.15, 6.15, ft(1.0) + 0.3, 3.5, "rgba(20,22,25,0.35)", 0, 'rx="0.4"')).join("");
-      return s + k.mark(c, L * 0.42) + letters(c, 2.6, 6.9, 0.55, cls === "X14" ? "3232" : "3137", kros ? "#26292e" : "#1f3f8a", { weight: 600, italic: !kros });
+      return s + k.mark(c, L * 0.42) + letters(c, 2.6, 6.9, 0.55, kros ? (cls === "X14" ? "3232" : "3137") : (cls === "X14" ? "3224" : cls === "X12" ? "3215" : "3209"), kros ? "#26292e" : "#1f3f8a", { weight: 600, italic: !kros });
     },
     extra: (c, g) => {
       let s = boxes(ft(5.5), L / 2 - 4, X10.sill, 2, 1.3) + boxes(L / 2 + 4, L - ft(5.5), X10.sill, 2, 1.1) + rect(L / 2 - 3.5, 1.5, 7, 1.1, "#2f3338", 0.4, 'rx="0.5"');
@@ -500,7 +500,7 @@ function x80(c, part) {
         s += path(poly([[1.0, 7.2], [6.9, 13.2], ["q", 8.2, 14.15, 10.4, 14.15], [11.0, 13.4], [4.9, 6.9], ["q", 3.0, 6.3, 1.0, 7.2]]), X80K.blue) +
           path(poly([[1.5, 7.55], [7.2, 13.0], ["q", 8.3, 13.8, 10.1, 13.8], [10.4, 13.3], [4.7, 7.25], ["q", 3.0, 6.75, 1.5, 7.55]]), X80K.navy) +
           path(poly([[ft(3.4), 8.0], [ft(4.4), 8.0], [ft(4.4), 11.8], ["q", ft(3.6), 12.3, ft(3.4), 11.0]]), X80K.navy) +
-          letters(c, L - ft(5.0), 5.4, 1.2, "västtågen", "#ffffff", { weight: 700, spacing: -0.03 }) + letters(c, 2.8, 5.6, 0.62, "80013", "#26292e", { weight: 500, italic: true });
+          letters(c, L - ft(5.0), 5.4, 1.2, "västtågen", "#ffffff", { weight: 700, spacing: -0.03 }) + letters(c, 4.6, 4.95, 0.55, "80013", "#26292e", { weight: 500, italic: true });
       }
       return s;
     },
