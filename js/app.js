@@ -1833,13 +1833,25 @@ function putPanelAway(away = true) {
   if (isPhone) {
     if (away) setSheet("collapsed");
     else if (sheetMode() === "collapsed") setSheet("");
-    return;
+    return syncMapPadding();
   }
   if (panelAway === away) return;
   panelAway = away;
   document.body.classList.toggle("panel-away", away);
   $("panel").inert = away;
   if (away) toggleMenu(false);
+  syncMapPadding();
+}
+// The map's padding (the part of it the panel leaves free, where zooming
+// with the buttons centers and pages frame what they show) follows the
+// panel as it comes and goes, without moving what's on screen.
+function syncMapPadding() {
+  const pad = panelPadding(), cur = map.getPadding();
+  if (["top", "bottom", "left", "right"].every((k) => Math.abs((cur[k] || 0) - (pad[k] || 0)) < 1)) return;
+  if (map.isMoving()) return map.once("moveend", syncMapPadding);
+  const { clientWidth: w, clientHeight: h } = map.getContainer();
+  const center = map.unproject([pad.left + (w - pad.left - pad.right) / 2, pad.top + (h - pad.top - pad.bottom) / 2]);
+  map.jumpTo({ center, padding: pad });
 }
 
 function setTab(tab) {
@@ -4969,7 +4981,10 @@ function panelPadding() {
     // Clear of the sheet, at the detent it's at (or headed for).
     return { bottom: sheetHeights()[sheetMode()], top: 0, left: 0, right: 0 };
   }
-  return { left: (panelAway ? $("tabbar") : $("panel")).getBoundingClientRect().right, top, bottom: 0, right: 0 };
+  // From where the panel (or, put away, the rail) sits, not where it is
+  // mid-slide: offsetLeft and offsetWidth leave its transform out.
+  const side = panelAway ? $("tabbar") : $("panel");
+  return { left: side.offsetLeft + side.offsetWidth, top, bottom: 0, right: 0 };
 }
 
 function setFollow(on) {
@@ -6048,7 +6063,8 @@ function loadAccount() {
 // the rail, beside the search field and by each page's title; it opens
 // Settings, which starts with the account. Kept on the device ("tt-initials")
 // so it shows from the first paint, before the account is loaded.
-const PERSON_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="4.2" fill="currentColor"/><path d="M3.5 22.5c.8-4.6 4.3-7.4 8.5-7.4s7.7 2.8 8.5 7.4Z" fill="currentColor"/></svg>';
+// Apple's default picture: a head, and shoulders running off the circle's foot.
+const PERSON_ICON = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="12.4" r="5.6" fill="currentColor"/><path d="M4.5 34c0-7.6 5.2-13.4 11.5-13.4S27.5 26.4 27.5 34Z" fill="currentColor"/></svg>';
 function initialsOf(user) {
   const meta = user?.user_metadata || {};
   const first = (w) => [...w][0] || "";
