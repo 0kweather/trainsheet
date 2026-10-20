@@ -287,11 +287,18 @@ def nested(url, timeout):
     return zipfile.ZipFile(io.BytesIO(OUTER[outer])).read(member) if member else OUTER[outer]
 
 
-def get_zip(url, timeout=180, attempts=4, page_link=True):
+def get_zip(url, timeout=180, attempts=4, page_link=True, cut=True):
     """A railroad's timetable as a ZipFile, trying again on a dropped download
     (Amtrak's 18 MB sometimes drops). page_link: follow a page that links the
     current file (the Alaska Railroad's, named by date). A "#" in the url
-    names a zip inside the one downloaded (nested(), above)."""
+    names a zip inside the one downloaded (nested(), above). A url whose
+    railroads ask for a cut gives the cut copy (cut_zip(), below)."""
+    if cut and any(x.get("cut") and GTFS.get(a, (None,))[0] == url for a, x in EXTRAS.items()):
+        if url not in CUTS:
+            CUTS.clear()
+            CUTS[url] = cut_zip(url, get_zip(url, timeout, attempts, page_link, cut=False))
+            OUTER.clear()  # the cut copy is all that's read again
+        return CUTS[url]
     for attempt in range(attempts):
         try:
             data = nested(url, timeout)
@@ -309,6 +316,56 @@ def get_zip(url, timeout=180, attempts=4, page_link=True):
                 raise
             print(f"  {url}: retry {attempt + 1} ({err})")
             time.sleep(10)
+
+
+# A whole country's timetable that several railroads read: Sweden's (GTFS
+# Sweden 3, 815 MB of every bus, boat and train, 3 GB of it shapes) took
+# minutes to read again for each of its sixteen railroads, in each build
+# script. A railroad whose extras hold "cut" (a test of a trip row and its
+# route row, or True for every trip) reads a copy cut to the trips of the
+# routes it keeps that pass the test: one copy for all such railroads on the
+# url, made the first time one of them asks (one download, seconds of
+# cutting) and kept until another cut url is asked for. Nothing reads
+# shapes.txt, so it stays out.
+CUTS = {}
+CUT_BY = {"routes.txt": "route_id", "trips.txt": "trip_id", "stop_times.txt": "trip_id", "frequencies.txt": "trip_id",
+          "attributions.txt": "trip_id"}
+
+
+def cut_zip(url, zf):
+    """zf with only the trips its "cut" railroads keep, as a new ZipFile."""
+    takers = [(GTFS[a][1], x["cut"]) for a, x in EXTRAS.items() if x.get("cut") and GTFS.get(a, (None,))[0] == url]
+    routes = {r["route_id"]: r for r in rows(zf, "routes.txt") if any(keep(r) for keep, _ in takers)}
+    trips = {t["trip_id"] for t in rows(zf, "trips.txt") if t["route_id"] in routes
+             and any(keep(routes[t["route_id"]]) and (test is True or test(t, routes[t["route_id"]])) for keep, test in takers)}
+    kept = {"route_id": set(routes), "trip_id": trips}
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as z:
+        for name in zf.namelist():
+            if name == "shapes.txt":
+                continue
+            z.writestr(name, cut_rows(zf, name, CUT_BY[name], kept[CUT_BY[name]]) if name in CUT_BY else zf.read(name))
+    cut = zipfile.ZipFile(out)
+    if hasattr(zf, "names_in"):
+        cut.names_in = zf.names_in
+    print(f"  {url}: cut to {len(routes)} routes, {len(trips)} trips")
+    return cut
+
+
+def cut_rows(zf, name, column, keep):
+    """The file's lines whose column is in keep (or blank: attributions.txt's
+    rows for a route or agency), read as bytes; a line with quotes is parsed."""
+    with zf.open(name) as f:
+        head = f.readline()
+        cols = next(csv.reader([head.decode("utf-8-sig")]))
+        i = [c.strip() for c in cols].index(column)
+        out = [head]
+        for line in f:
+            text = line.decode("utf-8")
+            value = next(csv.reader([text]))[i] if '"' in text else text.split(",", i + 1)[i]
+            if value.strip() in keep or (not value.strip() and name == "attributions.txt"):
+                out.append(line)
+    return b"".join(out)
 
 
 def rows(zf, name, optional=False, spaces=False, strip=True):
