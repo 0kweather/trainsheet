@@ -11,7 +11,7 @@ AGENCIES = {
     "trenord": {"name": "Trenord", "short": "Trenord", "region": "Lombardy", "country": "IT", "color": "#006633",
                 "kind": "commuter", "tz": "Europe/Rome",
                 "credit": {"label": "Regione Lombardia open data (Trenord)", "href": "https://www.dati.lombardia.it/d/3z4k-mxz9"},
-                "license": "CC BY 4.0", "bbox": BBOX, "clip": True, "cars": True},
+                "license": "CC BY 4.0", "bbox": BBOX, "clip": True, "cars": True, "detail": "viaggiatreno"},
 }
 SOURCES = [{"id": "trenord", "agencies": ["trenord"], "format": "timetable", "interval": 60, "scope": "view"}]
 

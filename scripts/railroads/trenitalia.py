@@ -13,7 +13,8 @@ NETEX = "https://www.cciss.it/nap/mmtis/public/api/v1/download/blob/Asset/108059
 CREDIT = {"label": "Trenitalia / Italo via Punto di Accesso Nazionale (cciss.it)",
           "href": "https://www.cciss.it/nap/mmtis/public/it/catalog/Dataset"}
 BBOX = [6.6, 36.6, 18.6, 47.1]
-COMMON = {"region": "Italy", "country": "IT", "tz": "Europe/Rome", "credit": CREDIT, "license": None, "bbox": BBOX, "clip": True, "cars": True}
+COMMON = {"region": "Italy", "country": "IT", "tz": "Europe/Rome", "credit": CREDIT, "license": None, "bbox": BBOX, "clip": True, "cars": True,
+          "detail": "viaggiatreno"}
 
 AGENCIES = {
     "frecce": {"name": "Trenitalia Frecce", "short": "Frecce", "color": "#c8102e", "kind": "intercity", **COMMON},

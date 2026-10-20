@@ -111,6 +111,26 @@ function pluginFeed(p, env) {
 // A detail source's query (one train): its number, its day, and the name of
 // the station it starts from (as a name key: no accents, case or spaces),
 // which tells apart two runs of one number on a day; null if it's off.
+// A detail source goes upstream for a train only within limits: per visitor,
+// 20 different trains in 10 minutes (a viewer opens a few), and per copy of
+// the relay, 120 a minute, so it can't be used to read a railroad's whole
+// service train by train. Cached answers don't count.
+const DETAIL_PER_VISITOR = 20, DETAIL_WINDOW_MS = 10 * 60 * 1000, DETAIL_PER_MINUTE = 120;
+const detailAsks = new Map(); // visitor address -> Map(train key -> last time it went upstream)
+let detailMinute = { at: 0, n: 0 };
+function detailAllowed(visitor, key, now) {
+  if (now - detailMinute.at > 60 * 1000) detailMinute = { at: now, n: 0 };
+  if (detailAsks.size > 5000) for (const [ip, m] of detailAsks) if ([...m.values()].every((t) => now - t > DETAIL_WINDOW_MS)) detailAsks.delete(ip);
+  const mine = detailAsks.get(visitor) || new Map();
+  for (const [k, t] of mine) if (now - t > DETAIL_WINDOW_MS) mine.delete(k);
+  if (!mine.has(key) && mine.size >= DETAIL_PER_VISITOR) return false;
+  if (detailMinute.n >= DETAIL_PER_MINUTE) return false;
+  mine.set(key, now);
+  detailAsks.set(visitor, mine);
+  detailMinute.n++;
+  return true;
+}
+
 function detailQuery(params) {
   const train = params.get("train") || "", date = params.get("date") || "";
   if (!/^\d{1,6}$/.test(train) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
@@ -1051,6 +1071,10 @@ export default {
     const keptResponse = () => new Response(kept.bytes, { headers: { ...CORS, "Content-Type": kept.type, "Cache-Control": `public, max-age=${CACHE_SECONDS}` } });
     if (kept && Date.now() - kept.at < ttl * 1000) return keptResponse();
 
+    if (query && !detailAllowed(request.headers.get("CF-Connecting-IP") || "unknown", feedKey, Date.now())) {
+      if (kept) return keptResponse();
+      return new Response("Too many trains asked for; try again in a few minutes", { status: 429, headers: { ...CORS, "Retry-After": "120" } });
+    }
     const headers = { "User-Agent": "Trainsheet relay", ...spec.headers };
     let upstream;
     try {
