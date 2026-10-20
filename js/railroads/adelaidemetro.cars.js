@@ -76,10 +76,13 @@ const gear = (spec, doors) => (c, g) => {
 // 22 sets in 2013-15 and 12 more in 2019-23 (4001-4034). Three cars,
 // DM-T-DM, the driving cars 25.255 m and the trailer 24.71 m with the
 // pantograph; two double doors a side on each car; a raked front. 25 kV,
-// broad gauge. Ribbed stainless sides, a red band along the top of the
-// side; the cab red back past the crew door, blue under a white line low on
-// the front, the windshield in a black mask; a blue stripe down the middle
-// of each door.
+// broad gauge. Ribbed stainless sides with the windows set in them, the red
+// of the cab running back along the top of the side and over the roof's
+// curve; the cab red back past the crew door, blue under a white line low on
+// the front, the windshield in a black mask; a blue stripe with a white line
+// in it down the middle of each door (photographs of 4005, 4022 and 4029,
+// 2024-25; corrected here from an earlier drawing that set the windows in a
+// dark band and the roof in gray, which the cars don't have).
 const E4K = { roof: 13.2, sill: 3.7, cornerR: 1.0, end: 0.6, trucks: { centers: 58.0, wb: 8.5, d: 34 }, diaphragm: [4.0, 12.0], badge: false,
   nose: [[1.5, 3.7], [0.9, 4.9], ["q", 0.8, 6.7, 1.5, 7.7], [4.0, 12.1], ["q", 4.8, 13.2, 6.6, 13.2]], cabLen: 7,
   cab: () => path(poly([[1.3, 7.2], ["q", 2.8, 10.0, 4.3, 12.4], [6.4, 12.4], [6.4, 7.6], ["q", 3.8, 7.0, 1.3, 7.2]]), AM.black) +
@@ -89,9 +92,9 @@ const E4K = { roof: 13.2, sill: 3.7, cornerR: 1.0, end: 0.6, trucks: { centers: 
 };
 function paint4k(c, g, nose, doors) {
   const L = g.L;
-  let s = rect(0, 0, L, 18, AM.steel) + flutes(0, L, 4.2, 6.9, 0.27) + flutes(0, L, 10.7, 11.9, 0.27) + rect(0, 12.0, L, 1.3, AM.red) + rect(0, 13.15, L, 2, AM.roof) +
-    rect(0, 0, L, 4.1, AM.skirt) + rect(0, 4.1, L, 0.12, "#7d848c") + rect(nose ? 9.6 : 0, 7.0, L, 3.6, "#2b2f34", 0, 'rx="0.4"');
-  for (const d of doors) s += rect(d.x + d.w / 2 - 0.3, d.y0, 0.6, d.y1 - d.y0, AM.blue);
+  let s = rect(0, 0, L, 18, AM.steel) + flutes(0, L, 4.2, 6.9, 0.27) + flutes(0, L, 10.7, 11.9, 0.27) + rect(0, 12.0, L, 3.2, AM.red) +
+    rect(0, 0, L, 4.1, AM.skirt) + rect(0, 4.1, L, 0.12, "#7d848c");
+  for (const d of doors) s += rect(d.x + d.w / 2 - 0.35, d.y0, 0.7, d.y1 - d.y0, AM.blue) + rect(d.x + d.w / 2 - 0.06, d.y0, 0.12, d.y1 - d.y0, "#f4f5f6");
   if (nose) s += path(poly([[0, -1], [9.4, -1], [9.4, 12.0], ["q", 9.4, 13.4, 10.6, 13.4], [0, 13.4]]), AM.red) +
     path(poly([[0, -1], [6.6, -1], [6.6, 4.6], ["q", 6.0, 5.4, 4.8, 5.4], [0, 5.4]]), AM.blue) + path(poly([[0, 5.4], [4.8, 5.4], ["q", 6.0, 5.4, 6.6, 4.6], [6.6, 4.95], ["q", 6.1, 5.7, 4.8, 5.7], [0, 5.7]]), "#f4f5f6");
   return s;
@@ -114,19 +117,32 @@ const e4kMid = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...E4K, nose
 // with a cab at the outer end only. Two double doors a side, a flat front
 // with two big windshield panes. Converted to hybrid drive; 50 cars remain
 // (3009-3030, 3113-3140) on the Belair, Grange, Outer Harbor and Port Dock
-// lines. Current paint: fluted stainless low on the side, a lime green
-// window band, a red band along the top of the side; the cab end red,
-// wrapping around the corner, blue low on the front; the doors green over
-// blue, edged in yellow. Two air-conditioning units and the exhaust stacks
-// on the roof; under the floor the engine and its radiator, the fuel tank.
+// lines. Windows (photographs of 3026 and 3123 side on): two big ones
+// behind the cab, four between the doors, two at the inner end. Current
+// paint: fluted stainless low on the side, a lime green window band, a red
+// band along the top of the side; the cab end red, the red carried back
+// along the cab side to a slanted edge behind the first window pair's
+// leading edge, blue low on the front; the doors edged in yellow, their
+// leaves blue with a white line down the middle. Two air-conditioning units
+// and the exhaust stacks on the roof; under the floor the engine and its
+// radiator, the fuel tank. (Corrected from an earlier drawing with five
+// windows between the doors, the red only a narrow strip at the corner and
+// green and blue doors.)
 const DIESEL_DOORS = [{ x: 21.0, w: 4.6, y0: 3.9, y1: 10.7, leaves: 2, glassY: 0.45, glassH: 0.4 }, { x: 58.9, w: 4.6, y0: 3.9, y1: 10.7, leaves: 2, glassY: 0.45, glassH: 0.4 }];
 const DIESEL = { roof: 13.0, sill: 3.8, cornerR: 1.1, end: 0.6, trucks: { centers: 60.0, wb: 8.5, d: 34 }, diaphragm: [4.0, 11.9], badge: false, cabLen: 4.5,
-  doors: DIESEL_DOORS, rows: [{ xs: [6.0, 12.2, ...seq(28.0, 5.8, 5), 66.8, 73.0], y: 7.3, w: 4.4, h: 2.9, r: 0.35 }], roofItems: [],
+  doors: DIESEL_DOORS, rows: [{ xs: [8.6, 14.4], y: 7.0, w: 5.0, h: 3.4, r: 0.35 }, { xs: seq(29.15, 7.0, 4), y: 7.0, w: 5.2, h: 3.4, r: 0.35 },
+    { xs: [66.6, 72.8], y: 7.0, w: 5.0, h: 3.4, r: 0.35 }], roofItems: [],
   paint: (c, g) => {
     const L = g.L;
     let s = rect(0, 0, L, 17, "#d5d9de") + flutes(0, L, 4.0, 6.6, 0.27) + rect(0, 6.75, L, 3.8, AM.green) + rect(0, 10.55, L, 1.2, "#c3c8ce") +
       rect(0, 11.75, L, 1.3, AM.red) + rect(0, 12.95, L, 2, C.steelShade) + rect(0, 0, L, 3.95, AM.skirt);
-    for (const d of DIESEL_DOORS) s += rect(d.x - 0.25, d.y0, d.w + 0.5, d.y1 - d.y0 + 0.2, AM.yellow) + rect(d.x, d.y0, d.w, 2.6, AM.blue) + rect(d.x, d.y0 + 2.6, d.w, d.y1 - d.y0 - 2.6, AM.green);
+    for (const d of DIESEL_DOORS) s += rect(d.x - 0.25, d.y0, d.w + 0.5, d.y1 - d.y0 + 0.2, AM.yellow) + rect(d.x, d.y0, d.w, d.y1 - d.y0, AM.blue) +
+      [d.x + d.w * 0.25, d.x + d.w * 0.75].map((x) => rect(x - 0.06, d.y0, 0.12, d.y1 - d.y0, "#f4f5f6")).join("");
+    // The cab's red, carried back along the side to a slanted edge (the
+    // left end; mirrored for a cab at the right).
+    const cabRed = (x0) => path(poly([[x0, 3.8], [x0 + 6.6, 3.8], [x0 + 8.0, 13.05], [x0, 13.05]]), AM.red);
+    if (c.cabL) s += cabRed(0);
+    if (c.cabR) s += `<g transform="matrix(-1 0 0 1 ${L} 0)">${cabRed(0)}</g>`;
     return s;
   },
   // The cab end: red around the corner, blue low on the front, the

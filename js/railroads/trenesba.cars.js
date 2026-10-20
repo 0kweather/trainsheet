@@ -511,6 +511,45 @@ const tfCoach = tfCoachOf({ doors: [tfDoor(1.9), tfDoor(24.0), tfDoor(51.6)], wi
 // With the van at one end: its double door, a small barred window.
 const tfVan = tfCoachOf({ doors: [tfDoor(20.2), tfDoor(47.8)], wins: [...seq(24.4, 4.6, 5), ...seq(52.0, 4.6, 5)], van: [1.4, 19.0] });
 
+// --- The Belgrano Sur's locomotive-hauled coaches (metre gauge; Materfer,
+// 1960s-70s, U.2xxx-U.4xxx, with the vans FU.45xx): center-entrance cars,
+// two single doors close together in the middle of the side with a panel
+// between them, on Minden-Deutz trucks (Commons, "J31 452 Bw Tapiales,
+// U.2223", "J31 461 ... U.4034", "J31 475 Libertad-Marinos, FU.4502" and
+// "J31 508 Drehgestell Minden-Deutz"). The van coach has the van at one
+// end, behind its own windows, with the bicycle sign, and its two doors
+// further along. No published dimensions: about 21 m over couplers and
+// 3.85 m tall, from photographs against the G22CU. Small windows in gray
+// frames with a transom, mostly in pairs. The paint in those photographs:
+// all-over azure, roof included, a dark gray band along the bottom with
+// the door steps in it, red and white stripes up each end beside the end
+// door, "Línea Belgrano Sur" in white italics over the doors.
+const BSC = { roof: 12.6, sill: 3.6, cornerR: 1.4, end: 0.5, trucks: { centers: 47.0, wb: 7.9, d: 33 }, diaphragm: [4.0, 11.4], badge: false };
+const BS_BLUE = "#2f8ad8";
+const bsDoor = (x) => ({ x, w: 2.6, y0: 3.75, y1: 10.6, leaves: 1, glassY: 0.62, glassH: 0.24, fill: "rgba(0,0,0,0.1)" });
+const bsWin = (x) => rect(x, 7.3, 2.7, 2.7, "#8f979f", 0.3, 'rx="0.15"') + win(x + 0.22, 8.55, 2.26, 1.2, 0.12) + win(x + 0.22, 7.5, 2.26, 0.9, 0.12);
+function bsCoachOf({ doors, wins, van = null }) {
+  return (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...BSC, base: BS_BLUE, doors, rows: [],
+    paint: (c, g) => {
+      const L = g.L;
+      return rect(0, 0, L, 14, BS_BLUE) + rect(0, 0, L, 4.7, "#3d4248") + line(0, 4.7, L, 4.7, "rgba(255,255,255,0.18)", 0.5) +
+        chevrons([[0.5, 4.7], [1.3, 4.7], [1.3, 12.0], [0.5, 12.0]]) + chevrons([[L - 1.3, 4.7], [L - 0.5, 4.7], [L - 0.5, 12.0], [L - 1.3, 12.0]], { slope: -1 });
+    },
+    extra: (c, g) => {
+      const a = g.L / 2 - BSC.trucks.centers / 2, b = g.L / 2 + BSC.trucks.centers / 2;
+      let s = wins.map(bsWin).join("") + bogieGear(a, 7.9, BSC.sill) + bogieGear(b, 7.9, BSC.sill) + underframe(a + 5.5, b - 5.5, BSC.sill, { depth: 1.2, boxes: 3 }) +
+        doors.map((d) => rect(d.x - 0.1, 2.3, d.w + 0.2, 0.25, "#2a2d31") + lines([[d.x, 2.3, d.x, 3.6], [d.x + d.w, 2.3, d.x + d.w, 3.6]], "#2a2d31", 0.6) + rect(d.x + 0.2, 3.0, d.w - 0.4, 0.2, "#e8b923")).join("");
+      const mid = (doors[0].x + doors[1].x + doors[1].w) / 2;
+      s += letters(c, mid, 11.2, 0.6, "Línea Belgrano Sur", "#ffffff", { weight: 600 }) +
+        seq(5, 9.0, Math.floor((g.L - 7) / 9.0)).map((x) => path(`M${r2(x)} ${BSC.roof - 0.02}Q${r2(x + 0.8)} ${BSC.roof + 0.4} ${r2(x + 1.6)} ${BSC.roof - 0.02}Z`, "#2a78c4", 0.3)).join("");
+      if (van) s += letters(c, van + 1.6, 9.9, 0.55, "FURGÓN", "#ffffff", { weight: 600 }) + circle(van + 1.0, 8.6, 0.45, "none", 0, 'stroke="#ffffff" stroke-width="0.6" vector-effect="non-scaling-stroke"') +
+        circle(van + 2.2, 8.6, 0.45, "none", 0, 'stroke="#ffffff" stroke-width="0.6" vector-effect="non-scaling-stroke"') + line(van + 1.0, 8.6, van + 1.6, 9.2, "#ffffff", 0.6) + line(van + 1.6, 9.2, van + 2.2, 8.6, "#ffffff", 0.6);
+      return s;
+    } });
+}
+const bsCoach = bsCoachOf({ doors: [bsDoor(29.4), bsDoor(36.9)], wins: [...seq(2.6, 3.7, 7), ...seq(40.7, 3.7, 7)] });
+const bsVan = bsCoachOf({ doors: [bsDoor(20.0), bsDoor(40.9)], wins: [2.6, 6.3, 10.0, 23.8, 27.5, 31.2, 34.9, ...seq(44.7, 3.7, 6)], van: 13.4 });
+
 // --- The Tren Universitario de La Plata's railcars (the Roca's La Plata-
 // Hospital San Juan de Dios shuttle): NOHAB (Trollhättan) diesel railcars of
 // 1948, the 0100 series (photographed as 105), refurbished and back in
@@ -564,7 +603,8 @@ export const TYPES = {
   taGt22cw: { name: "EMD GT22CW locomotive", kind: "diesel" },
   taCoach: { name: "Materfer coach", kind: "coach" },
   taCoachVan: { name: "Materfer coach with van", kind: "coach" },
-  taBsCoach: { name: "Metre-gauge coach", kind: "coach" },
+  taBsCoach: { name: "Belgrano Sur coach", kind: "coach" },
+  taBsVan: { name: "Belgrano Sur coach with van", kind: "coach" },
   taNohab: { name: "NOHAB railcar", kind: "emu" },
 };
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
@@ -576,7 +616,7 @@ export const MODELS = {
   sdd7: M(sdd7, 65.6), csrCoach: M(csrCoach, 80.4), taCsrCoachFu: M(csrCoachFu, 80.4, true),
   cafCar: M(cafCar, 49.0, true),
   taG22cw: M(g22cw, 50.9), taG22cu: M(g22cu, 50.9), taG22cu2: M(g22cu, 50.9), taGt22cw: M(gt22cw, 57.0),
-  taCoach: M(tfCoach, 78.0), taCoachVan: M(tfVan, 78.0, true), taBsCoach: M(tfCoach, 78.0),
+  taCoach: M(tfCoach, 78.0), taCoachVan: M(tfVan, 78.0, true), taBsCoach: M(bsCoach, 68.9), taBsVan: M(bsVan, 68.9, true),
   taNohab: M(nohabCar, 67.3),
 };
 // Numbers the feed gives as plain integers: the Belgrano Sur's DMUs and its
@@ -626,14 +666,17 @@ export const TYPICAL = {
       return set(`${gt22 ? "EMD GT22CW" : "CSR SDD7"} locomotive with seven CSR coaches`, [loco, 1], ["taCsrCoachFu", 1], ["csrCoach", 5], ["taCsrCoachFu", 1]);
     }
     if (r === "Belgrano Sur") {
-      if (/^F?70\d$/.test(unitName)) return set("EMD G22CU-2 locomotive with metre-gauge coaches, usually six", ["taG22cu2", 1], ["taBsCoach", 6]);
-      if (reported === "taG22cu" || /^F?77\d\d$/.test(unitName)) return set("EMD G22CU locomotive with metre-gauge coaches, usually six", ["taG22cu", 1], ["taBsCoach", 6]);
+      if (/^F?70\d$/.test(unitName)) return set("EMD G22CU-2 locomotive with metre-gauge coaches, usually six", ["taG22cu2", 1], ["taBsVan", 1], ["taBsCoach", 5]);
+      if (reported === "taG22cu" || /^F?77\d\d$/.test(unitName)) return set("EMD G22CU locomotive with metre-gauge coaches, usually six", ["taG22cu", 1], ["taBsVan", 1], ["taBsCoach", 5]);
       if (/^D\d{4}$/.test(unitName)) return set("Two CNR three-car DMUs coupled, 6 cars", ...DMU, ...DMU);
       if (reported === "cnrCar") return set("CNR three-car DMU", ...DMU);
       if (/Belgrano|Marinos/i.test(e)) return set("CNR three-car DMU", ...DMU);
       return set("Two CNR three-car DMUs coupled, 6 cars (some trains locomotive-hauled)", ...DMU, ...DMU);
     }
     if (r === "Tren de la Costa") return set("CAF two-car articulated unit", ["cafCar", 2]);
+    // A unit known by its number alone (the fleet roster): its usual train.
+    if (reported === "cnrCar") return set("CNR three-car DMU", ...DMU);
+    if (reported === "taG22cu") return set("EMD G22CU locomotive with metre-gauge coaches, usually six", ["taG22cu", 1], ["taBsVan", 1], ["taBsCoach", 5]);
     return null;
   },
 };
@@ -683,7 +726,7 @@ const TF_FACTS = { model: "Materfer coach", type: "Passenger coach", builder: "M
   about: "Rebuilt suburban coaches that run behind GM locomotives on the diesel branches around Buenos Aires, usually three to a train, one of them with a guard's van.",
   source: "https://enelsubte.com/noticias/el-ramal-temperley-haedo-la-linea-h-del-conurbano/" };
 const BS_FACTS = { model: "Belgrano Sur coach", type: "Passenger coach", builder: "Materfer (Fiat-Concord), Werkspoor and Aerfer",
-  about: "The Belgrano Sur's older metre-gauge coaches, their doors fitted with plates to reach the raised platforms. Drawn alike here: the types differ in detail, and the feed doesn't say which run.",
+  about: "The Belgrano Sur's older metre-gauge coaches, center-entrance cars whose doors were fitted with plates to reach the raised platforms. They run behind the line's GM locomotives, a van coach for bicycles at one end.",
   source: `${LEIVA}2018/10/coche-motor-cnr-del-belgrano-sur.html` };
 const NOHAB_FACTS = { model: "NOHAB railcar", type: "Diesel railcar", builder: "NOHAB (Trollhättan, Sweden)", built: "1948",
   about: "The Swedish-built railcar that runs La Plata's Tren Universitario, from the Roca's La Plata station past the university to the San Juan de Dios hospital. Overhauled in January 2026.",
@@ -694,5 +737,5 @@ export const FACTS = {
   cnrCar: CNR_FACTS, cnrMid: { ...CNR_FACTS, lengthFt: 70.5 },
   sdd7: SDD7_FACTS, csrCoach: COACH_FACTS, taCsrCoachFu: FU_FACTS, cafCar: CAF_FACTS,
   taG22cw: G22_FACTS, taG22cu: G22CU_FACTS, taG22cu2: G22CU2_FACTS, taGt22cw: GT22_FACTS,
-  taCoach: TF_FACTS, taCoachVan: TF_FACTS, taBsCoach: BS_FACTS, taNohab: NOHAB_FACTS,
+  taCoach: TF_FACTS, taCoachVan: TF_FACTS, taBsCoach: BS_FACTS, taBsVan: BS_FACTS, taNohab: NOHAB_FACTS,
 };
