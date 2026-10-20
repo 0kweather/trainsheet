@@ -1906,17 +1906,20 @@ function countdown(ms) {
 
 // The next trip, large: when it leaves (a countdown on the day), from where
 // and on which track, where it gets in, and its train once it's out.
-function nextTripCard(r) {
+function nextTripCard(legs) {
+  const r = legs[0], last = legs[legs.length - 1], now = Date.now();
+  // The train being ridden, or the next to be: its live train, once it's out.
+  const cur = legs.find((l) => !(Date.parse(l.arrive_at) < now)) || last;
   const a = AGENCIES[r.agency] || { short: r.agency, name: r.agency, color: "#888" };
-  const live = r.service_date === account.today() ? tripTrain(r) : null;
+  const live = cur.service_date === account.today() ? tripTrain(cur) : null;
   const tracked = live && state.tracked.some((x) => x.id === live.id);
-  const from = live && stopOfTrip(live, r.from_key, r.from_name), to = live && stopOfTrip(live, r.to_key, r.to_name);
-  const depMs = Date.parse(from?.dep || from?.time || r.depart_at), arrMs = Date.parse(to?.time || r.arrive_at), now = Date.now();
+  const from = live && cur === r && stopOfTrip(live, r.from_key, r.from_name), to = live && cur === last && stopOfTrip(live, last.to_key, last.to_name);
+  const depMs = Date.parse(from?.dep || from?.time || r.depart_at), arrMs = Date.parse(to?.time || last.arrive_at);
   const onWay = from?.status === "past" || (depMs && now >= depMs);
   const when = tripWhen(r.service_date);
   let label, big;
   if (onWay && arrMs > now) {
-    label = r.to_name ? T("On its way · gets to {place} in", { place: r.to_name }) : T("On its way · arrives in");
+    label = last.to_name ? T("On its way · gets to {place} in", { place: last.to_name }) : T("On its way · arrives in");
     big = countdown(arrMs - now);
   } else if (depMs && depMs > now && depMs - now < 24 * 3600000) {
     label = `${when[0].toUpperCase()}${when.slice(1)} · ${r.from_name ? T("leaves {place} in", { place: r.from_name }) : T("leaves in")}`;
@@ -1925,20 +1928,24 @@ function nextTripCard(r) {
     label = r.from_name ? T("Leaves {place}", { place: r.from_name }) : T("Leaves");
     big = `<span class="tk-day">${esc(tripDate(r.service_date, { weekday: "long", month: "long", day: "numeric" }))}</span>`;
   }
-  const dep = tripTime(r.depart_at, r.from_key, r.agency), arr = tripTime(r.arrive_at, r.to_key, r.agency);
-  const span = r.depart_at && r.arrive_at ? fmtSpan(Date.parse(r.arrive_at) - Date.parse(r.depart_at)) : "";
+  const dep = tripTime(r.depart_at, r.from_key, r.agency), arr = tripTime(last.arrive_at, last.to_key, last.agency);
+  const span = r.depart_at && last.arrive_at ? fmtSpan(Date.parse(last.arrive_at) - Date.parse(r.depart_at)) : "";
   const track = from?.track ? T("Track {track}", { track: from.track }) : "";
-  const toKey = r.to_key || (r.to_name && [...(loadDelays(r.agency, r.number)?.stops.keys() || [])].find((k) => stationNameOf(k) && fold(stationNameOf(k)) === fold(r.to_name)));
+  const toKey = legs.length === 1 && (r.to_key || (r.to_name && [...(loadDelays(r.agency, r.number)?.stops.keys() || [])].find((k) => stationNameOf(k) && fold(stationNameOf(k)) === fold(r.to_name))));
   const usual = toKey && !live ? usualDelay(r.agency, r.number, toKey) : null;
   const status = live ? statusSpan(live, "status") : usual ? `<span class="nt-usual ${lateText(usual.median).cls}">${esc(lateText(usual.median).cls === "good" ? T("Usually on time") : T("Usually {late}", { late: lateText(usual.median).text.toLowerCase() }))}</span>` : "";
+  const train = legs.length > 1
+    ? `${legs.map((l) => { const la = AGENCIES[l.agency] || a; return plate(l.number || la.short, la.color, "xs"); }).join('<span class="tk-then" aria-hidden="true">›</span>')}<span>${esc(T("{n} trains", { n: legs.length }))}</span>`
+    : `${plate(r.number || a.short, a.color, "xs")}<span>${esc(r.route || a.name)}</span>`;
   return `<div class="trip-card">
-    <div class="tk-top"><span class="tk-train">${plate(r.number || a.short, a.color, "xs")}<span>${esc(r.route || a.name)}</span></span>${status}</div>
+    <div class="tk-top"><span class="tk-train">${train}</span>${status}</div>
     <div class="tk-label">${esc(label)}</div>
     <div class="tk-big">${big}</div>
-    ${r.from_name || r.to_name ? `<div class="tk-leg">
+    ${r.from_name || last.to_name ? `<div class="tk-leg">
       <span class="nt-end"><strong>${esc(dep || "—")}</strong><span>${esc([r.from_name, track].filter(Boolean).join(" · "))}</span></span>
       <span class="nt-span">${esc(span)}</span>
-      <span class="nt-end right"><strong>${esc(arr || "—")}</strong><span>${esc(r.to_name || "")}</span></span></div>` : ""}
+      <span class="nt-end right"><strong>${esc(arr || "—")}</strong><span>${esc(last.to_name || "")}</span></span></div>` : ""}
+    ${legs.length > 1 ? journeyLegs(legs, cur) : ""}
     ${r.notes ? `<div class="nt-notes">${esc(r.notes)}</div>` : ""}
     <div class="tk-actions">${live
       ? (tracked ? `<button type="button" class="btn small tracking-btn" data-select="${esc(live.id)}">${BELL_ICON}${T("Tracking")}</button>`
@@ -1948,13 +1955,90 @@ function nextTripCard(r) {
   </div>`;
 }
 
+// ---------- Trips with connections ----------
+// A trip on more than one train: each train is a row of its own, the rows
+// sharing a journey id (js/account.js). Shown as one trip, its trains in
+// order, with where the change is and how long it leaves between them.
+function journeysOf(rows) {
+  const out = [], by = new Map();
+  for (const r of rows) {
+    if (!r.journey) { out.push([r]); continue; }
+    let j = by.get(r.journey);
+    if (!j) { by.set(r.journey, (j = [])); out.push(j); }
+    j.push(r);
+  }
+  const at = (r) => r.service_date + (r.depart_at || "");
+  for (const j of out) j.sort((x, y) => at(x).localeCompare(at(y)));
+  return out;
+}
+const legsAt = (legs) => legs[0].service_date + (legs[0].depart_at || "");
+// The changes between a trip's trains: where, and how long between them.
+const changesOf = (legs) => legs.slice(1).map((r, i) => {
+  const wait = Date.parse(r.depart_at) - Date.parse(legs[i].arrive_at);
+  return { place: legs[i].to_name || r.from_name || "", wait: wait >= 0 && wait < 86400000 ? wait : null };
+});
+const changeText = (c) => (c.wait != null ? T("Change at {place} · {wait}", { place: c.place, wait: fmtSpan(c.wait) }) : T("Change at {place}", { place: c.place }));
+const tripName = (legs) => legs.map((l) => l.route || AGENCIES[l.agency]?.name || l.agency).join(" → ");
+// The trains, one under the other, and each change between them: on the
+// next trip's card, and History's.
+function journeyLegs(legs, cur = null) {
+  const changes = changesOf(legs);
+  return `<ol class="jl">${legs.map((l, i) => {
+    const la = AGENCIES[l.agency] || { short: l.agency, name: l.agency, color: "#888" };
+    const times = [tripTime(l.depart_at, l.from_key, l.agency), tripTime(l.arrive_at, l.to_key, l.agency)].filter(Boolean).join(" – ");
+    return (i ? `<li class="jl-change">${esc(changeText(changes[i - 1]))}</li>` : "") +
+      `<li class="jl-leg${l === cur ? " now" : ""}" style="--c:${la.color}">${plate(l.number || la.short, la.color, "xs")}
+        <span class="jl-text"><span class="title">${esc(l.route || la.name)}</span><span class="sub">${esc([[l.from_name, l.to_name].filter(Boolean).join(" → "), times].filter(Boolean).join(" · "))}</span></span></li>`;
+  }).join("")}</ol>`;
+}
+// Time on each train, and waiting between them, end to end.
+function journeyBar(legs) {
+  const t0 = Date.parse(legs[0].depart_at), t1 = Date.parse(legs[legs.length - 1].arrive_at);
+  if (!(t1 > t0) || legs.some((l) => !(Date.parse(l.arrive_at) > Date.parse(l.depart_at)))) return "";
+  const pct = (ms) => `${((ms / (t1 - t0)) * 100).toFixed(2)}%`;
+  let at = t0, html = "";
+  for (const l of legs) {
+    const a = Date.parse(l.depart_at), b = Date.parse(l.arrive_at);
+    if (a > at) html += `<span class="jb-wait" style="width:${pct(a - at)}"></span>`;
+    html += `<span class="jb-ride" style="width:${pct(b - Math.max(a, at))};--c:${AGENCIES[l.agency]?.color || "#888"}"></span>`;
+    at = b;
+  }
+  return `<span class="jbar" aria-hidden="true">${html}</span>`;
+}
+// A trip with connections in a list (My trips): its day, its trains' names,
+// from and to, how many changes and when it leaves, and the bar.
+function journeyRow(legs) {
+  const r = legs[0], last = legs[legs.length - 1];
+  const d = new Date(`${r.service_date}T12:00:00Z`);
+  const month = dateFormat({ month: "short", timeZone: "UTC" }).format(d), day = d.getUTCDate();
+  const sub = [[r.from_name, last.to_name].filter(Boolean).join(" → "), Tn(legs.length - 1, "1 change", "{n} changes"), tripTime(r.depart_at, r.from_key, r.agency)].filter(Boolean).join(" · ");
+  return `<button type="button" class="home-row trip-row journey-row" data-trip="${esc(r.id)}">
+      <span class="tr-date"><span>${esc(month)}</span><strong>${day}</strong></span>
+      <span class="home-row-text"><span class="title">${esc(tripName(legs))}</span><span class="sub">${esc(sub)}</span>${journeyBar(legs)}</span>
+      <span class="tr-bell" title="${T("Tracked on the day")}">${BELL_ICON}</span>
+    </button>`;
+}
+// History: a trip with connections as a card of its own, each train on a
+// line in its railroad's color, the change between them marked, and the bar.
+function journeyCard(legs) {
+  const r = legs[0], last = legs[legs.length - 1];
+  const took = Date.parse(last.arrive_at) - Date.parse(r.depart_at);
+  const meta = [Tn(legs.length, "1 train", "{n} trains"), took > 0 && took < 4 * 86400000 ? fmtSpan(took) : ""].filter(Boolean).join(" · ");
+  return `<button type="button" class="journey-card" data-trip="${esc(r.id)}">
+      <span class="jc-head"><strong>${esc([r.from_name, last.to_name].filter(Boolean).join(" → ") || tripName(legs))}</strong><span>${esc([tripDate(r.service_date), meta].join(" · "))}</span></span>
+      ${journeyLegs(legs)}
+      ${journeyBar(legs)}
+    </button>`;
+}
+
 // A planned trip that has gone by: did the rider take it?
-const confirmRow = (r) => {
+const confirmRow = (legs) => {
+  const r = legs[0], last = legs[legs.length - 1];
   const a = AGENCIES[r.agency] || { short: r.agency, name: r.agency, color: "#888" };
-  const leg = [r.from_name, r.to_name].filter(Boolean).join(" → ");
+  const leg = [r.from_name, last.to_name].filter(Boolean).join(" → ");
   return `<div class="home-row trip-row confirm-row">
     <button type="button" class="confirm-open" data-trip="${esc(r.id)}">${plate(r.number || a.short, a.color, "xs")}
-      <span class="home-row-text"><span class="title">${esc(r.route || a.name)}</span><span class="sub">${esc([leg, tripDate(r.service_date)].filter(Boolean).join(" · "))}</span></span></button>
+      <span class="home-row-text"><span class="title">${esc(tripName(legs))}</span><span class="sub">${esc([leg, tripDate(r.service_date)].filter(Boolean).join(" · "))}</span></span></button>
     <button type="button" class="btn small" data-trip-taken="${esc(r.id)}">${T("I took it")}</button>
   </div>`;
 };
@@ -1966,16 +2050,19 @@ function myTripsHtml() {
   const all = account?.trips?.();
   if (!all) return head + `<div class="trip-card"><span class="sk sk-line"></span><span class="sk sk-line short"></span></div>`;
   const day = account.today();
-  const [next, ...rest] = account.upcoming();
-  const unsure = all.filter((r) => r.status === "planned" && !account.isUpcoming(r) && r.service_date >= addDaysIso(day, -3));
+  // By trip: a trip with connections is upcoming until its last train is in.
+  const trips = journeysOf(all).filter((j) => j.every((r) => r.status === "planned")).sort((x, y) => legsAt(x).localeCompare(legsAt(y)));
+  const [next, ...rest] = trips.filter((j) => account.isUpcoming(j[j.length - 1]));
+  const unsure = trips.filter((j) => !account.isUpcoming(j[j.length - 1]) && j[0].service_date >= addDaysIso(day, -3));
   let html = head;
   html += next ? nextTripCard(next) : `<div class="trips-empty"><p>${T("No trips planned. Find your train in Browse and add it: it's tracked for you on the day.")}</p>
     <div><button type="button" class="btn primary small" data-tab-go="browse">${T("Find a train")}</button><button type="button" class="link-btn" data-trip-add>${T("Plan a trip")}</button></div></div>`;
   if (unsure.length) html += `<div class="group-title">${T("Did you take these?")}</div>` + unsure.map(confirmRow).join("");
   const week = addDaysIso(day, 6);
-  const soon = rest.filter((r) => r.service_date <= week), later = rest.filter((r) => r.service_date > week);
-  if (soon.length) html += `<div class="group-title">${T("This week")}</div>` + soon.map(tripRowHome).join("");
-  if (later.length) html += `<div class="group-title">${T("Later")}</div>` + later.map(tripRowHome).join("");
+  const soon = rest.filter((j) => j[0].service_date <= week), later = rest.filter((j) => j[0].service_date > week);
+  const row = (j) => (j.length > 1 ? journeyRow(j) : tripRowHome(j[0]));
+  if (soon.length) html += `<div class="group-title">${T("This week")}</div>` + soon.map(row).join("");
+  if (later.length) html += `<div class="group-title">${T("Later")}</div>` + later.map(row).join("");
   return html;
 }
 
@@ -2021,7 +2108,9 @@ function historyHtml() {
     return head + `<div class="trips-empty"><p>${T("No trips yet. Trains you track to your stop while riding are added here when you arrive, and trips you planned once you say you took them.")}</p>
       <div><button type="button" class="btn primary small" data-tab-go="browse">${T("Find a train")}</button></div></div>`;
   }
-  // The numbers.
+  // The numbers: trips counted whole (one with connections is one trip),
+  // the rest by train.
+  const journeys = journeysOf(list);
   const stations = new Set(list.flatMap((r) => [stationOfTrip(r.from_key, r.from_name, r.agency), stationOfTrip(r.to_key, r.to_name, r.agency)]).filter(Boolean));
   let onBoard = 0;
   for (const r of list) {
@@ -2033,7 +2122,7 @@ function historyHtml() {
   const time = hours ? `${hours.toLocaleString(locale)}<small>${T("h")}</small> ${mins % 60}<small>${T("min")}</small>` : `${mins}<small>${T("min")}</small>`;
   const km = state.units === "km", d = dist / (km ? 1000 : 1609.344);
   const stats = `<div class="rr-stats hist-stats">
-    ${statTile(list.length.toLocaleString(locale), esc(Tn(list.length, "trip taken", "trips taken")))}
+    ${statTile(journeys.length.toLocaleString(locale), esc(Tn(journeys.length, "trip taken", "trips taken")))}
     ${statTile(stations.size.toLocaleString(locale), esc(Tn(stations.size, "station", "stations")))}
     ${statTile(time, esc(T("on board")))}
     ${statTile(`${Math.round(d).toLocaleString(locale)}<small>${km ? "km" : "mi"}</small>`, esc(T(km ? "kilometers ridden" : "miles ridden")))}
@@ -2053,7 +2142,7 @@ function historyHtml() {
       <div class="hm-label">${T("Ridden most")}</div>
       <div class="hm-cars">${consistHtml(most.c, AGENCIES[most.agency]?.color, "histmost")}</div>
       <div class="hm-name">${esc(modelsLine(most.c))}</div>
-      <div class="hm-sub">${esc(`${AGENCIES[most.agency]?.short || most.agency} · ${T("{k} of your {n} trips", { k: most.n, n: list.length })}`)}</div>
+      <div class="hm-sub">${esc(`${AGENCIES[most.agency]?.short || most.agency} · ${list.length > journeys.length ? T("{k} of your {n} trains", { k: most.n, n: list.length }) : T("{k} of your {n} trips", { k: most.n, n: list.length })}`)}</div>
     </div>` : "";
   // The top railroad and station.
   const tally = (keys) => { const m = new Map(); for (const k of keys) if (k) m.set(k, (m.get(k) || 0) + 1); return [...m].sort((x, y) => y[1] - x[1])[0]; };
@@ -2066,13 +2155,13 @@ function historyHtml() {
   // Every trip, by month.
   let month = "", rows = "";
   const thisYear = String(new Date().getFullYear());
-  for (const r of list) {
-    const m = r.service_date.slice(0, 7);
+  for (const legs of journeys.sort((x, y) => legsAt(y).localeCompare(legsAt(x)))) {
+    const m = legs[0].service_date.slice(0, 7);
     if (m !== month) {
       month = m;
       rows += `<div class="group-title">${esc(dateFormat({ month: "long", year: m.startsWith(thisYear) ? undefined : "numeric", timeZone: "UTC" }).format(new Date(`${m}-15T12:00:00Z`)))}</div>`;
     }
-    rows += tripRowHome(r);
+    rows += legs.length > 1 ? journeyCard(legs) : tripRowHome(legs[0]);
   }
   return head + stats + mostHtml + tops + rows;
 }

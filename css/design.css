@@ -1266,3 +1266,56 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
   body.panel-away.has-tabs .tab[aria-current="page"]:hover { background: var(--hover); color: var(--text); }
 }
 @media (prefers-reduced-motion: reduce) { .panel, .tracked, .maplibregl-ctrl-bottom-left { transition: none !important; } }
+
+/* ---------- Trips with connections ----------
+ * The form: each train a fieldset of the same fields, a "Change trains"
+ * marker between them, and "+ Add a connection" under the last. */
+.trip-leg { display: flex; flex-direction: column; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.trip-leg-head { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
+.trip-change { display: flex; align-items: center; gap: 10px; font-size: var(--fs-xs); font-weight: 600; color: var(--accent); }
+.trip-change::before, .trip-change::after { content: ""; flex: 1; height: 0; border-top: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
+.trip-add-leg {
+  align-self: flex-start; padding: 8px 14px; border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: var(--r-pill);
+  background: none; color: var(--accent); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+}
+.trip-add-leg:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+/* Each train, one under the other, on a line in its railroad's color, the
+ * change between them marked on a dotted stretch. */
+.jl { position: relative; margin: 10px 0 0; padding: 0; list-style: none; }
+.jl-leg { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 0 6px 14px; }
+.jl-leg::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 4px; border-radius: 2px; background: var(--c); }
+.jl-leg .plate { min-width: 46px; }
+.jl-leg.now .title { color: var(--accent); }
+.jl-text { display: flex; flex-direction: column; min-width: 0; }
+.jl-text .title { font-size: var(--fs-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jl-text .sub { font-size: var(--fs-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jl-change {
+  position: relative; margin-left: 1px; padding: 3px 0 3px 15px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted);
+  background: radial-gradient(circle, var(--faint) 1.2px, transparent 1.6px) 0 50% / 2px 6px repeat-y;
+}
+.jl-change::before { content: ""; position: absolute; left: -3px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--panel-solid); box-shadow: 0 0 0 2px var(--faint); }
+
+/* Time on each train and waiting between them, end to end. */
+.jbar { display: flex; height: 5px; margin-top: 7px; overflow: hidden; border-radius: 3px; background: var(--fill); }
+.jb-ride { background: var(--c); }
+.jb-ride + .jb-ride { box-shadow: inset 1.5px 0 0 var(--group); }
+.jb-wait { background: repeating-linear-gradient(90deg, var(--faint) 0 2px, transparent 2px 4px); opacity: 0.7; }
+.tk-then { color: var(--faint); font-weight: 400; margin: 0 1px; }
+.trip-card .jl { padding-top: 8px; border-top: 0.5px solid var(--line); }
+.journey-row .home-row-text { padding: 2px 0; }
+
+/* History: a trip with connections as a card of its own between the rows. */
+.journey-card {
+  display: block; width: 100%; box-sizing: border-box; margin: 8px 0; padding: 12px 14px 13px;
+  border: 0; border-radius: var(--r-card); background: var(--group); color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.journey-card:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
+.journey-card:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.jc-head { display: flex; flex-direction: column; min-width: 0; }
+.jc-head strong { font-size: var(--fs-base); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jc-head span { font-size: var(--fs-sm); color: var(--muted); }
+.group-title + .journey-card { margin-top: 0; }
+.journey-card + .home-row { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
+.home-row:has(+ .journey-card) { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
+.journey-card + .home-row::before { display: none; }
