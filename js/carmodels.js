@@ -2414,7 +2414,7 @@ export function gtwPower(c) {
 const BRIGHT = ["#1fa64a", "#e5473b", "#5b4fb8", "#38a3dc"]; // green, red, purple, blue
 // The Smart coaches (green, red, purple in turn) behind the locomotive, then
 // the two blue Premium coaches before the locomotive at the far end.
-const brightColor = (c) => ((c.index ?? 1) >= (c.count ?? 9) - 3 ? 3 : ((c.index ?? 1) + 2) % 3);
+const brightColor = (c) => ((c.index ?? 1) >= Math.max(6, (c.count ?? 9) - 3) ? 3 : ((c.index ?? 1) + 2) % 3);
 const VENTURE = {
   roof: 14.0, sill: 3.9, cornerR: 1.4, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6,
   rows: [{ xs: seq(11.5, 6.8, 9), y: 7.3, w: 4.85, h: 2.5, r: 0.45 }],
