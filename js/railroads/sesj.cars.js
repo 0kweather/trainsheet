@@ -280,6 +280,256 @@ const b2Trv = (c) => coach7(c, { paint: "trv", doors: [1.25, c.L - 3.85], rows: 
 // each end, the kitchen's small windows, big windows over the tables.
 const r12Trv = (c) => coach7(c, { paint: "trv", doors: [1.25, c.L - 3.85], rows: [W7(seq(20.0, 7.0, 7), 5.0)], small: [[6.2, 1.4], [10.0, 1.4], [13.6, 1.4]], label: "Bistro" });
 
+// ===================== Bombardier Regina (X55, X52) =====================
+
+// --- Bombardier Regina: SJ 3000 (X55, 20 four-car sets 3344-3363, 2010-13)
+// and the regional X52s that Vy Tåg runs for Värmlandstrafik and SJ on
+// Göteborg–Karlstad. A 2-car Regina is 53.9 m, a 3-car 80.5 m, an X55 107.1
+// m (Swedish Wikipedia), so an end car is 26.95 m and a middle car 26.6 m;
+// 3.45 m wide, the widest Swedish train; bogies 19.0 m apart, 2.7 m
+// wheelbase, 840 mm wheels; floor 1150 mm; about 4.1 m to the roof, scaled
+// from photographs. A rounded nose under a big raked windshield, its
+// coupler under a black cover; a cab door, then the windows, a double plug
+// door at each end of the car. Every X55 bogie is powered but the bistro
+// car's. SJ 3000: painted silver, the windows a dark band, the nose's
+// lower face darker gray with SJ on it. Värmlandstrafik's: warm white, the
+// roof and a band over the windows yellow, sweeping down over the
+// windshield, a green line under the windows rising up the nose.
+const RG_ROOF = 13.45, RG_SILL = 3.1;
+const RG = { roof: RG_ROOF, sill: RG_SILL, cornerR: 1.1, end: 0.5, trucks: { centers: ft(19.0), wb: ft(2.7), d: 33.1 }, diaphragm: [3.9, 12.2], badge: false };
+const RG_NOSE = [[3.4, RG_SILL], [1.1, 3.15], ["q", 0.35, 3.5, 0.35, 4.6], [0.5, 6.6], ["q", 0.8, 7.9, 1.8, 8.6], [5.2, 12.1], ["q", 6.5, RG_ROOF, 9.6, RG_ROOF]];
+const RG_PAINT = {
+  sj: { body: "#b9bec4", roof: "#a3a9b0", band: "#23262b", face: "#70757c", door: "#b0b6bc", skirt: "#3a3e44" },
+  vt: { body: "#eceae3", roof: "#f0c419", band: "#23262b", face: "#eceae3", door: "#e4e2da", skirt: "#3a3e44", line: "#2f9a43" },
+};
+const rgDoor = (x) => ({ x, w: 4.3, y0: 3.3, y1: 10.9, leaves: 2, glassY: 0.5, glassH: 0.36, grabs: false });
+function regina(c, part, paint) {
+  const L = c.L, k = RG_PAINT[paint], cab = part === "cab", vt = paint === "vt";
+  const pitch = vt ? 5.4 : 6.9, w = vt ? 4.6 : 6.2;
+  const xs = cab ? seq(vt ? 18.4 : 13.6, pitch, vt ? 10 : 9) : part === "bistro" ? [...seq(10.0, 6.9, 5), ...seq(48.0, 8.0, 3)] : seq(10.0, 6.9, 10);
+  // SJ's end car: a crew door behind the cab; Värmlandstrafik's: a
+  // passenger door there instead.
+  const doors = cab ? [L - 11.5, ...(vt ? [10.6] : [])] : [2.6, L - 7.0];
+  const band = [xs[0] - 0.5, xs[xs.length - 1] + w + 0.5];
+  return bilevel({ ...c, cabL: cab && c.cabL, cabR: false }, { ...RG, nose: cab ? RG_NOSE : null, cabLen: 9,
+    paint: (c, g) => {
+      let s = rect(0, 0, L, 17, k.body) + rect(band[0], 7.0, band[1] - band[0], 3.7, k.band, 0, 'rx="0.5"') + rect(0, 11.9, L, 3, k.roof) + line(0, 11.9, L, 11.9, "rgba(0,0,0,0.18)", 0.5) +
+        rect(0, 0, L, RG_SILL + 0.45, k.skirt);
+      if (vt) s += rect(0, 10.9, L, 1.0, k.roof) + rect(0, 6.35, L, 0.35, k.line);
+      for (const x of doors) s += rect(x - 0.2, RG_SILL, 4.7, 8.0, k.door);
+      if (cab) {
+        // The nose: no window band ahead of the cab door; SJ's darker lower
+        // face, or Värmlandstrafik's yellow swept down to the windshield and
+        // the green line rising to the headlights.
+        s += vt ? path(poly([[0, 13.6], [0, 9.0], [1.9, 9.0], [6.5, 11.3], [16.0, 11.3], [16.0, 13.6]]), k.roof) + path("M0 5.9L4.0 5.9Q8.0 6.3 13.0 6.35L13.0 6.7Q8.0 6.65 4.0 6.3L0 6.3Z", k.line)
+          : path(poly([[0, 3.6], [2.6, 3.6], [2.0, 8.4], [0, 8.4]]), k.face);
+        s += path(poly([[1.9, 8.75], [5.15, 11.75], [7.9, 11.75], [7.9, 8.75]]), C.glass) + path(poly([[2.3, 9.0], [3.6, 10.2], [4.3, 10.2], [3.0, 9.0]]), C.glassLight);
+      }
+      return s + frames(xs, 7.25, w, 3.2, 0.12, "#191b1e");
+    },
+    rows: [{ xs, y: 7.25, w, h: 3.2, r: 0.4 }, ...(cab ? [] : [])],
+    doors: [...doors.map(rgDoor), ...(cab && !vt ? [{ x: 9.4, w: 2.2, y0: 4.2, y1: 11.3, glassY: 0.55, glassH: 0.33, grabs: true }] : [])],
+    extra: (c, g) => {
+      let s = boxes(17.0, L - 17.0, RG_SILL, 4, 1.05) + hvac(cab ? 22.0 : 12.0, RG_ROOF, 11) + roofCover(cab ? 40.0 : 44.0, RG_ROOF, 14, 0.5);
+      if (cab && !c.mirrored) s += pantograph(L - 14.0, RG_ROOF, { facing: -1 }) + panGear(L - 14.0, RG_ROOF, -1);
+      if (cab) s += horns(10.4, RG_ROOF - 0.02);
+      const mark = vt ? letters(c, cab ? 30.0 : L / 2, 5.0, 0.95, "Värmlandstrafik", "#2f6f3a", { weight: 600 })
+        : letters(c, cab ? 15.5 : 10.0, 5.4, 1.1, "SJ", "#ffffff", { weight: 800 });
+      return s + mark + (part === "bistro" ? letters(c, 60.0, 5.2, 0.8, "Bistro", "#2c3038", { weight: 600 }) : "");
+    },
+    cab: () => wiper(2.5, 9.0, 4.6, 11.2) + lamp(0.55, 5.6, 0.6, 0.45) + lamp(0.6, 6.4, 0.4, 0.28, RED_LAMP) + lamp(6.6, 12.6, 0.8, 0.3) +
+      rect(-0.05, 2.55, 1.6, 1.5, "#1d1f22", 0, 'rx="0.35"') + path(poly([[1.0, 3.1], [3.8, 3.1], [3.6, 1.1], [1.5, 0.9]]), "#2a2d31"),
+  });
+}
+const x55Cab = (c) => regina(c, "cab", "sj"), x55Mid = (c) => regina(c, "mid", "sj"), x55Bistro = (c) => regina(c, "bistro", "sj");
+const x52Cab = (c) => regina(c, "cab", "vt"), x52Mid = (c) => regina(c, "mid", "vt");
+
+// ===================== Alstom X40 (Coradia Duplex) =====================
+
+// --- Alstom Coradia Duplex, SJ X40 (43 sets, 2004-08; 2-car 3301-3310 and
+// 3338-3342, 3-car 3311-3337): 27.55 m cars (55.1 m and 81.5 m sets),
+// 2.96 m wide, 4.56 m tall (trainspo), bogies 20.0 m apart, each car on a
+// motor bogie (920 mm wheels) and a trailer bogie. Double-deck between the
+// bogies, entered at 645 mm; single-level ends over the bogies. The end
+// car's cab sits high in a bulbous nose behind a huge windshield, its
+// coupler under a cover; a crew door, two windows over the motor bogie, a
+// door into the double-deck section at each end of it. Painted silver, the
+// windows framed dark; the three-car sets refurbished by VR FleetCare from
+// 2024 keep the silver.
+const X40_ROOF = 14.96, X40_SILL = 3.9;
+const X40 = { roof: X40_ROOF, sill: X40_SILL, cornerR: 1.2, end: 0.5, noTrucks: true, diaphragm: [4.0, 12.8], badge: false };
+const X40_NOSE = [[5.0, X40_SILL], [1.8, 3.4], ["q", 0.15, 3.6, 0.15, 5.3], [0.25, 7.4], ["q", 0.55, 9.0, 1.35, 10.0], [2.5, 13.4], ["q", 3.3, X40_ROOF, 6.6, X40_ROOF]];
+const x40Door = (x) => ({ x, w: 4.0, y0: 2.2, y1: 9.7, leaves: 2, glassY: 0.48, glassH: 0.38, grabs: false });
+function x40(c, cab) {
+  const L = c.L, dd = [cab ? 24.6 : 17.6, L - 17.6];
+  const up = seq(dd[0] + 1.6, 5.35, 9), low = seq(dd[0] + 1.6, 5.35, 9);
+  const ends = cab ? [11.6, 15.8, L - 10.2] : [3.4, 8.2, L - 10.2];
+  return bilevel({ ...c, cabL: cab && c.cabL, cabR: false }, { ...X40, nose: cab ? X40_NOSE : null, cabLen: 8, drop: { a: dd[0], b: dd[1], y: 1.55 },
+    paint: (c, g) => {
+      let s = rect(0, 0, L, 17, "#c6cacf") + rect(0, 13.4, L, 3, "#a9afb6") + line(0, 13.4, L, 13.4, "rgba(0,0,0,0.18)", 0.5) + rect(0, 0, L, 2.1, "#3a3e44");
+      s += frames(up, 9.55, 4.3, 3.0, 0.14, "#2a2d31") + frames(low, 3.05, 4.3, 2.6, 0.14, "#2a2d31") + frames(ends, 7.4, 3.6, 3.0, 0.14, "#2a2d31");
+      if (cab) s += path(poly([[1.3, 9.6], [2.45, 13.3], [7.6, 13.3], [7.6, 9.6]]), "#1d2024") + rect(0, 3.4, 2.4, 2.0, "#2a2d31");
+      return s;
+    },
+    rows: [{ xs: up, y: 9.55, w: 4.3, h: 3.0, r: 0.5 }, { xs: low, y: 3.05, w: 4.3, h: 2.6, r: 0.5 }, { xs: ends, y: 7.4, w: 3.6, h: 3.0, r: 0.5 }],
+    doors: [x40Door(dd[0] - 4.6), x40Door(dd[1] + 0.6), ...(cab ? [{ x: 8.2, w: 2.0, y0: 4.4, y1: 11.9, glassY: 0.55, glassH: 0.33, grabs: true }] : [])],
+    extra: (c, g) => {
+      // The motor bogie under the A end (the cab), the trailer bogie under the other.
+      let s = truck(L / 2 - 32.8, { wb: ft(2.7), d: 36.2, top: X40_SILL }) + truck(L / 2 + 32.8, { wb: ft(2.5), d: 30.7, top: X40_SILL });
+      s += boxes(cab ? 6.5 : 4.0, dd[0] - 5.2, X40_SILL, 1, 1.0) + boxes(dd[1] + 5.2, L - 4.0, X40_SILL, 1, 0.9) + boxes(dd[0] + 3, dd[1] - 3, 1.55, 3, 0.35);
+      s += hvac(cab ? 10.0 : 3.0, X40_ROOF, 10) + hvac(L - 13.0, X40_ROOF, 10) + roofCover(32.0, X40_ROOF, 14, 0.4);
+      if (c.mirrored && cab) s += pantograph(L - 26.0, X40_ROOF, { facing: -1 }) + panGear(L - 26.0, X40_ROOF, -1);
+      return s + letters(c, cab ? 20.0 : 13.0, 8.4, 1.0, "SJ", "#2c3038", { weight: 800 });
+    },
+    cab: () => path(poly([[1.55, 9.85], [2.55, 12.95], [7.3, 12.95], [7.3, 9.85]]), C.glass) + path(poly([[1.95, 10.05], [2.6, 11.7], [3.3, 11.7], [2.65, 10.05]]), C.glassLight) +
+      wiper(2.0, 10.0, 2.9, 12.3) + rect(3.0, 13.45, 3.6, 0.75, "#141618", 0, 'rx="0.15"') + rect(3.3, 13.62, 2.4, 0.4, "#f4a321", 0, 'rx="0.06"') +
+      lamp(0.45, 6.4, 0.8, 0.7) + lamp(0.6, 7.5, 0.45, 0.32, RED_LAMP) + lamp(4.0, 14.5, 0.5, 0.25) +
+      rect(-0.05, 2.3, 2.2, 2.3, "#2b2e33", 0, 'rx="0.4"') + path(poly([[1.8, 3.4], [5.0, 3.4], [4.8, 1.2], [2.3, 1.0]]), "#2a2d31"),
+  });
+}
+const x40Cab = (c) => x40(c, true), x40Mid = (c) => x40(c, false);
+
+// ===================== Arlanda Express X3 =====================
+
+// --- Alstom X3 (7 four-car units, 1-7, 1998-99, built in Birmingham): 93.08
+// m (järnväg.net), the end cars about 24.4 m and the middle ones 22.1 m;
+// about 3.8 m tall; floors level with the special high platforms at
+// Stockholm C and Arlanda. Motor bogies under the end cars (Bo'Bo'+2'2'+
+// 2'2'+Bo'Bo'), 200 km/h. A rounded nose (new nose cones in 2003-04), two
+// double doors a side on every car. The paint since 2010-11: white sides,
+// the nose and the doors yellow, arlanda express in dark gray type.
+const X3_ROOF = 12.5, X3_SILL = 3.4, X3Y = "#f5c400";
+const X3 = { roof: X3_ROOF, sill: X3_SILL, cornerR: 1.0, end: 0.5, trucks: { centers: ft(16.0), wb: ft(2.6), d: 33.1 }, diaphragm: [3.8, 11.4], badge: false };
+const X3_NOSE = [[3.8, X3_SILL], [1.3, 3.3], ["q", 0.3, 3.6, 0.3, 4.9], [0.5, 6.6], ["q", 0.8, 8.0, 1.9, 8.8], [5.4, 11.5], ["q", 6.9, X3_ROOF, 9.8, X3_ROOF]];
+function x3(c, cab) {
+  const L = c.L, doors = cab ? [16.0, L - 12.5] : [9.0, L - 13.5];
+  const xs = cab ? [...seq(21.8, 5.6, 8), L - 6.6] : [3.2, ...seq(15.4, 5.6, 8), L - 7.6];
+  return bilevel({ ...c, cabL: cab && c.cabL, cabR: false }, { ...X3, trucks: { ...X3.trucks, centers: ft(cab ? 16.6 : 15.0) }, nose: cab ? X3_NOSE : null, cabLen: 10,
+    paint: (c, g) => {
+      let s = rect(0, 0, L, 17, "#f3f4f4") + rect(0, 11.4, L, 3, "#b7bdc4") + line(0, 11.4, L, 11.4, "rgba(0,0,0,0.18)", 0.5) + rect(0, 0, L, X3_SILL + 0.4, "#3a3e44");
+      for (const x of doors) s += rect(x - 0.5, X3_SILL, 5.3, 8.1, X3Y);
+      if (cab) s += path(poly([[0, 0], [11.5, 0], [11.5, 11.45], [9.0, 13.5], [0, 13.5]]), X3Y) + path(poly([[1.9, 8.6], [5.3, 11.2], [8.9, 11.2], [8.9, 8.6]]), "#1d2024");
+      return s + frames(xs, 7.2, 4.4, 2.9, 0.14, "#2a2d31");
+    },
+    rows: [{ xs, y: 7.2, w: 4.4, h: 2.9, r: 0.45 }],
+    doors: doors.map((x) => ({ x, w: 4.3, y0: 3.6, y1: 10.9, leaves: 2, glassY: 0.48, glassH: 0.38, grabs: false })),
+    extra: (c, g) => {
+      let s = boxes(14.0, L - 14.0, X3_SILL, 3, 1.0) + hvac(cab ? 24.0 : 20.0, X3_ROOF, 11) + roofCover(cab ? 44.0 : 40.0, X3_ROOF, 10, 0.4);
+      if (cab && !c.mirrored) s += pantograph(L - 16.0, X3_ROOF, { facing: -1 }) + panGear(L - 16.0, X3_ROOF, -1);
+      return s + letters(c, cab ? 38.0 : L / 2, 4.9, 1.3, "arlanda express", "#2a2d31", { weight: 600, spacing: -0.03 });
+    },
+    cab: () => path(poly([[2.2, 8.85], [5.3, 10.95], [8.6, 10.95], [8.6, 8.85]]), C.glass) + path(poly([[2.6, 9.05], [3.8, 9.9], [4.5, 9.9], [3.3, 9.05]]), C.glassLight) +
+      wiper(2.8, 9.0, 4.6, 10.6) + lamp(0.55, 5.9, 0.6, 0.45) + lamp(0.65, 6.7, 0.4, 0.28, RED_LAMP) + win(9.8, 8.6, 1.4, 2.3, 0.3) +
+      path(poly([[1.2, 3.3], [4.0, 3.3], [3.8, 1.2], [1.7, 1.0]]), "#2a2d31") + rect(0.0, 2.6, 1.5, 1.1, "#1d1f22", 0, 'rx="0.3"'),
+  });
+}
+const x3Cab = (c) => x3(c, true), x3Mid = (c) => x3(c, false);
+
+// ===================== Snälltåget =====================
+
+// --- Siemens Vectron, Snälltåget's 193s (seven, leased from ELL since
+// 2016): 18.98 m, 6400 kW, 200 km/h (järnväg.net); bogies 9.5 m apart, 3.0
+// m wheelbase, 1250 mm wheels; a near-upright nose with a wide windshield,
+// a crew door behind each cab, the machine room's smooth sides, a
+// pantograph over each end. Snälltåget's red, a dark gray band along the
+// bottom, and its name three times along the side in white serif type.
+const vectron = (c) => vectronBody(c) + [17.4, 31.1, 44.8].map((x) => letters(c, x, 7.9, 2.0, "Snälltåget", "#ffffff", { weight: 600, family: "Georgia, serif", spacing: -0.04 })).join("");
+const vectronBody = (c) => bothEnds(c, (h) => {
+  const L = h.L, sill = 4.0, roof = 12.8, red = "#cf2030";
+  return cabUnit(h, {
+    roof, sill, rearR: 1.0,
+    nose: [[1.5, sill], [1.25, 6.4], [1.55, 8.6], [2.7, 11.9], ["q", 3.0, roof, 4.0, roof]],
+    base: red, trucks: { centers: ft(9.5), wb: ft(3.0), d: 49.2 },
+    tank: [18.5, L - 18.5, 1.8],
+    paint: () => rect(0, 0, L, 5.4, "#3a3e44") + rect(0, 5.4, L, 0.12, "#25282c") + rect(0, roof - 0.55, L, 1, "#2a2d31") +
+      path(poly([[1.6, 8.6], [2.6, 11.7], [6.0, 11.7], [6.0, 8.6]]), "#1d1f22"),
+    glass: [[[1.75, 8.9], [2.75, 11.5], [5.6, 11.5], [5.6, 8.9]]],
+    sideWin: [[6.3, 9.1, 1.6, 1.8]],
+    doors: [[8.2, 2.3, sill + 0.35, 11.3]],
+    grilles: [[13.0, 11.2, 6.0, 0.7, 0.3], [20.5, 11.2, 6.0, 0.7, 0.3]],
+    roofItems: [[L / 2 - 9, 18, 0.55]],
+    extra: () => pantograph(15.5, roof, { up: h.half === 1, facing: -1 }) + panGear(15.5, roof, 1) + horns(5.6, roof) +
+      lamp(1.35, 6.9, 0.45, 0.42) + lamp(1.28, 6.1, 0.32, 0.3, RED_LAMP) + lamp(3.0, 12.15, 0.5, 0.28) + wiper(2.2, 9.0, 3.0, 11.1) +
+      buffers(0, -1, { y: 3.45 }) + rect(11.5, 1.9, 2.4, 1.0, "#3a3e44", 0.4, 'rx="0.1"') + lines([[8.0, 5.5, 8.0, 11.0], [10.8, 5.5, 10.8, 11.0]], "#e9ebed", 0.6),
+  });
+});
+
+// --- Snälltåget's coaches: second-class open coaches bought from ÖBB and DB
+// (Bmpz, Bpmmz, Bmz; 26.4 m, built 1973-89), couchette cars (Bvcmz, 26.4 m,
+// and SJ-built BC2, 23.5 m), the WRbmz dining car (26.4 m), all about 4.05
+// m tall on Minden-Deutz-type bogies; doors at the ends. Their paint: white,
+// the ends red, a gray roof and a dark band along the bottom, and big serif
+// words along the side in red, blue, green, pink and yellow (Snälltåget, or
+// the cities it serves); the dining car red all over.
+const SN = { roof: 13.3, sill: 3.6, cornerR: 1.2, end: 0.5, trucks: { centers: ft(19.0), wb: ft(2.5), d: 36.2 }, diaphragm: [4.0, 11.8], badge: false };
+const SN_COLORS = ["#d4202c", "#2c52a3", "#3aa045", "#e0488f", "#e9b417"];
+const SN_WORDS = { seat: ["Snälltåget", "Snälltåget", "Snälltåget"], night: ["Stockholm", "Malmö", "Berlin"], couchette: ["Snälltåget", "Snälltåget", "Snälltåget"] };
+function snallCoach(c, { rows, doors, words = "seat", dining = false, small = [] }) {
+  const L = c.L, red = "#d4202c";
+  return bilevel(c, { ...SN,
+    paint: (c, g) => {
+      let s = rect(0, 0, L, 17, dining ? red : "#f1f1ee") + rect(0, 12.15, L, 3, "#a7adb4") + line(0, 12.15, L, 12.15, "rgba(0,0,0,0.2)", 0.5) +
+        rect(0, 0, L, SN.sill + 0.6, "#3a3e44") + (dining ? "" : ribs(0, L, 4.3, 12.0, 0.32, "rgba(0,0,0,0.05)"));
+      // The red ends round the doors.
+      if (!dining) s += rect(0, 0, 6.6, 17, red) + rect(L - 6.6, 0, 6.6, 17, red) + rect(0, 0, L, SN.sill + 0.6, "#3a3e44");
+      for (const r of rows) s += frames(r.xs, r.y, r.w, r.h, 0.16, "#2a2d31");
+      return s;
+    },
+    rows: [...rows, ...small.map(([x, w]) => ({ xs: [x], y: 8.4, w, h: 1.6, r: 0.25 }))],
+    doors: doors.map((x) => ({ x, w: 2.6, y0: 3.95, y1: 10.9, glassY: 0.58, glassH: 0.3, grabs: true })),
+    extra: (c, g) => {
+      let s = hvac(L / 2 - 6, SN.roof, 12, 0.6) + boxes(19.0, L - 19.0, SN.sill, 3, 0.95, "#2f3338") + buffers(0, -1, { y: 3.45 }) + buffers(L, 1, { y: 3.45 });
+      if (dining) return s + letters(c, L / 2, 5.2, 1.6, "Restaurang", "#ffffff", { weight: 600, family: "Georgia, serif" });
+      const ws = SN_WORDS[words], span = L - 16.0;
+      ws.forEach((w, i) => { s += letters(c, 8.0 + span * (i + 0.5) / ws.length, 5.15, 1.75, w, SN_COLORS[i % SN_COLORS.length], { weight: 600, family: "Georgia, serif", spacing: -0.03 }); });
+      return s + letters(c, 3.3, 5.0, 0.55, "Snälltåget", "#ffffff", { weight: 600, family: "Georgia, serif" });
+    },
+  });
+}
+const SNW = (xs, w = 3.9, h = 2.8) => ({ xs, y: 7.2, w, h, r: 0.35 });
+// Bmpz: an open saloon, twelve windows.
+const snBmpz = (c) => snallCoach(c, { doors: [1.25, c.L - 3.85], rows: [SNW(seq(8.4, 6.0, 12), 4.3)] });
+// Bvcmz: ten six-berth compartments, a window each, and the corridor.
+const snCouchette = (c) => snallCoach(c, { doors: [1.25, c.L - 3.85], rows: [SNW(seq(9.2, 6.9, 10), 3.6, 2.9)], words: "night" });
+// WRbmz: the dining car, the kitchen's small windows at one end.
+const snDining = (c) => snallCoach(c, { doors: [1.25, c.L - 3.85], rows: [SNW(seq(24.0, 6.6, 8), 5.0)], small: [[8.0, 1.5], [11.4, 1.5], [15.0, 1.5], [18.6, 1.5]], dining: true });
+
+// ===================== Tågab =====================
+
+// --- Tågab's coaches: SJ's 1960s stainless cars, B1 (second class, 62
+// seats), A2 (first, 40), AB3, BS5 (kiosk), R2 (bistro): 24.1 m, 3.08 m
+// wide, about 4.0 m to the roof; corrugated stainless sides, swing doors at
+// the ends, framed windows (järnväg.net). Tågab's stripes: a broad red band
+// under the windows, a thin line over them, red on second-class cars and
+// yellow on first.
+const TG = { roof: 13.1, sill: 3.6, cornerR: 1.2, end: 0.5, trucks: { centers: ft(17.2), wb: ft(2.5), d: 34.6 }, diaphragm: [4.0, 11.7], badge: false };
+function tagabCoach(c, { first = false, rows, small = [], label = null }) {
+  const L = c.L;
+  return bilevel(c, { ...TG,
+    paint: (c, g) => rect(0, 0, L, 17, "#c9cdd2") + ribs(0, L, 3.7, 12.0, 0.26, "rgba(0,0,0,0.12)") + rect(0, 12.1, L, 3, "#8e949b") + line(0, 12.1, L, 12.1, "rgba(0,0,0,0.2)", 0.5) +
+      rect(0, 5.0, L, 1.55, "#d32630") + rect(0, 10.55, L, 0.32, first ? "#f0c419" : "#d32630") + rect(0, 0, L, TG.sill + 0.3, "#2a2d31") +
+      rows.map((r) => frames(r.xs, r.y, r.w, r.h, 0.22, "#8f969e")).join(""),
+    rows: [...rows, ...small.map(([x, w]) => ({ xs: [x], y: 8.3, w, h: 1.6, r: 0.25 }))],
+    doors: [1.25, L - 3.85].map((x) => ({ x, w: 2.6, y0: 3.95, y1: 10.9, glassY: 0.58, glassH: 0.3, grabs: true, fill: "rgba(0,0,0,0.04)" })),
+    extra: (c, g) => hvac(L - 12.5, TG.roof, 9, 0.6) + boxes(17.0, L - 17.0, TG.sill, 3, 0.9, "#2f3338") + buffers(0, -1, { y: 3.45 }) + buffers(L, 1, { y: 3.45 }) +
+      letters(c, 6.2, 9.9, 1.0, first ? "1" : "2", first ? "#c79a00" : "#d32630", { weight: 800 }) + (label ? letters(c, L / 2, 4.4, 0.55, label, "#2a2d31", { weight: 700 }) : ""),
+  });
+}
+const TGW = (xs, w = 3.9) => ({ xs, y: 7.0, w, h: 3.0, r: 0.35 });
+const tgB1 = (c) => tagabCoach(c, { rows: [TGW(seq(8.8, 6.15, 10), 4.2)], small: [[5.0, 1.4]] });
+const tgA2 = (c) => tagabCoach(c, { first: true, rows: [TGW(seq(9.0, 7.0, 9), 4.6)], small: [[5.0, 1.4]] });
+
+// ===================== Vy =====================
+
+// --- Stadler FLIRT, Vy's Type 74 (BM74, 54 five-car units, 2010-22; 105.5
+// m), on Oslo–Göteborg and on to Malmö: the FLIRT sections of
+// digitraffic.cars.js in Vy's deep green, its name big and pale on the cab
+// sections, the black mask round the windshield (as entur.cars.js).
+const VY = { body: "#0f5247", roof: "#8f979f", skirt: "#0a3a33", door: "#17675a", mask: "#17191c",
+  paint: (c, g, part) => rect(0, 4.55, g.L, 0.22, "#7cc5a6") +
+    (part === "cab" ? letters(c, 21.65, 8.3, 3.4, "vy", "#e3eeea", { weight: 800, spacing: -0.14, stretch: 1.1 }) + rect(0, 3.0, 1.6, 2.4, "#0a3a33") : "") };
+const vyFlirtCab = (c) => flirt(c, "cab", VY), vyFlirtMid = (c) => flirt(c, "mid", VY);
+
 // ===================== The registry =====================
 
 export const TYPES = {
@@ -288,9 +538,15 @@ export const TYPES = {
   seUB2: { name: "X2000 second-class car (UB2)", kind: "emu" },
   seURB2: { name: "X2000 bistro car (URB2)", kind: "emu", amenities: ["cafe"] },
   seUB2X: { name: "X2000 driving trailer (UB2X)", kind: "emu" },
+  seX55Cab: { name: "SJ 3000 (X55) end car", kind: "emu" },
+  seX55Mid: { name: "SJ 3000 (X55) car", kind: "emu" },
+  seX55Bistro: { name: "SJ 3000 (X55) bistro car", kind: "emu", amenities: ["cafe"] },
+  seX52Cab: { name: "Regina (X52) car", kind: "emu" },
+  seX52Mid: { name: "Regina (X52) middle car", kind: "emu" },
+  seX40Cab: { name: "X40 double-deck end car", kind: "emu" },
+  seX40Mid: { name: "X40 double-deck middle car", kind: "emu" },
   seRc6: { name: "Rc6 electric locomotive", kind: "electric", pan: true },
   seRc6Trv: { name: "Rc6 electric locomotive (Trafikverket)", kind: "electric", pan: true },
-  seRc3: { name: "Rc3 electric locomotive", kind: "electric", pan: true },
   seA7: { name: "A7 first-class coach", kind: "coach" },
   seB7: { name: "B7 second-class coach", kind: "coach" },
   seBF7: { name: "BF7 coach with luggage room", kind: "coach" },
@@ -302,6 +558,17 @@ export const TYPES = {
   seBC4Trv: { name: "BC4 couchette car", kind: "coach", amenities: ["sleepers"] },
   seWL4Trv: { name: "WL4 sleeping car", kind: "coach", amenities: ["sleepers"] },
   seWL6Trv: { name: "WL6 sleeping car", kind: "coach", amenities: ["sleepers"] },
+  seX3Cab: { name: "X3 end car", kind: "emu" },
+  seX3Mid: { name: "X3 middle car", kind: "emu" },
+  se193: { name: "Vectron (193) electric locomotive", kind: "electric", pan: true },
+  seSnBmpz: { name: "Bmpz second-class coach", kind: "coach" },
+  seSnBvcmz: { name: "Couchette car", kind: "coach", amenities: ["sleepers"] },
+  seSnWRbmz: { name: "WRbmz dining car", kind: "coach", amenities: ["cafe"] },
+  seRc3: { name: "Rc3 electric locomotive", kind: "electric", pan: true },
+  seTgB1: { name: "B1 second-class coach", kind: "coach" },
+  seTgA2: { name: "A2 first-class coach", kind: "coach" },
+  seBM74Cab: { name: "Type 74 (Stadler FLIRT) cab section", kind: "emu", pan: true },
+  seBM74Mid: { name: "Type 74 (Stadler FLIRT) section", kind: "emu", pan: true },
 };
 
 const M = (draw, len, oneEnd = false) => ({ draw, len, oneEnd, variant: null });
@@ -312,9 +579,15 @@ export const MODELS = {
   seUB2: M(ub2, ft(24.95)),
   seURB2: M(urb2, ft(24.95)),
   seUB2X: M(ub2x, ft(22.447), true),
+  seX55Cab: M(x55Cab, ft(26.95), true),
+  seX55Mid: M(x55Mid, ft(26.6)),
+  seX55Bistro: M(x55Bistro, ft(26.6)),
+  seX52Cab: M(x52Cab, ft(26.95), true),
+  seX52Mid: M(x52Mid, ft(26.6)),
+  seX40Cab: M(x40Cab, ft(27.55), true),
+  seX40Mid: M(x40Mid, ft(26.4)),
   seRc6: M(rc6, ft(15.52)),
   seRc6Trv: M(rc6Trv, ft(15.52)),
-  seRc3: M(rc3Tagab, ft(15.52)),
   seA7: M(a7, COACH),
   seB7: M(b7("sj"), COACH),
   seBF7: M(bf7, COACH),
@@ -326,32 +599,82 @@ export const MODELS = {
   seBC4Trv: M(bc4("trv"), COACH),
   seWL4Trv: M(wl4("trv"), COACH),
   seWL6Trv: M(wl6("trv"), COACH),
+  seX3Cab: M(x3Cab, ft(24.4), true),
+  seX3Mid: M(x3Mid, ft(22.14)),
+  se193: M(vectron, ft(18.98)),
+  seSnBmpz: M(snBmpz, COACH),
+  seSnBvcmz: M(snCouchette, COACH),
+  seSnWRbmz: M(snDining, COACH),
+  seRc3: M(rc3Tagab, ft(15.52)),
+  seTgB1: M(tgB1, ft(24.1)),
+  seTgA2: M(tgA2, ft(24.1)),
+  seBM74Cab: M(vyFlirtCab, 70.5, true),
+  seBM74Mid: M(vyFlirtMid, 51.5),
 };
 
-// [first, last, type]: the fleet numbers as järnväg.net lists them.
+// [first, last, type]: unit, power-car and locomotive numbers as
+// järnväg.net lists them (an X55's or X40's set number; Arlanda Express's
+// units 1-7; the Rc6s Trafikverket owns, which it lists as 14 of 1323-1382,
+// taken here as 1323-1336; Tågab's Rc3s, numbered among the Rc2s they were
+// rebuilt from; Värmlandstrafik's Reginas, 90xx).
 export const FLEETS = {
   sj: [[2001, 2043, "seX2"], [2088, 2088, "seX2"], [2501, 2544, "seUB2X"], [2601, 2624, "seURB2"], [2701, 2754, "seUA2"], [2801, 2821, "seUA2"], [2822, 2882, "seUB2"],
-    [1323, 1336, "seRc6Trv"], [1337, 1422, "seRc6"]],
+    [3344, 3363, "seX55Cab"], [3301, 3343, "seX40Cab"], [9077, 9080, "seX52Cab"], [1323, 1336, "seRc6Trv"], [1337, 1422, "seRc6"]],
+  arlandaexpress: [[1, 7, "seX3Cab"]],
+  tagab: [[1027, 1136, "seRc3"]],
+  vytag: [[9040, 9090, "seX52Cab"]],
 };
 
+// What runs where (SJ's and the others' published fleets, järnväg.net's
+// operator pages): SJ's Snabbtåg is an X2000 south and west of Stockholm
+// and an SJ 3000 north (Sundsvall, Umeå, Östersund, Falun, Mora) and to
+// Karlstad; its Regional and many InterCity trains are X40s, three-car
+// sets often with a two-car one; the rest of InterCity is an Rc6 with
+// 1980s coaches, and the night trains an Rc6 with couchettes and sleeping
+// cars, Trafikverket's gray ones to Luleå and Narvik. Göteborg–Karlstad is
+// a yellow Regina run with Västtrafik and Värmlandstrafik.
 const set = (label, ...units) => ({ label, units });
 const X2_SET = set("X2000: power car, five cars and a driving trailer", ["seX2", 1], ["seUA2", 1], ["seUB2", 1], ["seURB2", 1], ["seUB2", 2], ["seUB2X", 1]);
+const X55_SET = set("Four-car SJ 3000 (X55)", ["seX55Cab", 1], ["seX55Mid", 1], ["seX55Bistro", 1], ["seX55Cab", 1]);
+const X40_SET = set("Three-car X40 double-decker, often with another set", ["seX40Cab", 1], ["seX40Mid", 1], ["seX40Cab", 1]);
+const X40_2 = set("Two-car X40 double-decker", ["seX40Cab", 2]);
+const X52_3 = set("Three-car Regina (X52) in Värmlandstrafik's yellow", ["seX52Cab", 1], ["seX52Mid", 1], ["seX52Cab", 1]);
+const X52_2 = set("Two-car Regina (X52), often two together", ["seX52Cab", 2]);
 const IC_SET = set("Rc6 locomotive with InterCity coaches, usually 5 to 7", ["seRc6", 1], ["seA7", 1], ["seB7", 2], ["seRB7", 1], ["seB7", 1], ["seBF7", 1]);
 const NIGHT_NORTH = set("Rc6 locomotive with Trafikverket's night-train cars (seats, bistro, couchettes, sleepers), about 10 cars",
   ["seRc6Trv", 1], ["seB2Trv", 2], ["seR12Trv", 1], ["seBC4Trv", 2], ["seWL4Trv", 1], ["seWL6Trv", 3]);
 const NIGHT_SJ = set("Rc6 locomotive with seats, couchettes and sleeping cars", ["seRc6", 1], ["seB7", 2], ["seRB7", 1], ["seBC4", 2], ["seWL4", 2]);
-const BY_TYPE = { seX2: X2_SET, seUA2: X2_SET, seUB2: X2_SET, seURB2: X2_SET, seUB2X: X2_SET, seRc6: IC_SET, seA7: IC_SET, seB7: IC_SET, seBF7: IC_SET, seRB7: IC_SET,
-  seRc6Trv: NIGHT_NORTH, seB2Trv: NIGHT_NORTH, seR12Trv: NIGHT_NORTH, seBC4Trv: NIGHT_NORTH, seWL4Trv: NIGHT_NORTH, seWL6Trv: NIGHT_NORTH, seBC4: NIGHT_SJ, seWL4: NIGHT_SJ };
+const X3_SET = set("Four-car X3", ["seX3Cab", 1], ["seX3Mid", 2], ["seX3Cab", 1]);
+const SN_DAY = set("Vectron locomotive with coaches and a dining car, usually 6 to 8", ["se193", 1], ["seSnBmpz", 3], ["seSnWRbmz", 1], ["seSnBmpz", 2]);
+const SN_NIGHT = set("Vectron locomotive with coaches, couchette cars and a dining car", ["se193", 1], ["seSnBmpz", 2], ["seSnWRbmz", 1], ["seSnBvcmz", 4]);
+const TG_SET = set("Rc3 locomotive with stainless coaches, usually 4 or 5", ["seRc3", 1], ["seTgA2", 1], ["seTgB1", 3]);
+const BM74_SET = set("Five-car Type 74 FLIRT", ["seBM74Cab", 1], ["seBM74Mid", 3], ["seBM74Cab", 1]);
+const BY_TYPE = { seX2: X2_SET, seUA2: X2_SET, seUB2: X2_SET, seURB2: X2_SET, seUB2X: X2_SET, seX55Cab: X55_SET, seX55Mid: X55_SET, seX55Bistro: X55_SET,
+  seX40Cab: X40_SET, seX40Mid: X40_SET, seX52Cab: X52_3, seX52Mid: X52_3, seRc6: IC_SET, seA7: IC_SET, seB7: IC_SET, seBF7: IC_SET, seRB7: IC_SET,
+  seRc6Trv: NIGHT_NORTH, seB2Trv: NIGHT_NORTH, seR12Trv: NIGHT_NORTH, seBC4Trv: NIGHT_NORTH, seWL4Trv: NIGHT_NORTH, seWL6Trv: NIGHT_NORTH, seBC4: NIGHT_SJ, seWL4: NIGHT_SJ,
+  seX3Cab: X3_SET, seX3Mid: X3_SET, se193: SN_DAY, seSnBmpz: SN_DAY, seSnWRbmz: SN_DAY, seSnBvcmz: SN_NIGHT, seRc3: TG_SET, seTgB1: TG_SET, seTgA2: TG_SET,
+  seBM74Cab: BM74_SET, seBM74Mid: BM74_SET };
 const text = (t) => `${t.route || ""} ${t.product || ""} ${t.destination || ""} ${t.origin || ""}`;
-const NORTH = /Luleå|Narvik|Kiruna|Boden|Abisko|Gällivare|Umeå|Riksgränsen/i;
+const NORTH = /Luleå|Narvik|Kiruna|Boden|Abisko|Gällivare|Riksgränsen/i;
+const NIGHT = /natt|night|sleeper/i;
+// SJ 3000 country: the lines north and northwest of Stockholm, and Karlstad.
+const X55_LAND = /Sundsvall|Umeå|Örnsköldsvik|Härnösand|Östersund|Åre|Duved|Storlien|Falun|Mora|Borlänge|Gävle|Hudiksvall|Karlstad|Uddevalla|Kristinehamn/i;
 export const TYPICAL = {
   sj: (t, reported) => {
+    // An X40's set number says whether it has two cars or three.
+    if (reported === "seX40Cab") return (t.cars?.numbers || []).some((n) => n >= 3311 && n <= 3337) ? X40_SET : X40_2;
     if (BY_TYPE[reported]) return BY_TYPE[reported];
     const s = text(t);
-    if (/natt|night/i.test(s)) return NORTH.test(s) ? NIGHT_NORTH : NIGHT_SJ;
-    if (/intercity|\bIC\b/i.test(s)) return IC_SET;
-    return X2_SET;
+    if (NIGHT.test(s)) return NORTH.test(s) ? NIGHT_NORTH : NIGHT_SJ;
+    if (/Göteborg/i.test(s) && /Karlstad/i.test(s) && !/Stockholm/i.test(s)) return X52_3;
+    if (/regional|\bR\b/i.test(s)) return X40_SET;
+    if (/intercity|\bIC\b/i.test(s)) return /Ljusdal|Gävle|Linköping|Västerås|Örebro|Uppsala/i.test(s) ? X40_SET : IC_SET;
+    return X55_LAND.test(s) ? X55_SET : X2_SET;
   },
+  arlandaexpress: (t, reported) => BY_TYPE[reported] || X3_SET,
+  snalltaget: (t, reported) => BY_TYPE[reported] || (NIGHT.test(text(t)) || /Berlin|Åre|Duved|Storlien|Hamburg/i.test(text(t)) ? SN_NIGHT : SN_DAY),
+  tagab: (t, reported) => BY_TYPE[reported] || TG_SET,
+  vytag: (t, reported) => BY_TYPE[reported] || (/Malmö|Göteborg|Halden|Fredrikstad/i.test(text(t)) && !/Karlstad|Stockholm/i.test(text(t)) ? BM74_SET : X52_2),
 };
 
 // Fact sheets in mph, hp and ft, from the published km/h, kW and m.
