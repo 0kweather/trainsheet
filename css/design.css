@@ -1319,3 +1319,19 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .journey-card + .home-row { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
 .home-row:has(+ .journey-card) { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
 .journey-card + .home-row::before { display: none; }
+
+/* The site opens on the map, the panel put away from the first paint
+ * (index.html, app.js): no flash of it before the page's script runs. */
+@media (min-width: 721px) {
+  .panel-boot-away .panel { transform: translateX(calc(-100% - 90px)); opacity: 0; visibility: hidden; transition: none; }
+}
+@media (max-width: 720px) {
+  .panel-boot-away .panel { height: calc(96px + 52px + env(safe-area-inset-bottom, 0px)); transition: none; }
+}
+/* A page folded down stays above the tab bar rather than showing under it. */
+@media (max-width: 720px) { .panel > section { overflow: hidden; } }
+
+/* A train's or a disruption's card on the map is to read, never to touch:
+ * scrolling, pinching and dragging over it reach the map underneath, which
+ * otherwise stopped zooming wherever a card was under the pointer. */
+.maplibregl-popup.hover-card, .maplibregl-popup.hover-card .maplibregl-popup-content { pointer-events: none; }

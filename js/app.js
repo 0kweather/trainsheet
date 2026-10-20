@@ -6091,7 +6091,11 @@ if (accountsOn() && $("tabbar")) {
   if (isPhone) $("panel").append($("tabbar"));
   state.tab = signedInHere() ? "trips" : "browse";
   $("tabbar").querySelector(`[data-tab="${state.tab}"]`)?.setAttribute("aria-current", "page");
+  // Opened on the map, the panel put away (from the first paint: index.html),
+  // unless a shared link opens a page in it.
+  if (document.documentElement.classList.contains("panel-boot-away")) putPanelAway(true);
 }
+document.documentElement.classList.remove("panel-boot-away");
 $("view-list").dataset.tab = state.tab;
 if (ACCOUNTS.url && ACCOUNTS.key) {
   // Signed in on this device already, or back from Google, Facebook or a
