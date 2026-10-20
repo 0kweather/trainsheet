@@ -35,7 +35,7 @@ EXTRACTS = [
     "europe/estonia", "europe/latvia", "europe/lithuania",
     "europe/greece", "europe/ireland-and-northern-ireland",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
-    "australia-oceania/australia",
+    "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
 SKIP_USAGE = re.compile(r"^(industrial|military|tourism|test)$")
 

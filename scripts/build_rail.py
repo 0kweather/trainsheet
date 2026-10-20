@@ -626,6 +626,8 @@ SHAPE_ROUTES = {
     "texrail": ("https://gtfsdata.ridetm.org/gtfs/fwtatransitdata.zip", lambda r: r["route_short_name"] == "TEXRail", 80),
     "star": ("https://www.wegotransit.com/googleexport/google_transit.zip", lambda r: r["route_id"] == "90", 80),
     "upx": ("https://assets.metrolinx.com/raw/upload/Documents/Metrolinx/Open%20Data/UP-GTFS.zip", lambda r: True, 80),
+    # NTAD flags none of the West Coast Express's track in British Columbia as commuter track.
+    "westcoastexpress": ("https://gtfs-static.translink.ca/gtfs/google_transit.zip", lambda r: r["route_short_name"] == "WCE", 80),
     # Ontario Northland files every route as a bus; its train is the Polar Bear Express (Cochrane-Moosonee).
     # The feed already has the Northlander's proposed trips, but it is not carrying passengers yet
     # (October 2026): add r["route_long_name"].startswith("Northlander") back when it is.

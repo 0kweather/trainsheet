@@ -39,6 +39,11 @@ FEEDS = {
     "vre": (url_of("vre"), None),
     "sounder": (url_of("sounder"), {"SNDR_EV", "SNDR_TL"}),  # not Link
     "ace": (url_of("ace"), None),  # 511's copy of ACE's timetable
+    # Swiftly's feeds (COASTER and SPRINTER: NCTD's, which also covers its
+    # buses; the A-train: DCTA's, likewise).
+    "coaster": (url_of("coaster"), {"398", "498"}),
+    "sprinter": (url_of("sprinter"), {"399"}),
+    "atrain": (url_of("atrain"), {"4911"}),
 }
 # The plug-ins' railroads whose live feeds give only ids: "trips", the
 # routes to keep (True: all).

@@ -841,7 +841,7 @@ function gpsRunTrain(agency, tt, number, run, fields, { delay = 0, live = {}, tr
 // placed from its timetable. A railroad abroad has its file there too
 // (build_schedules.py); a timetable that names no time zone runs on its
 // railroad's. One with no timetable file has no trains to place.
-async function timetableTrains(agency) {
+export async function timetableTrains(agency) {
   const file = await loadSchedule(agency).catch(() => null);
   if (!file?.trips) return [];
   const tt = file.tz ? file : { ...file, tz: AGENCIES[agency]?.tz || "America/New_York" };

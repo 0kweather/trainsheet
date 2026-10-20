@@ -4,9 +4,7 @@
 import { AGENCIES } from "./sources.js?v=dev";
 
 const UNTRACKED = {
-  wes:        { name: "WES Commuter Rail",    color: "#5b8c2a" },
   go:         { name: "GO Transit",           color: "#3d8b37" },
-  wce:        { name: "West Coast Express",   color: "#7a1f5c" },
   commuter:   { name: "Commuter rail",        color: "#8d95a3" },
 };
 
