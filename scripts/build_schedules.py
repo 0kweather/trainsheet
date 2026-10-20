@@ -134,11 +134,28 @@ def build(agency, url, keep, line_name, number_of, stations, station_by=None):
             for d in window:
                 if d < begins and next((d + datetime.timedelta(7 * k) for k in range(1, 3) if d + datetime.timedelta(7 * k) >= begins), None) in dates:
                     dates.add(d)
+    # Past the two weeks: each service's days as far as the feed's calendar
+    # goes (a year at most), for planning a trip on a later day (app.js
+    # timetableDay): [first, last, weekdays (Monday's bit first), [days added],
+    # [days dropped]], dates as YYYY-MM-DD.
+    ahead_from, horizon = today + datetime.timedelta(14), today + datetime.timedelta(400)
+    ahead_svc = {}
+    for c in rows(zf, "calendar.txt"):
+        start, end = (datetime.datetime.strptime(c[k], "%Y%m%d").date() for k in ("start_date", "end_date"))
+        wd = sum(1 << i for i, name in enumerate(DAYS) if c[name] == "1")
+        if end >= ahead_from and start <= horizon and wd:
+            ahead_svc[c["service_id"]] = [max(start, ahead_from).isoformat(), min(end, horizon).isoformat(), wd, [], []]
+    for c in rows(zf, "calendar_dates.txt"):
+        d = datetime.datetime.strptime(c["date"], "%Y%m%d").date()
+        if ahead_from <= d <= horizon:
+            spec = ahead_svc.setdefault(c["service_id"], [None, None, 0, [], []])
+            spec[3 if c["exception_type"] == "1" else 4].append(d.isoformat())
+    ahead_svc = {k: v for k, v in ahead_svc.items() if v[0] or v[3]}
     routes = [r for r in rows(zf, "routes.txt") if keep(r)]
     lines = {r["route_id"]: line_name(r) for r in routes}
     colors = {line_name(r): f"#{r['route_color']}" for r in routes if r.get("route_color")}
     route_trips = {t["trip_id"]: t for t in rows(zf, "trips.txt") if t["route_id"] in lines}
-    trips = {k: t for k, t in route_trips.items() if days.get(t["service_id"])}
+    trips = {k: t for k, t in route_trips.items() if days.get(t["service_id"]) or t["service_id"] in ahead_svc}
     # Each stop as its station (the parent station where there is one).
     all_stops = list(rows(zf, "stops.txt"))
     station_of = {s["stop_id"]: station_by(s) if station_by else s.get("parent_station") or s["stop_id"] for s in all_stops}
@@ -178,6 +195,7 @@ def build(agency, url, keep, line_name, number_of, stations, station_by=None):
                     out_seq.append((i, sid, arr, dep))
             times[trip_id] = out_seq
     patterns = defaultdict(dict)  # number -> {(line, stops): mask}
+    ahead = defaultdict(dict)     # number -> {(line, stops): {service ids}}
     for trip_id, seq in times.items():
         t = trips[trip_id]
         seq.sort()
@@ -195,12 +213,15 @@ def build(agency, url, keep, line_name, number_of, stations, station_by=None):
         if not n or len(seq) < 2:
             continue
         mask = 0
-        for d in days[t["service_id"]]:
+        for d in days.get(t["service_id"], ()):
             mask |= 1 << (d - today).days
         line = TRIP_LINE[agency](t, lines[t["route_id"]]) if agency in TRIP_LINE else lines[t["route_id"]]
         key = (line, tuple((sid, arr, dep) for _, sid, arr, dep in seq))
-        patterns[n][key] = patterns[n].get(key, 0) | mask
-    used = {sid for p in patterns.values() for (_, pat) in p for sid, *_ in pat}
+        if mask:
+            patterns[n][key] = patterns[n].get(key, 0) | mask
+        if t["service_id"] in ahead_svc:
+            ahead[n].setdefault(key, set()).add(t["service_id"])
+    used = {sid for p in (*patterns.values(), *ahead.values()) for (_, pat) in p for sid, *_ in pat}
     # Times are in the feed's own zone (Amtrak's are all Eastern, whatever the station's).
     tz = EXTRAS.get(agency, {}).get("tz") \
         or next((a.get("agency_timezone") for a in rows(zf, "agency.txt") if a.get("agency_timezone")), None) \
@@ -210,6 +231,24 @@ def build(agency, url, keep, line_name, number_of, stations, station_by=None):
            "trips": {n: [[mask, line, [list(x) for x in pat]] for (line, pat), mask in p.items()] for n, p in sorted(patterns.items())}}
     if colors:
         out["colors"] = colors
+    # Past the two weeks: {"until", "services": [as ahead_svc], "trips":
+    # {number: [[service indexes, run]]}}, run being the index of the same
+    # run in "trips" or, for one only past them (a timetable change), its
+    # [line, stops]. Left out where it would outweigh the rest of the file.
+    if ahead:
+        svc_ids = sorted({sid for p in ahead.values() for svcs in p.values() for sid in svcs})
+        svc_at = {sid: i for i, sid in enumerate(svc_ids)}
+        index_of = {n: {key: i for i, key in enumerate(p)} for n, p in patterns.items()}
+        later = {"until": max([s[1] for s in ahead_svc.values() if s[1]] + [d for s in ahead_svc.values() for d in s[3]]),
+                 "services": [ahead_svc[sid] for sid in svc_ids],
+                 "trips": {n: [[sorted(svc_at[sid] for sid in svcs),
+                                index_of.get(n, {}).get(key, [key[0], [list(x) for x in key[1]]])] for key, svcs in p.items()]
+                           for n, p in sorted(ahead.items())}}
+        size, base = len(json.dumps(later, separators=(",", ":"))), len(json.dumps(out["trips"], separators=(",", ":")))
+        if size <= max(400_000, 1.5 * base):
+            out["ahead"] = later
+        else:
+            print(f"{agency}: calendar ahead left out ({size // 1024} KB against {base // 1024} KB)")
     if not number_of:
         out["unnumbered"] = True
     if agency in LOOKUPS:

@@ -33,6 +33,11 @@ create table if not exists public.trips (
   unique (user_id, ride_key)
 );
 create index if not exists trips_user_date on public.trips (user_id, service_date desc);
+-- A trip with connections: its trains are rows of their own, sharing one
+-- journey id (null for a trip on one train). Added after the first version,
+-- so it's added to a table made without it.
+alter table public.trips add column if not exists journey uuid;
+create index if not exists trips_user_journey on public.trips (user_id, journey) where journey is not null;
 
 -- ---------- Tracked trains ----------
 -- The trains a rider is tracking (js/app.js state.tracked), so every device

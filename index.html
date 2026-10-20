@@ -16,6 +16,9 @@
         : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       var lang = JSON.parse(localStorage.getItem("tt-lang") || '"auto"');
       if (lang === "fr" || (lang === "auto" && /^fr\b/i.test(navigator.language || ""))) document.documentElement.classList.add("i18n-wait");
+      // The site opens on the map, the panel put away (app.js), unless a
+      // shared link opens a train, station or railroad in it.
+      if (!/[?&](train|station|railroad)=/.test(location.search)) document.documentElement.classList.add("panel-boot-away");
     } catch (e) {}
   </script>
   <link rel="icon" type="image/svg+xml" href="img/icon.svg">
