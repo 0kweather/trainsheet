@@ -13,10 +13,20 @@
 // coupled in pairs, cab to cab in the middle of a six-car train, so their
 // driving motor cars put their cab at whichever end of their unit they
 // stand. V/Line's feed names only the lead unit or locomotive.
+//
+// Lengths, widths, heights, floor heights, wheelbases and wheels are the
+// published figures cited above each class (Wikipedia's articles on each,
+// from the builders' and operators' data). Where none is published (most
+// classes' truck centers, door and window positions, heights of bands),
+// they are measured off broadside photographs on Wikimedia Commons (2024-26)
+// against the published car lengths, and said so. Not drawn: V/Line's last
+// A class (A66, in the old orange and gray, hired to heritage groups) and
+// the stored P class and H sets; a train led by one is drawn as its
+// line's usual train.
 
 import { newId, bilevel } from "../carmodels.js?v=dev";
-import { C, rect, circle, path, line, lines, poly, slats, truck, pantograph, flutes } from "../carart.js?v=dev";
-import { bothEnds, letters, hvac, roofCover, panGear, horns, lamp, RED_LAMP, wiper, boxes, frames } from "./digitraffic.cars.js?v=dev";
+import { C, rect, path, line, lines, poly, slats, pantograph, flutes, truck } from "../carart.js?v=dev";
+import { bothEnds, letters, hvac, roofCover, panGear, horns, lamp, RED_LAMP, wiper, frames } from "./digitraffic.cars.js?v=dev";
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -156,7 +166,8 @@ const framed = (rows) => rows.map((r) => frames(r.xs, r.y, r.w, r.h, 0.2, "#1619
 // motor cars 301M-698M (24.0 m), trailers 1001T-1199T (23.2 m), 71.2 m a
 // unit, 3.05 m wide, 3,835 mm to the roof, run in pairs as six-car trains.
 // Three pairs of sliding doors a side on each car, which riders pull open;
-// big windows in pairs between them. Stainless steel, corrugated below the
+// three big windows between each pair (positions and the 16 m truck
+// centers measured off photographs). Stainless steel, corrugated below the
 // windows and over them; a pantograph on each motor car at its inner end.
 // 100 units remained in June 2026 (Wikipedia: Comeng (train)), on the
 // Craigieburn, Upfield, Frankston, Sandringham, Werribee and Williamstown
@@ -201,7 +212,8 @@ const comT = (c) => comCar({ ...c, cabL: false, cabR: false }, false);
 // 2501T-2572T (23.77 m), 2.95 m wide, 4,141 mm high, floor 1.23 m; two
 // pairs of plug doors a side on each car; SF 5000 bogies, 2.6 m wheelbase,
 // 850 mm wheels; a pantograph on each motor car at its inner end, under a
-// long roof fairing over the equipment (Wikipedia: Siemens Nexas). Paint
+// long roof fairing over the equipment (Wikipedia: Siemens Nexas; truck
+// centers and window positions measured off photographs). Paint
 // (2022 on, the whole fleet from 2024): bare stainless, a blue band along
 // the cant rail, blue facets behind the cab around the first door and at
 // the inner end, light blue doors framed in yellow; the rounded cab yellow
@@ -244,7 +256,10 @@ const sieT = (c) => sieCar({ ...c, cabL: false, cabR: false }, false);
 // trailers 1301T-1444T and 1626T-1693T (22.76 m), 3,046 mm wide, 4,214 mm
 // high, floor 1,185 mm; CL 353 bogies, 2.2 m wheelbase, 890 mm wheels; one
 // pantograph a unit, on the trailer (Wikipedia: X'Trapolis 100). Three
-// pairs of sliding doors a side on each car. The Burnley and Clifton Hill
+// pairs of sliding doors a side on each car, four windows between them
+// (positions and truck centers measured off photographs; 4,214 mm is to
+// the top of the air conditioning, the body's roof drawn at 3.95 m). The
+// Burnley and Clifton Hill
 // groups' train, and on the Frankston, Werribee and Williamstown lines.
 // Paint (Metro's, with the 2022 changes): silver sides, a blue band along
 // the cant rail, blue facets behind the cab with METRO across them and at
@@ -284,8 +299,11 @@ const xtT = (c) => xtCar({ ...c, cabL: false, cabR: false }, false);
 // 25 ordered, 25 more in April 2026), Mc 24.935 m, the others 23.62 m,
 // 3.03 m wide, floor 1.17 m, a walk-through train; Dellner couplers; the
 // pantographs on the two Tp (trailer, pantograph) cars (Wikipedia:
-// X'Trapolis 2.0). Three wide doors a side on each car, a ramp door
-// behind each cab. Craigieburn, Upfield and Frankston lines, replacing the
+// X'Trapolis 2.0). Three wide doors a side on each car, the first behind
+// the cab's ramp space (door, window and truck positions measured off
+// photographs at Newport, Ballarat and South Yarra, 2025-26; the body
+// drawn 3.95 m high like the X'Trapolis 100's, the 3.7 m published
+// seeming not to be from the rail). Craigieburn, Upfield and Frankston lines, replacing the
 // Comengs. Paint: bright blue over the roof edge and the car ends, white
 // panels along the windows, blue doors framed in yellow; behind the cab a
 // blue panel of darker facets; the raked nose blue, the black windshield
@@ -344,7 +362,8 @@ const xt2M = (c) => xt2Car({ ...c, cabL: false, cabR: false }, "m");
 // high, level floor 1.17 m; three doors a side on every car; pantographs
 // on the four powered cars, those of cars 2 and 3 toward the front, 5 and
 // 6 toward the back (Wikipedia: High Capacity Metro Trains, formation
-// table). The Pakenham, Cranbourne and Sunbury lines through the Metro
+// table; truck centers and windows measured off photographs). The
+// Pakenham, Cranbourne and Sunbury lines through the Metro
 // Tunnel. Paint: a mid gray body, a light blue band along the cant rail,
 // the windows in black; blue doors framed in yellow, blue facets around
 // the doors at each car's ends and behind the cab; the aerodynamic nose
@@ -410,10 +429,12 @@ const hcmtDT = (c) => hcCar({ ...c, cabL: false, cabR: false }, "dt");
 // yellow, a white panel under the windshields with V/Line on it, a yellow
 // line along the sill.
 const SPR = { roof: 12.81, sill: 3.9, trucks: { centers: 54.5, wb: 8.2, d: 36.2 }, diaphragm: [4.2, 11.6] };
-const sprinter = (c) => bothEnds({ ...c, cabR: false }, (h) => {
+function sprinterHalf(h) {
   const L = h.L;
   const door = { x: 8.6, w: 2.9, y0: 4.0, y1: 10.85, glassY: 0.5, glassH: 0.36, grabs: false, fill: "rgba(0,0,0,0.04)" };
-  const rows = [{ xs: [5.0], y: 7.2, w: 2.3, h: 2.6, r: 0.3 }, { xs: seq(13.4, 5.75, 6), y: 7.15, w: 4.6, h: 2.7, r: 0.25 }];
+  // Five windows from the door to the middle and one across it (whole in
+  // both halves, so they meet exactly).
+  const rows = [{ xs: [5.0], y: 7.2, w: 2.3, h: 2.6, r: 0.3 }, { xs: [...seq(12.6, 5.6, 5), L / 2 - 2.3], y: 7.15, w: 4.6, h: 2.7, r: 0.25 }];
   return unit(h, { ...SPR, rows, doors: [door], cabLen: 4.2,
     nose: [[0.8, 3.9], [0.55, 4.8], [0.55, 10.9], ["q", 0.6, 12.4, 1.8, 12.75], [2.8, 12.81]],
     paint: (c, g) => rect(0, 0, L, 17, VL.steel) + flutes(0, L, 4.4, 6.7, 0.26) + flutes(0, L, 10.2, 12.0, 0.26) + rect(0, 6.95, L, 3.1, VL.band) +
@@ -422,10 +443,18 @@ const sprinter = (c) => bothEnds({ ...c, cabR: false }, (h) => {
       framed([rows[0]]),
     gear: [[19, 9, 1.6, "g"], [29, 6, 1.3, "b"], [L / 2 - 2, 4, 1.0, "t"]],
     onRoof: (c, g) => hvac(16, g.roof, 11, 0.7, "#b4bac1") + exhaust(32, g.roof) + horns(2.6, g.roof) + aerial(10.4, g.roof),
-    cabArt: (c) => cabFoot(0.75, 3.9, { reach: 3.0 }) + path(poly([[0.6, 7.4], [0.6, 10.6], [3.0, 10.6], [3.0, 7.4]]), "#1b1e22") + rect(3.4, 4.1, 1.2, 6.8, "none", 0.4) +
+    cabArt: (c) => cabFoot(0.75, 3.9, { reach: 3.0 }) + path(poly([[0.6, 7.4], [0.6, 10.6], [3.0, 10.6], [3.0, 7.4]]), "#1b1e22") +
       lamp(0.6, 5.0, 0.45, 0.42) + lamp(0.62, 6.0, 0.4, 0.3, RED_LAMP) + lamp(1.4, 12.5, 0.6, 0.25) + vlName(c, 26, 5.2, 0.6, VL.purple),
   });
-});
+}
+// The car is drawn as its two halves, cab and door mirrored at the far end
+// (bothEnds), over a strip of the whole body under the join so no seam
+// shows between them.
+const sprinter = (c) => {
+  const id = newId(), L = c.L;
+  return `<clipPath id="${id}"><rect x="${r2(L / 2 - 1.5)}" y="-5" width="3" height="40"/></clipPath><g clip-path="url(#${id})">${sprinterHalf({ ...c, cabL: true, cabR: false })}</g>` +
+    bothEnds({ ...c, cabR: false }, sprinterHalf);
+};
 
 // ===================== V/Line =====================
 
@@ -436,7 +465,9 @@ const sprinter = (c) => bothEnds({ ...c, cabR: false }, (h) => {
 // Albury line (VS93-VS98); the cars numbered 11xx/21xx (DM(D), the No. 1
 // end), 12xx/22xx (DM) and 13xx/23xx (TM), 15xx kiosk cars (Wikipedia:
 // V/Line VLocity). A plug door a side at each end of each car; the windows
-// in one dark band; a crumple zone in the raked nose. Paint (PTV, from
+// in one dark band; a crumple zone in the raked nose (the height, about
+// 3.9 m, and the truck centers measured off photographs, none being
+// published). Paint (PTV, from
 // VL52 and since on all): ribbed stainless with a yellow line along the
 // sill, purple facets around each door and over the cab, white door
 // leaves with V/Line on them; the cab's lower edge yellow, a white panel
