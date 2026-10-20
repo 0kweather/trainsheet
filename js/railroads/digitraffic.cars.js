@@ -278,6 +278,44 @@ const sr3 = (c) => bothEnds(c, (h) => {
   });
 });
 
+// --- NEVZ/Strömberg Sr1 (VR 3001-3112, 1973-1995; 73 still in service in
+// 2025, being replaced by the Sr3; en.wikipedia "VR Class Sr1"): 18.96 m,
+// Bo'Bo' on 1.25 m wheels, bogies about 9.6 m apart; a flat, upright cab
+// at each end with two windshield panes, a crew door behind each cab with
+// a round porthole beside it, the machine room's windows high in the
+// middle of the side, ribbed panels; two pantographs and the roof
+// resistors between. VR's current scheme (photographs, 3043 at Kouvola):
+// white, a gray skirt, a green band low along the side that steps up
+// toward the middle and frames the machine room's first windows, VR big in
+// green on the other half.
+const sr1 = (c) => bothEnds(c, (h) => {
+  const L = h.L, sill = 4.2, roof = 13.4;
+  return cabUnit(h, {
+    roof, sill, rearR: 1.0,
+    nose: [[0.9, sill], [0.8, 10.6], ["q", 0.85, 12.9, 2.0, roof - 0.2], ["q", 2.6, roof, 3.6, roof]],
+    base: VR.white, trucks: { centers: 31.5, wb: 10.5, d: 49 },
+    tank: [18.0, L - 18.0, 2.0],
+    paint: () => {
+      let s = rect(0, 0, L, 5.6, "#626a72") + rect(0, 5.6, L, 1.2, VR.green) + rect(0, roof - 0.6, L, 1, VR.roof) + line(0, 6.8, L, 6.8, VR.deep, 0.4);
+      // The step: the green rising under the first machine-room windows
+      // (on the No. 2 end's half), and VR on the No. 1 end's.
+      if (h.half === 0) s += path(`M10.5 5.6L19.0 6.8L${L / 2 + 1} 6.8L${L / 2 + 1} 7.9L22.4 7.9L22.4 11.2L17.6 11.2L14.6 6.8Z`, VR.green);
+      else s += vrMark(h, 21.5, 8.6, 3.0, VR.green);
+      return s + path(poly([[0.9, 9.0], [0.86, 11.6], [5.4, 11.6], [5.4, 9.0]]), "#1d2024");
+    },
+    glass: [[[1.0, 9.2], [0.95, 11.35], [5.1, 11.35], [5.1, 9.2]]],
+    sideWin: [[5.8, 9.2, 2.4, 2.2]],
+    doors: [[8.8, 2.3, sill + 0.35, 11.6]],
+    grilles: [[17.0, 9.0, L / 2 - 17.0, 2.3, 2.6]],
+    panels: [[11.6, 5.6, 2.4, 3.0]],
+    roofItems: [[L / 2 - 6, 12, 0.7]],
+    extra: () => circle(13.2, 10.3, 0.9, C.glass, 0, `stroke="${C.gasket}" stroke-width="0.6"`) + pantograph(17.5, roof, { up: h.half === 1, facing: -1 }) + panGear(17.5, roof, 1) +
+      horns(3.4, roof) + lamp(1.0, 6.3, 0.5, 0.5) + lamp(1.0, 5.55, 0.36, 0.32, RED_LAMP) + lamp(2.6, 12.6, 0.6, 0.3) + wiper(1.5, 9.4, 1.5, 11.0) + buffers(0, -1) +
+      // The ribbed panels below the machine room's windows.
+      lines([7.4, 7.9, 8.4].map((y) => [24.0, y, L / 2, y]), "rgba(0,0,0,0.14)", 0.5),
+  });
+});
+
 // ===================== VR multiple units =====================
 
 // --- Fiat/Alstom Sm3 Pendolino (VR, 18 six-car units 1995-2006, 14 in
@@ -321,6 +359,52 @@ const sm3Mid = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...SM3,
   extra: (c, g) => sm3Under(g.L, g.roof - 8.8) + hvac(40, g.roof, 13) +
     (c.pan ? pantograph(14.0, g.roof) + panGear(14.0, g.roof, 1) + roofCover(22.5, g.roof, 8, 0.5) : roofCover(18, g.roof, 9, 0.45)) +
     letters(c, 44.0, 10.25, 0.55, "VR", VR.green, { weight: 800, italic: true }),
+});
+
+// --- Alstom New Pendolino, Sm6 "Pendolino Plus" (4 seven-car units built
+// 2009-2011 at Savigliano for the Helsinki-St Petersburg Allegro, back in
+// VR's domestic service since November 2025 on Helsinki-Turku and
+// Helsinki-Oulu; en.wikipedia "VR Class Sm6"): 184.8 m, end cars 27.2 m and
+// middle cars 25.0 m, 4.27 m tall; a long nose rising to a windshield set
+// in a gray mask, a plug door a side at each end of the middle cars and
+// behind each cab, small windows close together; pantographs on the second
+// and sixth cars. VR's paint for it (photographs, Helsinki, 3 November
+// 2025): the nose and the front half of each end car bright green, VR big in
+// white on the green; the rest white, swept with green speed lines that
+// thin out toward the middle of the train; the windows in a dark band, a
+// gray roof and a dark skirt.
+const SM6 = { roof: 14.0, sill: 3.6, cornerR: 1.0, end: 0.6, trucks: { centers: 61.0, wb: 8.9, d: 35 }, diaphragm: [3.9, 12.6], badge: false };
+const sm6Lines = (x0, x1, y0, y1, n = 9) => {
+  const segs = [];
+  for (let k = 0; k < n; k++) {
+    const y = y0 + ((y1 - y0) * k) / (n - 1);
+    segs.push([x0 + (k % 3) * 1.4, y, x1 - (k % 2) * 2.2, y]);
+  }
+  return lines(segs, VR.green, 2.2);
+};
+const sm6Paint = (cab) => (c, g) => {
+  const L = g.L;
+  let s = rect(0, 0, L, 17, VR.white) + rect(0, 13.0, L, 2, "#b6bcc3") + line(0, 13.0, L, 13.0, "rgba(0,0,0,0.15)", 0.5) +
+    rect(0, 7.3, L, 3.0, "#2a2e33") + rect(0, 0, L, 3.9, "#3a3f45");
+  if (cab) {
+    s += path("M0 3.9L0 13.0L30.0 13.0L33.0 3.9Z", VR.green) + sm6Lines(31.0, 52.0, 4.6, 12.4) + path(poly([[2.2, 8.4], [7.4, 12.6], [12.6, 12.6], [12.6, 8.2], [6.0, 8.0]]), "#5d646c");
+  } else s += sm6Lines(-1, 18.0, 4.6, 12.4, 7) + sm6Lines(L - 18.0, L + 1, 4.6, 12.4, 7);
+  return s;
+};
+const sm6Door = (x) => ({ x, w: 2.9, y0: 3.8, y1: 11.2, glassY: 0.55, glassH: 0.3, grabs: false, fill: "rgba(0,0,0,0.08)" });
+const sm6Cab = (c) => bilevel({ ...c, cabL: true }, { ...SM6,
+  nose: [[3.0, 3.6], [1.0, 4.6], ["q", 0.3, 5.9, 1.4, 7.4], [7.6, 12.6], ["q", 9.6, 14.0, 12.8, 14.0]], cabLen: 13,
+  rows: [{ xs: seq(30.0, 4.6, 12), y: 7.6, w: 3.0, h: 2.4, r: 0.35 }], doors: [sm6Door(23.0), sm6Door(c.L - 5.0)], paint: sm6Paint(true),
+  extra: (c, g) => boxes(g.L / 2 - 22, g.L / 2 + 22, 3.6, 4, 0.95) + hvac(34, g.roof, 13) + roofCover(60, g.roof, 9, 0.45) + horns(13.6, g.roof - 0.02) +
+    vrMark(c, 26.0, 6.0, 2.4, "#ffffff") + vrMark(c, 3.6, 5.2, 0.9, "#ffffff"),
+  cab: () => path(poly([[2.8, 8.6], [7.6, 12.3], [11.8, 12.3], [11.8, 8.9], [6.2, 8.6]]), C.glass) + path(poly([[3.4, 8.85], [5.8, 10.6], [6.6, 10.6], [4.4, 8.85]]), C.glassLight) +
+    wiper(4.2, 8.9, 6.4, 10.8) + lamp(1.05, 5.0, 0.8, 0.45) + lamp(1.9, 5.7, 0.5, 0.3, RED_LAMP) + emuFront(3.0, 3.6, { coupler: 2.9 }) +
+    path(poly([[19.4, 7.4], [21.6, 7.4], [22.0, 10.8], [19.0, 11.4]]), C.glass),
+});
+const sm6Mid = (c) => bilevel({ ...c, cabL: false, cabR: false }, { ...SM6,
+  rows: [{ xs: seq(6.4, 4.6, 15), y: 7.6, w: 3.0, h: 2.4, r: 0.35 }], doors: [sm6Door(1.6), sm6Door(c.L - 4.5)], paint: sm6Paint(false),
+  extra: (c, g) => boxes(g.L / 2 - 22, g.L / 2 + 22, 3.6, 4, 0.95) + hvac(46, g.roof, 13) +
+    (c.pan ? pantograph(16.0, g.roof) + panGear(16.0, g.roof, 1) : roofCover(18, g.roof, 9, 0.45)) + vrMark(c, g.L / 2, 11.4, 0.8, VR.green),
 });
 
 // --- Transtech double-deck InterCity cars (VR, since 1998): 26.4 m over
@@ -471,6 +555,9 @@ const sm5Mid = (c) => flirt(c, "mid", SM5);
 export const TYPES = {
   vrSr2: { name: "Sr2 electric locomotive", kind: "electric", pan: true },
   vrSr3: { name: "Sr3 (Siemens Vectron) electric locomotive", kind: "electric", pan: true },
+  vrSr1: { name: "Sr1 electric locomotive", kind: "electric", pan: true },
+  vrSm6Cab: { name: "Sm6 Pendolino Plus end car", kind: "emu" },
+  vrSm6Mid: { name: "Sm6 Pendolino Plus car", kind: "emu", pan: true },
   vrSm3Cab: { name: "Sm3 Pendolino end car", kind: "emu" },
   vrSm3Mid: { name: "Sm3 Pendolino car", kind: "emu", pan: true },
   vrEd: { name: "Double-deck InterCity coach", kind: "bilevel" },
@@ -487,6 +574,9 @@ const M = (draw, len, oneEnd = false) => ({ draw, len, oneEnd, variant: null });
 export const MODELS = {
   vrSr2: M((c) => lok2000(c), 62.4),
   vrSr3: M(sr3, 62.5),
+  vrSr1: M(sr1, 62.2),
+  vrSm6Cab: M(sm6Cab, 89.2, true),
+  vrSm6Mid: M(sm6Mid, 82.0),
   vrSm3Cab: M(sm3Cab, 86.9, true),
   vrSm3Mid: M(sm3Mid, 86.9),
   vrEd: M(ddCoach, 86.6),
@@ -507,7 +597,7 @@ export const MODELS = {
 // car 0).
 const SM4_SM2 = [[6301, 6330, "vrSm4"], [6401, 6430, "vrSm4"], [6051, 6100, "vrSm2"], [6251, 6300, "vrSm2"]];
 export const FLEETS = {
-  vr: [[3201, 3246, "vrSr2"], [3301, 3380, "vrSr3"], [7101, 7118, "vrSm3Cab"], [7201, 7218, "vrSm3Mid"], [7301, 7318, "vrSm3Mid"],
+  vr: [[3001, 3112, "vrSr1"], [3201, 3246, "vrSr2"], [3301, 3380, "vrSr3"], [7101, 7118, "vrSm3Cab"], [7201, 7218, "vrSm3Mid"], [7301, 7318, "vrSm3Mid"],
     [7401, 7418, "vrSm3Mid"], [7501, 7518, "vrSm3Mid"], [7601, 7618, "vrSm3Cab"], [4401, 4416, "vrDm12"], ...SM4_SM2,
     [0, 0, "vrEdCab"]],
   hsl: [[1, 81, "hslSm5Cab"], ...SM4_SM2],
@@ -523,24 +613,29 @@ export const FLEETS = {
 // units together; Sm2s the G, M and O trains.
 const set = (label, ...units) => ({ label, units });
 const SM3_SET = set("Six-car Sm3 Pendolino", ["vrSm3Cab", 1], ["vrSm3Mid", 4], ["vrSm3Cab", 1]);
-const IC_SET = (loco) => set(`${loco === "vrSr2" ? "Sr2" : "Sr3"} locomotive with double-deck InterCity coaches`, [loco, 1], ["vrEd", 6]);
+// The four Sm6s (Pendolino Plus) share the Helsinki-Turku and Helsinki-Oulu
+// workings with the Sm3s since November 2025; the timetable doesn't say
+// which train gets which, so those trains say both.
+const SM3_OR_SM6 = set("Usually a six-car Sm3 Pendolino (some trains a seven-car Sm6 Pendolino Plus)", ["vrSm3Cab", 1], ["vrSm3Mid", 4], ["vrSm3Cab", 1]);
+const SM6_SET = set("Seven-car Sm6 Pendolino Plus", ["vrSm6Cab", 1], ["vrSm6Mid", 5], ["vrSm6Cab", 1]);
+const IC_SET = (loco) => set(`${{ vrSr1: "Sr1", vrSr2: "Sr2", vrSr3: "Sr3" }[loco]} locomotive with double-deck InterCity coaches${loco === "vrSr3" ? " (some trains an Sr1 or Sr2)" : ""}`, [loco, 1], ["vrEd", 6]);
 const IC_PUSH = set("Sr3 locomotive with double-deck coaches and a driving trailer", ["vrSr3", 1], ["vrEd", 4], ["vrEdCab", 1]);
-const NIGHT = set("Sr2 locomotive with double-deck sleeping cars and coaches", ["vrSr2", 1], ["vrSleeper", 4], ["vrEd", 2]);
+const NIGHT = set("Sr2 or Sr1 locomotive with double-deck sleeping cars and coaches (north of Tornio to Kolari a Dr19 diesel)", ["vrSr2", 1], ["vrSleeper", 4], ["vrEd", 2]);
 const SM4_SET = set("Two two-car Sm4 units", ["vrSm4", 4]);
 const SM2_SET = set("Two-car Sm2 units, often two together", ["vrSm2", 4]);
 const SM5_SET = set("Four-section Sm5 FLIRT", ["hslSm5Cab", 1], ["hslSm5Mid", 2], ["hslSm5Cab", 1]);
 const DM12_SET = set("Dm12 diesel railcar", ["vrDm12", 1]);
 const DM12_ENDS = /Nurmes|Savonlinna|Parikkala|Keuruu|Haapamäki|Seinäjoki|Jyväskylä/;
-const BY_TYPE = { vrSr2: IC_SET("vrSr2"), vrSr3: IC_SET("vrSr3"), vrSm3Cab: SM3_SET, vrSm3Mid: SM3_SET, vrEd: IC_SET("vrSr3"), vrEdCab: IC_PUSH,
+const BY_TYPE = { vrSr1: IC_SET("vrSr1"), vrSm6Cab: SM6_SET, vrSm6Mid: SM6_SET, vrSr2: IC_SET("vrSr2"), vrSr3: IC_SET("vrSr3"), vrSm3Cab: SM3_SET, vrSm3Mid: SM3_SET, vrEd: IC_SET("vrSr3"), vrEdCab: IC_PUSH,
   vrSleeper: NIGHT, vrSm4: SM4_SET, vrSm2: SM2_SET, vrDm12: DM12_SET, hslSm5Cab: SM5_SET, hslSm5Mid: SM5_SET };
 export const TYPICAL = {
   vr: (t, reported) => {
     if (BY_TYPE[reported]) return BY_TYPE[reported];
     switch (t.route) {
-      case "Pendolino": return SM3_SET;
+      case "Pendolino": return /Turku|Oulu/.test(`${t.origin || ""} ${t.destination || ""}`) ? SM3_OR_SM6 : SM3_SET;
       case "InterCity": return IC_SET("vrSr3");
       case "Night train": return NIGHT;
-      case "Regional": return DM12_ENDS.test(`${t.origin || ""} ${t.destination || ""}`) && !/Helsinki|Tampere/.test(`${t.origin || ""} ${t.destination || ""}`) ? DM12_SET : SM4_SET;
+      case "Regional": return DM12_ENDS.test(`${t.origin || ""} ${t.destination || ""}`) && !/Helsinki/.test(`${t.origin || ""} ${t.destination || ""}`) ? DM12_SET : SM4_SET;
       default: return IC_SET("vrSr2");
     }
   },
@@ -565,6 +660,14 @@ export const FACTS = {
     topSpeedMph: 124.3, powerHp: 8582, lengthFt: 62.5,
     about: "VR's newest electric locomotive, first in service in 2017. It hauls double-deck InterCity trains as well as freight, bought to replace the older Sr1s.",
     source: WIKI + "VR_Class_Sr3" },
+  vrSr1: { model: "NEVZ/Strömberg Sr1", type: "Electric locomotive", builder: "Novocherkassk (NEVZ), electrics by Strömberg", built: "1973–1995",
+    fleet: "112 built, 3001–3112; 73 in service in 2025", topSpeedMph: 87, powerHp: 4290, lengthFt: 62.2,
+    about: "VR's first electric locomotive, Soviet-built with Finnish electrical equipment. It still hauls InterCity, night and freight trains while the Sr3 replaces it.",
+    source: WIKI + "VR_Class_Sr1" },
+  vrSm6Cab: { model: "Alstom Pendolino Sm6 (Pendolino Plus)", type: "Tilting electric multiple unit", builder: "Alstom, Savigliano", built: "2009–2011",
+    fleet: "4 seven-car units", topSpeedMph: 136.7, lengthFt: 606.3,
+    about: "Built for the Helsinki–St Petersburg Allegro, idle after the service stopped in 2022, and back in VR's domestic service as Pendolino Plus since November 2025 on Helsinki–Turku and Helsinki–Oulu.",
+    source: WIKI + "VR_Class_Sm6" },
   vrSm3Cab: { model: "Pendolino (Sm3)", type: "Tilting electric multiple unit", builder: "Fiat Ferroviaria (Alstom)", built: "1992–2006",
     fleet: "18 six-car units, 14 in service", topSpeedMph: 136.7, powerHp: 5364, seats: 309, lengthFt: 521.3,
     about: "VR's tilting train, an Italian Pendolino built for Finland's broad gauge and winters. It runs the S trains from Helsinki to Turku, Tampere, Oulu, Kuopio and Joensuu, and reaches 220 km/h between Kerava and Lahti.",
@@ -599,4 +702,5 @@ export const FACTS = {
 // A unit's other cars share its sheet, named for the part they are.
 const part = (facts, name) => ({ ...facts, model: `${facts.model}, ${name}` });
 FACTS.vrSm3Mid = part(FACTS.vrSm3Cab, "middle car");
+FACTS.vrSm6Mid = part(FACTS.vrSm6Cab, "middle car");
 FACTS.hslSm5Mid = part(FACTS.hslSm5Cab, "intermediate section");
