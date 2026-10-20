@@ -1635,3 +1635,69 @@ FACTS.czCjCab = unitPart(FACTS.czCjCoach, "driving trailer");
 FACTS.czMoraviaMid = unitPart(FACTS.czMoraviaCab, "intermediate car");
 FACTS.czElfMid = unitPart(FACTS.czElfPid, "middle car");
 FACTS.czSiriusMid = unitPart(FACTS.czSiriusCab, "middle car");
+
+// Other railroads' cars on the international trains.
+const de = (page) => `https://de.wikipedia.org/wiki/${page}`;
+const ZELPAGE = "https://www.zelpage.cz/razeni/24/vlaky/cd-456";
+Object.assign(FACTS, {
+  atTaurus: { model: "Siemens Taurus (ÖBB 1116)", type: "Electric locomotive", builder: "Siemens and Krauss-Maffei", built: "1999–2006", fleet: "382 with the 1016s",
+    topSpeedMph: 143, powerHp: 8579, lengthFt: 63.25, source: de("Siemens_ES64U2"),
+    about: "ÖBB's standard electric locomotive for 15 kV and 25 kV AC; the ones painted for the railjet haul its push-pull sets, here the railjet xpress between Bratislava, Vienna, Innsbruck and Switzerland." },
+  at1216: { model: "Siemens Taurus III (ÖBB 1216)", type: "Electric locomotive", builder: "Siemens", built: "2006–2008", fleet: "50",
+    topSpeedMph: 143, powerHp: 8579, lengthFt: 64.24, source: de("ÖBB_1216"),
+    about: "The three- and four-system Taurus, for the Czech, Slovak, Slovenian and Italian lines; it hauls the Nightjet between Graz, Vienna, Prague and Berlin all the way." },
+  atRjCoach: { model: "railjet coach (Siemens Viaggio)", type: "Passenger coach", builder: "Siemens Mobility", built: "2008–2013", fleet: "60 seven-car sets with ÖBB",
+    topSpeedMph: 143, lengthFt: 86.9, source: `${WP}Railjet`,
+    about: "ÖBB's railjet: business, first and economy class, a restaurant car and a driving trailer, pushed or pulled by a Taurus at up to 230 km/h." },
+  atRjCab: { model: "railjet driving trailer (80-90.7)", type: "Driving trailer", builder: "Siemens Mobility", built: "2008–2013", topSpeedMph: 143, lengthFt: 87.9,
+    source: `${WP}Railjet`, about: "The railjet's cab car, with business class behind the cab and first class beyond." },
+  atNjSleeper: { model: "Nightjet sleeping car (WLABmz)", type: "Sleeping car", builder: "Siemens SGP", built: "2003–2005, refurbished for the Nightjet", lengthFt: 86.6,
+    source: ZELPAGE, about: "Twelve compartments of one to three beds, some with their own shower and toilet; on the Nightjet between Graz, Vienna, Prague and Berlin." },
+  atNjCouchette: { model: "Nightjet couchette car (Bcmz)", type: "Couchette car", builder: "Various, rebuilt", lengthFt: 86.6, source: ZELPAGE,
+    about: "Compartments of four or six berths, made up at night as couchettes; breakfast is included." },
+  atNjCoach: { model: "Nightjet seated coach (Bmz)", type: "Passenger coach", builder: "Various", lengthFt: 86.6, source: ZELPAGE,
+    about: "Ordinary second-class compartments for the Nightjet's seated passengers." },
+  atDesiroCab: { model: "Siemens Desiro ML (ÖBB cityjet 4744/4746)", type: "Electric multiple unit", builder: "Siemens Mobility", built: "Since 2015",
+    fleet: "Over 200 units", topSpeedMph: 99.4, lengthFt: 246.6, source: de("ÖBB_4744"),
+    about: "ÖBB's three-car regional train for the Vienna area, the cityjet; its REX trains run from Vienna to Bratislava-Petržalka through Kittsee." },
+  gyDesiroCab: { model: "Siemens Desiro ML (Raaberbahn 4744.3/4746.3, Ventus)", type: "Electric multiple unit", builder: "Siemens Mobility", built: "2016 and 2021",
+    fleet: "13 units", topSpeedMph: 99.4, seats: 244, lengthFt: 246.6, source: de("GySEV-Baureihe_4744/4746"),
+    about: "Raaberbahn's (GySEV's) Desiro MLs, the same as ÖBB's cityjets bar details; they run its REX 6 from Bratislava-Petržalka through Vienna to Eisenstadt and Deutschkreutz." },
+  gy247: { model: "GySEV class 247 (ex-ÖBB 5047)", type: "Diesel railcar", builder: "Jenbacher Werke", built: "1987–1995; to GySEV in 2011", fleet: "7, 247 503–509",
+    topSpeedMph: 74.6, powerHp: 570, seats: 62, lengthFt: 83.4, source: de("ÖBB_5047"),
+    about: "Austrian railcars GySEV bought and refurbished; they run between Bratislava, Rajka and Hegyeshalom." },
+  huVectron: { model: "Siemens Vectron MS (MÁV 193)", type: "Electric locomotive", builder: "Siemens Mobility", built: "Since 2017", fleet: "About 24 multi-system, leased",
+    topSpeedMph: 99.4, powerHp: 8583, lengthFt: 62.3, source: "https://iho.hu/hirek/oktobertol-kassara-is-atjarnak-a-mav-os-vectronok-260929",
+    about: "MÁV's leased Vectrons; from October 2026 its multi-system ones haul the trains from Budapest to Košice across the border, onto Slovakia's 3 kV DC, without a change at Hidasnémeti." },
+  huCoach: { model: "MÁV-START coach", type: "Passenger coach", builder: "Various, refurbished", lengthFt: 86.6, source: "https://hu.wikipedia.org/wiki/Hern%C3%A1d_nemzetk%C3%B6zi_InterCity",
+    about: "MÁV-START's InterCity coaches on its trains to Košice and the Báthory to Warsaw, in its blue and white." },
+  huSleeper: { model: "MÁV sleeping car (WLABmz)", type: "Sleeping car", builder: "Various", lengthFt: 86.6, source: ZELPAGE,
+    about: "MÁV's through sleeping car from Budapest, coupled to the Nightjet at Břeclav for Prague and Berlin." },
+  huCouchette: { model: "MÁV couchette car (Bcmz)", type: "Couchette car", builder: "Various", lengthFt: 86.6, source: ZELPAGE,
+    about: "MÁV's couchettes from Budapest, coupled to the Nightjet at Břeclav." },
+  plSleeper: { model: "PKP Intercity sleeping car (WLAB)", type: "Sleeping car", builder: "Waggonbau Görlitz and Bautzen, modernised", lengthFt: 80.4,
+    source: "https://www.zelpage.cz/razeni/24/vlaky/cd-406", about: "PKP Intercity's sleeping cars on the night trains from Vienna, Munich, Budapest and Prague to Warsaw and Kraków." },
+  plCoach: { model: "PKP Intercity coach", type: "Passenger coach", builder: "Various", lengthFt: 80.4, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-406",
+    about: "PKP Intercity's seated cars on its night trains through Czechia." },
+  cdSleeper: { model: "ČD sleeping car (WLABmz)", type: "Sleeping car", builder: "Siemens SGP", built: "2003", lengthFt: 86.6, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ČD's sleeping cars on its night trains to Slovakia and Poland, with compartments of one to three beds." },
+  cdCouchette: { model: "ČD couchette car (Bcmz)", type: "Couchette car", builder: "Various, refurbished", lengthFt: 86.6, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ČD's couchettes, four or six berths a compartment, on its night trains to Slovakia and Poland." },
+  skSleeper: { model: "ZSSK sleeping car (WLABmee)", type: "Sleeping car", builder: "Waggonbau Görlitz", lengthFt: 80.4, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ZSSK's sleeping cars on the EuroNight between Prague, Košice and Humenné." },
+  skCouchette: { model: "ZSSK couchette car (Bcmh)", type: "Couchette car", builder: "Various", lengthFt: 86.6, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ZSSK's couchettes on the EuroNight between Prague and Košice." },
+  skVectron: { model: "Siemens Vectron (ZSSK 383)", type: "Electric locomotive", builder: "Siemens Mobility", built: "Since 2017", fleet: "15, leased", topSpeedMph: 99.4,
+    powerHp: 8583, lengthFt: 62.3, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-443",
+    about: "ZSSK's leased Vectrons haul the EuroNight between Prague and Košice across both countries' systems." },
+  deEr20: { model: "Siemens ER20 Herkules (Die Länderbahn 223)", type: "Diesel-electric locomotive", builder: "Siemens", built: "2003–2004", topSpeedMph: 87,
+    powerHp: 2700, lengthFt: 63.24, source: de("Siemens_ER20"),
+    about: "Die Länderbahn's diesels haul the Prague–Munich trains over the unwired lines between Plzeň, Domažlice, Schwandorf and Regensburg." },
+  deAlexCoach: { model: "alex coach (Die Länderbahn)", type: "Passenger coach", builder: "Various, refurbished", lengthFt: 86.6, source: "https://www.zelpage.cz/razeni/24/vlaky/cd-363",
+    about: "Die Länderbahn's alex coaches, first and second class with a bistro, run through from Munich to Prague with ČD's." },
+});
+FACTS.cdVectron = FACTS["czVectron@czcd"] || { model: "Siemens Vectron (ČD 383 and leased 193)", type: "Electric locomotive", builder: "Siemens Mobility", topSpeedMph: 124,
+  powerHp: 8583, lengthFt: 62.3, source: `${WP}Siemens_Vectron`, about: "ČD's Vectrons haul its EuroCity trains, the Báthory between Budapest and Warsaw among them." };
+FACTS.cdCoach = FACTS["czCoach@czcd"];
+FACTS.atDesiroMid = unitPart(FACTS.atDesiroCab, "middle car");
+FACTS.gyDesiroMid = unitPart(FACTS.gyDesiroCab, "middle car");
