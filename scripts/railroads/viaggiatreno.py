@@ -1,4 +1,7 @@
-"""ViaggiaTreno, Trenitalia's live running information (viaggiatreno.it):
+"""Off for now (October 2026): ViaggiaTreno's CDN (Akamai) refuses every
+request from Cloudflare's network with "Access Denied", whatever its headers,
+though it answers the same request from a home connection; no railroad names
+this source until the relay can reach it. ViaggiaTreno, Trenitalia's live running information (viaggiatreno.it):
 how late one train is, where it was last reported, its platforms and its
 stop-by-stop times, for the trains of Trenitalia (Frecce, Intercity,
 Regionale, Tper) and of Trenord, which ViaggiaTreno also covers.
