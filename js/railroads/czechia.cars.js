@@ -361,6 +361,35 @@ export const vectron = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_VE
   paint: vectronPaint, over: vectronOver, surround: c.agency === "zssk" ? ZS.dark : isLeo(c) ? "#111214" : c.agency === "czcd" ? CD.navy : RJ.black,
   grilles: [[-19.0, 10.0, 9.4, 11.3], [9.0, 10.0, 9.4, 11.3], [-4.0, 8.0, 9.4, 11.3]], grilleFill: "rgba(20,22,25,0.22)" });
 
+// Bombardier (Alstom) TRAXX 3 MS, RegioJet 388.201-231 (2020-2023, the
+// mainstay of its long-distance trains and R8; the TRAXX MS2e 386.201-204
+// alike, cs.wikipedia "RegioJet" fleet table 6/2026): 18.9 m over the
+// buffers, Bo'Bo', bogies 10.44 m apart on 1,250 mm wheels, about 4.28 m
+// tall; a flat, upright front under a shallow raked windshield, smooth
+// sides with a crew door behind each cab, the machine room's few grilles
+// high near the middle, four pantographs' worth of roof gear for its
+// four systems. RegioJet's paint (photographs, 388.223 at Ostrava): yellow,
+// a silver band along the top of the side that sweeps down behind each
+// cab door and wraps the cab's shoulders, the windshield in black, the
+// underframe dark gray; "REGIOJET POOL" big along the side, red with
+// RegioJet's two red bars ahead of it, POOL in blue.
+const NOSE_TRAXX = [[1.2, 4.1], [1.0, 7.7], ["q", 1.05, 8.6, 1.7, 9.1], [2.5, 12.2], ["q", 2.8, 12.9, 3.9, 12.9]];
+function traxxPaint(c, L) {
+  const silver = "#b7bcc2";
+  let s = bands(L, [[0, 20, RJ.yellow], [11.75, 3, silver], [0, 5.0, "#3a3d42"]]);
+  // The silver sweep behind each cab, and the cab's black windshield band.
+  for (const [a, k] of [[0, 1], [L, -1]]) {
+    s += path(`M${a} 11.75L${a} 9.6L${a + k * 2.2} 9.6L${a + k * 6.6} 11.75Z`, silver) +
+      path(`M${a + k * 8.6} 11.75L${a + k * 9.4} 11.75L${a + k * 8.6} 5.0L${a + k * 7.8} 5.0Z`, silver);
+  }
+  return s;
+}
+const traxxOver = (c, L) => mark(c, L / 2 - 0.8, 7.6, `<path d="M-12.7 -1.5L-12.1 -1.5L-12.1 1.5L-12.7 1.5ZM-11.8 -1.5L-11.2 -1.5L-11.2 1.5L-11.8 1.5Z" fill="${CD.red}"/>` +
+  txt(-10.6, 0, 2.2, "REGIOJET", CD.red, { weight: 800, anchor: "start", spacing: "-0.02em" }) + txt(1.4, 0.35, 1.1, "POOL", "#1d3f9e", { weight: 700, anchor: "start" })) +
+  letters(c, L / 2, 4.5, 0.5, c.cls || "388", "#f4f4f2", { weight: 600 });
+export const traxx = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_TRAXX, rake: [[1.7, 9.1], [2.5, 12.2]], centers: 34.25, door: 5.4, wheel: 49,
+  paint: traxxPaint, over: traxxOver, surround: "#141518", grilles: [[-6.0, 5.0, 10.0, 11.4], [1.0, 5.0, 10.0, 11.4]], grilleFill: "rgba(20,22,25,0.18)" });
+
 // ---------- Coaches ----------
 
 // ČD's railjets: Siemens Viaggio coaches, longer windows; the driving
@@ -467,6 +496,14 @@ function cdBlue(L, { cab = null, low, top, skirt, sill, roofY }) {
 function panterPaint(cab) {
   return (c, g) => {
     const L = g.L;
+    // Moravia (Škoda, the South Moravian Region's 530 four-car and 550 two-
+    // car units of the RegioPanter family, 2022-23, run by ČD on Brno's S2,
+    // S3 and S51; cs.wikipedia "Moravia (elektrická jednotka)", photographs):
+    // raspberry red, the windows in a black band, a white band under them
+    // that rises toward the car ends, red doors, a dark skirt.
+    if (c.livery === "jmk") return bands(L, [[0, 20, "#c42a4c"], [12.9, 3, "#c9ced4"], [0, 3.95, "#2a2d31"]]) +
+      path(`M-1 4.3L${L + 1} 4.3L${L + 1} 6.3Q${L / 2} 5.6 -1 6.6Z`, "#f4f5f6") + rect(-1, 6.25, L + 2, 4.35, "#16181b") +
+      (cab ? path("M0 3.95L0 14L7.6 14L7.6 4.6Q6.0 3.95 4.0 3.95Z", "#c42a4c") : "");
     if (c.agency === "zssk") return bands(L, [[0, 20, ZS.white], [12.9, 3, ZS.gray], [5.9, 4.8, ZS.red], [0, 3.9, "#2a2d31"], [3.9, 0.15, ZS.red]]) +
       (cab ? path("M0 5.9L0 14L8.4 14L8.4 6.4Q8.0 5.9 7.0 5.9Z", ZS.red) : "");
     if (c.agency === "czarriva") return bands(L, [[0, 20, ARRIVA.aqua], [12.9, 3, "#c9ced4"], [0, 3.9, ARRIVA.skirt], [4.2, 0.22, ARRIVA.white], [4.65, 0.22, ARRIVA.white]]) +
@@ -474,8 +511,9 @@ function panterPaint(cab) {
     return cdBlue(L, { cab: cab ? 8.0 : null, low: 4.35, top: 11.25, skirt: 4.1, sill: 3.0, roofY: 12.9 });
   };
 }
-const panterFill = (c) => (c.agency === "zssk" ? ZS.red : null);
-const panterName = (c, x) => (c.agency === "czcd" || !c.agency ? cdLogo(c, x, 5.35, 1.1, "#ffffff") : c.agency === "czarriva" ? letters(c, x, 5.6, 1.3, "arriva", "#ffffff", { weight: 700 })
+const panterFill = (c) => (c.agency === "zssk" ? ZS.red : c.livery === "jmk" ? "#c42a4c" : null);
+const panterName = (c, x) => (c.livery === "jmk" ? letters(c, x, 5.1, 0.75, "Jihomoravský kraj", "#16181b", { weight: 600 })
+  : c.agency === "czcd" || !c.agency ? cdLogo(c, x, 5.35, 1.1, "#ffffff") : c.agency === "czarriva" ? letters(c, x, 5.6, 1.3, "arriva", "#ffffff", { weight: 700 })
   : zsLogo(c, x, 11.6, 0.55, ZS.red, false) + letters(c, x + 1.0, 11.65, 0.7, "ZSSK", ZS.red, { anchor: "start", weight: 800 }));
 const panterRoof = (L, items) => items.map(([x, w]) => hvac(x, 13.9, w)).join("");
 export const panterCab = (c) => unit(c, { roof: 13.9, sill: 3.0, nose: NOSE_PANTER, rake: [[2.0, 8.3], [4.2, 12.9]], cabLen: 8,
@@ -484,7 +522,8 @@ export const panterCab = (c) => unit(c, { roof: 13.9, sill: 3.0, nose: NOSE_PANT
   surround: c.agency === "zssk" ? "#1d1e20" : undefined,
   pan: c.index === 0 && c.count === 2 ? 44 : null,
   extra: (cc, g) => panterRoof(g.L, [[18, 13], [g.L - 26, 10]]) + boxes(25, g.L - 18, 3.0, 2, 0.6) + panterName(cc, 30) +
-    (cc.agency === "czcd" || !cc.agency ? letters(cc, 58, 5.35, 0.85, "RegioPanter", "#ffffff", { weight: 600 }) : "") });
+    (cc.livery === "jmk" ? letters(cc, 58, 5.1, 0.85, "Moravia", "#16181b", { weight: 700 })
+      : cc.agency === "czcd" || !cc.agency ? letters(cc, 58, 5.35, 0.85, "RegioPanter", "#ffffff", { weight: 600 }) : "") });
 export const panterMid = (c) => unit(c, { roof: 13.9, sill: 3.0,
   rows: [{ xs: seq(17.6, 6.4, 7), y: 6.4, w: 5.6, h: 3.8, r: 0.45 }, { xs: [3.0, c.L - 6.6], y: 6.4, w: 3.6, h: 3.8, r: 0.45 }],
   doors: [plug(9.4, 3.0, 10.5), plug(c.L - 13.8, 3.0, 10.5)], trucks: [8.0, c.L - 8.0], paint: panterPaint(false), doorFill: panterFill, pan: c.L / 2 - 8,
@@ -675,6 +714,28 @@ export const rs1 = (c) => twinEnded(c, (h) => unit(h, { roof: 13.1, sill: 3.6, d
   extra: (cc, g) => hvac(10, 13.1, 9) + exhaust(20.5, 13.1) + boxes(13.0, 16.3, 3.6, 1, 1.2) })) +
   (c.agency === "czgwtrain" ? letters(c, c.L / 2, 4.15, 1.65, "GWTRAIN", "#ffffff", { weight: 800, style: "italic", spacing: "-0.02em" }) : cdLogo(c, c.L / 2, 11.15, 0.9, "#ffffff"));
 
+// Duewag RegioSprinter (GW Train Regio's 654s, 16 bought from Rurtalbahn,
+// on its South Bohemian lines since December 2017 and Karlovy Vary-
+// Mariánské Lázně; de.wikipedia "Duewag RegioSprinter", cs.wikipedia "GW
+// Train Regio"): three modules, 24.8 m over the couplers, 3.45 m tall; a
+// cab module at each end over a single powered axle with its MAN engine
+// under the high floor, the short middle module low-floored over a two-
+// axle truck (A'2'A'); a raked windshield, a big window in the cab door, a
+// double door a side in each end module by the joint, big windows. In GW
+// Train's orange, the cab ends green.
+const NOSE_RSP = [[1.0, 2.6], [0.8, 5.4], ["q", 0.9, 6.8, 1.8, 7.6], [3.4, 10.6], ["q", 3.9, 11.3, 5.2, 11.3]];
+const halfRsp = (h) => unit(h, { roof: 11.3, sill: 2.6, nose: NOSE_RSP, rake: [[1.8, 7.6], [3.4, 10.6]], depth: 2.2, cabLen: 4, lampY: 4.2,
+  rows: [{ xs: [5.0], y: 6.2, w: 4.0, h: 3.6, r: 0.5 }, { xs: [12.0], y: 5.8, w: 7.0, h: 4.0, r: 0.4 }, { xs: [25.6], y: 5.8, w: 6.4, h: 4.0, r: 0.4 },
+    { xs: [37.2], y: 5.8, w: 7.0, h: 4.0, r: 0.4 }],
+  doors: [{ x: 20.2, w: 4.2, y0: 2.0, y1: 9.9, leaves: 2, glassY: 0.3, glassH: 0.55 }], diaphragm: [2.4, 10.4],
+  paint: (cc, g) => bands(g.L, [[0, 20, GW.orange], [10.4, 3, "#8e959d"], [0, 3.1, "#3a3d42"], [3.1, 0.25, GW.green]]) + path("M-1 3.1L10.0 3.1L11.2 11.3L-1 11.3Z", GW.green),
+  doorFill: () => GW.green, surround: "#1d2026",
+  // The joints between the modules (a rubber seal and a dark band), the
+  // powered axle and engine under the cab module, the middle module's truck.
+  extra: (cc, g) => rect(32.7, 2.6, 0.6, 8.7, "#2a2d31") + slats(10.1, 6.4, 0.9, 3.0, 0.3, "rgba(0,0,0,0.5)") +
+    truck(7.8, { wb: 0.01, d: 30, top: 2.6 }) + boxes(11.0, 19.5, 2.6, 1, 1.0) + truck(g.L / 2, { wb: 5.9, d: 26, top: 2.0 }) + hvac(13, 11.3, 8, 0.6) + exhaust(4.5, 11.3) });
+export const regioSprinter = (c) => twinEnded(c, halfRsp) + letters(c, 28.8, 3.9, 0.95, "GWTRAIN", "#ffffff", { weight: 800, style: "italic" });
+
 // DB class 628 (Arriva 845, GW Train's 628s): two cars of 22.9 m, a diesel
 // under the motor car; a wedge cab; single folding doors near each end.
 // Arriva: aqua, two white lines low, "arriva" in white. GW Train: green
@@ -708,13 +769,51 @@ export const lintCar = (c) => unit(c, { roof: 13.4, sill: 2.8, nose: NOSE_LINT, 
 // region's lime green over dark green, yellow round the windshield, a dark
 // roof; RegioJet's name in white.
 const NOSE_ELF = [[1.4, 3.4], [1.0, 6.0], ["q", 1.1, 7.8, 2.6, 9.2], [5.0, 12.9], ["q", 5.8, 13.8, 7.6, 13.8]];
-const elfPaint = (c, g) => bands(g.L, [[0, 20, RJ.lime], [12.9, 3, "#4a5056"], [0, 4.7, RJ.green], [4.7, 0.2, "#ffffff"]]) +
+// The three-car Elf.eu (RegioJet 655, 7 units, 2025, Prague's S49 and S61;
+// cs.wikipedia "RegioJet" fleet table) in PID's red and gray: pale gray, a
+// black window band, red over and under the band beside the inner door,
+// the nose's edge red; RegioJet's name behind the cab.
+const elfPid = (c, g, cab) => bands(g.L, [[0, 20, "#e6e8ea"], [12.9, 3, "#c9cdd2"], [0, 4.0, "#3a3d42"]]) +
+  rect(cab ? 40.5 : 22.0, 4.0, 12.0, 9.0, CD.red) + rect(cab ? 10.5 : -1, 6.35, g.L + 2, 4.1, "#16181b") +
+  (cab ? path("M0 4.0L0 9.0Q1.0 9.4 1.6 9.0L1.6 4.0Z", CD.red) + path("M0 9.6Q2.4 10.4 4.6 13.9L5.4 13.9Q3.2 10.0 0.6 9.1Z", CD.red) : "");
+const elfPaint = (c, g) => c.livery === "pid" ? elfPid(c, g, true) : bands(g.L, [[0, 20, RJ.lime], [12.9, 3, "#4a5056"], [0, 4.7, RJ.green], [4.7, 0.2, "#ffffff"]]) +
   path("M0 8.2L0 14L9.2 14L9.2 12.0Q6.8 12.0 5.0 9.6Q3.4 8.2 0 8.2Z", RJ.yellow) + rect(-1, 3.4, 4.8, 0.7, RJ.yellow);
 export const elfCar = (c) => unit(c, { roof: 13.8, sill: 3.4, nose: NOSE_ELF, rake: [[2.6, 9.2], [5.0, 12.9]], cabLen: 8, lampY: 5.4,
   rows: [{ xs: seq(15.6, 6.0, 3), y: 6.6, w: 5.0, h: 3.7, r: 0.45 }, { xs: seq(40.4, 6.0, 4), y: 6.6, w: 5.0, h: 3.7, r: 0.45 }],
-  doors: [plug(9.8, 3.4, 10.6), plug(34.4, 3.4, 10.6)], trucks: [9.0, c.L - 8.0], pan: c.index === 0 ? 50 : null, paint: elfPaint, doorFill: () => "#7ab534",
+  doors: [plug(9.8, 3.4, 10.6), plug(34.4, 3.4, 10.6)], trucks: [9.0, c.L - 8.0], pan: c.index === 0 && c.livery !== "pid" ? 50 : null, paint: elfPaint, doorFill: (cc) => (cc.livery === "pid" ? "#d9dcdf" : "#7ab534"),
   extra: (cc, g) => hvac(15, 13.8, 12) + (cc.index === 0 ? rect(37, 13.75, 6, 0.6, C.steelDark, 0.4, 'rx="0.2"') : hvac(44, 13.8, 10)) + boxes(18, 33, 3.4, 2, 0.7) +
-    letters(cc, 26, 5.65, 0.95, "RegioJet", "#ffffff", { weight: 700 }) + letters(cc, g.L - 18, 5.65, 0.6, "DOPRAVA ÚSTECKÉHO KRAJE", "#ffffff", { weight: 600, spacing: "0.03em" }) });
+    (cc.livery === "pid" ? letters(cc, 20, 5.6, 0.95, "‖ REGIOJET", "#16181b", { weight: 700 }) + letters(cc, 46.5, 5.2, 1.4, "pid", "#ffffff", { weight: 700 })
+      : letters(cc, 26, 5.65, 0.95, "RegioJet", "#ffffff", { weight: 700 }) + letters(cc, g.L - 18, 5.65, 0.6, "DOPRAVA ÚSTECKÉHO KRAJE", "#ffffff", { weight: 600, spacing: "0.03em" })) });
+// Its middle car: two double doors a side, the pantograph between them.
+export const elfMid = (c) => unit({ ...c, livery: "pid" }, { roof: 13.8, sill: 3.4,
+  rows: [{ xs: [3.0], y: 6.6, w: 3.0, h: 3.7, r: 0.45 }, { xs: seq(13.4, 6.0, 6), y: 6.6, w: 5.0, h: 3.7, r: 0.45 }, { xs: [c.L - 6.0], y: 6.6, w: 3.0, h: 3.7, r: 0.45 }],
+  doors: [plug(7.6, 3.4, 10.6), plug(c.L - 12.0, 3.4, 10.6)], trucks: [8.0, c.L - 8.0], pan: c.L / 2 - 4, paint: (cc, g) => elfPid(cc, g, false), doorFill: () => "#d9dcdf",
+  extra: (cc, g) => hvac(4, 13.8, 10) + boxes(16, g.L - 16, 3.4, 2, 0.7) });
+
+// CRRC Sirius (ZEMU03, RegioJet 665.001-003, built 2019-2021 for Leo
+// Express, leased by RegioJet for R23 Kolín-Ústí nad Labem since December
+// 2024; en.wikipedia "CRRC ZEMU03", cs.wikipedia "RegioJet"): three cars,
+// about 82 m, each on its own two trucks, about 4.2 m tall; a long, low
+// nose sloping up to a deep windshield, a large oval side window in the cab
+// door; one double door a side in each car, near its inner end. Its paint
+// (photographs at Ústí nad Labem): slate gray, a yellow line along the
+// sill that turns up behind the cab and arches over the cab's oval window,
+// the deflector orange; RegioJet's name in white over the windows.
+const NOSE_SIRIUS = [[3.0, 3.6], [1.2, 4.3], ["q", 0.35, 5.6, 1.4, 7.2], [7.2, 12.2], ["q", 8.8, 13.6, 11.6, 13.6]];
+const SIRIUS = { slate: "#666d74", roof: "#8a9197", yellow: "#f6b800" };
+const siriusPaint = (cab) => (c, g) => bands(g.L, [[0, 20, SIRIUS.slate], [12.4, 3, SIRIUS.roof], [4.35, 0.55, SIRIUS.yellow], [0, 3.95, "#3b3f44"]]) +
+  (cab ? path("M13.2 4.35L13.2 12.0L13.9 12.0L13.9 4.35Z", SIRIUS.yellow) + path("M13.0 12.0Q11.0 12.4 9.0 11.0Q8.0 9.6 8.4 7.4L9.0 7.4Q8.8 9.4 9.6 10.6Q11.2 11.7 13.0 11.4Z", SIRIUS.yellow) +
+    path("M9.2 7.6Q9.0 9.6 10.0 10.6Q11.4 11.4 12.8 11.0L12.8 7.6Q11.0 7.0 9.2 7.6Z", C.glass) : "");
+const siriusRows = (xs) => [{ xs, y: 6.9, w: 4.0, h: 3.4, r: 0.4 }];
+export const siriusCab = (c) => unit(c, { roof: 13.6, sill: 3.6, nose: NOSE_SIRIUS, rake: [[1.4, 7.2], [7.2, 12.2]], depth: 3.6, cabLen: 14, lampY: 5.0,
+  rows: siriusRows(seq(16.0, 5.3, 10)), doors: [plug(c.L - 11.6, 3.6, 10.8, 4.2)], trucks: [11.5, c.L - 8.0], paint: siriusPaint(true),
+  doorFill: () => SIRIUS.yellow, surround: "#202326",
+  extra: (cc, g) => path(poly([[3.0, 3.6], [7.0, 3.6], [6.4, 1.0], [3.4, 0.8], [2.6, 2.4]]), "#d9622b") + hvac(18, 13.6, 13) + rect(45, 13.55, 14, 0.55, C.steelDark, 0.4, 'rx="0.25"') +
+    boxes(18, g.L - 16, 3.6, 4, 1.1) + mark(cc, 40, 11.3, `<path d="M-6.1 -0.65L-5.85 -0.65L-5.85 0.65L-6.1 0.65ZM-5.65 -0.65L-5.4 -0.65L-5.4 0.65L-5.65 0.65Z" fill="#ffffff"/>` +
+      txt(-5.1, 0, 1.25, "REGIOJET", "#ffffff", { weight: 700, anchor: "start" })) });
+export const siriusMid = (c) => unit(c, { roof: 13.6, sill: 3.6,
+  rows: siriusRows(seq(4.0, 5.3, 13)), doors: [plug(c.L - 11.0, 3.6, 10.8, 4.2)], trucks: [8.0, c.L - 8.0], paint: siriusPaint(false), doorFill: () => SIRIUS.yellow,
+  pan: c.L / 2 - 6, extra: (cc, g) => hvac(4, 13.6, 10) + boxes(16, g.L - 16, 3.6, 3, 1.1) });
 
 // Stadler FLIRT (Leo Express 480): sections of the built-in FLIRT's
 // dimensions (js/carmodels.js), cab sections 21.5 m to the joint, the
@@ -774,6 +873,14 @@ export const TYPES = {
   cz660Mid: { name: "InterPanter intermediate car", kind: "emu", pan: true },
   czCjCoach: { name: "ComfortJet coach", kind: "coach", amenities: ["first", "cafe"] },
   czCjCab: { name: "ComfortJet driving trailer", kind: "coach", cab: true },
+  czMoraviaCab: { name: "Moravia (530/550) end car", kind: "emu" },
+  czMoraviaMid: { name: "Moravia (530) intermediate car", kind: "emu", pan: true },
+  czTraxx: { name: "TRAXX electric locomotive", kind: "electric", pan: true },
+  czElfPid: { name: "Pesa Elf (655) end car", kind: "emu" },
+  czElfMid: { name: "Pesa Elf (655) middle car", kind: "emu", pan: true },
+  czSiriusCab: { name: "CRRC Sirius (665) end car", kind: "emu" },
+  czSiriusMid: { name: "CRRC Sirius (665) middle car", kind: "emu", pan: true },
+  czRegioSprinter: { name: "RegioSprinter railcar", kind: "emu" },
 };
 
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
@@ -813,6 +920,14 @@ export const MODELS = {
   cz660Mid: M(interMid, 86.8, false, byIndex),
   czCjCoach: M(cjCoach, 86.9),
   czCjCab: M(cjCab, 86.9, true),
+  czMoraviaCab: M((c) => panterCab({ ...c, livery: "jmk" }), 86.8, true),
+  czMoraviaMid: M((c) => panterMid({ ...c, livery: "jmk" }), 86.8),
+  czTraxx: M(traxx, 62.0),
+  czElfPid: M((c) => elfCar({ ...c, livery: "pid" }), 71.5, true),
+  czElfMid: M(elfMid, 64.0),
+  czSiriusCab: M(siriusCab, 91.9, true),
+  czSiriusMid: M(siriusMid, 85.3),
+  czRegioSprinter: M(regioSprinter, 81.36),
 };
 
 // [first, last, type], by UIC number (class and serial run together).
