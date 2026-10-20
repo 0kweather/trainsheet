@@ -1244,6 +1244,42 @@ export const goCab = (c) => bilevel(c, { ...CEM, base: "#eef0f2",
   },
   cab: cemCab,
   extra: (c) => cemTrucks() + goMetrolinx(c) });
+// GO's older cab cars (Series II 200-214, rebuilt 2022-23; Series VII
+// 242-250, refurbished 2025-26; Series VIII 251-257), still in service in
+// 2026 (Brampton, September 2026; Rouge Hill, January 2026): the standard
+// BiLevel with the mid-1990s full-width cab in its end section, a flat end
+// with the center door between two windows, three windows in each end
+// section. From photographs: the cab's end section white, the green
+// sweeping down off the roof over the door and back along the upper level,
+// the lime rising from under the door to the lower windows; the end face
+// white with black chevrons on its lower half, seen side-on as a ladder.
+export const goOldCab = (c) => bilevel(c, { ...BOMB, base: "#eef0f2", cabLen: 5, extra: goMetrolinx,
+  paint: (c, g) => {
+    const L = g.L;
+    if (!c.cabL) return goBilevelPaint(c, g);
+    return goBilevelPaint(c, g, {
+      upper: path(`M${L + 1} 9.9L40 9.9C30 9.9 22.5 10.6 18.5 12.2C16 13.3 14.4 14.6 13.6 17L${L + 1} 17Z`, GO.green),
+      lower: path(`M${L + 1} 7.0L26 7.0C20.5 7.0 17.5 5.6 15.2 4.0L${L + 1} 4.0Z`, GO.lime) +
+        path(`M${L + 1} 4.0L15.2 4.0C14.4 3.2 14.0 2.0 13.8 0L${L + 1} 0Z`, GO.skirt) });
+  },
+  cab: (c, { x0 }) => {
+    let s = "";
+    for (let k = 0; k < 6; k++) s += rect(x0, 3.9 + k * 0.6, 0.45, 0.6, k % 2 ? "#f4f5f6" : "#1d1f22");
+    return s + rect(x0, 7.6, 0.45, 2.2, C.black) + win(x0 + 0.8, 6.9, 3.0, 2.3, 0.3);
+  } });
+// Sound Transit's crash-energy-management cab cars (321-329, 2017; the
+// Alstom-built 330-332, June 2026): the same cab as GO's, from a photograph
+// (King Street, August 2025): the cab's lower front navy up to a teal line
+// under the windshield, white above; the car's wave behind it.
+export const sounderCemCab = (c) => bilevel(c, { ...CEM, base: SOUNDER.white,
+  badge: (c) => [{ x: goShift(13.5), y: 5.9, h: 0.9, dark: true }, { x: goShift(67), y: 5.9, h: 0.9, dark: true }, { x: goShift(38.4), y: 3.2, h: 3.5, logo: "sounder-word" }],
+  paint: (c, g) => {
+    const wave = `<g transform="translate(${GO_CAB} 0)">${sounderWave(g.L, SOUNDER_BL_WAVE)}</g>`;
+    if (!c.cabL) return sounderWave(g.L, SOUNDER_BL_WAVE);
+    return wave + rect(0, 0, GO_CAB + 1.2, 18, SOUNDER.white) + rect(0, 0, GO_CAB + 1.2, 9.0, "#22306a") + rect(0, 9.0, GO_CAB + 1.2, 0.4, SOUNDER.teal);
+  },
+  cab: cemCab,
+  extra: cemTrucks });
 // ACE's Series IX cab cars (3310-3314): the same cab, blue down to the band;
 // behind it a small window with the mirror ahead of it.
 const aceCab = (c) => bilevel(c, { ...CEM, base: ACE.silver,
@@ -4114,6 +4150,8 @@ export const MODELS = {
   bilevelCab: M((c) => (c.agency === "mbta" ? mbtaCab(c) : c.agency === "marc" ? marcKawasakiCab(c) : c.agency === "go" ? goCab(c) : ["metrolink", "trirail"].includes(c.agency) ? rotemCabCar(c)
     : c.agency === "sunrail" ? sunrailCab(c) : c.agency === "ace" ? aceCab(c) : c.agency === "exo" ? exoCab(c) : bombardierCab(c)),
     (ag) => (ag === "mbta" || ag === "marc" ? 85.33 : ag === "go" || ag === "ace" ? 85 + GO_CAB : 85), true),
+  goOldCab: M(goOldCab, 85, true),
+  sounderCemCab: M(sounderCemCab, 85 + GO_CAB, true),
   kawasakiCab: M((c) => (c.agency === "marc" ? marcKawasakiCab(c) : mbtaCab(c)), 85.33, true),
   rotemCab: M(mbtaCab, 85.33, true),
   multilevel: M(multilevel, 85),

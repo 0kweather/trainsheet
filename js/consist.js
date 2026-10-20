@@ -64,11 +64,13 @@ const FLEETS = {
   // GO Transit (Wikipedia, "GO Transit rolling stock"): MP40PH-3C 600-666
   // except 647, rebuilt as the prototype MP54AC; new MP54ACs 667-682.
   // BiLevel coaches 2000-2857 and 4000-4225, 4500-4533 (Series IX); the new
-  // CEM cab cars 300-380. The older cab cars (200-214, 242-257) have no
-  // drawing yet.
+  // CEM cab cars 300-380; the older cab cars still in service in 2026,
+  // Series II 200-214 (rebuilt as cab cars 2022-23), VII 242-250
+  // (refurbished 2025-26) and VIII 251-257. (215-241 are coaches now.)
   go: [
     [600, 646, "mp40"], [647, 647, "mp54ac"], [648, 666, "mp40"], [667, 682, "mp54ac"],
-    [300, 380, "bilevelCab"], [2000, 2857, "bilevel"], [4000, 4225, "bilevel"], [4500, 4533, "bilevel"],
+    [300, 380, "bilevelCab"], [200, 214, "goOldCab"], [242, 257, "goOldCab"],
+    [2000, 2857, "bilevel"], [4000, 4225, "bilevel"], [4500, 4533, "bilevel"],
   ],
   // CT Rail (Wikipedia, "Hartford Line" and "Shore Line East"): P40DC
   // 6700-6711, GP40-3H 6694-6699; Mafersa cab cars 1701-1719 (odd) and
@@ -98,10 +100,14 @@ const FLEETS = {
   vre: [
     [50, 69, "mp36"], [710, 730, "galleryCab"], [800, 879, "gallery"],
   ],
-  // Sounder: F59PHI 901-911, MP40PH-3C 921-923. Its BiLevel coaches and cab
-  // cars are numbered in several series that aren't matched here.
+  // Sounder (Wikipedia, "Sounder commuter rail"; Sound Transit, June 2026):
+  // F59PHI 901-911, MP40PH-3C 921-923; BiLevel cab cars with the older cab
+  // 101-111 and 301-307, with the crash-energy-management cab 321-332
+  // (330-332 Alstom-built, 2026); coaches 201-240 and 401-418.
   sounder: [
     [901, 911, "f59"], [921, 923, "mp40"],
+    [101, 111, "bilevelCab"], [301, 307, "bilevelCab"], [321, 332, "sounderCemCab"],
+    [201, 240, "bilevel"], [401, 418, "bilevel"],
   ],
   // New Mexico Rail Runner Express: MP36PH-3C 101-109; BiLevel coaches
   // 1001-1013 and cab cars 1101-1109.
@@ -251,6 +257,8 @@ const TYPES = {
   multilevelCab: { name: "MultiLevel cab car", kind: "bilevel", cab: true },
   crrcBilevel: { name: "CRRC bi-level coach", kind: "bilevel" },
   crrcBilevelCab: { name: "CRRC bi-level cab car", kind: "bilevel", cab: true },
+  goOldCab: { name: "Bi-level cab car (older cab)", kind: "bilevel", cab: true },
+  sounderCemCab: { name: "Bi-level cab car (crash-energy-management cab)", kind: "bilevel", cab: true },
   // Alaska Railroad and Ontario Northland
   akCoach: { name: "Coach", kind: "coach" },
   akDiner: { name: "Café or dining car", kind: "coach" },
@@ -562,7 +570,7 @@ function typicalFor(t, reported) {
     // Most GO trains run 12 cars (11 coaches and a cab car) behind an
     // MP40PH-3C or MP54AC; the reported locomotive picks which.
     case "go": return set("MP54AC or MP40PH-3C locomotive with BiLevel coaches and a cab car, usually 12 cars",
-      [reported === "mp40" ? "mp40" : "mp54ac", 1], ["bilevel", 11], ["bilevelCab", 1]);
+      [reported === "mp40" ? "mp40" : "mp54ac", 1], ["bilevel", 11], [reported === "goOldCab" ? "goOldCab" : "bilevelCab", 1]);
     // CT Rail: both lines run push-pull sets, a P40DC (some trains a
     // GP40-3H) with Mafersa coaches and a cab car; Shore Line East went back
     // to them in 2026 after four years of M8 electric cars.
@@ -590,13 +598,15 @@ function typicalFor(t, reported) {
     case "vre": return set("MP36PH-3C locomotive with gallery bi-levels and a cab car, usually 6 to 8 cars",
       ["mp36", 1], ["gallery", 6], ["galleryCab", 1]);
     // Sounder: an F59PHI or MP40PH-3C (the reported locomotive picks which)
-    // with BiLevel coaches and a cab car: usually 7 cars on the S Line, 2 or
-    // 3 on the N Line.
+    // with BiLevel coaches and a cab car: 5 or 7 cars on the S Line, 2 or 3
+    // on the N Line (Sound Transit's 2025 Transit Development Plan). Two
+    // cab cars in three have the older cab.
     case "sounder": {
       const loco = reported === "mp40" ? "mp40" : "f59", name = loco === "mp40" ? "MP40PH-3C" : "F59PHI";
+      const cab = reported === "sounderCemCab" ? "sounderCemCab" : "bilevelCab";
       return /^N/.test(t.route || "")
-        ? set(`${name} locomotive with BiLevel coaches and a cab car, usually 2 or 3 cars`, [loco, 1], ["bilevel", 1], ["bilevelCab", 1])
-        : set(`${name} locomotive with BiLevel coaches and a cab car, usually 7 cars`, [loco, 1], ["bilevel", 6], ["bilevelCab", 1]);
+        ? set(`${name} locomotive with BiLevel coaches and a cab car, usually 2 or 3 cars`, [loco, 1], ["bilevel", 1], [cab, 1])
+        : set(`${name} locomotive with BiLevel coaches and a cab car, usually 5 or 7 cars`, [loco, 1], ["bilevel", 6], [cab, 1]);
     }
     // Rail Runner: an MP36PH-3C with BiLevel coaches and a cab car, usually
     // 4 cars.
