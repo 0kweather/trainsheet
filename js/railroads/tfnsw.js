@@ -234,7 +234,7 @@ export const parse = {
         id: `${agency}:${number}`, agency, number, route: run?.line || routeLine(v.trip.routeId),
         lat: p.lat, lon: p.lon, bearing: heading(number, p.lat, p.lon, now),
         updated: (v.timestamp || feed.timestamp || now) * 1000,
-        set: null, fleet, carCount, cars: car ? { numbers: [car[2]], codes: [car[0]], complete: false } : null,
+        set: null, setType: fleet, carCount, cars: car ? { numbers: [car[2]], codes: [car[0]], complete: false } : null,
         ...fields,
       }));
     });
