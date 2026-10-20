@@ -6,7 +6,8 @@
 // drawn here, as Trainsheet's own side views from published dimensions and
 // photographs at the shared scale (js/carart.js).
 
-import { TYPES as CZ_TYPES, MODELS as CZ_MODELS, FACTS as CZ_FACTS, unit, euroLoco, twinEnded, buffers, hvac, exhaust, tank, letters, zsLogo, ZS, axle } from "./czechia.cars.js?v=dev";
+import { TYPES as CZ_TYPES, MODELS as CZ_MODELS, FACTS as CZ_FACTS, unit, euroLoco, twinEnded, buffers, hvac, exhaust, tank, letters, zsLogo, ZS, axle,
+  NIGHT_SETS, FOREIGN_SETS } from "./czechia.cars.js?v=dev";
 import { C, rect, path, line, lines, poly, truck, slats, underframe } from "../carart.js?v=dev";
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
@@ -17,7 +18,10 @@ const bands = (L, list) => list.map(([y, h, fill]) => rect(-1, y, L + 2, h, fill
 // The Czech types these railroads run (added under their own keys only once,
 // whichever file loads first).
 const SHARED = ["czVectron", "czCoach", "czElefant471", "czElefant071", "czElefant971", "czPanter640", "czPanterMid", "czLint", "czFlirtCab", "czFlirtMid",
-  "czEso", "czTraxx", "czCjCoach", "czCjCab", "czPendoCab", "czPendoMid"];
+  "czEso", "czTraxx", "czCjCoach", "czCjCab", "czPendoCab", "czPendoMid",
+  // Other railroads' cars on the trains through Slovakia (czechia.cars.js).
+  "cz380", "atTaurus", "atRjCoach", "atRjCab", "atDesiroCab", "atDesiroMid", "gyDesiroCab", "gyDesiroMid", "gy247", "huVectron", "huCoach", "huSleeper",
+  "huCouchette", "plSleeper", "plCoach", "cdSleeper", "cdCouchette", "cdCoach", "cdVectron", "skSleeper", "skCouchette", "skVectron"];
 
 // ---------- ZSSK's diesel units ----------
 
@@ -228,13 +232,17 @@ export const TYPICAL = {
     if (/Štrba$|Štrba /.test(ends + " ") && /Štrbské Pleso/.test(ends)) return RACK;
     if (TEZ_STOPS.test(ends) && !/Studený Potok/.test(names)) return TEZ;
     if (r === "railjet") return COMFORTJET;
-    // Other railroads' own trains through Slovakia (ÖBB's railjet xpress
-    // and its REX trains from Petržalka to Vienna, MÁV's InterCitys and
-    // EuroCitys from Budapest) aren't drawn yet: no consist rather than
-    // the wrong one.
-    if (r === "railjet xpress" || (r === "Regionálny rýchlik" && /Petržalka|Wien|Hegyeshalom/.test(ends) && !/hl\.st\./.test(ends))) return null;
-    if (/^(EuroCity|InterCity|EuroNight)$/.test(r) && /Budapest/.test(ends) && !/Praha|Humenné/.test(ends)) return null;
-    if (r === "Regionálny expres" && /Deutschkreutz/.test(ends)) return null;
+    // Other railroads' own trains through Slovakia (czechia.cars.js has
+    // their sources): ÖBB's railjet xpress; the Desiro MLs from Petržalka,
+    // Raaberbahn's Ventus to Eisenstadt and Deutschkreutz, ÖBB's cityjets to
+    // Vienna and Mürzzuschlag; GySEV's railcars to Hegyeshalom; MÁV's trains
+    // from Budapest to Košice; the Báthory Budapest-Warsaw; the night trains.
+    if (r === "railjet xpress") return FOREIGN_SETS.railjet;
+    if (/Hegyeshalom|Rajka/.test(ends)) return FOREIGN_SETS.gysev;
+    if (/^Regionálny/.test(r) && /Petržalka/.test(ends)) return /Deutschkreutz|Eisenstadt|Wulkaprodersdorf/.test(names) ? FOREIGN_SETS.ventus : FOREIGN_SETS.cityjet;
+    if (/^(EuroCity|InterCity)$/.test(r) && /Budapest/.test(ends) && /Košice/.test(ends)) return FOREIGN_SETS.kosice;
+    if (/^(EuroCity|InterCity)$/.test(r) && /Warszawa/.test(ends)) return FOREIGN_SETS.bathory;
+    if (r === "EuroNight") return /Budapest/.test(ends) ? NIGHT_SETS.metropol : NIGHT_SETS.slovakia;
     if ((r === "Regionálny rýchlik" || r === "Regionálny expres") && /Wien/.test(ends)) return set("Usually a Vectron (383) locomotive and ZSSK coaches", ["czVectron", 1], ["czCoach", 4]);
     if (r === "Regionálny rýchlik") return set("Usually a Vectron (383) locomotive and ZSSK coaches", ["czVectron", 1], ["czCoach", 4]);
     if (r === "Expres") return ZSSK_LOCO(7);
