@@ -1995,6 +1995,96 @@ export const silverliner4 = married((c) => bilevel(c, {
   },
 }));
 
+// --- GE Arrow III (NJ Transit, 1977-78; rebuilt by ABB 1992-96): the
+// Silverliner IV's sibling, 85 ft, fluted stainless above and below a
+// smooth window band, trucks 59 ft 6 in apart on 36 in wheels. Single cars
+// 1304-1333 (no washroom, a cab and a pantograph each: the Princeton
+// shuttle's "Dinky", one or two of them) and married pairs 1334-1533 (one
+// pantograph a pair). A single door with trap steps at each end; eleven
+// round-cornered windows; a blanked plug mid-car. NJ Transit's dress, from
+// photographs (Princeton, April 2026): plain stainless; by each end door the
+// US flag and a slanted block of blue, magenta and orange; the NJ TRANSIT
+// mark on the flat ends.
+function arrow3Car(c) {
+  return bilevel(c, {
+    roof: 13.5, sill: 3.7, cornerR: 0.9, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6,
+    rows: [{ xs: [9.3, 14.9, 20.5, 26.1, 31.7, 40.35, 49.0, 54.6, 60.2, 65.8, 71.4], y: 8.0, w: 4.3, h: 2.0, r: 0.6 }],
+    doors: [{ x: 1.4, w: 2.8, y0: 4.1, y1: 11.9, glassY: 0.56, glassH: 0.38 }, { x: 80.8, w: 2.8, y0: 4.1, y1: 11.9, glassY: 0.56, glassH: 0.38 }],
+    diaphragm: [4.25, 11.8], cabLen: 4, badge: false,
+    paint: (c, g) => {
+      const L = g.L;
+      let s = rect(0, 0, L, 17, "#d0d4d9") + flutes(0, L, 4.6, 7.7, 0.27) + flutes(0, L, 10.3, 12.6, 0.27) + rect(0, 12.6, L, 2, C.steelShade);
+      s += rect(0, 0, L, 3.85, "#2a2d31") + lines([[39.8, 4.6, 39.8, 12.6], [45.2, 4.6, 45.2, 12.6]], "rgba(0,0,0,0.3)", 0.5);
+      // By each door the flag and the slanted block of NJ Transit's colors.
+      for (const x of [5.0, L - 8.7]) {
+        s += usFlag(x, 8.2, 1.3);
+        [["#1f3a93", 0], ["#c8287a", 0.75], ["#f26b21", 1.5]].forEach(([col, dx]) => { s += path(poly([[x + 1.6 + dx, 7.2], [x + 2.35 + dx, 7.2], [x + 2.95 + dx, 10.2], [x + 2.2 + dx, 10.2]]), col); });
+      }
+      return s;
+    },
+    cab: (c, g) => emuEnd([[4.3, 7.6, "#c3c8cd"], [11.0, 1.3, "#2a2d31"]])(c, g),
+    extra: (c, g) => {
+      const L = g.L, pan = !!(c.mate || c.single);
+      const a = 6.5, b = pan ? L - 19 : L - 6.5;
+      let s = rect(a, 13.45, b - a, 0.95, "#8d949c", 0.4) + slats(a, 13.45, b - a, 0.95, 0.5, "rgba(0,0,0,0.35)");
+      if (pan) s += pantograph(L - 10.5, 13.5, { up: true, facing: -1 }).replace(/currentColor/g, "#b8202a");
+      return s;
+    },
+  });
+}
+export const arrow3 = married(arrow3Car);
+export const arrow3Single = (c) => arrow3Car({ ...c, cabL: true, cabR: true, single: true });
+
+// --- Alstom PL42AC (NJ Transit 4000-4032, 2005-06; ten still running in
+// 2025, Ridgewood): 69 ft 10 in, 15 ft 5 in tall, 42 in wheels (Wikipedia).
+// A wide cab with a two-pane windshield set back over a short sloping nose;
+// a full-width body with a ribbed panel of intakes along the upper side and
+// radiators at the rear. Dark gray, silver over the nose and in a V on the
+// front, a thin orange line along the sill; NJ TRANSIT on the cab side.
+export const pl42 = (c) => cabUnit(c, {
+  roof: 15.42, sill: 4.6, rearR: 0.9,
+  nose: [[2.2, 4.6], [1.4, 5.2], [1.35, 8.2], [2.0, 9.6], [4.6, 10.6], [5.6, 14.4], ["q", 5.9, 15.42, 7.2, 15.42]],
+  glass: [[[4.85, 10.9], [5.6, 14.2], [6.6, 14.2], [6.6, 10.9]]],
+  sideWin: [[7.2, 11.3, 2.2, 2.3]],
+  doors: [[10.4, 2.1, 5.0, 13.6]],
+  grilles: [[14.0, 11.4, 30.0, 2.8, 0.4], [50.0, 10.4, 15.5, 3.8, 0.36], [7.0, 5.4, 2.8, 1.4, 0.3]],
+  panels: [[18, 5.3, 3.0, 5.5], [44.5, 5.3, 3.0, 5.5]],
+  tank: [21, 48, 1.5], reservoir: [33, 45],
+  trucks: { centers: 41.0, wb: 9.0, d: 42 },
+  roofItems: [[16, 6, 0.4]], fans: [56, 61.5, 66.5], horn: 8.4,
+  badge: { x: 12.3, y: 7.6, h: 0.75, logo: "njt-word", dark: true },
+  paint: (c, sp) => {
+    const L = sp.L;
+    return rect(0, 0, L, 17, "#3c4047") + path(`M0 0L0 10.4L4.6 10.6L9.6 9.0L13.6 ${sp.sill}Z`, "#b9bec4") + rect(0, 14.9, L, 2, "#2a2d31") +
+      rect(0, sp.sill + 0.25, L, 0.22, "#f26b21");
+  },
+});
+
+// --- Bombardier Comet V (NJ Transit, 2002-04: cab cars 6000-6083,
+// coaches 6200-6213 and 6500-6601; Metro-North's 6700s on the Port Jervis
+// and Pascack Valley lines): 85 ft, 12 ft 10 in tall, smooth stainless; a
+// vestibule with trap steps at each end; a long row of windows, pairs under
+// one frame; the disco stripe (blue, magenta, orange) low along the side,
+// NJ TRANSIT by each door. The cab car's flat end: the center door between
+// the engineer's window and the other end window, the stripe across it.
+const COMET5 = {
+  roof: 12.85, sill: 3.9, cornerR: 1.2, trucks: { centers: 59.5, wb: 8.5, d: 36 }, end: 0.6, diaphragm: [4.25, 11.8],
+  rows: [{ xs: seq(8.0, 5.9, 12), y: 6.95, w: 4.9, h: 2.6, r: 0.4 }],
+  doors: [{ x: 1.3, w: 2.7, y0: 4.0, y1: 11.0, glassY: 0.55, glassH: 0.3 }, { x: 81.0, w: 2.7, y0: 4.0, y1: 11.0, glassY: 0.55, glassH: 0.3 }],
+  roofItems: [[4.5, 7, 0.45], [73.5, 7, 0.45]],
+  badge: [{ x: 6.4, y: 10.6, h: 0.5, logo: "njt-word" }, { x: 78.6, y: 10.6, h: 0.5, logo: "njt-word" }],
+};
+function comet5Paint(c, g) {
+  const L = g.L, id = `ts-njt-${++clipSeq}`;
+  let s = rect(0, 0, L, 17, "#d3d7dc") + rect(0, 11.9, L, 2, C.steelShade) + rect(0, 0, L, 4.3, "#b8bdc3");
+  s += `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="#22389a"/><stop offset="0.4" stop-color="#c8287a"/>` +
+    '<stop offset="0.75" stop-color="#e8336e"/><stop offset="1" stop-color="#f26b21"/></linearGradient></defs>';
+  return s + rect(4.2, 5.15, L - 8.4, 0.7, `url(#${id})`) + lines(seq(8.0, 5.9, 12).map((x) => [x + 2.45, 7.0, x + 2.45, 9.5]), C.gasket, 0.9);
+}
+export const comet5 = (c) => bilevel(c, { ...COMET5, paint: comet5Paint });
+export const comet5Cab = (c) => bilevel(c, { ...COMET5, paint: comet5Paint, cabLen: 4,
+  cab: (c, { x0 }) => rect(x0, 4.3, 0.42, 8.0, "#c3c8cd") + rect(x0, 5.15, 0.44, 0.7, "#c8287a") + rect(x0, 7.0, 0.44, 3.4, C.black) + rect(x0 + 1.0, 12.85, 1.6, 0.45, "currentColor", 0, 'rx="0.2"') });
+
 // --- Hyundai Rotem Silverliner V (SEPTA 701-882; RTD Denver 4001-4066):
 // 85 ft 1.5 in, 12 ft 7 in body with a long HVAC unit on the roof; smooth
 // stainless. SEPTA: three doors a side at the quarter points (a double door
@@ -4135,7 +4225,8 @@ export function alp45(c) {
   s += lines([[14.1, cove, 14.1, roof], [32.4, cove, 32.4, roof], [56.6, cove, 56.6, low]], "rgba(0,0,0,0.25)", 0.5) + line(4.9, cove, end, cove, "rgba(0,0,0,0.25)", 0.6);
   // Horns on the cab roof; the pantograph over the rear (exo's folded).
   for (const x of [5.6, 6.5, 7.4]) s += rect(x, roof - 0.05, 0.6, 0.45, "currentColor", 0, 'rx="0.15"');
-  s += pantograph(61.5, low, { up: njt, facing: 1 });
+  // On NJ Transit's diesel lines the pantograph stays down.
+  s += pantograph(61.5, low, { up: njt && !/Pascack|Port Jervis|Main\/Bergen|Raritan|Atlantic City/.test(c.route || ""), facing: 1 });
   // NJ Transit's name under the cab window. exo's wordmark is on the nose
   // front only (not seen side-on).
   if (njt) s += badge(c, 7.4, 6.45, 0.8, { logo: "njt-word" });
@@ -4359,6 +4450,11 @@ export const MODELS = {
   nsEmu: M(nsEmu, 85),
   nsTrailer: M(nsTrailer, 85),
   silverliner5: M(silverliner5, 85.13),
+  arrow3: M(arrow3, 85),
+  arrow3Single: M(arrow3Single, 85),
+  pl42: M(pl42, 69.83, true),
+  comet5: M(comet5, 85),
+  comet5Cab: M(comet5Cab, 85, true),
   kiss: M(kiss, 83.7),
   kissCab: M(kissCab, 90.2, true),
   smartDmu: M(smartDmu, 85),

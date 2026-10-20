@@ -167,6 +167,7 @@ const TYPES = {
   gp40: { name: "GP40MC diesel locomotive", kind: "diesel" },
   gp40h: { name: "GP40-3H diesel locomotive", kind: "diesel" },
   mp32: { name: "MP32PH-Q diesel locomotive", kind: "diesel" },
+  pl42: { name: "PL42AC diesel locomotive", kind: "diesel" },
   hsp46: { name: "HSP46 diesel locomotive", kind: "diesel" },
   bl36: { name: "BL36PH diesel locomotive", kind: "diesel" },
   f125: { name: "F125 diesel locomotive", kind: "diesel" },
@@ -184,6 +185,8 @@ const TYPES = {
   m8: { name: "M8", kind: "emu", pan: true },
   m9: { name: "M9", kind: "emu" },
   m3: { name: "M3", kind: "emu" },
+  arrow3: { name: "Arrow III", kind: "emu", pan: true },
+  arrow3Single: { name: "Arrow III single car", kind: "emu", pan: true },
   nsEmu: { name: "Nippon Sharyo electric car", kind: "emu", pan: true },
   highliner: { name: "Highliner", kind: "bilevel", emu: true, pan: true },
   kiss: { name: "Stadler KISS car", kind: "bilevel", emu: true, pan: true },
@@ -221,6 +224,8 @@ const TYPES = {
   marcII: { name: "MARC II coach", kind: "coach" },
   marcIICab: { name: "MARC II cab car", kind: "coach", cab: true },
   nsTrailer: { name: "Nippon Sharyo trailer car", kind: "coach" },
+  comet5: { name: "Comet V coach", kind: "coach" },
+  comet5Cab: { name: "Comet V cab car", kind: "coach", cab: true },
   coach: { name: "Coach", kind: "coach" },
   buddBaggage: { name: "Baggage car", kind: "coach", baggage: true },
   buddCoach: { name: "Stainless coach", kind: "coach" },
@@ -512,7 +517,8 @@ function typicalFor(t, reported) {
     case "amtrak":
       if (t.route === "Amtrak Cascades" && CASCADES_AIRO.has(String(t.number))) return AIRO_SET;
       return AMTRAK[t.route] || set("Locomotive with coaches", ["genesis", 1], ["amfleet", 5]);
-    case "via": return VIA[t.route] || VIA.Corridor;
+    // The Maple Leaf, on VIA's timetable too, is Amtrak's train in Amtrak's colors.
+    case "via": return t.route === "Maple Leaf" ? { ...AMTRAK["Maple Leaf"], agency: "amtrak" } : VIA[t.route] || VIA.Corridor;
     // Ten coaches on the Orlando trains since December 2025 (eight Smart,
     // two Premium), a Charger at each end.
     case "brightline": return set("Charger locomotives with 10 Brightline coaches", ["charger", 1], ["venture", 10], ["charger", 1]);
@@ -563,7 +569,25 @@ function typicalFor(t, reported) {
         : set(`${name} locomotive with MultiLevel coaches${/Brunswick/i.test(route) ? " (some trains MARC II single-level cars)" : ""}`, [loco, 1], ["multilevel", 4], ["multilevelCab", 1]);
     }
     case "septa": return set("Silverliner IV or V cars, usually 2 to 6", ["silverliner4", 4]);
-    case "njt": return set("Electric or dual-mode locomotive with MultiLevel coaches", ["alp46", 1], ["multilevel", 5], ["multilevelCab", 1]);
+    // NJ Transit by line (Wikipedia, "NJ Transit Rail Operations", 2026;
+    // photographs 2025-26). Electric lines: an ALP-46 with MultiLevels, some
+    // trains Arrow III cars; the Princeton shuttle one or two single Arrow
+    // IIIs. Diesel lines: an ALP-45DP (some trains a PL42AC) with Comet V
+    // cars or MultiLevels. North Jersey Coast trains beyond Long Branch, and
+    // Montclair-Boonton trains beyond Montclair State, change to diesel.
+    case "njt": {
+      const r = t.route || "";
+      if (/Princeton/.test(r)) return set("Arrow III single cars, one or two", ["arrow3Single", 2]);
+      const loco = reported === "pl42" ? "pl42" : "alp45", name = loco === "pl42" ? "PL42AC" : "ALP-45DP";
+      if (/Pascack|Port Jervis|Main\/Bergen/.test(r) || reported === "comet5" || reported === "comet5Cab") {
+        return set(`${name} locomotive with Comet V coaches and a cab car (some trains MultiLevels)`, [loco, 1], ["comet5", 4], ["comet5Cab", 1]);
+      }
+      if (/Raritan|Atlantic City/.test(r) || /Bay Head/.test(dest) || (/Montclair/.test(r) && /Hackettstown|Mount Olive|Lake Hopatcong|Netcong|Dover/.test(dest))) {
+        return set(`${name} locomotive with MultiLevel coaches and a cab car`, [loco, 1], ["multilevel", 4], ["multilevelCab", 1]);
+      }
+      if (/Gladstone/.test(r)) return set("Arrow III electric cars (some trains an ALP-46 with MultiLevels)", ["arrow3", 4]);
+      return set("ALP-46 electric locomotive with MultiLevel coaches and a cab car (some trains Arrow III cars)", ["alp46", 1], ["multilevel", 5], ["multilevelCab", 1]);
+    }
     case "metra": return t.route === "Metra Electric"
       ? set("Highliner electric cars", ["highliner", 4])
       : ["Milwaukee North", "Milwaukee West"].includes(t.route)
