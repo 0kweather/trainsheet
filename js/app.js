@@ -1828,27 +1828,31 @@ const addDaysIso = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 864
 // sheet folds down). Any page, train or station opened brings it back.
 let panelAway = false;
 const isAway = () => (isPhone ? sheetMode() === "collapsed" : panelAway);
-function putPanelAway(away = true) {
+function putPanelAway(away = true, { boot = false } = {}) {
   if (!document.body.classList.contains("has-tabs")) return; // no rail to bring it back
   if (isPhone) {
     if (away) setSheet("collapsed");
     else if (sheetMode() === "collapsed") setSheet("");
-    return syncMapPadding();
+    return syncMapPadding(!boot);
   }
   if (panelAway === away) return;
   panelAway = away;
   document.body.classList.toggle("panel-away", away);
   $("panel").inert = away;
   if (away) toggleMenu(false);
-  syncMapPadding();
+  syncMapPadding(!boot);
 }
 // The map's padding (the part of it the panel leaves free, where zooming
 // with the buttons centers and pages frame what they show) follows the
 // panel as it comes and goes, without moving what's on screen.
-function syncMapPadding() {
+// On opening, the padding is set without holding the view: the address's
+// map position was saved with it, and holding the view would move the map
+// a little further at every visit.
+function syncMapPadding(keepView = true) {
   const pad = panelPadding(), cur = map.getPadding();
   if (["top", "bottom", "left", "right"].every((k) => Math.abs((cur[k] || 0) - (pad[k] || 0)) < 1)) return;
-  if (map.isMoving()) return map.once("moveend", syncMapPadding);
+  if (!keepView) return map.setPadding(pad);
+  if (map.isMoving()) return map.once("moveend", () => syncMapPadding());
   const { clientWidth: w, clientHeight: h } = map.getContainer();
   const center = map.unproject([pad.left + (w - pad.left - pad.right) / 2, pad.top + (h - pad.top - pad.bottom) / 2]);
   map.jumpTo({ center, padding: pad });
@@ -2057,7 +2061,7 @@ const confirmRow = (legs) => {
 
 function myTripsHtml() {
   const head = pageHead(T("My trips"), signedInHere()
-    ? `<button type="button" class="icon-btn page-add" data-trip-add aria-label="${esc(T("Plan a trip"))}" title="${esc(T("Plan a trip"))}">${PLUS_ICON}</button>` : "");
+    ? `<button type="button" class="icon-btn page-add" data-trip-add aria-label="${esc(T("Add a train"))}" title="${esc(T("Add a train"))}">${PLUS_ICON}</button>` : "");
   if (!signedInHere()) return head + signedOutHtml("trips");
   const all = account?.trips?.();
   if (!all) return head + `<div class="trip-card"><span class="sk sk-line"></span><span class="sk sk-line short"></span></div>`;
@@ -2067,8 +2071,7 @@ function myTripsHtml() {
   const [next, ...rest] = trips.filter((j) => account.isUpcoming(j[j.length - 1]));
   const unsure = trips.filter((j) => !account.isUpcoming(j[j.length - 1]) && j[0].service_date >= addDaysIso(day, -3));
   let html = head;
-  html += next ? nextTripCard(next) : `<div class="trips-empty"><p>${T("No trips planned. Find your train in Browse and add it: it's tracked for you on the day.")}</p>
-    <div><button type="button" class="btn primary small" data-tab-go="browse">${T("Find a train")}</button><button type="button" class="link-btn" data-trip-add>${T("Plan a trip")}</button></div></div>`;
+  html += next ? nextTripCard(next) : `<div class="trips-empty"><p>${T("No trips planned. Tap + to add the trains you'll take: they're tracked for you on the day.")}</p></div>`;
   if (unsure.length) html += `<div class="group-title">${T("Did you take these?")}</div>` + unsure.map(confirmRow).join("");
   const week = addDaysIso(day, 6);
   const soon = rest.filter((j) => j[0].service_date <= week), later = rest.filter((j) => j[0].service_date > week);
@@ -2117,8 +2120,7 @@ function historyHtml() {
   const list = all.filter((r) => !state.historyYear || r.service_date.startsWith(state.historyYear))
     .sort((x, y) => (y.service_date + (y.depart_at || "")).localeCompare(x.service_date + (x.depart_at || "")));
   if (!list.length) {
-    return head + `<div class="trips-empty"><p>${T("No trips yet. Trains you track to your stop while riding are added here when you arrive, and trips you planned once you say you took them.")}</p>
-      <div><button type="button" class="btn primary small" data-tab-go="browse">${T("Find a train")}</button></div></div>`;
+    return head + `<div class="trips-empty"><p>${T("No trips yet. Trains you track to your stop while riding are added here when you arrive, and trips you planned once you say you took them.")}</p></div>`;
   }
   // The numbers: trips counted whole (one with connections is one trip),
   // the rest by train.
@@ -6032,6 +6034,17 @@ function loadAccount() {
       return s ? s.members.find((m) => m.key === key)?.tz || s.tz : null;
     },
     findTrains, trainRuns, searchStations,
+    // The station nearest the rider, when they've let Trainsheet find them
+    // (Near you), within 30 km: where a first trip is planned from.
+    nearestStation() {
+      if (!nearFix) return null;
+      let best = null, bestM = 30000;
+      for (const st of state.stations.values()) {
+        const m = meters(nearFix, st);
+        if (m < bestM) { best = st; bestM = m; }
+      }
+      return best ? stationChoice(best) : null;
+    },
     loadPlaces: () => { dataRegions()?.then((m) => m?.loadAll()); return stationsReady; },
     stationOfKey: (key) => {
       const st = key && state.stations.get(state.stationOfKey?.get(key));
@@ -6109,7 +6122,7 @@ if (accountsOn() && $("tabbar")) {
   $("tabbar").querySelector(`[data-tab="${state.tab}"]`)?.setAttribute("aria-current", "page");
   // Opened on the map, the panel put away (from the first paint: index.html),
   // unless a shared link opens a page in it.
-  if (document.documentElement.classList.contains("panel-boot-away")) putPanelAway(true);
+  if (document.documentElement.classList.contains("panel-boot-away")) putPanelAway(true, { boot: true });
 }
 document.documentElement.classList.remove("panel-boot-away");
 $("view-list").dataset.tab = state.tab;

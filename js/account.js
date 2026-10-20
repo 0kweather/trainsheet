@@ -303,7 +303,7 @@ function render() {
       `<form class="acct-form" data-form="newpass"><label class="acct-field"><span>${T("New password")}</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
         <button class="btn primary" type="submit"${dis}>${T("Save password")}</button></form>`;
   } else if (view === "plan") {
-    body = head(T("Plan a trip")) + note + planView();
+    body = head(T("Add a train")) + note + planView();
   } else if (view === "form") {
     body = head(editing ? T("Edit trip") : T("Add a trip"), editing || !plan ? null : "plan") + note + tripForm(formLegs || editing || [prefill || {}]);
   } else {
@@ -344,9 +344,23 @@ function accountView() {
 // (from the railroads' timetables), one tap filling in the whole trip.
 // Stations are offered as you type, the rider's usual ones first.
 
+// The planner opens on the rider's usual trip (the stations they've gone
+// between most, the way they went most), else from the station nearest them
+// when their location is known; its trains show at once.
 function startPlan() {
   plan = { from: null, to: null, typed: { from: "", to: "" }, day: today(), trains: null, exact: true, loading: false };
-  ctx.loadPlaces?.();
+  const pairs = new Map();
+  for (const r of trips || []) {
+    const a = r.from_key && ctx.stationOfKey(r.from_key), b = r.to_key && ctx.stationOfKey(r.to_key);
+    if (!a || !b || a.id === b.id) continue;
+    const k = `${a.id}|${b.id}`;
+    pairs.set(k, { from: a, to: b, n: (pairs.get(k)?.n || 0) + 1 });
+  }
+  const usual = [...pairs.values()].sort((x, y) => y.n - x.n)[0];
+  if (usual) Object.assign(plan, { from: usual.from, to: usual.to });
+  else plan.from = ctx.nearestStation?.() || null;
+  const places = ctx.loadPlaces?.();
+  if (plan.from && plan.to) Promise.resolve(places).then(() => plan && searchPlan());
 }
 const addDays = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
@@ -354,9 +368,6 @@ function planView() {
   const field = (which, label) => `<div class="plan-field">
       <label class="acct-field"><span>${label}</span><input data-plan="${which}" value="${esc(plan[which]?.name || plan.typed[which])}" placeholder="${T("Station or city")}" autocomplete="off" spellcheck="false"></label>
       <div class="plan-suggest" data-suggest="${which}" hidden></div></div>`;
-  const t0 = today(), t1 = addDays(t0, 1);
-  const dayBtn = (d, label) => `<button type="button" data-plan-day="${d}" aria-pressed="${plan.day === d}">${label}</button>`;
-  const other = plan.day !== t0 && plan.day !== t1;
   let results;
   if (!plan.from || !plan.to) results = `<p class="plan-hint">${T("Choose where you're leaving from and where you're going, and the trains between them show here.")}</p>`;
   else if (plan.loading) results = `<p class="plan-hint">${T("Finding trains…")}</p>`;
@@ -366,20 +377,21 @@ function planView() {
       const a = ctx.agencies[r.agency] || { color: "#888", short: r.agency };
       const mins = Math.round((Date.parse(r.arriveAt) - Date.parse(r.departAt)) / 60000);
       const span = mins >= 60 ? `${Math.floor(mins / 60)} h${mins % 60 ? ` ${mins % 60} min` : ""}` : `${mins} min`;
-      return `<button type="button" class="plan-train" data-pick="${i}">
+      const added = api.has(r.agency, r.number, plan.day);
+      return `<button type="button" class="plan-train${added ? " added" : ""}" data-pick="${i}"${added ? " disabled" : ""}>
         <span class="pt-plate">${ctx.plate(r.number || a.short, a.color, "xs")}</span>
         <span class="pt-times">${esc(ctx.fmtTime(r.departAt, r.fromTz))} – ${esc(ctx.fmtTime(r.arriveAt, r.toTz))}</span>
-        <span class="pt-span">${esc(span)}</span>
-        <span class="pt-train">${esc([r.route, a.short].filter(Boolean).join(" · "))}</span>
+        <span class="pt-add" title="${esc(added ? T("In My trips") : T("Add to My trips"))}">${added ? TICK : PLUS}</span>
+        <span class="pt-train">${esc([r.route, a.short, span].filter(Boolean).join(" · "))}</span>
       </button>`;
-    }).join("")}</div>` + (plan.exact ? "" : `<p class="plan-hint">${T("That day is past the timetable Trainsheet has, so these are the trains on that weekday now. Check again closer to the day.")}</p>`);
+    }).join("")}</div>` + (plan.exact ? "" : `<p class="plan-hint">${T("Trains on that weekday, as the timetable runs now.")}</p>`);
   }
   return `<div class="plan">
     <div class="plan-stations"><div class="plan-fields">${field("from", T("From"))}${field("to", T("To"))}</div>
       <button type="button" class="plan-swap" data-plan-swap aria-label="${T("Swap from and to")}" title="${T("Swap from and to")}">⇅</button></div>
-    <div class="segmented plan-days">${dayBtn(t0, T("Today"))}${dayBtn(t1, T("Tomorrow"))}<label class="plan-date${other ? " on" : ""}"><input type="date" data-plan-date value="${esc(plan.day)}" aria-label="${T("Another day")}"><span>${esc(other ? dateFormat({ month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${plan.day}T12:00:00Z`)) : T("Other day"))}</span></label></div>
+    <label class="acct-field plan-day"><span>${T("Date")}</span><input type="date" data-plan-date value="${esc(plan.day)}" min="${esc(today())}" required></label>
     ${results}
-    <button type="button" class="acct-link plan-manual" data-manual>${T("Enter a trip yourself")}</button>
+    <button type="button" class="acct-link plan-manual" data-manual>${T("Not listed? Enter it yourself")}</button>
   </div>`;
 }
 
@@ -403,28 +415,44 @@ function showSuggest(which, q) {
   box.innerHTML = (q.trim() ? "" : `<div class="plan-suggest-title">${T("Your stations")}</div>`) + list.map((st) =>
     `<button type="button" class="plan-option" data-suggest-pick="${esc(st.id)}" data-name="${esc(st.name)}" data-sub="${esc(st.sub)}"><span>${esc(st.name)}</span><small>${esc(st.sub)}</small></button>`).join("");
 }
+const PLUS = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const TICK = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 let planToken = 0;
-async function searchPlan() {
+// The trains between the two stations that day: today's from now on, and
+// when today's have all gone, the next day's that has any (a week ahead at
+// most). Any day ahead works: past the two weeks the timetables cover, a
+// day's trains are its weekday's, as they run week after week.
+async function searchPlan({ moveOn = true } = {}) {
   if (!plan.from || !plan.to) return render();
   const token = ++planToken;
   plan.loading = true;
   render();
-  const r = await ctx.findTrains(plan.from.id, plan.to.id, plan.day).catch(() => ({ trains: [], exact: true }));
-  if (token !== planToken || !plan) return;
-  Object.assign(plan, { trains: r.trains, exact: r.exact, loading: false });
-  render();
+  for (let tries = 0; ; tries++) {
+    const r = await ctx.findTrains(plan.from.id, plan.to.id, plan.day).catch(() => ({ trains: [], exact: true }));
+    if (token !== planToken || !plan) return;
+    const trains = plan.day === today() ? r.trains.filter((t) => Date.parse(t.departAt) > Date.now()) : r.trains;
+    if (!trains.length && r.trains.length && moveOn && tries < 7) { plan.day = addDays(plan.day, 1); continue; }
+    Object.assign(plan, { trains, exact: r.exact, loading: false });
+    return render();
+  }
 }
+// One tap on a train adds it, filled in from the timetable; it can be
+// changed afterwards from My trips.
 function pickTrain(r) {
-  prefill = {
+  if (!r) return;
+  const row = {
     agency: r.agency, number: r.number, route: r.route, service_date: plan.day,
     from_name: r.fromName, from_key: r.fromKey, to_name: r.toName, to_key: r.toKey,
-    depart_at: r.departAt, arrive_at: r.arriveAt, status: plan.day < today() ? "taken" : "planned",
+    depart_at: r.departAt, arrive_at: r.arriveAt, status: plan.day < today() ? "taken" : "planned", notes: null,
   };
-  editing = null;
-  formLegs = null;
-  view = "form";
-  notice = "";
-  render();
+  run(async () => {
+    const { error } = await sb.from("trips").insert(row);
+    if (error) throw error;
+    closeSheet(); // before the planner goes: drawn again without it, the sheet would fail
+    plan = null;
+    await loadTrips();
+    ctx.toast(isUpcoming(row) ? T("Added to My trips.") : T("Added to your history."));
+  });
 }
 
 // The form's trains: one, or more for a trip with connections, each a
@@ -627,7 +655,7 @@ function onClick(e) {
     [plan.typed.from, plan.typed.to] = [plan.typed.to, plan.typed.from];
     return searchPlan();
   }
-  if (d.planDay) { plan.day = d.planDay; return searchPlan(); }
+  if (d.planDay) { plan.day = d.planDay; return searchPlan({ moveOn: false }); }
   if (d.pick) return pickTrain(plan.trains[Number(d.pick)]);
   if (d.manual != null) { prefill = null; editing = null; formLegs = null; view = "form"; notice = ""; return render(); }
   // A connection: one more train, from where the last one gets to, that day.
@@ -677,7 +705,7 @@ function onChange(e) {
   const L = e.target.closest?.(".trip-leg"), f = e.target.dataset?.f;
   if (L && f === "agency") fillStations(L).then(() => autofill(L));
   if (L && f === "service_date") autofill(L);
-  if (e.target.matches("[data-plan-date]") && e.target.value) { plan.day = e.target.value; searchPlan(); }
+  if (e.target.matches("[data-plan-date]") && e.target.value) { plan.day = e.target.value; searchPlan({ moveOn: false }); }
 }
 let typingTimer;
 function onInput(e) {

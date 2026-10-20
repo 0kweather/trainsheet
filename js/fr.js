@@ -541,4 +541,10 @@ export default {
   "Change at {place} · {wait}": "Correspondance à {place} · {wait}",
   "Change at {place}": "Correspondance à {place}",
   "{k} of your {n} trains": "{k} de vos {n} trains",
+  "Add": "Ajouter",
+  "Added": "Ajouté",
+  "Trains on that weekday, as the timetable runs now.": "Les trains de ce jour de la semaine, selon l’horaire actuel.",
+  "Add a train": "Ajouter un train",
+  "No trips planned. Tap + to add the trains you'll take: they're tracked for you on the day.": "Aucun voyage prévu. Touchez + pour ajouter les trains que vous prendrez : ils seront suivis pour vous le jour venu.",
+  "Not listed? Enter it yourself": "Introuvable? Saisissez-le vous-même",
 };
