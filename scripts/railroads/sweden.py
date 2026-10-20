@@ -43,7 +43,11 @@ AGENCIES = {
                    "bbox": [10.5, 52.4, 18.2, 63.4]},
     "tagab": {"name": "Tågab", "short": "Tågab", "color": "#c8102e", "kind": "intercity", "region": "Sweden",
               "bbox": [11.9, 56.8, 18.2, 60.7]},
-    "mtrx": {"name": "MTRX", "short": "MTRX", "color": "#e4002b", "kind": "intercity", "region": "Sweden",
+    # MTR Express (MTRX) until VR bought it in May 2024; its Stockholm-Göteborg
+    # trains have run as VR's since August 2024 (VR Snabbtåg Sverige), in
+    # VR's green (Finland's VR, digitraffic.py). The timetable still files
+    # them as "MTR Express AB", route "MTRX"; the id stays.
+    "mtrx": {"name": "VR Snabbtåg", "short": "VR", "color": "#3fa535", "kind": "intercity", "region": "Sweden",
              "bbox": [11.9, 57.6, 18.1, 59.4]},
     "arlandaexpress": {"name": "Arlanda Express", "short": "Arlanda Express", "color": "#f5c400", "kind": "intercity",
                        "region": "Stockholm", "bbox": [17.9, 59.3, 18.0, 59.66]},
@@ -254,7 +258,7 @@ def train(t, r):
 # ("Pendeltåg 40"); Krösatåg by its four networks; Värmlandstrafik by its two
 # lines.
 SJ_LINES = {"101": "SJ Snabbtåg", "103": "SJ InterCity", "105": "SJ Nattåg", "100": "SJ Regional", "106": "SJ Regional"}
-BRANDS = {"tagab": "Tågab", "mtrx": "MTRX", "arlandaexpress": "Arlanda Express", "malartag": "Mälartåg",
+BRANDS = {"tagab": "Tågab", "mtrx": "VR Snabbtåg", "arlandaexpress": "Arlanda Express", "malartag": "Mälartåg",
           "ostgotapendeln": "Östgötapendeln", "tib": "Tåg i Bergslagen", "norrtag": "Norrtåg", "xtaget": "X-Tåget",
           "pagatag": "Pågatåg", "oresundstag": "Öresundståg", "vasttag": "Västtågen"}
 KROSA = {"164": "Krösatåg Syd", "189": "Krösatåg Kalmar", "190": "Krösatåg Öst", "192": "Krösatåg Nord"}

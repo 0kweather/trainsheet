@@ -17,7 +17,7 @@ const PRODUCTS = [
   [/öresundståg/i, "oresundstag"], [/pågatåg/i, "pagatag"], [/västtåg/i, "vasttag"], [/krösatåg/i, "krosatag"],
   [/mälartåg|upptåget/i, "malartag"], [/östgötapendeln/i, "ostgotapendeln"], [/tåg i bergslagen/i, "tib"],
   [/norrtåg/i, "norrtag"], [/värmlandstrafik|värmlandståg/i, "varmlandstag"], [/x-tåget/i, "xtaget"],
-  [/arlanda\s*express/i, "arlandaexpress"], [/^mtr/i, "mtrx"], [/snälltåget/i, "snalltaget"], [/tågab/i, "tagab"],
+  [/arlanda\s*express/i, "arlandaexpress"], [/^mtr|^vr\b|grodan/i, "mtrx"], [/snälltåget/i, "snalltaget"], [/tågab/i, "tagab"],
   [/^sj\b|snabbtåg|intercity|nattåg|euronight/i, "sj"], [/^vy\b/i, null],
 ];
 // Else by the train's owner (InformationOwner, the authority or company
@@ -27,14 +27,14 @@ const OWNERS = [
   [/^sl$/i, "slpendel"], [/^sj/i, "sj"], [/skånetrafiken/i, "pagatag"], [/västtrafik/i, "vasttag"],
   [/mälardalstrafik|^ul$/i, "malartag"], [/östgötatrafiken/i, "ostgotapendeln"], [/bergslagen/i, "tib"],
   [/norrtåg/i, "norrtag"], [/värmlandstrafik/i, "varmlandstag"], [/x-trafik/i, "xtaget"], [/krösatåg|jlt|kronoberg|klt|blekinge/i, "krosatag"],
-  [/arlanda/i, "arlandaexpress"], [/mtr/i, "mtrx"], [/snälltåget/i, "snalltaget"], [/tågab/i, "tagab"], [/^vy/i, null],
+  [/arlanda/i, "arlandaexpress"], [/mtr|vr snabbtåg/i, "mtrx"], [/snälltåget/i, "snalltaget"], [/tågab/i, "tagab"], [/^vy/i, null],
 ];
 const matchOf = (list, text) => (text ? list.find(([re]) => re.test(text)) : undefined);
 // Lines for a train its railroad's timetable doesn't have (an extra run):
 // SJ's by its product, as the timetable names them; the others by brand.
 const sjLine = (p) => (/snabb/i.test(p) ? "SJ Snabbtåg" : /intercity/i.test(p) ? "SJ InterCity" : /natt|euronight/i.test(p) ? "SJ Nattåg" : "SJ Regional");
 const LINES = {
-  snalltaget: "Snälltåget", tagab: "Tågab", mtrx: "MTRX", arlandaexpress: "Arlanda Express", slpendel: "Pendeltåg",
+  snalltaget: "Snälltåget", tagab: "Tågab", mtrx: "VR Snabbtåg", arlandaexpress: "Arlanda Express", slpendel: "Pendeltåg",
   malartag: "Mälartåg", ostgotapendeln: "Östgötapendeln", tib: "Tåg i Bergslagen", norrtag: "Norrtåg",
   varmlandstag: "Värmlandstrafik", xtaget: "X-Tåget", pagatag: "Pågatåg", oresundstag: "Öresundståg",
   vasttag: "Västtågen", krosatag: "Krösatåg",
