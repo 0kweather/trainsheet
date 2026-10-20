@@ -1,13 +1,18 @@
-// KTMB's trains (scripts/railroads/ktmb.py): the ETS electric sets, KTM
-// Komuter's EMUs, the Class 61 DMUs and the locomotive-hauled trains. The
-// feed names each train's set (vehicle.label "ETS202", "SCS21", "EMU23",
-// "DMU06"), which js/railroads/ktmb.js passes as the car's type; the rest of
-// the train is what that class runs as. Drawn from each class's published
-// dimensions and photographs of the current paint; the lettering is drawn
-// as type, not copied from the operator's logo.
+// KTMB's trains (scripts/railroads/ktmb.py): the ETS electric sets (Classes
+// 91, 93/1, 93/2 and 94), KTM Komuter's EMUs (Classes 92, 83 and 81), the
+// Class 61 DMUs, and the locomotive-hauled trains (Class 25 and Class 26
+// diesels, the power generator car, seated and sleeping coaches, and the
+// generator wagon of the Pasir Gudang "hybrid" train). The feed names each
+// train's set (vehicle.label "ETS202", "SCS21", "EMU23", "DMU06"), which
+// js/railroads/ktmb.js passes as the car's type; the rest of the train is
+// what that class runs as, and the set's number picks the batch or paint
+// where a class has more than one (93/1 or 93/2, the ex-Skypark Class 83s).
+// Drawn from each class's published dimensions and photographs of the
+// current paint; the lettering is drawn as type, not copied from the
+// operator's logo.
 
 import { bilevel, newId } from "../carmodels.js?v=dev";
-import { C, rect, circle, path, line, lines, poly, win, door, truck, pantograph, underframe, slats, flutes } from "../carart.js?v=dev";
+import { C, rect, circle, path, line, lines, poly, win, door, truck, pantograph, underframe, slats, flutes, locoCoupler } from "../carart.js?v=dev";
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
 const KTM = {
@@ -45,8 +50,9 @@ function acUnit(x, w, roof, { h = 0.8, fill = "#c3c8ce" } = {}) {
     slats(x + 0.9, roof + 0.12, gw, h - 0.42, 0.3, "rgba(0,0,0,0.35)") + slats(x + w - 0.9 - gw, roof + 0.12, gw, h - 0.42, 0.3, "rgba(0,0,0,0.35)") +
     line(x + 0.7, t - 0.16, x + w - 0.7, t - 0.16, "rgba(255,255,255,0.5)", 0.4);
 }
-function panDeck(cx, roof, { facing = 1, cableTo = null } = {}) {
-  let s = rect(cx - 3.3, roof - 0.05, 6.6, 0.35, "#8f969e", 0.4) + pantograph(cx, roof + 0.3, { facing });
+// down: the pantograph folded (a set hauled off the wires).
+function panDeck(cx, roof, { facing = 1, cableTo = null, down = false } = {}) {
+  let s = rect(cx - 3.3, roof - 0.05, 6.6, 0.35, "#8f969e", 0.4) + pantograph(cx, roof + 0.3, { facing, up: !down });
   const ax = cx + 4.1 * facing;
   s += rect(ax - 0.2, roof, 0.4, 0.95, "#7d848c", 0.3) + lines([[ax - 0.27, roof + 0.32, ax + 0.27, roof + 0.32], [ax - 0.27, roof + 0.62, ax + 0.27, roof + 0.62]], "#4a5057", 0.6) + circle(ax, roof + 1.05, 0.16, "#5a6068");
   if (cableTo != null) {
