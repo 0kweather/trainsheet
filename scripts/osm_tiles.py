@@ -34,6 +34,7 @@ EXTRACTS = [
     "europe/finland", "europe/norway", "europe/sweden",
     "europe/estonia", "europe/latvia", "europe/lithuania",
     "europe/greece", "europe/ireland-and-northern-ireland",
+    "europe/italy", "europe/switzerland", "europe/slovenia",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
     "australia-oceania/australia",
 ]
