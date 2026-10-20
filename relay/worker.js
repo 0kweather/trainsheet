@@ -21,6 +21,9 @@
 //                       publish positions and predicted stop times as two
 //                       GTFS-realtime feeds, both, back to back: concatenated
 //                       protobuf messages read as one feed with every entity.
+//   GET /feed/:id?train=:number&date=:yyyy-mm-dd[&from=:origin name]
+//                    -> a plug-in's detail source (DETAILS): one train, when
+//                       a viewer opens or tracks it, never polled for all.
 
 import { FEEDS as PLUGIN_FEEDS } from "./feeds/index.js";
 
@@ -100,9 +103,19 @@ function pluginFeed(p, env) {
   const fill = (s, esc) => s.replace(/\{([A-Z0-9_]+)\}/g, (_, k) => esc(env[k] ?? ""));
   const url = (u) => fill(u, encodeURIComponent);
   return {
-    url: p.url && url(p.url), also: p.also?.map(url), routes: p.routes, vehicles: p.vehicles && new RegExp(p.vehicles), ttl: p.ttl, format: p.format, fetchFeed: p.fetchFeed,
+    url: p.url && url(p.url), also: p.also?.map(url), routes: p.routes, vehicles: p.vehicles && new RegExp(p.vehicles), ttl: p.ttl, format: p.format, fetchFeed: p.fetchFeed, detail: p.detail,
     headers: { ...(p.ua ? { "User-Agent": IDENTIFYING_UA } : {}), ...Object.fromEntries(Object.entries(p.headers || {}).map(([k, v]) => [k, fill(v, String)])) },
   };
+}
+
+// A detail source's query (one train): its number, its day, and the name of
+// the station it starts from (as a name key: no accents, case or spaces),
+// which tells apart two runs of one number on a day; null if it's off.
+function detailQuery(params) {
+  const train = params.get("train") || "", date = params.get("date") || "";
+  if (!/^\d{1,6}$/.test(train) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const from = (params.get("from") || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+  return { train: String(+train), date, from };
 }
 
 // 511 SF Bay: positions plus predicted stop times for one operator.
@@ -1018,9 +1031,15 @@ export default {
     const match = pathname.match(/^\/feed\/([a-z0-9-]+)$/);
     const spec = match && FEEDS[match[1]]?.(env);
     if (!spec) return new Response("Unknown or unconfigured feed", { status: 404, headers: CORS });
+    // A detail source answers for one train, the one asked for: its query,
+    // checked and put in one form, is part of what's cached.
+    const query = spec.detail ? detailQuery(new URL(request.url).searchParams) : null;
+    if (spec.detail && !query) return new Response("Ask for one train: ?train=<number>&date=<yyyy-mm-dd>", { status: 400, headers: CORS });
+    const feedKey = query ? `${match[1]}?${new URLSearchParams(query)}` : match[1];
+    if (query && feedMem.size > 2000) for (const [k, v] of feedMem) if (Date.now() - v.at > STALE_MS) feedMem.delete(k);
 
     const cache = caches.default;
-    const cacheKey = new Request(new URL(`/feed/${match[1]}`, request.url).toString());
+    const cacheKey = new Request(new URL(`/feed/${feedKey}`, request.url).toString());
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
     // Each feed is fetched from its railroad at most every `ttl` seconds (15
@@ -1028,7 +1047,7 @@ export default {
     // edge cache does nothing on workers.dev, and railroads refuse requests
     // that come too often. The scraped feeds keep their own.
     const ttl = spec.ttl ?? CACHE_SECONDS;
-    const kept = feedMem.get(match[1]);
+    const kept = feedMem.get(feedKey);
     const keptResponse = () => new Response(kept.bytes, { headers: { ...CORS, "Content-Type": kept.type, "Cache-Control": `public, max-age=${CACHE_SECONDS}` } });
     if (kept && Date.now() - kept.at < ttl * 1000) return keptResponse();
 
@@ -1039,7 +1058,7 @@ export default {
         : spec.goTracker ? Response.json(await fetchGoTracker())
         : spec.exoHub ? Response.json(await fetchExo())
         : spec.transitland ? await fetchTransitland(spec.transitland, env)
-        : spec.fetchFeed ? await spec.fetchFeed(env, match[1], ctx) // a plug-in's own fetching (relay/feeds/<id>.js)
+        : spec.fetchFeed ? await spec.fetchFeed(env, match[1], ctx, query) // a plug-in's own fetching (relay/feeds/<id>.js)
         : await fetch(spec.url, { headers });
     } catch (err) {
       if (kept && Date.now() - kept.at < STALE_MS) return keptResponse();
@@ -1067,7 +1086,7 @@ export default {
     const type = /json/i.test(upstreamType) ? upstreamType
       : spec.format === "xml" || spec.format === "text" ? upstreamType || "text/plain; charset=utf-8" : "application/x-protobuf";
     body = new Uint8Array(await new Response(body).arrayBuffer());
-    feedMem.set(match[1], { at: Date.now(), bytes: body, type });
+    feedMem.set(feedKey, { at: Date.now(), bytes: body, type });
     const response = new Response(body, {
       headers: {
         ...CORS,

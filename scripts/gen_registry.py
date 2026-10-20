@@ -15,6 +15,16 @@ relay/feeds/index.js: each plug-in's relay feeds (RELAY), and for the ones
 with no url, the custom fetchFeed in relay/feeds/<id>.js (whose Python twin
 is the module's relay_fetch, for scripts/dev_relay.py).
 
+Detail sources (DETAILS = {"<source id>": {"ttl": seconds}}): one train at a
+time, fetched through the relay only when a viewer opens or tracks it, as
+/feed/<source id>?train=<number>&date=<yyyy-mm-dd>[&from=<origin name>]. They
+need relay_fetch(env, source_id, query) and its Worker twin, and a railroad
+uses one by naming it in its AGENCIES entry ("detail": "<source id>"); the
+answer has one shape for every source (js/sources.js applyDetail), so there
+is no parser. A module may define DETAILS alone, with no AGENCIES, SOURCES,
+GTFS, RAIL or RELAY (a relay-only plug-in, e.g. viaggiatreno.py, which
+serves railroads defined in other plug-ins).
+
 The output is sorted and formatted the same way every time, so running it
 again changes nothing.
 """
@@ -76,12 +86,27 @@ def data_regions(agencies):
 def main():
     boxes = station_boxes()
     agencies, sources, loaders, feeds, imports = {}, [], {}, {}, {}
+    details, wants = {}, {}  # detail source id -> its plug-in; agency -> (plug-in, the detail source it names)
     for mod in load():
         mid = mod.__name__.split(".")[-1]
         if not re.fullmatch(r"[a-z0-9]+", mid):
             fail(mid, "plug-in ids are lowercase letters and digits")
+        for did, d in getattr(mod, "DETAILS", {}).items():
+            if not re.fullmatch(r"[a-z0-9]+", did) or did in details or did in feeds or any(x["id"] == did for x in sources):
+                fail(mid, f"detail source {did}: ids are lowercase letters and digits, unique among sources")
+            if not hasattr(mod, "relay_fetch") or not (ROOT / "relay" / "feeds" / f"{mid}.js").exists():
+                fail(mid, f"detail source {did} needs relay_fetch and its Worker twin, relay/feeds/{mid}.js")
+            ttl = d.get("ttl", 15)
+            if not isinstance(ttl, (int, float)) or isinstance(ttl, bool) or ttl <= 0:
+                fail(mid, f"detail source {did}: ttl is seconds, a number > 0")
+            details[did] = mid
+            feeds[did] = {"detail": True, "format": "json", "ttl": ttl, "fetchFeed": mid}
+            imports[mid] = True
         if not getattr(mod, "AGENCIES", None):
-            fail(mid, "no AGENCIES")
+            # A relay-only plug-in: detail sources for other plug-ins' railroads.
+            if getattr(mod, "DETAILS", None) and not any(getattr(mod, k, None) for k in ("SOURCES", "GTFS", "RAIL", "RELAY")):
+                continue
+            fail(mid, "no AGENCIES (only a plug-in with nothing but DETAILS may have none)")
         for aid, a in mod.AGENCIES.items():
             if aid in agencies:
                 fail(mid, f"agency {aid} is already in another plug-in")
@@ -90,6 +115,8 @@ def main():
                     fail(mid, f"agency {aid} has no {key}")
             if a["kind"] not in KINDS or not re.fullmatch(r"#[0-9a-f]{6}", a["color"]) or not re.fullmatch(r"[A-Z]{2}", a["country"]):
                 fail(mid, f"agency {aid}: kind, color (#rrggbb) or country (ISO 3166 alpha-2) is off")
+            if "detail" in a:
+                wants[aid] = (mid, a["detail"])
             box = boxes.get(aid) or a.get("bbox")
             # "clip": its stations abroad (a timetable's through trains to
             # Paris or Vienna) don't stretch its extent past its own box.
@@ -103,7 +130,7 @@ def main():
             fail(mid, f"relay_fetch has no Worker twin, relay/feeds/{mid}.js")
         for s in getattr(mod, "SOURCES", []):
             sid = s["id"]
-            if any(x["id"] == sid for x in sources):
+            if any(x["id"] == sid for x in sources) or sid in details:
                 fail(mid, f"source {sid} is already in another plug-in")
             if not s.get("agencies") or any(x not in mod.AGENCIES for x in s["agencies"]):
                 fail(mid, f"source {sid} names an agency it doesn't define")
@@ -137,6 +164,9 @@ def main():
             loaders[mid] = True
         elif any(s.get("format") != "timetable" for s in getattr(mod, "SOURCES", [])):
             fail(mid, f"js/railroads/{mid}.js is missing: a source with a feed needs a parser")
+    for aid, (mid, did) in sorted(wants.items()):
+        if did not in details:
+            fail(mid, f"agency {aid}: detail {did!r} is no plug-in's detail source (DETAILS)")
 
     out = [HEAD, "// The railroad plug-ins, as js/sources.js merges them into AGENCIES and SOURCES.\n\n",
            "export const AGENCIES = {\n"]
