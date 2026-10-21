@@ -149,7 +149,11 @@ export const RAIL_REGIONS = [
   {"bbox": [21.01, 55.75, 28.18, 57.78], "bytes": 55645, "file": "data/rail/lv.geojson", "region": "lv"},
   {"bbox": [100.25, 1.36, 103.93, 7.06], "bytes": 115365, "file": "data/rail/my.geojson", "region": "my"},
   {"bbox": [5.33, 56.66, 16.56, 67.34], "bytes": 313259, "file": "data/rail/no.geojson", "region": "no"},
+  {"bbox": [141.47, -37.82, 153.14, -27.47], "bytes": 246271, "file": "data/rail/nsw.geojson", "region": "nsw"},
+  {"bbox": [174.58, -41.28, 175.65, -36.84], "bytes": 40889, "file": "data/rail/nz.geojson", "region": "nz"},
+  {"bbox": [10.66, 55.37, 24.15, 68.45], "bytes": 488750, "file": "data/rail/se.geojson", "region": "se"},
   {"bbox": [15.62, 47.51, 22.68, 50.28], "bytes": 380542, "file": "data/rail/sk.geojson", "region": "sk"},
+  {"bbox": [142.47, -38.39, 147.63, -35.34], "bytes": 136558, "file": "data/rail/vic.geojson", "region": "vic"},
 ];
 
 // Station and timetable data outside the US and Canada (data/regions/<region>/), by region.
