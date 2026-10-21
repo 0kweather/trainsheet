@@ -144,23 +144,19 @@ const plane = (c, x, y, h, fill) => `<g transform="translate(${x} ${y}) scale(${
   `<path d="M0.08 0.03L-0.12 0.42L-0.02 0.42L0.24 0.03ZM0.08 -0.03L-0.12 -0.42L-0.02 -0.42L0.24 -0.03Z" fill="${fill}"/>` +
   `<path d="M-0.36 0.03L-0.48 0.18L-0.42 0.18L-0.28 0.03ZM-0.36 -0.03L-0.48 -0.18L-0.42 -0.18L-0.28 -0.03Z" fill="${fill}"/></g>`;
 const AIR_YELLOW = "#f5c400";
-// Trainsheet's own class marking, as on Italy's other railroads' cars: a
-// gold band the length of a first-class car just over its upper windows,
-// under the roof edge; on each door's leaf the class numeral (1 big, 2
-// smaller) and, on the first-class car, "1ª CLASSE" beside the door. Only
-// the airport Caravaggios have two classes; the other Trenord trains drawn
-// here are one class and carry none of it.
+// Class marks as the airport Caravaggios carry them (photographed on ETR
+// 421 047, 2026): the class numeral, thin and white, small on the body
+// left of each door near its top, about a seventh of the door tall;
+// Trenord's yellow band and aircraft pictograms mark the first-class area
+// (airMark, below). Trainsheet adds its own class band, gold the length of the
+// first-class car over its upper windows, as on Italy's other railroads'
+// cars. Only the airport units have two classes; the other Trenord trains
+// drawn here are one class and carry none of it.
 const CLASS_GOLD = "#c9a227";
 const mxp = (c) => /^RE5[14]$/.test(String(c.route || "").replace(/[\s_]/g, "").toUpperCase());
+const TN_FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 function classDoors(c, doors, y, first) {
-  return doors.map(({ x, w }, i) => {
-    let s = letters(c, x + w / 4, y + 1.6, first ? 3.0 : 2.2, first ? "1" : "2", TN.ink, { weight: 800 });
-    if (first) {
-      const side = i ? -1 : 1, anchor = (side > 0) !== !!c.mirrored ? "start" : "end";
-      s += letters(c, side > 0 ? x + w + 0.7 : x - 0.7, 9.0, 1.65, "1ª CLASSE", TN.ink, { weight: 700, anchor, spacing: "0.02em" });
-    }
-    return s;
-  }).join("");
+  return doors.map(({ x, w }) => letters(c, c.mirrored ? x + w + 0.6 : x - 0.6, y + 6.2, 1.5, first ? "1" : "2", "#ffffff", { weight: 300, family: TN_FONT })).join("");
 }
 // The airport Caravaggios' (ETR 421 047-054) first-class area: marked
 // outside with a yellow band and aircraft pictograms by the doors.
