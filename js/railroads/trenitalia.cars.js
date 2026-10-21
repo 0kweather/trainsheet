@@ -66,14 +66,8 @@ const classNo = (c, x, y, cls, fill = "#ffffff") => letters(c, x, y, 1.1, String
 // grey in a plain upright sans; the InterCity coaches a small white plate
 // low on each door, the IC roundel and the level (PLUS for first class,
 // EASY for second), and the car number in the door's window; the regional
-// trains none. On top, Trainsheet's own convention (as Amtrak's
-// business-class band, carmodels.js AMFLEET_CLASS, for every railroad): a
-// solid gold band, 0.9 ft, the length of a first-class or Business car
-// just above its window band, or over only the first-class part of a car
-// that is partly first.
-export const GOLD = "#c9a227";
+// trains none.
 const isFirst = (lv) => lv === "executive" || lv === "business" || lv === "bistro" || lv === "first";
-export const goldBand = (y, x0 = -1, x1 = 1000) => rect(x0, y, x1 - x0, 0.9, GOLD);
 const CONDENSED = "Roboto Condensed, Arial Narrow, Helvetica Neue Condensed, Helvetica Neue, Arial, sans-serif";
 // The car-number placard inside a window by the door: a blue square, the
 // number in a white ring.
@@ -169,7 +163,7 @@ const fr4Cab = (c) => {
     paint: (cc, g) => frPaint(cc, g, { y0: 6.55, y1: 10.45, red0: 4.55, x0: 23.2, roofY: 12.45, name: "Frecciarossa", nameAt: 33, sub: "1000", redTop: true,
       cab: rect(-1, 3.6, 24.4, 2.7, FR.silver) + path("M23.4 4.55L23.4 6.3L18.0 6.3L20.0 4.55Z", FR.silver) + arrow(1.4, 4.6, 19.0, 1.5, FR.red) +
         path("M8.6 8.6Q14.5 11.0 19.5 12.4L23.2 12.4L23.2 10.45L19.4 10.45Q14.4 9.6 9.6 8.2Z", FR.band) }) +
-      framesOf(rows) + rect(rows[0].xs[0] - 0.4, 6.65, 0.1, 3.7, "rgba(255,255,255,0.08)") + (isFirst(cc.lv) ? goldBand(10.55, 23.2) : ""),
+      framesOf(rows) + rect(rows[0].xs[0] - 0.4, 6.65, 0.1, 3.7, "rgba(255,255,255,0.08)"),
     cab: () => glass([[9.4, 8.95], [14.4, 10.8], ["q", 17.0, 11.85, 20.4, 12.35], [22.0, 12.45], [22.0, 10.9], [16.6, 10.1], [12.0, 8.95]], [[10.6, 9.15], [14.6, 10.6], [15.6, 10.6], [12.0, 9.15]], [11.6, 9.1, 15.0, 10.7]) +
       lamp(2.1, 5.1, 1.2, 0.36) + lamp(1.2, 4.55, 0.55, 0.28, RED_LAMP) + emuFront(1.4, 3.55, { coupler: 2.9 }) + horns(22.0, 13.3),
     extra: (cc, g) => fairing(11.5, 3.55, 13, FR.dark) + fairing(g.L - 9.8, 3.55, 13, FR.dark) + boxes(19, g.L - 18, 3.55, 4, 1.0, "#33373c") +
@@ -180,8 +174,7 @@ const fr4Mid = (c) => {
   const rows = fr4Rows(4.4, 11);
   const pan = c.index === 3 || c.index === 4;
   return sec(c, { marks: (cc) => placard(cc, 71.5, 8.85, carNo(cc)), ...FR4, rows, doors: [sgl(c.L - 5.5, 3.75, 10.9)], trucks: [[9.5, 36, 9.2], [c.L - 9.5, 36, 9.2]],
-    paint: (cc, g) => frPaint(cc, g, { y0: 6.55, y1: 10.45, red0: 4.55, roofY: 12.45, name: "Frecciarossa", nameAt: 66, sub: "1000", redTop: true }) + framesOf(rows) +
-      (isFirst(cc.lv) ? goldBand(10.55) : ""),
+    paint: (cc, g) => frPaint(cc, g, { y0: 6.55, y1: 10.45, red0: 4.55, roofY: 12.45, name: "Frecciarossa", nameAt: 66, sub: "1000", redTop: true }) + framesOf(rows),
     extra: (cc, g) => fairing(9.5, 3.55, 13, FR.dark) + fairing(g.L - 9.5, 3.55, 13, FR.dark) + boxes(17, g.L - 17, 3.55, 4, 1.0, "#33373c") +
       (pan ? roofFairing(4, 26, 13.35) + panSet(g.L / 2 + 6, 13.6, -1, cc.index === 4) + roofFairing(g.L - 22, g.L - 4, 13.35) : roofFairing(4, g.L - 18, 13.35) + hvac(g.L - 17, 13.35, 9.0)) });
 };
@@ -208,8 +201,7 @@ const e404 = (c) => cabUnit(c, {
 const etr500Coach = (c) => {
   const rows = [{ xs: seq(6.6, 6.05, 12), y: 7.25, w: 4.4, h: 2.65, r: 0.35 }];
   return sec(c, { marks: (cc) => placard(cc, 6.75, 8.95, carNo(cc)), roof: 13.1, sill: 3.9, rows, doors: [sgl(2.0, 4.1, 10.9), sgl(c.L - 4.9, 4.1, 10.9)], trucks: [[11.6, 36, 8.9], [c.L - 11.6, 36, 8.9]],
-    paint: (cc, g) => frPaint(cc, g, { y0: 6.8, y1: 10.35, red0: 4.75, roofY: 11.75, darkRoof: true, name: "Frecciarossa", nameAt: 42 }) + framesOf(rows) +
-      (isFirst(cc.lv) ? goldBand(10.45) : ""),
+    paint: (cc, g) => frPaint(cc, g, { y0: 6.8, y1: 10.35, red0: 4.75, roofY: 11.75, darkRoof: true, name: "Frecciarossa", nameAt: 42 }) + framesOf(rows),
     extra: (cc, g) => fairing(11.6, 3.9, 13, FR.dark) + fairing(g.L - 11.6, 3.9, 13, FR.dark) + boxes(19, g.L - 19, 3.9, 4, 1.05, "#33373c") +
       hvac(g.L / 2 - 7, 13.1, 14) + roofCover(8, 13.1, 12, 0.35, "#a9afb6", 2) + roofCover(g.L - 20, 13.1, 12, 0.35, "#a9afb6", 2) + trenitalia(cc, 20, 11.25, 0.42, "#e3e6e9") });
 };
@@ -223,8 +215,7 @@ const etr700Cab = (c) => {
   const rows = [{ xs: seq(21.2, 6.0, 10), y: 7.1, w: 4.3, h: 2.8, r: 0.4 }];
   return sec(c, { marks: (cc) => placard(cc, 21.5, 8.95, carNo(cc)), roof: 13.25, sill: 3.6, nose: NOSE_700, cabLen: 14, rows, doors: [sgl(16.4, 3.8, 10.9, 2.7), sgl(c.L - 5.4, 3.8, 10.9)], trucks: [[10.6, 36, 9.0], [c.L - 10.0, 36, 9.0]],
     paint: (cc, g) => frPaint(cc, g, { y0: 6.6, y1: 10.45, red0: 4.6, x0: 15.2, roofY: 12.4, name: "Frecciarossa", nameAt: 24, redTop: true,
-      cab: rect(-1, 3.6, 16.4, 2.75, FR.silver) + arrow(1.0, 4.65, 14.4, 1.45, FR.red) + path("M6.8 9.7Q10.6 11.4 12.6 12.1L15.2 12.1L15.2 10.45L12.2 10.45Q9.4 9.9 7.4 9.0Z", FR.band) }) + framesOf(rows) +
-      (isFirst(cc.lv) ? goldBand(10.55, 15.2) : ""),
+      cab: rect(-1, 3.6, 16.4, 2.75, FR.silver) + arrow(1.0, 4.65, 14.4, 1.45, FR.red) + path("M6.8 9.7Q10.6 11.4 12.6 12.1L15.2 12.1L15.2 10.45L12.2 10.45Q9.4 9.9 7.4 9.0Z", FR.band) }) + framesOf(rows),
     cab: () => glass([[6.6, 9.4], [9.8, 11.6], [13.8, 12.1], [13.8, 10.4], [9.6, 9.85]], [[7.4, 9.75], [9.2, 10.9], [10.0, 10.9], [8.4, 9.75]], [7.6, 9.6, 9.6, 11.0]) +
       lamp(1.4, 5.5, 1.1, 0.4) + lamp(0.9, 4.85, 0.55, 0.28, RED_LAMP) + emuFront(1.2, 3.6, { coupler: 2.9 }) + horns(14.5, 13.2),
     extra: (cc, g) => fairing(10.6, 3.6, 12.5, FR.dark) + fairing(g.L - 10.0, 3.6, 12.5, FR.dark) + boxes(18, g.L - 17, 3.6, 4, 1.0, "#33373c") +
@@ -235,7 +226,7 @@ const etr700Mid = (c) => {
   const rows = [{ xs: seq(5.4, 6.0, 11), y: 7.1, w: 4.3, h: 2.8, r: 0.4 }];
   const pan = c.index === 2 || c.index === c.count - 3;
   return sec(c, { marks: (cc) => placard(cc, 68.6, 8.95, carNo(cc)), roof: 13.25, sill: 3.6, rows, doors: [sgl(c.L - 5.2, 3.8, 10.9)], trucks: [[9.2, 36, 9.0], [c.L - 9.2, 36, 9.0]],
-    paint: (cc, g) => frPaint(cc, g, { y0: 6.6, y1: 10.45, red0: 4.6, roofY: 12.4, redTop: true, name: "Frecciarossa", nameAt: 64 }) + framesOf(rows) + (isFirst(cc.lv) ? goldBand(10.55) : ""),
+    paint: (cc, g) => frPaint(cc, g, { y0: 6.6, y1: 10.45, red0: 4.6, roofY: 12.4, redTop: true, name: "Frecciarossa", nameAt: 64 }) + framesOf(rows),
     extra: (cc, g) => fairing(9.2, 3.6, 12.5, FR.dark) + fairing(g.L - 9.2, 3.6, 12.5, FR.dark) + boxes(16, g.L - 16, 3.6, 4, 1.0, "#33373c") +
       (pan ? roofFairing(3, 30, 13.25) + panSet(g.L - 24, 13.5, -1, cc.index === 2) + hvac(g.L - 15, 13.25, 9) : roofFairing(3, g.L - 16, 13.25) + hvac(g.L - 15.5, 13.25, 9)) });
 };
@@ -249,8 +240,7 @@ const etr600Cab = (c) => {
   const rows = [{ xs: seq(21.4, 4.3, 15), y: 6.95, w: 3.2, h: 2.75, r: 0.4 }];
   return sec(c, { marks: (cc) => placard(cc, 21.6, 8.75, carNo(cc)), roof: 12.65, sill: 3.6, nose: NOSE_600, cabLen: 16, rows, doors: [sgl(17.0, 3.8, 10.6, 2.6), sgl(c.L - 5.2, 3.8, 10.6)], trucks: [[12.6, 34, 8.9], [c.L - 9.8, 34, 8.9]],
     paint: (cc, g) => frPaint(cc, g, { y0: 6.5, y1: 10.15, red0: 4.6, x0: 16.0, roofY: 11.75, name: "Frecciarossa", nameAt: 26, redTop: true,
-      cab: rect(-1, 3.6, 17.2, 2.65, FR.silver) + arrow(1.2, 4.65, 15.0, 1.4, FR.red) + path("M7.8 9.8Q11.6 11.4 13.6 11.75L16.0 11.75L16.0 10.15L13.0 10.15Q10.2 9.7 8.4 9.0Z", FR.band) }) + framesOf(rows) +
-      (isFirst(cc.lv) ? goldBand(10.25, 16.0) : ""),
+      cab: rect(-1, 3.6, 17.2, 2.65, FR.silver) + arrow(1.2, 4.65, 15.0, 1.4, FR.red) + path("M7.8 9.8Q11.6 11.4 13.6 11.75L16.0 11.75L16.0 10.15L13.0 10.15Q10.2 9.7 8.4 9.0Z", FR.band) }) + framesOf(rows),
     cab: () => glass([[7.6, 9.5], [11.4, 11.35], [15.0, 11.7], [15.0, 10.1], [10.8, 9.8]], [[8.4, 9.75], [10.6, 10.8], [11.4, 10.8], [9.4, 9.75]], [8.6, 9.7, 10.8, 11.0]) +
       lamp(0.85, 5.1, 1.1, 0.36) + lamp(1.4, 4.55, 0.55, 0.26, RED_LAMP) + emuFront(1.4, 3.6, { coupler: 2.8 }) + horns(16.0, 12.6),
     extra: (cc, g) => fairing(12.6, 3.6, 12, FR.dark) + fairing(g.L - 9.8, 3.6, 12, FR.dark) + boxes(20, g.L - 17, 3.6, 4, 1.0, "#33373c") +
@@ -260,8 +250,7 @@ const etr600Mid = (c) => {
   const rows = [{ xs: seq(5.0, 4.3, 17), y: 6.95, w: 3.2, h: 2.75, r: 0.4 }];
   const pan = c.index === 2 || c.index === 4;
   return sec(c, { marks: (cc) => placard(cc, 75.6, 8.75, carNo(cc)), roof: 12.65, sill: 3.6, rows, doors: [sgl(c.L - 5.2, 3.8, 10.6)], trucks: [[10.0, 34, 8.9], [c.L - 10.0, 34, 8.9]],
-    paint: (cc, g) => frPaint(cc, g, { y0: 6.5, y1: 10.15, red0: 4.6, roofY: 11.75, redTop: true }) + framesOf(rows) +
-      (isFirst(cc.lv) ? goldBand(10.25) : "") + freccia(cc, 64, 5.55, 0.42, "Frecciarossa"),
+    paint: (cc, g) => frPaint(cc, g, { y0: 6.5, y1: 10.15, red0: 4.6, roofY: 11.75, redTop: true }) + framesOf(rows) + freccia(cc, 64, 5.55, 0.42, "Frecciarossa"),
     extra: (cc, g) => fairing(10.0, 3.6, 12, FR.dark) + fairing(g.L - 10.0, 3.6, 12, FR.dark) + boxes(17, g.L - 17, 3.6, 4, 1.0, "#33373c") +
       (pan ? roofFairing(3, 28, 12.65, 0.5) + panSet(g.L - 26, 12.9, -1, cc.index === 2) + hvac(g.L - 15, 12.65, 9) : roofFairing(3, g.L - 16, 12.65, 0.5) + hvac(g.L - 15, 12.65, 9)) });
 };
@@ -286,8 +275,7 @@ function faPaint(c, g, cab) {
 const etr485Cab = (c) => {
   const rows = [{ xs: seq(20.2, 4.4, 14), y: 6.9, w: 3.1, h: 2.8, r: 0.35 }];
   return sec(c, { roof: 12.4, sill: 3.5, nose: NOSE_485, cabLen: 15, rows, doors: [sgl(15.6, 3.7, 10.4, 2.5, "#4a5057"), sgl(c.L - 5.0, 3.7, 10.4)], trucks: [[12.0, 35, 8.9], [c.L - 9.6, 35, 8.9]],
-    paint: (cc, g) => faPaint(cc, g, true) + framesOf(rows, 0.15, "#3a3f45") + freccia(cc, 72, 5.75, 0.38, faName(cc), "#3a3d42") +
-      (isFirst(cc.lv) ? goldBand(9.85, 14.6) : "") + faNumeral(cc, 82.85, cc.lv),
+    paint: (cc, g) => faPaint(cc, g, true) + framesOf(rows, 0.15, "#3a3f45") + freccia(cc, 72, 5.75, 0.38, faName(cc), "#3a3d42") + faNumeral(cc, 82.85, cc.lv),
     cab: () => glass([[7.0, 9.4], [10.4, 11.1], [13.6, 11.45], [13.6, 10.0], [10.0, 9.7]], [[7.8, 9.65], [9.6, 10.5], [10.3, 10.5], [8.6, 9.65]], [8.0, 9.6, 9.9, 10.8]) +
       lamp(0.9, 5.05, 1.0, 0.36) + lamp(1.4, 4.45, 0.5, 0.26, RED_LAMP) + emuFront(1.4, 3.5, { coupler: 2.8 }) + horns(14.6, 12.35),
     extra: (cc, g) => fairing(12.0, 3.5, 12, "#3a3f45") + fairing(g.L - 9.6, 3.5, 12, "#3a3f45") + boxes(19, g.L - 17, 3.5, 4, 1.0, "#33373c") +
@@ -297,8 +285,7 @@ const etr485Mid = (c) => {
   const rows = [{ xs: seq(5.2, 4.4, 16), y: 6.9, w: 3.1, h: 2.8, r: 0.35 }];
   const pan = c.index === 2 || c.index === c.count - 3;
   return sec(c, { roof: 12.4, sill: 3.5, rows, doors: [sgl(c.L - 5.0, 3.7, 10.4)], trucks: [[9.8, 35, 8.9], [c.L - 9.8, 35, 8.9]],
-    paint: (cc, g) => faPaint(cc, g, false) + framesOf(rows, 0.15, "#3a3f45") + freccia(cc, 68, 5.75, 0.38, faName(cc), "#3a3d42") +
-      (isFirst(cc.lv) ? goldBand(9.85) : "") + faNumeral(cc, 76.15, cc.lv),
+    paint: (cc, g) => faPaint(cc, g, false) + framesOf(rows, 0.15, "#3a3f45") + freccia(cc, 68, 5.75, 0.38, faName(cc), "#3a3d42") + faNumeral(cc, 76.15, cc.lv),
     extra: (cc, g) => fairing(9.8, 3.5, 12, "#3a3f45") + fairing(g.L - 9.8, 3.5, 12, "#3a3f45") + boxes(17, g.L - 17, 3.5, 4, 1.0, "#33373c") +
       (pan ? roofFairing(3, 28, 12.4, 0.45) + panSet(g.L - 25, 12.7, -1, cc.index === 2) + hvac(g.L - 14.5, 12.4, 8.5) : roofFairing(3, g.L - 15, 12.4, 0.45) + hvac(g.L - 14.5, 12.4, 8.5)) +
       "" });
@@ -342,7 +329,7 @@ function z1(c, { cab = false, kind = "coach" } = {}) {
       if (kind === "sleeper") s += letters(cc, L * 0.62, 5.6, 0.7, "VAGONE LETTO", icInk(cc), { weight: 600, spacing: 0.12 });
       else if (kind === "couchette") s += letters(cc, L * 0.62, 5.6, 0.7, "CUCCETTE", icInk(cc), { weight: 600, spacing: 0.12 });
       else if (night(cc)) s += letters(cc, L * 0.62, 5.6, 0.8, "Notte", "#ffffff", { weight: 600, italic: true });
-      return s + (kind === "coach" && cc.lv === "first" ? goldBand(10.6) : "");
+      return s;
     },
     cab: () => glass([[2.6, 9.95], [4.3, 12.0], [7.6, 12.0], [7.6, 9.95]], [[3.0, 10.2], [3.8, 11.2], [4.5, 11.2], [3.6, 10.2]], [3.2, 10.1, 4.0, 11.6]) +
       lamp(1.0, 5.6, 0.5, 0.5) + lamp(1.0, 4.85, 0.4, 0.32, RED_LAMP) + lamp(5.0, 12.95, 0.6, 0.25) + horns(7.0, roof),
@@ -452,9 +439,7 @@ const masDoor = (c) => (c.agency === "trenitaliaic" ? IC.sky : "#2b6db5");
 const masCab = (c) => {
   const rows = [{ xs: [13.2], y: 6.8, w: 2.6, h: 3.3, r: 0.35 }, { xs: seq(22.0, 5.2, 3), y: 6.8, w: 4.4, h: 3.3, r: 0.35 }, { xs: [c.L - 13.6, c.L - 8.4], y: 6.8, w: 4.4, h: 3.3, r: 0.35 }];
   return sec(c, { roof: 13.4, sill: 3.4, nose: NOSE_MAS, cabLen: 10, rows, doors: [dbl(16.6, 3.4, 10.7, 4.3, masDoor(c)), dbl(c.L - 19.4, 3.4, 10.7, 4.3, masDoor(c))], trucks: [[10.0, 33, 8.5]], jakobs: ["end"],
-    paint: (cc, g) => masPaint(cc, g, true) + (cc.agency === "trenitaliaic" ? ic(cc, 30, 5.0, 0.9, IC.blue) : letters(cc, 30, 5.3, 1.0, "Blues", "#ffffff", { weight: 700, italic: true })) +
-      // InterCity's Plus (first class) seats: "1" and the level's name over the windows.
-      (cc.lv === "first" ? goldBand(10.4, 12) : ""),
+    paint: (cc, g) => masPaint(cc, g, true) + (cc.agency === "trenitaliaic" ? ic(cc, 30, 5.0, 0.9, IC.blue) : letters(cc, 30, 5.3, 1.0, "Blues", "#ffffff", { weight: 700, italic: true })),
     cab: () => glass([[2.3, 8.8], [5.0, 12.0], [9.4, 12.0], [9.4, 8.8]], [[2.8, 9.1], [4.0, 10.6], [4.8, 10.6], [3.6, 9.1]], [3.0, 9.0, 4.4, 11.2]) +
       lamp(1.0, 5.0, 0.9, 0.4) + lamp(0.9, 4.3, 0.5, 0.28, RED_LAMP) + emuFront(1.2, 3.4, { coupler: 2.8 }) + horns(9.0, 13.35),
     extra: (cc, g) => hvac(14, 13.4, 9) + roofCover(32, 13.4, 10, 0.5) + boxes(14, 30, 3.4, 2, 1.2) + rect(31, 1.6, 9, 1.6, "#2a2d31", 0.4, 'rx="0.3"') + slats(31.4, 1.8, 8.2, 1.2, 0.4, "rgba(255,255,255,0.18)") +
@@ -605,15 +590,8 @@ const vivRows = (L, cab) => [{ xs: seq(18.0, 5.05, Math.floor((L - 36) / 5.05) +
   { xs: seq(18.0, 5.05, Math.floor((L - 36) / 5.05) + 1), y: 4.5, w: 4.1, h: 1.95, r: 0.4 }, { xs: cab ? [7.4, L - 7.8] : [3.0, L - 7.0], y: 8.2, w: 3.6, h: 2.2, r: 0.4 }];
 const vivDoorFill = (c) => (c.agency === "tper" ? TP.red : DPR.lime);
 const vivDoors = (L, cab, c) => [sgl(cab ? 11.6 : 8.0, 4.1, 11.6, 3.2, vivDoorFill(c)), sgl(L - 11.4, 4.1, 11.6, 3.2, vivDoorFill(c))];
-// The class numerals at the end of each deck: "1" upstairs on a mixed coach.
-// Upstairs, by the end of the deck over each door, "1" on a coach with
-// first class there (its name between the decks, the gold band over the
-// upper deck's windows only), else "2"; "2" by the lower deck.
-const vivClass = (c, L) => {
-  const up = c.lv === "first" ? "first" : "second", xs = [c.cabL ? 16.2 : 14.3, L - 14.45];
-  return up === "first" ? goldBand(12.85, 17.5, L - 17.5) : "";
-};
-const vivOver = (c, L) => vivClass(c, L) + (c.agency === "tper" ? letters(c, L / 2, 8.6, 1.0, "Tper", TP.red, { weight: 800 }) : letters(c, L / 2 + 2, 8.6, 0.9, "Vivalto", "#4a5057", { weight: 700, italic: true }) + trenitalia(c, L / 2 + 13, 8.6, 0.4, "#5b6168"));
+// A Vivalto carries no class marking outside, its first-class deck included.
+const vivOver = (c, L) => (c.agency === "tper" ? letters(c, L / 2, 8.6, 1.0, "Tper", TP.red, { weight: 800 }) : letters(c, L / 2 + 2, 8.6, 0.9, "Vivalto", "#4a5057", { weight: 700, italic: true }) + trenitalia(c, L / 2 + 13, 8.6, 0.4, "#5b6168"));
 const vivExtra = (c, L) => hvac(4, 14.1, 8.5) + hvac(L - 12.5, 14.1, 8.5) + roofCover(20, 14.1, L - 40, 0.3, "#b2b8bf", 4) + boxes(19, L - 19, 1.6, 3, 0.5) +
   rect(L / 2 - 3, 0.9, 6, 0.6, C.steelDark, 0.4, 'rx="0.3"') + buffers(L, 1) + (c.cabL ? "" : buffers(0, -1));
 const vivalto = (c) => sec(c, { ...VIV, drop: { a: 16.5, b: c.L - 16.5, y: 1.6 }, rows: vivRows(c.L, false), doors: vivDoors(c.L, false, c),
@@ -636,8 +614,7 @@ const minCab = (diesel) => (c) => sec(c, { roof: 13.0, sill: 3.4, nose: NOSE_MIN
   // The "501" end car's first-class section behind the cab (its four
   // windows): the gold band over it, "1" and its name past its last window;
   // "2" by the door.
-  paint: (cc, g) => minPaint(true)(cc, g) + letters(cc, 42, 4.55, 0.85, "Minuetto", "#ffffff", { weight: 700, italic: true }) +
-    (cc.lv === "first" ? goldBand(10.3, 10.6, 31.6) : ""),
+  paint: (cc, g) => minPaint(true)(cc, g) + letters(cc, 42, 4.55, 0.85, "Minuetto", "#ffffff", { weight: 700, italic: true }),
   cab: () => glass([[1.8, 8.9], [4.3, 11.7], [9.6, 11.7], [9.6, 8.6], [5.4, 8.6]], [[2.3, 9.2], [3.6, 10.6], [4.4, 10.6], [3.2, 9.2]], [2.6, 9.1, 3.8, 11.0]) +
     lamp(0.85, 5.3, 0.8, 0.4) + lamp(0.8, 4.55, 0.45, 0.28, RED_LAMP) + emuFront(1.6, 3.4, { coupler: 2.8 }) + horns(9.6, 12.95),
   extra: (cc, g) => hvac(12, 13.0, 9) + (diesel ? roofCover(24, 13.0, 8, 0.7, "#8d949c", 2) + slats(24.6, 13.1, 6.8, 0.5, 0.4, "rgba(0,0,0,0.35)") + rect(28, 13.7, 0.5, 0.8, "currentColor") +

@@ -148,11 +148,8 @@ const AIR_YELLOW = "#f5c400";
 // 421 047, 2026): the class numeral, thin and white, small on the body
 // left of each door near its top, about a seventh of the door tall;
 // Trenord's yellow band and aircraft pictograms mark the first-class area
-// (airMark, below). Trainsheet adds its own class band, gold the length of the
-// first-class car over its upper windows, as on Italy's other railroads'
-// cars. Only the airport units have two classes; the other Trenord trains
-// drawn here are one class and carry none of it.
-const CLASS_GOLD = "#c9a227";
+// (airMark, below). Only the airport units have two classes; the other
+// Trenord trains drawn here are one class and carry none of it.
 const mxp = (c) => /^RE5[14]$/.test(String(c.route || "").replace(/[\s_]/g, "").toUpperCase());
 const TN_FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 function classDoors(c, doors, y, first) {
@@ -167,7 +164,7 @@ function airMark(c, L, a, b) {
 function rockMid(c) {
   const L = c.L, a = 13.6, b = L - 13.6, pan = c.index === 1 || (c.count === 5 && c.index === 3);
   return deck(c, { ...ROCK, a, b, trucks: [8.0, L - 8.0], doors: [{ x: a + 0.6, w: 4.4, low: true }, { x: b - 5.0, w: 4.4, low: true }], ends: [3.4, b + 4.4],
-    paint: (cc, g) => rockPaint(false)(cc, g) + (cc.air ? rect(-1, 13.3, g.L + 2, 0.55, CLASS_GOLD) : ""), doorFill: () => TN.door,
+    paint: rockPaint(false), doorFill: () => TN.door,
     extra: (cc, g) => (cc.air || mxp(cc) ? classDoors(cc, [{ x: a + 0.6, w: 4.4 }, { x: b - 5.0, w: 4.4 }], ROCK.y + 0.15, !!cc.air) : "") + (pan ? pantograph(g.L / 2 - 8, ROCK.roof + 0.55, { up: true, facing: -1 }) + cover(g.L / 2 - 11, ROCK.roof, 7, 0.55) + hvLine(g.L / 2 - 5, g.L / 2 + 4, ROCK.roof + 0.55) + cover(g.L / 2 + 4, ROCK.roof, 12)
       : hvac(15, ROCK.roof, 12) + cover(g.L / 2 + 2, ROCK.roof, 14)) + boxes(a + 6, b - 6, ROCK.y + 0.05, 2, 0.4) +
       (cc.air ? airMark(cc, g.L, a, b) + letters(cc, g.L / 2, 7.6 + 1.3, 0.7, "Malpensa Express", TN.blue, { weight: 600, style: "italic" })
