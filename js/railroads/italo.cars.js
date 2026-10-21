@@ -21,7 +21,7 @@ const SANS = "Helvetica Neue, Helvetica, Arial, sans-serif";
 // red all over, the roof too; a charcoal skirt; a fine gold line along the
 // side under the windows, an Italian flag on it by each door and ".italo"
 // small in gold where it breaks mid-car; the AGV's windows set in a gray
-// band, the EVO's in a black one. On the cab end ".italo" and its hare big
+// band, the EVO's in a black one. On the cab end ".italo" big
 // in gold; over the windows each car's class (ambiente) in gold, "Club",
 // "Prima Business" or "Smart", in Italo's tall, narrow lettering; on the
 // AGV, beside each door, the car's number in gold in the window band with
@@ -64,10 +64,6 @@ const carPlate = (c, x, k, cls) => letters(c, x + 0.45, 7.55, 1.9, String(k), IT
 // The door's window framed in gold.
 const doorFrame = (x, w, y0, h) => rect(x + w * 0.22 - 0.08, y0 + h * 0.55 - 0.08, w * 0.56 + 0.16, h * 0.3 + 0.16, "none", 0, `stroke="${IT.gold}" stroke-width="0.9" vector-effect="non-scaling-stroke"`);
 
-// A leaping hare in gold, h ft long, nose forward (toward the cab, left),
-// reading the same way on a mirrored car: Italo's emblem is a hare; this
-// silhouette is drawn here, not traced.
-const hare = (c, x, y, h) => `<g transform="translate(${n(x)} ${n(y)}) scale(${n(c.mirrored ? -h : h)} ${n(h)})"><path d="M-0.5 0.05Q-0.35 0.32 -0.08 0.3Q0.12 0.28 0.28 0.14Q0.36 0.34 0.5 0.42Q0.42 0.2 0.36 0.06Q0.42 -0.04 0.5 -0.12L0.4 -0.12Q0.3 -0.04 0.22 -0.02Q0.05 -0.22 -0.18 -0.2L-0.36 -0.32L-0.3 -0.16Q-0.42 -0.08 -0.5 0.05Z" fill="${IT.letter}"/></g>`;
 
 // ---------- AGV 575 ----------
 // Alstom's AGV (Automotrice à Grande Vitesse): eleven articulated cars on
@@ -75,7 +71,7 @@ const hare = (c, x, y, h) => `<g transform="translate(${n(x)} ${n(y)}) scale(${n
 // floor, not in power cars. The end cars are about 22 m with a long, low nose;
 // the intermediates 17.3 m, sharing a Jakobs truck at each joint. 3.45 m
 // tall over the rail; 920 mm wheels; one plug door a side near one end of
-// each car; small square windows.
+// each car; big windows, five or six a car.
 const AGV = { roof: 11.45, sill: 3.3 };
 const NOSE_AGV = [[0.9, 2.5], [0.55, 3.6], ["q", 0.6, 5.2, 2.6, 6.6], [10.4, 9.9], ["q", 15.0, 11.45, 19.5, 11.45]];
 function agvPaint(cab) {
@@ -88,10 +84,15 @@ function agvPaint(cab) {
     return s;
   };
 }
-// The windows: AGV's are small and square, one per seat bay, in their gray band.
-const agvRows = (a, b) => [{ xs: seq(a, 3.55, Math.floor((b - a) / 3.55) + 1), y: 5.95, w: 2.75, h: 2.45, r: 0.35 }];
+// The windows: big panes with well-rounded corners, five on an end car and
+// six on an intermediate one (as photographed), spread evenly between a
+// and b in their gray band.
+function agvRows(a, b, w = 5.0, pitch = 7.2) {
+  const k = Math.floor((b - a - w) / pitch) + 1, x0 = a + (b - a - ((k - 1) * pitch + w)) / 2;
+  return [{ xs: seq(x0, pitch, k), y: 5.6, w, h: 2.9, r: 0.65 }];
+}
 // The gray band the windows are set in.
-const panes = (x0, x1) => rect(x0, 5.6, x1 - x0, 3.05, IT.panes, 0, 'rx="0.5"');
+const panes = (x0, x1) => rect(x0, 5.35, x1 - x0, 3.35, IT.panes, 0, 'rx="0.5"');
 // Roof: a low fairing along the whole car, the pantograph on its well, the
 // converters' covers; the transformer and traction gear under the floor
 // between the trucks, behind a skirt.
@@ -100,13 +101,13 @@ const agvSkirt = (a, b) => rect(a, 1.55, b - a, 1.8, IT.skirt, 0.4, 'rx="0.2"') 
 function agvCab(c) {
   const L = c.L;
   return unit(c, { roof: AGV.roof, sill: AGV.sill, nose: NOSE_AGV, rake: [[8.6, 8.9], [14.8, 11.0]], depth: 3.4, cabLen: 19, lampY: 4.0, low: 3.6,
-    rows: agvRows(24.4, L - 11.0), doors: [plugDoor(L - 6.2, 3.3, 9.6)], trucks: [7.5, "end"], wheel: 36, diaphragm: [3.6, 10.4],
+    rows: agvRows(24.4, L - 9.2), doors: [plugDoor(L - 6.2, 3.3, 9.6)], trucks: [7.5, "end"], wheel: 36, diaphragm: [3.6, 10.4],
     paint: (cc, g) => agvPaint(true)(cc, g) + panes(23.6, g.L - 6.6) + flag(g.L - 8.2, 4.63) + lineName(cc, 40, 4.63), surround: IT.band,
     extra: (cc, g) => agvRoof(g.L, 19.5, g.L - 0.8) + hvac(26, AGV.roof + 0.25, 12, 0.55) + agvSkirt(11.6, g.L - 5.6) + boxes(13, g.L - 7, 3.3, 3, 1.4) +
       // A slanted cab side window and the cab door's outline.
       path(poly([[16.2, 7.4], [19.6, 7.4], [19.6, 9.4], [17.0, 9.4]]), "#1d2026", 0.4) + rect(20.3, 3.6, 2.2, 6.1, "rgba(0,0,0,0.08)", 0.5) +
-      // The cab's ".italo" and hare, big in gold, behind the windshield.
-      italoName(cc, 16.0, 6.6, 2.6) + hare(cc, 10.4, 6.2, 1.8) + letters(cc, 25, 4.0, 0.36, "AGV 575", IT.white, { weight: 600, spacing: "0.06em" }) +
+      // The cab's ".italo", big in gold, behind the windshield.
+      italoName(cc, 14.0, 6.6, 2.6) + letters(cc, 25, 4.0, 0.36, "AGV 575", IT.white, { weight: 600, spacing: "0.06em" }) +
       carPlate(cc, g.L - 7.75, cc.index + 1, cc.cls) + doorFrame(g.L - 6.2, 2.6, 3.3, 6.3) + ambiente(cc, cc.cls, 40, 10.45, 2.0) });
 }
 function agvMid(c) {
@@ -114,7 +115,7 @@ function agvMid(c) {
   // The pantographs ride on cars 3 and 9.
   const pan = k === 2 || k === 8;
   return unit(c, { roof: AGV.roof, sill: AGV.sill,
-    rows: agvRows(5.0, L - 9.4), doors: [plugDoor(L - 5.6, 3.3, 9.6)], trucks: ["start", "end"], wheel: 36, diaphragm: [3.6, 10.4],
+    rows: agvRows(5.0, L - 8.8), doors: [plugDoor(L - 5.6, 3.3, 9.6)], trucks: ["start", "end"], wheel: 36, diaphragm: [3.6, 10.4],
     paint: (cc, g) => agvPaint(false)(cc, g) + panes(4.3, g.L - 6.0) + flag(g.L - 7.6, 4.63) + lineName(cc, g.L * 0.45, 4.63),
     extra: (cc, g) => agvRoof(g.L, 0.6, g.L - 0.6) + (pan ? pantograph(g.L * 0.42, AGV.roof + 0.25, { up: true, facing: -1 }) + hvLine(g.L * 0.42 + 3.0, g.L * 0.42 + 9.5, AGV.roof + 0.25)
       : hvac(8, AGV.roof + 0.25, 11, 0.55) + hvac(g.L - 21, AGV.roof + 0.25, 9, 0.55)) +
@@ -139,7 +140,8 @@ function evoPaint(cab) {
     return s;
   };
 }
-const evoRows = (a, b) => [{ xs: seq(a, 5.1, Math.floor((b - a - 4.3) / 5.1) + 1), y: 7.0, w: 4.3, h: 2.75, r: 0.4 }];
+// The EVO's windows nearly fill the black band's height, closely spaced.
+const evoRows = (a, b) => [{ xs: seq(a, 5.4, Math.floor((b - a - 4.2) / 5.4) + 1), y: 6.8, w: 4.2, h: 3.1, r: 0.55 }];
 const evoRoof = (L, a, b) => rect(a, EVO.roof - 0.05, b - a, 0.38, "#b9bec4", 0.4, 'rx="0.19"');
 function evoCab(c) {
   const L = c.L;
@@ -148,8 +150,8 @@ function evoCab(c) {
     diaphragm: [4.0, 11.6], paint: evoPaint(true), surround: IT.band,
     extra: (cc, g) => evoRoof(g.L, 15.6, g.L - 1.2) + hvac(29, EVO.roof + 0.3, 13, 0.6) + hvac(g.L - 24, EVO.roof + 0.3, 9, 0.6) +
       boxes(17, g.L - 15, 3.75, 3, 1.3) + flag(25.6, 5.63) + flag(g.L - 6.0, 5.63) + lineName(cc, 55, 5.63) +
-      // The cab's ".italo" and hare, big in gold, under the window band.
-      italoName(cc, 18.0, 5.15, 2.6) + hare(cc, 12.2, 4.95, 1.8) +
+      // The cab's ".italo", big in gold, under the window band.
+      italoName(cc, 16.0, 5.15, 2.6) +
       ambiente(cc, cc.cls, 45, 12.05, 1.9) + (cc.cls === "club" ? ambiente(cc, "prima", g.L - 24, 12.05, 1.9) : "") });
 }
 function evoMid(c) {
