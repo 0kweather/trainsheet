@@ -14,13 +14,13 @@ BBOX = [-9.5, 36.95, -6.75, 42.1]
 COMMON = {"country": "PT", "tz": "Europe/Lisbon", "credit": CREDIT, "license": None, "clip": True, "cars": True}
 
 AGENCIES = {
-    "cplc": {"name": "CP Longo Curso", "short": "CP Longo Curso", "region": "Portugal", "color": "#00573f",
+    "cplc": {"name": "CP Longo Curso", "short": "CP Longo Curso", "region": "Portugal", "color": "#0b7236",
              "kind": "intercity", "bbox": BBOX, **COMMON},
-    "cpreg": {"name": "CP Regional", "short": "CP Regional", "region": "Portugal", "color": "#5a8f29",
+    "cpreg": {"name": "CP Regional", "short": "CP Regional", "region": "Portugal", "color": "#ed7d23",
               "kind": "commuter", "after": "cplc", "bbox": BBOX, **COMMON},
-    "cplisboa": {"name": "CP Urbanos de Lisboa", "short": "CP Lisboa", "region": "Lisbon", "color": "#00573f",
+    "cplisboa": {"name": "CP Urbanos de Lisboa", "short": "CP Lisboa", "region": "Lisbon", "color": "#1d8643",
                  "kind": "commuter", "after": "cpreg", "bbox": [-9.45, 38.45, -8.75, 39.1], **COMMON},
-    "cpporto": {"name": "CP Urbanos do Porto", "short": "CP Porto", "region": "Porto", "color": "#00573f",
+    "cpporto": {"name": "CP Urbanos do Porto", "short": "CP Porto", "region": "Porto", "color": "#299ad6",
                 "kind": "commuter", "after": "cplisboa", "bbox": [-8.75, 40.6, -8.0, 41.6], **COMMON},
 }
 SOURCES = [{"id": "cp", "agencies": list(AGENCIES), "format": "timetable", "interval": 60, "scope": "view"}]
@@ -108,11 +108,14 @@ def agency_of(r):
     return category(r)[0]
 
 
-COLORS = {"Alfa Pendular": "#00573f", "Intercidades": "#00573f", "InterRegional": "#5a8f29", "Regional": "#5a8f29",
-          "Urbanos de Coimbra": "#5a8f29", "Linha de Sintra": "#00573f", "Linha de Cascais": "#00573f",
-          "Linha da Azambuja": "#00573f", "Linha do Sado": "#00573f", "Linha de Braga": "#00573f",
-          "Linha de Guimarães": "#00573f", "Linha de Aveiro": "#00573f", "Linha do Marco": "#00573f",
-          "Linha de Leixões": "#00573f"}
+# CP's own colours, from its timetables and network maps: by category, and
+# for Porto's urbanos by line; Lisbon's four lines share one green on CP's
+# map, and Coimbra's urbanos take the urbanos' blue.
+COLORS = {"Alfa Pendular": "#739b2d", "Intercidades": "#0b7236", "InterRegional": "#2672b8", "Regional": "#ed7d23",
+          "Urbanos de Coimbra": "#299ad6", "Linha de Sintra": "#1d8643", "Linha de Cascais": "#1d8643",
+          "Linha da Azambuja": "#1d8643", "Linha do Sado": "#1d8643", "Linha de Braga": "#5bb031",
+          "Linha de Guimarães": "#e30613", "Linha de Aveiro": "#fbba00", "Linha do Marco": "#009fe3",
+          "Linha de Leixões": "#9c84b0"}
 LINES = {"cplc": {"Alfa Pendular", "Intercidades"}, "cpreg": {"InterRegional", "Regional", "Urbanos de Coimbra"},
          "cplisboa": LISBOA, "cpporto": PORTO}
 GTFS = {agency: (GTFS_URL, lambda r, a=agency: agency_of(r) == a, line,
