@@ -444,9 +444,16 @@ def chains(elements):
             nxt = [j for j in ends[chain[-1]] if not used[j]]
             if len(ends[chain[-1]]) != 2 or not nxt:
                 return chain
-            used[nxt[0]] = True
             w = ways[nxt[0]]
-            chain += (w if w[0] == chain[-1] else w[::-1])[1:]
+            w = w if w[0] == chain[-1] else w[::-1]
+            # Not back along itself: a route from A to B and its return from
+            # B to A share both ends, and joined they'd make one line out and
+            # back, which the passes after cut into two dead-end spurs.
+            seen = set(chain)
+            if sum(1 for q in w[1:] if q in seen) > len(w[1:]) / 2:
+                return chain
+            used[nxt[0]] = True
+            chain += w[1:]
 
     out = []
     for i, w in enumerate(ways):
@@ -454,6 +461,43 @@ def chains(elements):
             used[i] = True
             out.append(extend(extend(list(w))[::-1]))
     return out
+
+
+def off_line(p, line, tol):
+    """Whether p is farther than tol meters from every segment of line (its
+    last 20 segments: a retrace runs back along what came just before)."""
+    for a, b in zip(line[-21:], line[-20:]):
+        kx = math.cos(math.radians(p[1]))
+        ax, ay, px, py = (b[0] - a[0]) * kx, b[1] - a[1], (p[0] - a[0]) * kx, p[1] - a[1]
+        t = max(0.0, min(1.0, (px * ax + py * ay) / (ax * ax + ay * ay or 1)))
+        if meters(p, (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)) <= tol:
+            return False
+    return True
+
+
+def unspike(line, tol=3.0):
+    """A line that turns back along itself (a route out to a terminus and
+    back, joined end to end with the next one) as pieces that don't: the
+    retraced stretch is dropped, and where the line leaves it again a new
+    piece starts on it. A train snapping to the retraced copy would otherwise
+    run out to its end and back."""
+    pieces, cur = [], []
+    retracing = False
+    for p in line:
+        if retracing:
+            if not off_line(p, cur, tol):
+                last = p
+                continue
+            pieces.append(cur)
+            cur, retracing = [last, p], False
+            continue
+        if len(cur) >= 2 and not off_line(p, cur[:-1], tol):
+            # p lies back along the line already drawn: a turnaround.
+            retracing, last = True, p
+            continue
+        cur.append(p)
+    pieces.append(cur)
+    return [q for q in pieces if len(q) >= 2]
 
 
 def near_station(p, pts):
@@ -464,7 +508,7 @@ def add_uncovered(segs, net, elements, min_run=MIN_RUN_M, covered_m=COVERED_M):
     """Add the stretches of these OSM ways that existing track doesn't cover."""
     cov = Coverage(segs)
     cuts, added_m = [], 0
-    for line in chains(elements):
+    for line in (piece for chain in chains(elements) for piece in unspike(chain)):
         line = densify(line)
         near = [cov.nearest(p, covered_m) for p in line]
         i = 0
@@ -729,12 +773,17 @@ def heal_dead_ends(segs):
                 # A bit farther is fine when it's the same railroad's track
                 # (the nearest such, even if another railroad's is closer).
                 hit = cov.nearest(tuple(c[end]), HEAL_SAME_M, exclude=k, keep=lambda j: bool(set(segs[j][0]) & set(nets)))
-            if hit and hit[0] > 0.5:
-                _d, k2, i, t, q = hit
-                c[end] = list(q)
-                degree[key(q)] += 2
-                cuts.append((k2, i, t, q))
-                healed += 1
+            if not hit:
+                continue
+            _d, k2, i, t, q = hit
+            # An end already on the other line still needs a node there to
+            # join it (one at the other line's own end is joined already).
+            if _d <= 0.5 and key(q) in (key(segs[k2][1][0]), key(segs[k2][1][-1])):
+                continue
+            c[end] = list(q)
+            degree[key(q)] += 2
+            cuts.append((k2, i, t, q))
+            healed += 1
     split_segments(segs, cuts)
     print(f"joined {healed} dead ends to nearby track")
 
@@ -1317,6 +1366,9 @@ def candidate_track(tiles):
     return list(ways.values())
 
 
+WALK_FREE_M = 120  # a stop's platform track usually lies within this of its point
+
+
 class RailGraph:
     """Track as a graph of OSM nodes, for routing between stops."""
     CELL = 0.01
@@ -1356,18 +1408,22 @@ class RailGraph:
         node near each stop is a way on or off: the nearest is often a
         platform track tied to the main lines only by sidings, which aren't
         in the graph. Starting farther from the stop costs twice the walk, so
-        the track at the station itself still wins where it's connected."""
+        the track at the station itself still wins where it's connected; past
+        WALK_FREE_M much more, so a route doesn't stop short of a station
+        whose line curls round to it (Águeda's, over its viaduct) and leave
+        the last stretch undrawn."""
         import heapq
+        walk = lambda d: 2 * d if d <= WALK_FREE_M else 2 * WALK_FREE_M + 10 * (d - WALK_FREE_M)
         starts, ends = self.near(a), self.near(b)
         if not starts or not ends:
             return None
-        goal = {n: d for d, n in ends}
+        goal = {n: walk(d) for d, n in ends}
         limit = ROUTE_DETOUR * meters(a, b) + 5000
         best, prev, heap = {}, {}, []
         for d, n in starts:
-            best[n] = 2 * d
-            heapq.heappush(heap, (2 * d + meters(n, b), 2 * d, n))
-        END = (math.inf, math.inf)  # reached from any node near b, at twice its distance from b (a pair, so heap ties compare)
+            best[n] = walk(d)
+            heapq.heappush(heap, (walk(d) + meters(n, b), walk(d), n))
+        END = (math.inf, math.inf)  # reached from any node near b, at the cost of walking from it to b (a pair, so heap ties compare)
         while heap:
             _f, g, n = heapq.heappop(heap)
             if n is END:
@@ -1379,8 +1435,8 @@ class RailGraph:
                 return path[::-1]
             if g > best.get(n, math.inf):
                 continue
-            if n in goal and g + 2 * goal[n] < best.get(END, math.inf):
-                best[END] = g + 2 * goal[n]
+            if n in goal and g + goal[n] < best.get(END, math.inf):
+                best[END] = g + goal[n]
                 prev[END] = n
                 heapq.heappush(heap, (best[END], best[END], END))
             for m, d in self.adj[n]:

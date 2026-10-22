@@ -125,6 +125,15 @@ GTFS = {
 #   "headers":      sent with the feed's download ({"Accept-Encoding":
 #                   "gzip"}, which Finland's Digitraffic requires; a gzipped
 #                   answer is unpacked)
+#   "rename":       a function putting the feed's stop names and headsigns
+#                   right (CP's, filed without their accents: "Porto
+#                   Campanha" is Porto Campanhã), applied as rows() reads them
+#   "convert":      a function turning the download's bytes into a GTFS zip's
+#                   (a timetable published in a format of its own), run once a
+#                   build however many railroads share the url
+#   "make":         a function returning a GTFS zip's bytes, for a railroad
+#                   with no timetable file to download: it gathers the
+#                   timetable itself (the url is then only its name)
 #   "netex":        the download is NeTEx (Italy's National Access Point's),
 #                   not GTFS: True, or scripts/netex.py's hooks ({"journey",
 #                   "stop_name"}); get_zip converts it to GTFS
@@ -143,6 +152,10 @@ for _agency in [a for a, f in GTFS.items() if f is None]:  # a plug-in taken out
 TRANSLATE = {GTFS[a][0]: x["translations"] for a, x in EXTRAS.items() if x.get("translations")}
 HEADERS = {GTFS[a][0]: x["headers"] for a, x in EXTRAS.items() if x.get("headers")}
 NETEX = {GTFS[a][0]: x["netex"] for a, x in EXTRAS.items() if x.get("netex")}
+RENAME = {GTFS[a][0]: x["rename"] for a, x in EXTRAS.items() if x.get("rename")}
+CONVERT = {GTFS[a][0]: x["convert"] for a, x in EXTRAS.items() if x.get("convert")}
+MAKE = {GTFS[a][0]: x["make"] for a, x in EXTRAS.items() if x.get("make")}
+MADE = {}  # url -> GTFS zip bytes, from CONVERT or MAKE, once a build
 # Each NeTEx download converted once a run, though several railroads share it
 # (Trenitalia's four): {url: GTFS zip bytes}.
 NETEX_GTFS = {}
@@ -308,6 +321,13 @@ def get_zip(url, timeout=180, attempts=4, page_link=True, cut=True):
         return CUTS[url]
     for attempt in range(attempts):
         try:
+            if url in CONVERT or url in MAKE:  # a timetable of its own form, or gathered, as GTFS
+                if url not in MADE:
+                    MADE[url] = MAKE[url]() if url in MAKE else CONVERT[url](get_raw(url, timeout))
+                zf = zipfile.ZipFile(io.BytesIO(MADE[url]))
+                if url in RENAME:
+                    zf.rename = RENAME[url]
+                return zf
             if url in NETEX:  # a NeTEx timetable, as GTFS (scripts/netex.py)
                 if url not in NETEX_GTFS:
                     NETEX_GTFS[url] = netex.to_gtfs(get_raw(url, timeout), NETEX[url])
@@ -320,6 +340,8 @@ def get_zip(url, timeout=180, attempts=4, page_link=True, cut=True):
                 zf = zipfile.ZipFile(io.BytesIO(data))
             if url in TRANSLATE:  # rows() reads its names in that language
                 zf.names_in = translations(zf, TRANSLATE[url])
+            if url in RENAME:
+                zf.rename = RENAME[url]
             return zf
         except Exception as err:
             OUTER.clear()  # a download that broke isn't kept
@@ -359,6 +381,8 @@ def cut_zip(url, zf):
     cut = zipfile.ZipFile(out)
     if hasattr(zf, "names_in"):
         cut.names_in = zf.names_in
+    if hasattr(zf, "rename"):
+        cut.rename = zf.rename
     print(f"  {url}: cut to {len(routes)} routes, {len(trips)} trips")
     return cut
 
@@ -393,13 +417,15 @@ def rows(zf, name, optional=False, spaces=False, strip=True):
         if not strip:
             yield from reader
             return
-        names_in = getattr(zf, "names_in", None)
-        named = NAMED.get(name, ()) if names_in else ()
+        names_in, rename = getattr(zf, "names_in", None), getattr(zf, "rename", None)
+        named = NAMED.get(name, ()) if names_in or rename else ()
         for r in reader:
             r = {k.strip(): (v or "").strip() for k, v in r.items() if k}
             for table, field, key in named:
-                if r.get(field):
+                if r.get(field) and names_in:
                     r[field] = names_in.get((table, field, r.get(key))) or names_in.get((table, field, "=" + r[field])) or r[field]
+                if r.get(field) and rename and table != "routes":
+                    r[field] = rename(r[field])
             yield r
 
 

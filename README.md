@@ -75,6 +75,7 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | New Zealand | AT Metro, Te Huia | Auckland, Hamilton–Auckland | Auckland Transport GTFS-realtime (trains only, with their units); placed from AT's timetable until the key is set | relay + free key |
 | New Zealand | Metlink (Kāpiti, Hutt Valley, Melling, Johnsonville, Wairarapa) | Wellington | Metlink GTFS-realtime (rail); placed from Metlink's timetable until the key is set | relay + free key |
 | Norway | Vy, Go-Ahead Norge, Flytoget, SJ Nord | Norway | Entur GTFS-realtime (SJ Nord sends no positions, and Entur's GTFS-realtime has none of its delays yet: placed from its timetable, shown as scheduled) | relay |
+| Portugal | CP – Comboios de Portugal (Alfa Pendular, Intercidades, InterRegional, Regional, Urbanos de Lisboa, Porto and Coimbra), Fertagus | Portugal | Placed from CP's and Fertagus's timetables (GTFS on Portugal's National Access Point) | — |
 | Slovakia | ZSSK, RegioJet, Leo Express | Slovakia | Community GTFS-realtime (jbb.ghsq.de, station reports), plus ŽSR's timetable | relay |
 | Spain | Renfe (AVE, Avlo, Alvia, Avant, Euromed, regional), Renfe Cercanías and Rodalies | Spain | Renfe's open GTFS-realtime | relay |
 | Spain | FGC (Barcelona–Vallès, Llobregat–Anoia) | Catalonia | FGC's Geotren positions on its open-data portal | relay |
@@ -88,6 +89,7 @@ Northstar (Minneapolis) ended rail service; its route is now a bus, so it isn't 
 - Ontario Northland's live feed: its GTFS-realtime carries only motor coaches (no Polar Bear position has been seen), and its stations sit inside the default US view, so a live source would be polled for every US viewer. The Polar Bear stays placed from its timetable.
 - Tshiuetin (Sept-Îles–Schefferville): its only live source is a Samsara fleet viewer whose robots.txt and terms forbid automated access, and its timetable is posted only as monthly images.
 - Italo's live data: its tracker's terms (italotreno.com, Note legali §7) allow only personal, non-commercial use, so Italo is placed from its timetable alone. Italy publishes no live train positions openly; ViaggiaTreno's own terms forbid reusing its data, and a Rome court (Trenitalia v. GoBright, 4 September 2019) allowed it only "in misura non sostanziale", so the relay can ask it for one opened train at a time and never polls it (relay/feeds/viaggiatreno.js); that's switched off for now, because ViaggiaTreno's CDN refuses every request from Cloudflare's network.
+- CP's and Infraestruturas de Portugal's live data (Portugal): CP's live times come from an API keyed for its own site, and IP's train-running pages are closed to automated access by its robots.txt and its terms (content only for personal information, reuse only with IP's written consent), so CP and Fertagus are placed from their timetables.
 - MÁV and GYSEV (Hungary): the live positions on mavplusz.hu work without a key, but MÁV's legal notice forbids storing or republishing the site's content, and its own GTFS needs registration.
 
 ## Using it
@@ -206,6 +208,7 @@ Data outside the US and Canada, credited on the map with each railroad:
 - ŽSR timetable (data.slovensko.sk), CC BY 1.0; live positions from jbb.ghsq.de (Slovakia).
 - Buenos Aires Data timetable, CC BY 2.5 AR; live data from SOFSE / Trenes Argentinos (Argentina).
 - Trenitalia and Italo timetables from Italy's National Access Point (cciss.it; published with no licence stated); live details of opened trains from Trenitalia's ViaggiaTreno; Regione Lombardia (Trenord), CC BY 4.0; STA – Südtiroler Transportstrukturen via the Open Data Hub, CC0; EAV, Italian Open Data Licence 2.0; ARST via Sardegna Mobilità, CC BY 4.0; Trentino Trasporti, CC BY 4.0 (Italy).
+- CP – Comboios de Portugal timetable (publico.cp.pt, listed on nap-portugal.imt-ip.pt with no licence stated); Fertagus timetable via the National Access Point, free of charge (Portugal).
 - Elron and the Regionaal- ja Põllumajandusministeerium, timetable CC0 (Estonia).
 - Vivi timetable and Pieturas live data (gsvalbe.id.lv), credited as Pieturas asks (Latvia).
 - Oběhy (SŽ, CIS JŘ) (Czechia); railway.gov.gr (Greece); Ministry of Transport and Hasadna Open Bus (Israel): no licence published. Railroad logos on the train drawings (`img/logos/`) are the railroads' trademarks, from the public-domain versions on Wikimedia Commons.
