@@ -417,9 +417,13 @@ def split_segments(segs, cuts):
         for i, t, q in cs:
             cur += c[last_i + 1:i + 1]
             last_i = i
-            if tuple(cur[-1]) == q:
+            # A cut on one of the line's own points (a branch whose end
+            # already sits on it) still breaks the line there, so the two
+            # meet at a node the routing graph joins.
+            if tuple(cur[-1]) != tuple(q):
+                cur.append(list(q))
+            if len(cur) < 2:
                 continue
-            cur.append(list(q))
             pieces.append(cur)
             cur = [list(q)]
         cur += c[last_i + 1:]
@@ -1092,6 +1096,16 @@ def oriented(chain):
     return chain[::-1] if flip else chain
 
 
+# A piece of track tagged with the railroads whose routes run along it keeps
+# three (the map draws three colors); where more run along it (Romania's
+# București-Ploiești: CFR's two, Astra, Softrans, Ferotrafic, Transferoviar),
+# the others get a hidden twin of it (routing only, not drawn), or the page
+# would route their trains over track of their own the long way round
+# (Transferoviar's București-Ploiești via Târgoviște). route_timetables
+# fills it, a region at a time; finish adds the twins.
+TWINS = []
+
+
 def finish(segments):
     """Heal, bridge, collapse and join the track, then chain it into features."""
     heal_dead_ends(segments)
@@ -1101,14 +1115,27 @@ def finish(segments):
     join_splits(segments, hidden)
     join_at_stations(segments, hidden)
 
-    by_nets = defaultdict(list)
-    for i, (nets, line) in enumerate(segments):
-        by_nets[(nets, i in hidden)].append(line)
-
     degree = defaultdict(int)
     for _nets, line in segments:
         degree[key(line[0])] += 1
         degree[key(line[-1])] += 1
+    # A line and its twin chain through the same nodes; where a twin ends
+    # mid-line, the line breaks there too, so the routing graph joins them.
+    twin_degree = defaultdict(int)
+    for _nets, line in TWINS:
+        twin_degree[key(line[0])] += 1
+        twin_degree[key(line[-1])] += 1
+    for node, n in twin_degree.items():
+        if n != 2:
+            degree[node] = max(degree[node], 3)
+    for twin in TWINS:
+        segments.append(twin)
+        hidden.add(len(segments) - 1)
+    TWINS.clear()
+
+    by_nets = defaultdict(list)
+    for i, (nets, line) in enumerate(segments):
+        by_nets[(nets, i in hidden)].append(line)
 
     features = []
     for (nets, is_hidden), lines in by_nets.items():
@@ -1496,16 +1523,21 @@ def route_timetables(segments, mods):
     # Every piece of track: the railroads whose routes run along it.
     guides = {a: Coverage([((a,), densify(p, 50)) for p in ps]) for a, ps in paths.items() if ps}
     retagged = 0
+    TWINS.clear()
     for k, (nets, line) in enumerate(segments):
         pts = densify(line, 100)
         users = [a for a, g in guides.items() if sum(1 for q in pts if g.nearest(q, ROUTE_ALONG_M)) >= 0.7 * len(pts)]
         if users:
-            new = tuple(sorted(users, key=rank)[:3])
+            ranked = sorted(users, key=rank)
+            new = tuple(ranked[:3])
             if new != nets:
                 retagged += 1
             segments[k] = (new, line)
+            for i in range(3, len(ranked), 3):  # the rest: hidden twins (finish)
+                TWINS.append((tuple(ranked[i:i + 3]), line))
     shared = sum(1 for n, _ in segments if len(n) > 1)
-    print(f"  {retagged} pieces retagged, {shared} shared by more than one railroad")
+    print(f"  {retagged} pieces retagged, {shared} shared by more than one railroad, "
+          f"{len(TWINS)} by more than three (hidden twins carry the others)")
 
 
 def build_regions(only=None):
