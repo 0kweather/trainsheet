@@ -181,7 +181,8 @@ export async function fetchFeed(env, name, ctx, query) {
   asked.push(now);
   const q = new URLSearchParams({ evu, operationDate: query.date, trainNumber: query.train });
   const res = await fetch(`${FORMATION}?${q}`, { headers: { Authorization: `Bearer ${env.CH_FORMATION_KEY}`, "User-Agent": UA, Accept: "application/json" } });
-  if (res.status === 404) return json({ found: false }); // no real-time data for it
+  // 404: no formation for it; 400: no such train for this railway that day.
+  if (res.status === 404 || res.status === 400) return json({ found: false });
   if (!res.ok) return res;
   return json(formation(await res.json(), query.train, query.date, evu));
 }

@@ -340,6 +340,7 @@ function addCars(m) {
   for (const [key, model] of Object.entries(m.MODELS || {})) if (!MODELS[key]) MODELS[key] = model;
   for (const [agency, ranges] of Object.entries(m.FLEETS || {})) if (PLUGINS[agency] && !FLEETS[agency]) FLEETS[agency] = ranges;
   for (const [agency, fn] of Object.entries(m.TYPICAL || {})) if (PLUGINS[agency] && !TYPICAL[agency]) TYPICAL[agency] = fn;
+  for (const [agency, fn] of Object.entries(m.FORMATION || {})) if (PLUGINS[agency] && !FORMATION[agency]) FORMATION[agency] = fn;
   for (const [id, facts] of Object.entries(m.FACTS || {})) FACTS[id] ??= facts;
   addLogos(m.LOGOS);
 }
@@ -347,6 +348,19 @@ function addCars(m) {
 export const pluginFacts = (id) => FACTS[id] || null;
 
 const LOCOMOTIVE = new Set(["diesel", "electric"]);
+// A railroad whose feed gives each car's model and class as well as its
+// number (Switzerland's Train Formation Service: "WRB6(502)", an ADLER's
+// "Ath150", often with no number at all): its car file's FORMATION[agency]
+// names each car's drawing, (car, i, cars) => TYPES key, car being
+// { number, cls, model, order }.
+const FORMATION = {};
+function formationKey(t, i) {
+  const f = FORMATION[t.agency];
+  if (!f || !t.cars?.models) return null;
+  const cars = t.cars.numbers.map((number, j) => ({ number: number || null, cls: t.cars.classes?.[j] ?? null, model: t.cars.models[j] ?? null, order: t.cars.orders?.[j] ?? null }));
+  const key = f(cars[i], i, cars);
+  return key && TYPES[key] ? key : null;
+}
 
 // Light, nearly colorless paint (stainless, silver, white) dims in dark mode
 // by --car-neutral-dim, as it would under softer light; every livery color
@@ -771,7 +785,7 @@ export function consistOf(t) {
   if (file && !carsDone.has(file)) { loadCars(t.agency); return null; }
   // A feed may name each car's model (t.cars.types, TYPES keys); else its
   // number says what it is.
-  const reported = (t.cars?.numbers || []).map((number, i) => ({ number, key: typeOf(t.agency, number) || (TYPES[t.cars.types?.[i]] ? t.cars.types[i] : null) }));
+  const reported = (t.cars?.numbers || []).map((number, i) => ({ number: number || null, key: formationKey(t, i) || typeOf(t.agency, number) || (TYPES[t.cars.types?.[i]] ? t.cars.types[i] : null) }));
   const known = reported.filter((c) => c.key);
   // Every car, straight from the feed.
   if (t.cars?.complete && known.length) {

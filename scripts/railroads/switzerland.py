@@ -674,6 +674,6 @@ def relay_fetch(env, source_id, query=None):
         try:
             out = formation(json.loads(_get(f"{FORMATION}?{q}", env["CH_FORMATION_KEY"])), query["train"], query["date"], evu)
         except urllib.error.HTTPError as err:
-            if err.code != 404:  # 404: no real-time data for it
+            if err.code not in (400, 404):  # 404: no formation for it; 400: no such train for this railway that day
                 raise
     return json.dumps(out, ensure_ascii=False, separators=(",", ":")).encode(), "application/json"
