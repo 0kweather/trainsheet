@@ -81,7 +81,7 @@ COMMON = {"region": "Switzerland", "country": "CH", "tz": TZ, "credit": CREDIT, 
 
 AGENCIES = {
     "sbb": {"name": "SBB", "short": "SBB", "color": "#eb0000", "kind": "intercity", "cars": "sbb", **COMMON},
-    "sbbregio": {"name": "SBB Regional", "short": "SBB Regio", "color": "#eb0000", "kind": "commuter",
+    "sbbregio": {"name": "SBB Regional", "short": "SBB Regio", "color": "#eb0000", "kind": "commuter", "cars": "sbbregio",
                  "after": "sbb", **COMMON},
     "bls": {"name": "BLS", "short": "BLS", "color": "#7ab929", "kind": "commuter", "cars": "chstd", "after": "sbbregio", **COMMON},
     "sob": {"name": "Südostbahn", "short": "SOB", "color": "#a0806a", "kind": "commuter", "cars": "chstd", "after": "bls", **COMMON},
