@@ -1,6 +1,6 @@
 """Trenord: Lombardy's regional railway (the S lines of Milan's suburban
-network, the R and RE lines, Malpensa Express, and the TILO lines it runs
-with SBB into Ticino), from its GTFS on Regione Lombardia's open data portal
+network, the R and RE lines and Malpensa Express; not the TILO lines it
+runs with SBB into Ticino, which Switzerland's plug-in shows), from its GTFS on Regione Lombardia's open data portal
 (CC BY 4.0, no key). Trenord publishes no live positions anyone may reuse
 without a key, so its trains are placed from the timetable (the "timetable"
 source: no relay and no parser file)."""
@@ -30,10 +30,16 @@ def line(r):
 # in for trains (Domodossola-Sesto Calende while the line is closed): left out.
 number = lambda t: (re.search(r"(?:^| )(\d+)$", t.get("trip_short_name") or "") or [None, None])[1]
 
-# Trains only: not the replacement buses (route TN_Bus, type 3).
+# TILO's lines (run with SBB into Ticino): Switzerland's national timetable
+# has them whole, Italian stretches too, with their live delays
+# (scripts/railroads/switzerland.py, SBB's regional trains), so they're shown
+# from there, not twice.
+TILO = {"S10", "S30", "S40", "S50", "RE80"}
+
+# Trains only: not the replacement buses (route TN_Bus, type 3), nor TILO's.
 GTFS = {
-    "trenord": ("https://www.dati.lombardia.it/download/3z4k-mxz9/application%2Fzip", lambda r: r["route_type"] == "2",
-                line, {"number": number}),
+    "trenord": ("https://www.dati.lombardia.it/download/3z4k-mxz9/application%2Fzip",
+                lambda r: r["route_type"] == "2" and line(r) not in TILO, line, {"number": number}),
 }
 
 # Trenord's own routes' track (its lines, including the FerrovieNord ones).

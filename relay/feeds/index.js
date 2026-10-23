@@ -7,6 +7,7 @@ import { fetchFeed as fgc } from "./fgc.js";
 import { fetchFeed as hellenictrain } from "./hellenictrain.js";
 import { fetchFeed as israelrail } from "./israelrail.js";
 import { fetchFeed as sweden } from "./sweden.js";
+import { fetchFeed as switzerland } from "./switzerland.js";
 import { fetchFeed as tfnsw } from "./tfnsw.js";
 import { fetchFeed as trenesba } from "./trenesba.js";
 import { fetchFeed as viaggiatreno } from "./viaggiatreno.js";
@@ -16,6 +17,14 @@ export const FEEDS = {
   aucklandtransport: {"format": "pb", "keys": ["AT_API_KEY"], "ttl": 60, "fetchFeed": aucklandtransport },
   capmetro: {"also": ["https://data.texas.gov/download/rmk2-acnw/application%2Foctet-stream"], "format": "pb", "routes": ["550"], "url": "https://data.texas.gov/download/eiei-9rpf/application%2Foctet-stream"},
   cercanias: {"also": ["https://gtfsrt.renfe.com/trip_updates.pb"], "format": "pb", "ttl": 30, "ua": true, "url": "https://gtfsrt.renfe.com/vehicle_positions.pb"},
+  chfobls: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
+  chfoother: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
+  chforhb: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
+  chfosbb: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
+  chfosob: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
+  chfothurbo: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
+  chfotpf: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
+  chfozb: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
   czechia: {"format": "pb", "ttl": 30, "ua": true, "url": "https://motis.obehy.cz/get-feeds/cz-czptt-gtfs-rt.pb"},
   digitraffic: {"format": "json", "ttl": 15, "ua": true, "fetchFeed": digitraffic },
   elron: {"format": "json", "ttl": 15, "ua": true, "url": "https://elron.ee/map_data.json"},
@@ -30,6 +39,7 @@ export const FEEDS = {
   renfe: {"also": ["https://gtfsrt.renfe.com/trip_updates_LD.pb"], "format": "pb", "ttl": 30, "ua": true, "url": "https://gtfsrt.renfe.com/vehicle_positions_LD.pb"},
   sjnord: {"format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "routes": ["SJN:Line:21", "SJN:Line:22", "SJN:Line:25", "SJN:Line:26", "SJN:Line:71", "SJN:Line:72", "SJN:Line:79", "SJN:Line:F6", "SJN:Line:F7", "SJN:Line:R60", "SJN:Line:R65", "SJN:Line:R70", "SJN:Line:R71", "SJN:Line:R75"], "ttl": 600, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=BNR"},
   sweden: {"format": "json", "keys": ["TRAFIKVERKET_API_KEY"], "ttl": 30, "fetchFeed": sweden },
+  switzerland: {"format": "json", "keys": ["CH_GTFSRT_KEY"], "ttl": 60, "fetchFeed": switzerland },
   tfnsw: {"format": "pb", "keys": ["TFNSW_API_KEY"], "ttl": 20, "fetchFeed": tfnsw },
   translinkbc: {"also": ["https://gtfsapi.translink.ca/v3/gtfsrealtime?apikey={TRANSLINK_API_KEY}"], "format": "pb", "keys": ["TRANSLINK_API_KEY"], "routes": ["6770"], "ttl": 180, "ua": true, "url": "https://gtfsapi.translink.ca/v3/gtfsposition?apikey={TRANSLINK_API_KEY}"},
   translinkseq: {"also": ["https://gtfsrt.api.translink.com.au/api/realtime/SEQ/TripUpdates/Rail"], "format": "pb", "ttl": 15, "ua": true, "url": "https://gtfsrt.api.translink.com.au/api/realtime/SEQ/VehiclePositions/Rail"},

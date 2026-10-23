@@ -100,7 +100,8 @@ def main():
             if not isinstance(ttl, (int, float)) or isinstance(ttl, bool) or ttl <= 0:
                 fail(mid, f"detail source {did}: ttl is seconds, a number > 0")
             details[did] = mid
-            feeds[did] = {"detail": True, "format": "json", "ttl": ttl, "fetchFeed": mid}
+            # "keys": the Worker secrets it needs; it's off until they're set.
+            feeds[did] = {"detail": True, "format": "json", "ttl": ttl, "fetchFeed": mid, **({"keys": d["keys"]} if d.get("keys") else {})}
             imports[mid] = True
         if not getattr(mod, "AGENCIES", None):
             # A relay-only plug-in: detail sources for other plug-ins' railroads.

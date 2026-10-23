@@ -89,12 +89,15 @@ export class RailIndex {
   constructor(geojson) {
     this.lines = [];
     this.grid = new Map();
+    this.files = 0;
+    this.netFiles = new Map(); // network -> the files (by order added) that have its track
     this.add(geojson);
   }
 
   // More track (a region's, js/railregions.js): indexed with the rest, and
   // joined to it in the routing graph wherever their ends meet.
   add(geojson) {
+    const file = this.files++;
     for (const f of geojson.features) {
       const g = f.geometry;
       const parts = g.type === "LineString" ? [g.coordinates] : g.type === "MultiLineString" ? g.coordinates : [];
@@ -106,7 +109,11 @@ export class RailIndex {
         const nets = [p.a, p.b, p.c].filter(Boolean);
         // Hidden pieces (parallel duplicates) carry routes but aren't drawn,
         // so nothing snaps to them.
-        const li = this.lines.push({ coords, cum, nets, hidden: !!p.h }) - 1;
+        const li = this.lines.push({ coords, cum, nets, hidden: !!p.h, file }) - 1;
+        for (const n of nets) {
+          if (!this.netFiles.has(n)) this.netFiles.set(n, new Set());
+          this.netFiles.get(n).add(file);
+        }
         for (let i = 0; i < coords.length - 1; i++) {
           const [x0, y0] = coords[i], [x1, y1] = coords[i + 1];
           for (let gx = Math.floor(Math.min(x0, x1) / CELL); gx <= Math.floor(Math.max(x0, x1) / CELL); gx++) {
@@ -231,9 +238,14 @@ export class RailIndex {
 
   // Closest point on the rail network: { line, along (meters), dist, bearing }.
   // With a network id, that railroad's own track wins if it's nearly as close
-  // (so an LIRR train at Penn Station doesn't land on the NJ Transit track).
+  // (so an LIRR train at Penn Station doesn't land on the NJ Transit track);
+  // else the track of a region file that has its track (where two regions'
+  // files draw the same line, Italy's through Switzerland, a Swiss train
+  // keeps to Switzerland's, whose junctions it routes through, even where its
+  // own railroad's run there is a hidden twin).
   snap(p, maxM = SNAP_M, net = null) {
-    let own = null;
+    let own = null, home = null;
+    const files = net && this.files > 1 ? this.netFiles.get(net) : null;
     const gx = Math.floor(p[0] / CELL), gy = Math.floor(p[1] / CELL);
     let best = null;
     for (let dx = -1; dx <= 1; dx++) {
@@ -254,10 +266,12 @@ export class RailIndex {
           const hit = () => ({ line: li, along: cum[i] + (cum[i + 1] - cum[i]) * t, dist: d, bearing: bearing(a, b) });
           if (!best || d < best.dist) best = hit();
           if (net && this.lines[li].nets.includes(net) && (!own || d < own.dist)) own = hit();
+          if (files?.has(this.lines[li].file) && (!home || d < home.dist)) home = hit();
         }
       }
     }
-    return own && own.dist <= (best?.dist ?? Infinity) + OWN_TRACK_SLACK_M ? own : best;
+    if (own && own.dist <= (best?.dist ?? Infinity) + OWN_TRACK_SLACK_M) return own;
+    return home && home.dist <= (best?.dist ?? Infinity) + OWN_TRACK_SLACK_M ? home : best;
   }
 
   // Point and travel bearing at a distance along a line (clamped to its ends).

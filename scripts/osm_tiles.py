@@ -37,6 +37,7 @@ EXTRACTS = [
     "europe/romania", "europe/moldova", "europe/bulgaria",
     "europe/italy", "europe/switzerland", "europe/slovenia",
     "europe/france/provence-alpes-cote-d-azur", "europe/france/rhone-alpes", "europe/germany/baden-wuerttemberg",
+    "europe/france/alsace", "europe/france/franche-comte", "europe/liechtenstein",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]

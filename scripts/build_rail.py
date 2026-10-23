@@ -1331,12 +1331,15 @@ def timetable_pairs(mods):
             tt = json.loads(path.read_text())
             at = {k: (round(v[2], 5), round(v[1], 5)) for k, v in tt["stops"].items()}
             pairs = set()
-            for runs in tt["trips"].values():
-                for run in runs:
-                    seq = [at[s[0]] for s in run[2] if s[0] in at]
-                    for a, b in zip(seq, seq[1:]):
-                        if a != b and meters(a, b) <= ROUTE_MAX_KM * 1000 and (near(a) or near(b)):
-                            pairs.add((a, b) if a < b else (b, a))
+            # The two weeks' runs, and the runs only in the calendar past them
+            # (a line reopening, a new season), which the page draws on the
+            # days a trip is planned for.
+            later = [r for runs in tt.get("ahead", {}).get("trips", {}).values() for _, r in runs if isinstance(r, list)]
+            for run in [r for runs in tt["trips"].values() for r in runs] + [[0, *r] for r in later]:
+                seq = [at[s[0]] for s in run[2] if s[0] in at]
+                for a, b in zip(seq, seq[1:]):
+                    if a != b and meters(a, b) <= ROUTE_MAX_KM * 1000 and (near(a) or near(b)):
+                        pairs.add((a, b) if a < b else (b, a))
             out[agency] = pairs
     return out
 
@@ -1394,6 +1397,7 @@ def candidate_track(tiles):
 
 
 WALK_FREE_M = 120  # a stop's platform track usually lies within this of its point
+OSM_GAP_M = 30     # a way's end this close to other track runs on into it (RailGraph)
 
 
 class RailGraph:
@@ -1411,6 +1415,26 @@ class RailGraph:
         self.grid = defaultdict(list)
         for n in self.adj:
             self.grid[(int(n[0] // self.CELL), int(n[1] // self.CELL))].append(n)
+        # OpenStreetMap's track sometimes stops a few metres short of the
+        # track it runs on into (two ways at a bridge that share no node,
+        # Rueun-Ilanz on the RhB; a branch that meets the station's lines only
+        # through yard tracks, left out here, the MOB's at Zweisimmen): the
+        # end of a way that shares its end node with no other way joins the
+        # nearest node of other track within OSM_GAP_M.
+        ways_at = defaultdict(set)
+        for wi, w in enumerate(ways):
+            for n in w:
+                ways_at[n].add(wi)
+        for wi, w in enumerate(ways):
+            for n in {w[0], w[-1]}:
+                if len(ways_at[n]) > 1 or n not in self.adj:
+                    continue
+                gx, gy = int(n[0] // self.CELL), int(n[1] // self.CELL)
+                best = min(((meters(n, m), m) for dx in (-1, 0, 1) for dy in (-1, 0, 1)
+                            for m in self.grid.get((gx + dx, gy + dy), ()) if wi not in ways_at[m]), default=None)
+                if best and best[0] <= OSM_GAP_M:
+                    self.adj[n].append((best[1], best[0]))
+                    self.adj[best[1]].append((n, best[0]))
 
     def near(self, p, k=40):
         """The k nodes nearest p within ROUTE_SNAP_M, nearest first."""
@@ -1481,7 +1505,7 @@ def route_timetables(segments, mods):
     pairs = timetable_pairs(mods)
     every = set().union(*pairs.values()) if pairs else set()
     if not every:
-        return
+        return {}, {}
     # Over the railroads' own track first; OpenStreetMap's other track is
     # fetched only along the hops that can't be routed on it.
     own = [tuple(map(tuple, c)) for _n, c in segments]
@@ -1538,6 +1562,125 @@ def route_timetables(segments, mods):
     shared = sum(1 for n, _ in segments if len(n) > 1)
     print(f"  {retagged} pieces retagged, {shared} shared by more than one railroad, "
           f"{len(TWINS)} by more than three (hidden twins carry the others)")
+    return pairs, routed
+
+
+# The page's routing (js/estimate.js RailIndex), for checking the drawn
+# track: a stop snaps to the nearest drawn (not hidden) line within
+# PAGE_SNAP_M, its own railroad's if that's within PAGE_OWN_SLACK_M as near;
+# a route runs over the lines' end nodes (four decimals), other railroads'
+# track costing four times as much, and may be at most three times the
+# straight distance plus 5 km long.
+PAGE_SNAP_M, PAGE_OWN_SLACK_M = 1500, 150
+
+
+class PageRoutes:
+    def __init__(self, features):
+        self.lines = []
+        self.adj = defaultdict(list)
+        self.grid = defaultdict(list)
+        for f in features:
+            c = f["geometry"]["coordinates"]
+            p = f["properties"]
+            li = len(self.lines)
+            n0, n1 = key(c[0]), key(c[-1])
+            length = sum(meters(a, b) for a, b in zip(c, c[1:]))
+            self.lines.append({"c": c, "nets": [p.get(k) for k in "abc" if p.get(k)], "hidden": bool(p.get("h")),
+                               "n0": n0, "n1": n1, "len": length})
+            self.adj[n0].append(li)
+            if n1 != n0:
+                self.adj[n1].append(li)
+            if not p.get("h"):
+                for i in range(len(c) - 1):
+                    for g in {(int(c[i][0] // 0.02), int(c[i][1] // 0.02)), (int(c[i + 1][0] // 0.02), int(c[i + 1][1] // 0.02))}:
+                        self.grid[g].append((li, i))
+
+    def snap(self, p, net):
+        best = own = None
+        gx, gy = int(p[0] // 0.02), int(p[1] // 0.02)
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for li, i in self.grid.get((gx + dx, gy + dy), ()):
+                    a, b = self.lines[li]["c"][i], self.lines[li]["c"][i + 1]
+                    kx = math.cos(math.radians(p[1]))
+                    ax, ay, px, py = (b[0] - a[0]) * kx, b[1] - a[1], (p[0] - a[0]) * kx, p[1] - a[1]
+                    L = ax * ax + ay * ay
+                    t = max(0.0, min(1.0, (px * ax + py * ay) / L)) if L else 0.0
+                    q = (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+                    d = meters(p, q)
+                    if d > PAGE_SNAP_M:
+                        continue
+                    along = sum(meters(x, y) for x, y in zip(self.lines[li]["c"][:i], self.lines[li]["c"][1:i + 1])) + meters(a, q)
+                    hit = (d, li, along)
+                    if not best or d < best[0]:
+                        best = hit
+                    if net in self.lines[li]["nets"] and (not own or d < own[0]):
+                        own = hit
+        return own if own and own[0] <= (best[0] if best else math.inf) + PAGE_OWN_SLACK_M else best
+
+    def routes(self, a, b, net):
+        import heapq
+        sa, sb = self.snap(a, net), self.snap(b, net)
+        if not sa or not sb:
+            return False
+        if sa[1] == sb[1]:
+            return True
+        la, lb = self.lines[sa[1]], self.lines[sb[1]]
+        limit = meters(a, b) * 3 + 5000
+        cost, length, heap = {}, {}, []
+        for n, c in ((la["n0"], sa[2]), (la["n1"], la["len"] - sa[2])):
+            if c < cost.get(n, math.inf):
+                cost[n], length[n] = c, c
+                heapq.heappush(heap, (c, n))
+        while heap:
+            c, n = heapq.heappop(heap)
+            if c > cost.get(n, math.inf):
+                continue
+            if n in (lb["n0"], lb["n1"]):
+                return True
+            for li in self.adj[n]:
+                if li in (sa[1], sb[1]):
+                    continue
+                l = self.lines[li]
+                m = l["n1"] if l["n0"] == n else l["n0"]
+                nc, nl = c + l["len"] * (1 if net in l["nets"] else 4), length[n] + l["len"]
+                if nl <= limit and nc < cost.get(m, math.inf):
+                    cost[m], length[m] = nc, nl
+                    heapq.heappush(heap, (nc, m))
+        return False
+
+
+def unroutable(features, pairs, routed):
+    """The hops (agency, pair) routed over OSM's track that the page couldn't
+    route on these features, both ways."""
+    page = PageRoutes(features)
+    return [(agency, pair) for agency, ps in sorted(pairs.items()) for pair in sorted(ps)
+            if routed.get(pair) and len(routed[pair]) > 1
+            and not (page.routes(pair[0], pair[1], agency) and page.routes(pair[1], pair[0], agency))]
+
+
+def add_whole(segments, bad, routed):
+    """Each hop's whole route as track of its railroad, its ends joined to
+    the track there."""
+    cov = Coverage(segments)
+    cuts = []
+    for agency, pair in bad:
+        pts = []
+        for x, y in routed[pair]:
+            q = [round(x, 4), round(y, 4)]
+            if not pts or q != pts[-1]:
+                pts.append(q)
+        if len(pts) < 2:
+            continue
+        line = simplify(pts)
+        for end in (0, -1):
+            hit = cov.nearest(tuple(line[end]), COVERED_M)
+            if hit:
+                _d, k, si, t, q = hit
+                line[end] = list(q)
+                cuts.append((k, si, t, q))
+        segments.append(((agency,), line))
+    split_segments(segments, cuts)
 
 
 def build_regions(only=None):
@@ -1555,9 +1698,24 @@ def build_regions(only=None):
             segments += plugin_track(m, fetch=not OFFLINE and (not only or plugin_id(m) == only))
         # A region whose plug-ins have no track of their own (Italy's, built
         # from Geofabrik's tiles alone) gets it all from routing its timetables.
-        route_timetables(segments, here)
+        pairs, routed = route_timetables(segments, here)
         if segments:
-            write_region(region, finish(segments))
+            # Every hop routed over OSM's track must route on the drawn track
+            # as the page routes it. Where it doesn't (its route ran within a
+            # few metres of other track, a parallel line, so that stretch
+            # counted as drawn), its route goes in whole, and the track is
+            # finished again from the same pieces.
+            before, twins = [(n, [list(p) for p in c]) for n, c in segments], list(TWINS)
+            features = finish(segments)
+            bad = unroutable(features, pairs, routed)
+            if bad:
+                segments[:], TWINS[:] = before, twins
+                add_whole(segments, bad, routed)
+                features = finish(segments)
+                left = unroutable(features, pairs, routed)
+                print(f"  {len(bad)} hops not routable on the drawn track got their routes whole; {len(left)} still aren't"
+                      + "".join(f"\n    {a}: {p[0]} - {p[1]}" for a, p in left[:20]))
+            write_region(region, features)
 
 
 only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None

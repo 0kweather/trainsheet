@@ -850,15 +850,25 @@ function gpsRunTrain(agency, tt, number, run, fields, { delay = 0, live = {}, tr
 // placed from its timetable. A railroad abroad has its file there too
 // (build_schedules.py); a timetable that names no time zone runs on its
 // railroad's. One with no timetable file has no trains to place.
-export async function timetableTrains(agency) {
+// A railroad whose live feed gives only delays (Switzerland's trip updates)
+// passes `live(run, stops, number)`, which gives the run's stops as they
+// will be ({ stops, delay (minutes), cancelled }) or null for none known: a
+// cancelled run isn't placed, and a late one stays until it gets in.
+// A number may carry a "~" and a suffix (a second train of that number on
+// the day, in another railway's timetable): the train is shown by the
+// number before it.
+export async function timetableTrains(agency, live = null) {
   const file = await loadSchedule(agency).catch(() => null);
   if (!file?.trips) return [];
   const tt = file.tz ? file : { ...file, tz: AGENCIES[agency]?.tz || "America/New_York" };
   const now = nowSec(), out = [];
   for (const number of Object.keys(tt.trips)) {
-    const run = runNow(tt, number, now, 120);
+    const run = runNow(tt, number, now, live ? 3 * 3600 : 120);
     if (!run) continue;
-    const stops = runStops(run);
+    let stops = runStops(run);
+    const rt = live?.(run, stops, number) || null;
+    if (rt?.cancelled) continue;
+    if (rt) stops = rt.stops;
     const prog = tripProgress(stops, now, tt.stops);
     if (!prog) continue;
     const nextStop = prog.dwelling ? prog.at : prog.next;
@@ -866,10 +876,11 @@ export async function timetableTrains(agency) {
     out.push(train({
       // Railroads that don't number their trains publicly key each run by its
       // direction and first departure ("0-0605"), shown without a number.
-      id: `${agency}:${number}`, agency, number: tt.unnumbered ? null : number, route: run.line,
+      id: `${agency}:${number}`, agency, number: tt.unnumbered ? null : number.replace(/~.*$/, ""), route: run.line,
       lat: prog.lat, lon: prog.lon, bearing: prog.bearing ?? null,
       origin: name(prog.list[0]), destination: name(prog.list[prog.list.length - 1]), nextStop: name(nextStop),
-      statusText: prog.dwelling ? `At ${name(prog.at)}` : "Scheduled",
+      delayMin: rt ? rt.delay : null,
+      statusText: prog.dwelling ? `At ${name(prog.at)}` : rt ? delayText(rt.delay) : "Scheduled",
       updated: now * 1000, estimated: true, leg: prog.leg || null,
       stops: mtaStops(agency, prog.list, tt.stops, now, nextStop, prog.dwelling ? prog.at : null, tt.tz),
       _progress: { stops, lookup: tt.stops },
@@ -936,6 +947,18 @@ function matchStops(mine, theirs) {
 // kept (t._sched). True if t has a place.
 export function applyDetail(t, d, now = nowSec()) {
   if (!d?.found) return false;
+  // A formation only (Switzerland's Train Formation Service): the train's
+  // cars, and its platforms at its stops; its times are its feed's. It
+  // never keeps a train on the map its feed has dropped.
+  if (d.formation) {
+    if (d.cars?.numbers?.length) t.cars = d.cars;
+    const theirs = (d.stops || []).map((x) => ({ ...x, arr: x.arr ?? null, dep: x.dep ?? null }));
+    if (t.stops && theirs.length) {
+      const idx = matchStops(t.stops.map((s) => ({ name: s.name, arr: null, dep: s.scheduled ? Date.parse(s.scheduled) / 1000 : null })), theirs);
+      t.stops.forEach((s, i) => { if (idx[i] >= 0 && theirs[idx[i]].platform) s.track = theirs[idx[i]].platform; });
+    }
+    return false;
+  }
   const late = d.cancelled ? null : d.delay ?? null;
   t.cancelled = Boolean(d.cancelled);
   t.delayMin = late;

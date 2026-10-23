@@ -1,6 +1,6 @@
 # Trainsheet
 
-A live map of passenger trains across the United States and Canada: Amtrak, VIA and Brightline plus the commuter railroads that publish real-time positions, and railroads in seventeen more countries: those whose live positions are public, Italy's from its timetables, and those (Australia's New South Wales and Victoria, New Zealand, Sweden) whose free keys switch on live positions, placed from their timetables until then; all on one map.
+A live map of passenger trains across the United States and Canada: Amtrak, VIA and Brightline plus the commuter railroads that publish real-time positions, and railroads in nineteen more countries: those whose live positions are public, Italy's from its timetables, and those (Australia's New South Wales and Victoria, New Zealand, Sweden, Switzerland) whose free keys switch on live positions or delays, placed from their timetables until then; all on one map.
 
 **Live site:** https://0kweather.github.io/trainsheet/
 
@@ -81,6 +81,7 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | Spain | Renfe (AVE, Avlo, Alvia, Avant, Euromed, regional), Renfe Cercanías and Rodalies | Spain | Renfe's open GTFS-realtime | relay |
 | Spain | FGC (Barcelona–Vallès, Llobregat–Anoia) | Catalonia | FGC's Geotren positions on its open-data portal | relay |
 | Sweden | SJ, Snälltåget, Tågab, VR Snabbtåg (ex-MTRX), Arlanda Express, SL Pendeltåg, Mälartåg, Östgötapendeln, Tåg i Bergslagen, Norrtåg, Värmlandstrafik, X-Tåget, Pågatåg, Öresundståg, Västtågen, Krösatåg | Sweden | Trafikverket's open API (train positions and announcements, joined by the relay); placed from Samtrafiken's GTFS Sweden 3 timetable until the key is set | relay + free key |
+| Switzerland | SBB (long distance; regional, S-Bahns, Léman Express, TILO), BLS, Südostbahn, Thurbo, RegionAlps, TPF, Rhätische Bahn, Matterhorn Gotthard Bahn, Zentralbahn, MOB, the other metre-gauge and rack railways (RBS, Appenzeller Bahnen, BOB, WAB, Jungfraubahn, Gornergrat, Rigi, Pilatus and more), and DB's, ÖBB's and SNCF's trains into Switzerland (ICE, TGV Lyria, Railjet, Nightjet, TER) | Switzerland | Placed from the national timetable (GTFS, opentransportdata.swiss) and moved by its GTFS-realtime trip updates (delays, cancellations, skipped stops; no positions are published), with an opened train's formation, car by car, from the Train Formation Service; placed from the timetable until the keys are set | relay + free keys |
 
 "Relay" feeds don't send the CORS headers a browser needs, and keyed feeds can't put their key in a public web page, so both go through a tiny Cloudflare Worker (below). Without it, the site still shows everything marked "—" or "direct" (fetched by each browser itself, as KTMB is, or placed from the timetable).
 
@@ -145,6 +146,8 @@ then open http://localhost:8000. To try the relay feeds locally, run `python3 sc
    - `AT_API_KEY`: https://dev-portal.at.govt.nz (subscribe to the Realtime API; AT Metro, Te Huia; 35,000 calls a week, so the relay keeps its answer a minute)
    - `METLINK_API_KEY`: https://opendata.metlink.org.nz (Metlink)
    - `TRAFIKVERKET_API_KEY`: https://data.trafikverket.se (Sweden)
+   - `CH_GTFSRT_KEY`: https://api-manager.opentransportdata.swiss (GTFS-RT; Switzerland's delays and cancellations; 2 requests a minute, so the relay keeps its answer a minute)
+   - `CH_FORMATION_KEY`: https://api-manager.opentransportdata.swiss (Train Formation Service; an opened train's cars; 50 requests a minute and 20,000 a day, so the relay asks at most 30 a minute and keeps each answer five minutes)
 
    Every other railroad outside the US and Canada needs none. Until a railroad's key is set, it is placed from its timetable.
 4. Put the Worker's URL in `config.js` (`window.TRAINSHEET_RELAY = "https://trainsheet-relay.<you>.workers.dev"`) and push.
@@ -206,6 +209,7 @@ Data outside the US and Canada, credited on the map with each railroad:
 - Translink (Queensland), CC BY 4.0; Adelaide Metro – Department for Infrastructure and Transport, South Australia, CC BY 3.0 AU; Transport for NSW, CC BY 4.0; Transport Victoria (opendata.transport.vic.gov.au), CC BY 4.0 (Australia).
 - Auckland Transport, CC BY 4.0; Metlink (Greater Wellington Regional Council), CC BY 4.0 (New Zealand).
 - Trafikverket, CC0; Samtrafiken / Trafiklab GTFS Sweden 3, CC0 1.0, read from the Mobility Database's copy (Sweden).
+- opentransportdata.swiss (Open Data Platform Mobility Switzerland): the national timetable (GTFS), GTFS-realtime and the Train Formation Service, under its terms of use (free to process and publish, citing opentransportdata.swiss as the source) (Switzerland).
 - data.gov.my, CC BY 4.0 (Malaysia).
 - ŽSR timetable (data.slovensko.sk), CC BY 1.0; live positions from jbb.ghsq.de (Slovakia).
 - Buenos Aires Data timetable, CC BY 2.5 AR; live data from SOFSE / Trenes Argentinos (Argentina).
