@@ -7,13 +7,17 @@
 // scale (js/carart.js), in Trenitalia's current paint: the Frecce's silver
 // with the black window band and red below, InterCity's 2024 white and
 // light blue (the night trains' blue), the regional trains' grey "DPR"
-// scheme and the green-and-yellow Regionale scheme of 2024. Names are
-// lettered here (no logo files). Detail helpers come from Finland's file
-// (digitraffic.cars.js), as the Baltic and Norwegian files take them.
+// scheme and the green-and-yellow Regionale scheme of 2024; the EuroCity
+// and EuroNight trains (SBB's Girunos and Astoros, Trenitalia's ETR 610s,
+// ÖBB's Nightjets) in their own railroads' paint. Names are lettered here
+// (no logo files). Detail helpers come from Finland's file
+// (digitraffic.cars.js), as the Baltic and Norwegian files take them; the
+// Taurus's body (euroLoco) from Czechia's.
 
 import { newId, bilevel, cabUnit } from "../carmodels.js?v=dev";
 import { C, rect, circle, path, line, lines, poly, truck, pantograph, slats, win } from "../carart.js?v=dev";
 import { letters, hvac, roofCover, panGear, horns, lamp, RED_LAMP, wiper, emuFront, buffers, boxes, frames, strokes, bothEnds, flirt } from "./digitraffic.cars.js?v=dev";
+import { euroLoco, OBB } from "./czechia.cars.js?v=dev";
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -686,6 +690,252 @@ const TPER_FLIRT = { body: TP.white, roof: TP.roof, skirt: TP.band, door: TP.red
 const tperFlirtCab = (c) => flirt(c, "cab", TPER_FLIRT);
 const tperFlirtMid = (c) => flirt({ ...c, pan: c.index === 2 }, "mid", TPER_FLIRT);
 
+// ===================== EuroCity and EuroNight =====================
+
+// The trains of the EuroCity and EuroNight services (route "EuroCity",
+// "EuroNight"): SBB's Giruno and Astoro, Trenitalia's own ETR 610s and
+// ÖBB's Nightjets, each in its own railroad's current paint (photographs on
+// Wikimedia Commons, 2024-2026). SBB: white, a black window band, a red line
+// along the roof edge and a red nose, red doors; first class marked by a
+// yellow stripe over the door (and on the Giruno second class by a white 2
+// beside it; the Astoro shows none).
+// Trenitalia's ETR 610 since its 2024-2026 refurbishment: the "euroCity"
+// scheme, silver with a dark window band, a green line along the roof edge
+// and a green nose, red doors, a white class numeral by the door.
+const SBB = { white: "#eceeef", red: "#e3000f", band: "#1c1f22", skirt: "#26292d", roof: "#4b5057", yellow: "#ffd200", blue: "#22397f", grey: "#c3c8cd" };
+const ECL = { silver: "#d4d7da", green: "#1fa64a", deep: "#0e6a3b", band: "#25282c", red: "#d02531", roof: "#9ea5ad", skirt: "#80878e" };
+
+// SBB's mark: the red square with the white double arrow through a cross,
+// "SBB CFF FFS" beside it in black; h the square's side.
+const sbbMark = (c, x, y, h) => {
+  const k = c.mirrored ? -1 : 1, a = h * 0.36, t = h * 0.1;
+  return rect(x - h / 2, y - h / 2, h, h, SBB.red) + rect(x - a + h * 0.1, y - t / 2, 2 * a - h * 0.2, t, "#ffffff") + rect(x - t / 2, y - h * 0.26, t, h * 0.52, "#ffffff") +
+    path(poly([[x - a - h * 0.04, y], [x - a + h * 0.18, y + h * 0.17], [x - a + h * 0.18, y - h * 0.17]]), "#ffffff") +
+    path(poly([[x + a + h * 0.04, y], [x + a - h * 0.18, y + h * 0.17], [x + a - h * 0.18, y - h * 0.17]]), "#ffffff") +
+    letters(c, x + k * (h * 0.75), y - h * 0.02, h * 0.62, "SBB CFF FFS", "#1b1d20", { weight: 600, anchor: c.mirrored ? "end" : "start", spacing: 0.02 * h });
+};
+
+// --- Giruno (Stadler SMILE, SBB RABe 501; 41 units since 2019): eleven
+// cars, 202 m; the end cars 22.25 m, the nine others 17.5 m, all on Jakobs
+// trucks (920 mm wheels) but for a running truck under each cab; a low
+// floor between the trucks, with one door a side in the middle of each car
+// at 760 mm and two more at 550 mm, in the cars either side of the
+// restaurant; 4.255 m tall. The formation (de.wikipedia "SBB RABe 501"):
+// first class in the four cars at one end (L, the cab car, quiet zone; K
+// with the business zone; J; H with the wheelchair places), the restaurant
+// car G, then second class (F to the cab car A, family zone in E);
+// pantographs on cars B, D, F and H. Photographs (Brescia 2024, Zürich HB
+// 2026, Steinen 2025): the restaurant car's window band red, "Restaurant"
+// in red over it; the canton's or region's arms under the cab side window
+// differ by unit and are left out.
+const GIR = { roof: 13.96, sill: 3.5, top: 12.35 };
+const girRows = (xs) => [{ xs, y: 6.7, w: 4.5, h: 2.85, r: 0.5 }];
+const girDoor = (x, fill = SBB.red) => ({ x, w: 3.7, y0: 1.9, y1: 10.5, glassY: 0.5, glassH: 0.42, grabs: false, fill });
+function girPaint(c, g, { band0 = -1, rest = false } = {}) {
+  const L = g.L;
+  return rect(-1, 0, L + 2, 20, SBB.white) + rect(-1, GIR.top + 0.6, L + 2, 4, SBB.roof) + rect(-1, GIR.top, L + 2, 0.6, SBB.red) + rect(-1, 0, L + 2, 3.0, SBB.skirt) +
+    rect(band0, 5.3, L - band0 + 1, 4.5, rest ? SBB.red : SBB.band, 0, band0 > 0 ? 'rx="0.9"' : "");
+}
+// The class at each passenger door: a yellow stripe over it (first) or a
+// white 2 at the top of the band beside it, the pictogram strip under it.
+// The 2 and the strip stand on the door's side away from the second-class
+// cab car (side 1: right of the door).
+const girClass = (c, doors, first, side = -1) => doors.map((x) => (first ? rect(x - 0.35, 10.55, 4.4, 0.42, SBB.yellow)
+  : letters(c, side < 0 ? x - 0.75 : x + 4.45, 9.05, 1.25, "2", "#ffffff", { weight: 700 }) + rect(side < 0 ? x - 1.35 : x + 4.05, 5.75, 1.0, 2.55, SBB.blue, 0, 'rx="0.12"'))).join("");
+const girRoof = (L, pan, up, a = 1.5) => roofCover(a, GIR.roof, L - 1.5 - a, 0.3, "#3d4248", 4) + (pan ? panSet(L / 2 + 6, GIR.roof + 0.25, -1, up) : hvac(L / 2 - 6, GIR.roof + 0.25, 12, 0.6, "#5b6168"));
+// The nose, bottom up: a rounded bumper, the long cap rising to a raked
+// windshield.
+const NOSE_GIR = [[1.4, 3.5], [0.35, 4.0], ["q", -0.05, 4.8, 0.1, 6.0], ["q", 0.4, 7.2, 2.2, 7.7], ["q", 4.6, 8.3, 6.2, 9.1], [11.6, 12.9], ["q", 12.8, 13.96, 15.5, 13.96]];
+// Windows of a 17.5 m car either side of its middle door at x.
+const girMidRows = (d) => [d - 18.3, d - 12.1, d - 5.9, d + 5.1, d + 11.3, d + 17.5];
+function girCab(c, first) {
+  const L = c.L, d = 46.5, xs = [22.0, 28.2, 34.4, 40.6, 51.6, 57.8, 64.0];
+  return sec(c, { roof: GIR.roof, sill: GIR.sill, nose: NOSE_GIR, cabLen: 20, cornerR: 1.2, rows: girRows(xs),
+    doors: [{ x: 17.2, w: 1.9, y0: 3.7, y1: 11.2, glass: false, grabs: true, fill: SBB.white }, girDoor(d)],
+    drop: { a: 21.0, b: L - 7.5, y: 1.8 }, trucks: [[15.0, 36, 8.9], [L, 36, 9.0]], diaphragm: [3.8, 12.4],
+    paint: (cc, g) => girPaint(cc, g, { band0: 21.0 }) +
+      // The red cap over the nose, up to the windshield's black surround,
+      // and on behind it as a broad sweep up to the roof-edge line.
+      path("M-1 6.0Q2.0 6.0 4.2 6.3Q8.4 7.0 11.4 9.4Q13.6 11.2 15.6 12.95L12.4 12.95L-1 12.95Z", SBB.red) + path("M3.4 8.15Q5.4 8.25 8.6 8.7L14.2 12.95L10.6 12.95Z", "#16181b") +
+      // The headlight cluster, a dark slanted lens behind the cap's edge.
+      path("M2.4 6.2Q4.6 6.3 6.6 6.9L6.0 7.6Q4.2 7.1 2.6 7.0Z", "#141618") + rect(3.2, 6.55, 1.5, 0.3, "#f6f2dc", 0, 'rx="0.12"'),
+    cab: () => glass([[5.6, 8.85], [11.6, 12.55], [13.4, 12.55], [8.2, 8.95]], [[6.4, 9.1], [9.0, 10.9], [10.0, 10.9], [7.6, 9.1]], [7.2, 9.2, 9.8, 11.2]) + win(14.4, 9.3, 1.6, 2.5, 0.35) +
+      emuFront(0.9, GIR.sill, { coupler: 2.75 }) + lamp(0.25, 4.55, 0.35, 0.3, RED_LAMP),
+    // SBB's mark on the junction side of the door on car L, the cab side on A.
+    marks: (cc) => girClass(cc, [d], first, 1) + sbbMark(cc, first ? d + 5.3 : d - 8.6, 4.25, 1.15) + letters(cc, 17.0, 4.3, 0.42, "STADLER", "#1b1d20", { weight: 700, spacing: 0.04, anchor: cc.mirrored ? "start" : "end" }),
+    extra: (cc, g) => girRoof(L, false, false, 16) + hvac(21, GIR.roof - 0.05, 9, 0.6, "#5b6168") + boxes(22, L - 10, 1.8, 3, 0.5) });
+}
+// A 17.5 m car: kind "plain", "two" (a second, 550 mm door, on the side
+// of the middle door toward car L in both H and F, as photographed),
+// "rest" (the restaurant car).
+function girMid(c, { first, kind = "plain" }) {
+  const L = c.L, d = L / 2 - 1.85;
+  const extra = kind === "two" ? d - 13.5 : null;
+  let xs = girMidRows(d);
+  if (extra != null) xs = [d - 20.0, d - 6.9, d + 5.1, d + 11.3, d + 17.5];
+  const doors = kind === "rest" ? [] : [d, ...(extra != null ? [extra] : [])];
+  if (kind === "rest") xs = [16.0, 24.6, 31.0, 37.4, 43.8];
+  const rows = kind === "rest" ? [{ xs: [16.0], y: 6.7, w: 1.6, h: 2.85, r: 0.4 }, { xs: xs.slice(1), y: 6.7, w: 4.3, h: 2.85, r: 0.5 }] : girRows(xs);
+  const pan = c.index === 3 || c.index === 5 || c.index === 7 || c.index === 9;
+  return sec(c, { roof: GIR.roof, sill: GIR.sill, rows, doors: doors.map((x) => girDoor(x)), drop: { a: 7.5, b: L - 7.5, y: 1.8 },
+    trucks: [[0, 36, 9.0], [L, 36, 9.0]], diaphragm: [3.8, 12.4],
+    paint: (cc, g) => girPaint(cc, g, { rest: kind === "rest" }),
+    marks: (cc) => girClass(cc, doors, first) + (kind === "rest" ? letters(cc, 23.0, 10.95, 0.8, "Restaurant", SBB.red, { weight: 500, spacing: 0.06 }) : sbbMark(cc, 4.4, 4.25, 1.1)),
+    extra: (cc, g) => girRoof(L, pan, c.index === 5) + boxes(9, L - 9, 1.8, 3, 0.5) });
+}
+const giruno = {
+  cab1: (c) => girCab(c, true), cab2: (c) => girCab(c, false),
+  first: (c) => girMid(c, { first: true }), firstTwo: (c) => girMid(c, { first: true, kind: "two" }), rest: (c) => girMid(c, { first: false, kind: "rest" }),
+  secondTwo: (c) => girMid(c, { first: false, kind: "two" }), second: (c) => girMid(c, { first: false }),
+};
+
+// --- ETR 610 (Alstom New Pendolino; SBB's "Astoro", RABe 503, 19 units,
+// and Trenitalia's, 12): the ETR 600's tilting body, seven cars, 187.4 m
+// (end cars 28.2 m, the others 26.2 m), the narrow body tapering in toward
+// the roof. The formation Apmt-A-WR-B-B-B-Bpmt: first class in the cab car
+// and the next, the restaurant third, second class in the rest. A crew
+// door behind each cab, one passenger door a side in each car at its end
+// toward car 1 and another at the back of car 1 (photographs at Brescia,
+// Bregenz and Visp). Pantographs on cars 3 and 5. First class has larger
+// windows, two rows of seats to each, 2+1 across.
+const T610 = { roof: 12.65, sill: 3.6, band: [6.5, 10.15], top: 11.45 };
+const r610 = (a, b, first) => {
+  const w = first ? 4.9 : 4.2, p = first ? 7.3 : 6.15, n = Math.floor((b - a - w) / p) + 1, x0 = a + (b - a - ((n - 1) * p + w)) / 2;
+  return [{ xs: seq(x0, p, n), y: 6.95, w, h: 2.75, r: 0.45 }];
+};
+// The paint of a section (livery "sbb" or Trenitalia's "ec"): the band from
+// x0, the roof-edge line, the cab's nose cap in the line's color.
+function p610(c, g, { x0 = -1, cab = false, rest = false }) {
+  const L = g.L, sbb = c.livery === "sbb", line0 = sbb ? SBB.red : ECL.green;
+  let s = rect(-1, 0, L + 2, 20, sbb ? SBB.white : ECL.silver) + rect(-1, T610.top + 0.35, L + 2, 4, sbb ? SBB.roof : ECL.roof) + rect(-1, T610.top, L + 2, 0.35, line0) +
+    rect(x0, T610.band[0], L - x0 + 1, T610.band[1] - T610.band[0], rest && sbb ? "#d52b1e" : sbb ? SBB.band : ECL.band, 0, x0 > 0 ? 'rx="0.8"' : "") + rect(-1, 0, L + 2, sbb ? 3.6 : 4.3, sbb ? SBB.skirt : "#26292d");
+  // The nose: the cap (red or green) from the roof-edge line down over the
+  // windshield's surround to the headlights; the windshield's black.
+  if (cab) s += path("M-1 5.7Q4.0 5.8 8.0 6.8Q11.8 8.0 14.6 10.2L16.9 11.8L-1 11.8Z", line0) +
+    path("M-1 7.9Q3.6 7.9 7.0 8.8Q10.0 9.6 13.0 11.8L-1 11.8Z", "#16181b") + rect(-1, 11.8, 19, 1.0, sbb ? SBB.roof : ECL.roof) +
+    // The cab's side window, behind the windshield.
+    path("M12.6 8.5L16.6 8.5L16.6 11.0L15.6 11.0Z", "#16181b");
+  return s;
+}
+// SBB's doors are white, the band red across them and on past them into
+// the car (side: which way, 1 right); first class (and the restaurant car
+// next to it) a yellow stripe along the red's top (photograph at Salgesch).
+// Trenitalia's: red, a white class numeral on the band beside them.
+const span610 = (x, side) => (side > 0 ? [x - 1.3, 2.6 + 1.3 + 1.7] : [x - 1.7, 2.6 + 1.7 + 1.3]);
+const c610 = (c, x, first, side = -1) => {
+  if (c.livery !== "sbb") return letters(c, side < 0 ? x - 1.05 : x + 3.65, 8.6, 1.9, first ? "1" : "2", "#ffffff", { weight: 700 });
+  const [a, w] = span610(x, side);
+  return first ? rect(a, T610.band[1] - 0.05, w, 0.45, SBB.yellow) : "";
+};
+const d610 = (x, c) => ({ ...sgl(x, 3.8, 10.6, 2.6, c.livery === "sbb" ? "rgba(0,0,0,0)" : ECL.red), glassY: c.livery === "sbb" ? 0.46 : 0.5, glassH: c.livery === "sbb" ? 0.42 : 0.36 });
+const dRed = (c, x, side) => { const [a, w] = span610(x, side); return c.livery === "sbb" ? rect(a, T610.band[0], w, T610.band[1] - T610.band[0], SBB.red) : ""; };
+// The euroCity name: lower-case "euro", a tall C, "ity".
+const word610 = (c, x) => (c.livery === "sbb" ? "" : letters(c, x, 5.0, 1.05, `euro<tspan font-size="1.9">C</tspan>ity`, ECL.deep, { weight: 400, spacing: -0.03 }));
+function etr610Cab(c, first) {
+  const L = c.L, rows = r610(20.4, L - 7.6, first);
+  return sec(c, { roof: T610.roof, sill: T610.sill, nose: NOSE_600, cabLen: 16, rows, doors: [sgl(17.0, 3.8, 10.6, 2.6, c.livery === "sbb" ? SBB.white : ECL.silver), d610(L - 5.2, c)],
+    trucks: [[12.6, 34, 8.9], [L - 9.8, 34, 8.9]],
+    paint: (cc, g) => p610(cc, g, { x0: 19.8, cab: true }) + dRed(cc, L - 5.2, -1) + framesOf(rows, 0.15, cc.livery === "sbb" ? "#111316" : "#1b1d20"),
+    cab: () => glass([[7.6, 9.5], [11.4, 11.35], [15.0, 11.7], [15.0, 10.1], [10.8, 9.8]], [[8.4, 9.75], [10.6, 10.8], [11.4, 10.8], [9.4, 9.75]], [8.6, 9.7, 10.8, 11.0]) +
+      path("M1.6 5.1Q3.8 4.8 6.6 5.5Q6.8 6.3 6.0 6.7Q3.6 6.6 1.9 6.3Z", "#1b1d20", 0, `stroke="#f2f3f4" stroke-width="0.9" vector-effect="non-scaling-stroke"`) + lamp(3.0, 5.45, 1.9, 0.45) + lamp(1.0, 4.35, 0.5, 0.26, RED_LAMP) + emuFront(1.4, 3.6, { coupler: 2.8 }) + horns(16.0, 12.6),
+    marks: (cc) => c610(cc, L - 5.2, first) + (cc.livery === "sbb" ? sbbMark(cc, 21.6, 5.0, 1.25) + sbbMark(cc, L - 16.6, 5.0, 1.25)
+      : word610(cc, L / 2 + 6) + letters(cc, 14.6, 7.7, 0.55, "ETR610", "#3b3f44", { weight: 600, italic: true }) + fsMark(cc, L / 2 + 2, 10.75, 0.5, ECL.deep) + letters(cc, L / 2 + (cc.mirrored ? 1.0 : 3.0), 10.75, 0.3, "TRENITALIA", "#4b5057", { weight: 700, anchor: cc.mirrored ? "end" : "start" })),
+    extra: (cc, g) => boxes(20, g.L - 17, 3.6, 4, 1.0, "#33373c") + roofFairing(17, g.L - 16, 12.65, 0.5, cc.livery === "sbb" ? "#5e646b" : "#aab0b7") + hvac(g.L - 15, 12.65, 9) });
+}
+function etr610Mid(c, { first = false, rest = false } = {}) {
+  const L = c.L, rows = rest ? [{ xs: seq(14.0, 7.3, 9), y: 6.95, w: 4.9, h: 2.75, r: 0.45 }] : r610(6.8, L - 2.4, first);
+  const pan = c.index === 2 || c.index === 4;
+  return sec(c, { roof: T610.roof, sill: T610.sill, rows, doors: [d610(1.9, c)], trucks: [[10.0, 34, 8.9], [L - 10.0, 34, 8.9]],
+    paint: (cc, g) => p610(cc, g, { rest }) + dRed(cc, 1.9, 1) + framesOf(rows, 0.15, cc.livery === "sbb" ? "#111316" : "#1b1d20"),
+    marks: (cc) => c610(cc, 1.9, first || rest, 1) + (cc.livery === "sbb" ? (rest ? letters(cc, L * 0.42, 11.0, 0.8, "Restaurant", "#c8202c", { weight: 500, spacing: 0.12 }) : sbbMark(cc, 7.4, 5.0, 1.25)) : word610(cc, L / 2)),
+    extra: (cc, g) => boxes(17, g.L - 17, 3.6, 4, 1.0, "#33373c") +
+      (pan ? roofFairing(3, 28, 12.65, 0.5, cc.livery === "sbb" ? "#5e646b" : "#aab0b7") + panSet(g.L - 26, 12.9, -1, cc.index === 2) + hvac(g.L - 15, 12.65, 9)
+        : roofFairing(3, g.L - 16, 12.65, 0.5, cc.livery === "sbb" ? "#5e646b" : "#aab0b7") + hvac(g.L - 15, 12.65, 9)) });
+}
+
+// --- ÖBB Nightjet, the new generation (Siemens Viaggio Next Level; 24
+// seven-car sets, on Wien-Roma and München-Roma since September 2024):
+// two sleeping cars (WLAmz), three couchette cars (Bcmz, three four-berth
+// compartments and the stacked Mini Cabins), a multi-function car
+// (ABbmpvz) and the control car (Bfmpz), its cab the Vectron's; behind an
+// ÖBB Taurus (1216, three-system) in Italy and Austria (photographs at
+// Bologna Centrale, 2025: 1216 005 on NJ 294). Paint as photographed (Wien
+// Hbf, Bregenz, Bologna): night blue, a red band at the windows' sills
+// over a dark grey line, light grey skirts, nightjet in big outline
+// letters on the sleeping and couchette cars, the car's kind in white
+// italics below the band and over the door; the control car a red and grey
+// sweep down toward the cab, ÖBB nightjet small behind it.
+const NJN = { blue: "#26347f", red: "#e2231a", grey: "#3f454c", roof: "#a2a9b1", skirt: "#c4c9ce", door: "#262c5c", frame: "#c9ced3" };
+const NJ = { roof: 13.3, sill: 3.1 };
+const njWord = (c, x, y, h) => `<text transform="translate(${r2(x)} ${r2(y)}) scale(${c.mirrored ? -1 : 1} -1)" font-size="${r2(h)}" text-anchor="middle" font-weight="700" font-style="italic" ` +
+  `font-family="Arial Rounded MT Bold, Helvetica Neue, Arial, sans-serif" letter-spacing="${r2(-0.02 * h)}" fill="none" stroke="#c9cfdb" stroke-width="0.07">nightjet</text>`;
+const njKind = (c, x, kind, h = 0.8) => letters(c, x, 5.0, h, kind, "#ffffff", { weight: 700, italic: true });
+function njPaint(c, g, { swoosh = false } = {}) {
+  const L = g.L;
+  let s = rect(-1, 0, L + 2, 20, NJN.blue) + rect(-1, 11.1, L + 2, 4, NJN.roof) + rect(-1, 6.1, L + 2, 1.3, NJN.red) + rect(-1, 5.6, L + 2, 0.5, NJN.grey) + rect(-1, 0, L + 2, 3.0, NJN.skirt);
+  // The control car's sweep (photograph at Wien Hbf): from the door the red
+  // falls in an S-curve to a point low behind the cab, filling the side to
+  // the bottom; inside it the grey line widens into a wedge.
+  if (swoosh) s += path("M-1 3.0L-1 7.4L19 7.4L19 3.0Z", NJN.blue) +
+    path("M19 7.4Q15.2 7.4 13.6 6.6Q10.0 4.6 4.1 3.5L5.0 3.0L19 3.0Z", NJN.red) +
+    path("M19 6.1Q14.6 5.6 10.5 4.2Q14.4 3.4 19 3.3Z", NJN.grey);
+  return s;
+}
+// A door: a light grey frame, the dark leaf with its window, the car's kind
+// over the window.
+const njDoor = (x) => ({ x, w: 4.0, y0: 2.3, y1: 10.5, glassY: 0.52, glassH: 0.35, grabs: false, fill: NJN.door });
+const njDoorFrame = (x) => rect(x - 0.7, 2.9, 5.4, 8.2, NJN.frame, 0, 'rx="0.35"');
+const njDoorWord = (c, x, kind) => letters(c, x + 2.0, 10.05, 0.42, kind, "#ffffff", { weight: 700, italic: true });
+function njCar(c, kind) {
+  const L = c.L, ds = [1.6, L - 5.6];
+  const word = { sleeper: "sleeping car", couchette: "couchette", seat: "seat car" }[kind] || null;
+  let rows;
+  // Sleeping cars: a big window to each compartment, its sill on the band.
+  if (kind === "sleeper") rows = [{ xs: seq(9.0, 7.35, 10), y: 7.45, w: 4.0, h: 2.95, r: 0.45 }];
+  // Couchettes: a narrow window, three compartments, then the Mini Cabins'
+  // two rows of small windows, one above the other.
+  else if (kind === "couchette") rows = [{ xs: [9.2], y: 6.8, w: 1.9, h: 2.7, r: 0.4 }, { xs: [17.6, 25.0, 32.4], y: 6.8, w: 4.4, h: 2.7, r: 0.4 },
+    { xs: seq(40.2, 5.4, 7), y: 9.2, w: 2.5, h: 1.6, r: 0.35 }, { xs: seq(40.2, 5.4, 7), y: 6.3, w: 2.5, h: 1.6, r: 0.35 }];
+  // The multi-function car's windows sit low, through the band.
+  else rows = [{ xs: seq(10.0, 9.4, 8), y: 4.3, w: 4.6, h: 3.35, r: 0.45 }];
+  return sec(c, { roof: NJ.roof, sill: NJ.sill, rows, doors: ds.map(njDoor), drop: { a: 13.5, b: L - 13.5, y: 2.25 }, trucks: [[L / 2 - 31.15, 36, 8.2], [L / 2 + 31.15, 36, 8.2]],
+    diaphragm: [4.0, 12.0], cornerR: 1.2,
+    paint: (cc, g) => njPaint(cc, g) + ds.map(njDoorFrame).join(""),
+    marks: (cc) => (word ? ds.map((x) => njDoorWord(cc, x, word)).join("") + njKind(cc, kind === "sleeper" ? L * 0.3 : L * 0.6, word) : "") +
+      // nightjet big: over the compartments' windows on a couchette car,
+      // under the band on a sleeping car, over it on the multi-function car
+      // (photographs at Wien, Bregenz and Bologna).
+      (kind === "couchette" ? njWord(cc, L * 0.4, 9.55, 2.4) : kind === "sleeper" ? njWord(cc, L * 0.6, 3.75, 4.1) : njWord(cc, L * 0.32, 7.8, 4.6)),
+    extra: (cc, g) => roofCover(6, NJ.roof, L - 12, 0.35, "#8f969e", 6) + hvac(L / 2 - 7, NJ.roof + 0.3, 14, 0.6) + boxes(L / 2 - 22, L / 2 + 22, 2.25, 4, 0.6) +
+      (cc.index === 1 ? buffers(0, -1, { y: 3.45 }) : "") });
+}
+// The Taurus (ES64U4, ÖBB 1216; 50, 2006-2008), on czechia.cars.js's
+// body (euroLoco, with its Taurus's nose, 19.58 m): traffic red over a dark
+// grey underframe, ÖBB in white big across the middle of the side, as on
+// 1216 005 at Bologna in 2025 (czechia.cars.js's taurus letters it at half
+// that size, with a white line over the grey that 1216 005 doesn't carry).
+const NOSE_1216 = [[1.7, 4.1], [1.1, 6.3], ["q", 0.95, 8.5, 2.3, 9.3], [3.9, 12.15], ["q", 4.6, 13.0, 6.4, 13.0]];
+const t1216 = (c) => euroLoco(c, { roof: 13.0, sill: 4.1, nose: NOSE_1216, rake: [[2.3, 9.3], [3.9, 12.15]], centers: 32.5, door: 7.2, wheel: 45,
+  paint: (cc, L) => rect(-1, 0, L + 2, 20, OBB.red) + rect(-1, 12.0, L + 2, 3, "#6d737a") + rect(-1, 0, L + 2, 5.0, "#3a3d42") + path("M0 5.0L0 7.4L2.0 7.4L3.3 5.0Z", "#3a3d42"),
+  over: (cc, L) => letters(cc, L / 2 - 2, 8.55, 5.6, "ÖBB", "#f4f4f2", { weight: 800, spacing: -0.15 }),
+  surround: "#141518", grilles: [[-13.5, 6.5, 9.8, 11.5], [7.0, 6.5, 9.8, 11.5]], grilleFill: "rgba(20,22,25,0.24)" });
+
+// The control car (Bfmpz, 70 seats): the Vectron's cab, a door behind it.
+const NOSE_NJC = [[1.5, 3.1], [1.3, 7.2], ["q", 1.35, 8.3, 2.1, 9.0], [3.1, 12.4], ["q", 3.5, 13.3, 4.7, 13.3]];
+function njCab(c) {
+  const L = c.L, rows = [{ xs: [5.0], y: 8.3, w: 1.9, h: 2.3, r: 0.4 }, { xs: seq(27.0, 6.3, 9), y: 6.6, w: 4.6, h: 2.9, r: 0.4 }];
+  return sec(c, { roof: NJ.roof, sill: NJ.sill, nose: NOSE_NJC, cabLen: 4, rows, doors: [njDoor(19.6), njDoor(L - 5.6)], drop: { a: 26.0, b: L - 13.5, y: 2.25 },
+    trucks: [[L / 2 - 31.15, 36, 8.2], [L / 2 + 31.15, 36, 8.2]], diaphragm: [4.0, 12.0], cornerR: 1.2,
+    paint: (cc, g) => njPaint(cc, g, { swoosh: true }) + [19.6, L - 5.6].map(njDoorFrame).join("") + path(poly([[2.15, 8.8], [3.05, 12.2], [3.9, 12.2], [3.0, 8.8]]), "#141518") +
+      // The cab's dark side panel behind the windshield.
+      path("M3.0 8.8L3.9 12.2L4.3 12.2Q4.6 10.0 4.2 8.8Z", "#1d2350"),
+    cab: () => glass([[2.3, 9.1], [3.15, 12.0], [3.75, 12.0], [2.9, 9.1]]) +
+      lamp(1.45, 5.6, 0.45, 0.55) + lamp(1.4, 4.7, 0.4, 0.35, RED_LAMP) + buffers(0.4, -1, { y: 3.45 }) + horns(5.4, NJ.roof),
+    marks: (cc) => [19.6, L - 5.6].map((x) => njDoorWord(cc, x, "seat car")).join("") +
+      letters(cc, 15.6, 10.5, 0.8, `<tspan fill="${NJN.red}" font-weight="800" font-style="normal">ÖBB</tspan> nightjet`, "#e9ecf2", { weight: 700, italic: true }),
+    extra: (cc, g) => roofCover(9, NJ.roof, L - 15, 0.35, "#8f969e", 6) + hvac(L / 2 - 7, NJ.roof + 0.3, 14, 0.6) + boxes(L / 2 - 22, L / 2 + 22, 2.25, 4, 0.6) });
+}
+
 // ---------- Tables ----------
 
 export const TYPES = {
@@ -752,6 +1002,28 @@ export const TYPES = {
   itSwingMid: { name: "Swing (ATR 220) middle section", kind: "emu" },
   itFlirt350Cab: { name: "FLIRT (ETR 350) end section", kind: "emu" },
   itFlirt350Mid: { name: "FLIRT (ETR 350) section", kind: "emu" },
+  itGirunoCab1: { name: "Giruno (RABe 501) first-class end car", kind: "emu", amenities: ["first"] },
+  itGirunoFirst: { name: "Giruno first-class car", kind: "emu", amenities: ["first"] },
+  itGirunoFirstH: { name: "Giruno first-class car with the wheelchair places", kind: "emu", amenities: ["first"] },
+  itGirunoRest: { name: "Giruno restaurant car", kind: "emu", amenities: ["dining"] },
+  itGirunoSecondF: { name: "Giruno second-class car by the restaurant", kind: "emu" },
+  itGirunoSecond: { name: "Giruno second-class car", kind: "emu" },
+  itGirunoCab2: { name: "Giruno (RABe 501) second-class end car", kind: "emu" },
+  itAstoroCab1: { name: "SBB Astoro (ETR 610) first-class end car", kind: "emu", amenities: ["first"] },
+  itAstoroFirst: { name: "SBB Astoro (ETR 610) first-class car", kind: "emu", amenities: ["first"] },
+  itAstoroRest: { name: "SBB Astoro (ETR 610) restaurant car", kind: "emu", amenities: ["dining"] },
+  itAstoroSecond: { name: "SBB Astoro (ETR 610) second-class car", kind: "emu" },
+  itAstoroCab2: { name: "SBB Astoro (ETR 610) second-class end car", kind: "emu" },
+  itEtr610Cab1: { name: "ETR 610 euroCity first-class end car", kind: "emu", amenities: ["first"] },
+  itEtr610First: { name: "ETR 610 euroCity first-class car", kind: "emu", amenities: ["first"] },
+  itEtr610Rest: { name: "ETR 610 euroCity bar car", kind: "emu", amenities: ["cafe"] },
+  itEtr610Second: { name: "ETR 610 euroCity second-class car", kind: "emu" },
+  itEtr610Cab2: { name: "ETR 610 euroCity second-class end car", kind: "emu" },
+  itNj1216: { name: "ÖBB Taurus (1216) electric locomotive", kind: "electric", pan: true },
+  itNjSleeper: { name: "Nightjet sleeping car (WLAmz)", kind: "coach", amenities: ["sleepers"] },
+  itNjCouchette: { name: "Nightjet couchette car with Mini Cabins (Bcmz)", kind: "coach", amenities: ["sleepers"] },
+  itNjMulti: { name: "Nightjet multi-function car (ABbmpvz)", kind: "coach" },
+  itNjCab: { name: "Nightjet control car (Bfmpz)", kind: "coach", cab: true },
 };
 
 // The paint goes by railroad and route (Leonardo Express, the night
@@ -824,13 +1096,41 @@ export const MODELS = {
   itSwingMid: M(swingMid, 54.4),
   itFlirt350Cab: M(tperFlirtCab, 70.5, true),
   itFlirt350Mid: M(tperFlirtMid, 51.5, false, byIndex),
+  // Giruno: 22.25 m end cars, 17.5 m cars; ETR 610: 28.2 m and 26.2 m;
+  // the Nightjet's cars taken as the Viaggio's 26.5 m.
+  itGirunoCab1: M(giruno.cab1, 73.0, true),
+  itGirunoFirst: M(giruno.first, 57.4, false, byIndex),
+  itGirunoFirstH: M(giruno.firstTwo, 57.4, false, byIndex),
+  itGirunoRest: M(giruno.rest, 57.4, false, byIndex),
+  itGirunoSecondF: M(giruno.secondTwo, 57.4, false, byIndex),
+  itGirunoSecond: M(giruno.second, 57.4, false, byIndex),
+  itGirunoCab2: M(giruno.cab2, 73.0, true),
+  itAstoroCab1: M((c) => etr610Cab({ ...c, livery: "sbb" }, true), 92.5, true),
+  itAstoroFirst: M((c) => etr610Mid({ ...c, livery: "sbb" }, { first: true }), 86.0, false, byIndex),
+  itAstoroRest: M((c) => etr610Mid({ ...c, livery: "sbb" }, { rest: true }), 86.0, false, byIndex),
+  itAstoroSecond: M((c) => etr610Mid({ ...c, livery: "sbb" }), 86.0, false, byIndex),
+  itAstoroCab2: M((c) => etr610Cab({ ...c, livery: "sbb" }, false), 92.5, true),
+  itEtr610Cab1: M((c) => etr610Cab({ ...c, livery: "ec" }, true), 92.5, true),
+  itEtr610First: M((c) => etr610Mid({ ...c, livery: "ec" }, { first: true }), 86.0, false, byIndex),
+  itEtr610Rest: M((c) => etr610Mid({ ...c, livery: "ec" }, { rest: true }), 86.0, false, byIndex),
+  itEtr610Second: M((c) => etr610Mid({ ...c, livery: "ec" }), 86.0, false, byIndex),
+  itEtr610Cab2: M((c) => etr610Cab({ ...c, livery: "ec" }, false), 92.5, true),
+  itNj1216: M(t1216, 64.24),
+  itNjSleeper: M((c) => njCar(c, "sleeper"), 86.9, false, byIndex),
+  itNjCouchette: M((c) => njCar(c, "couchette"), 86.9, false, byIndex),
+  itNjMulti: M((c) => njCar(c, "multi"), 86.9, false, byIndex),
+  itNjCab: M(njCab, 86.9, true),
 };
 
 // [first, last, type], by class and serial run together (ETR 400 001 is
 // 400001). The fleet pages draw one of each; no timetable reports a unit.
 export const FLEETS = {
   frecce: [[400001, 400058, "itFr1000Exec"], [404500, 404659, "itE404"], [700001, 700017, "itEtr700CabBiz"], [600001, 600012, "itEtr600CabBiz"], [485001, 485015, "itEtr485CabFirst"]],
-  trenitaliaic: [[401001, 401040, "itE401"], [402101, 402180, "itE402B"], [414101, 414159, "itE414"], [464001, 464717, "itE464"], [412001, 412011, "itHtrPlus"]],
+  trenitaliaic: [[401001, 401040, "itE401"], [402101, 402180, "itE402B"], [414101, 414159, "itE414"], [464001, 464717, "itE464"], [412001, 412011, "itHtrPlus"],
+    // The EuroCity and EuroNight trains: SBB's Girunos (RABe 501 001-041)
+    // and Astoros (RABe 503), Trenitalia's ETR 610s, ÖBB's 1216s and the
+    // Nightjets' control cars (8091 7xx).
+    [501001, 501041, "itGirunoCab1"], [503011, 503029, "itAstoroCab1"], [610001, 610012, "itEtr610Cab1"], [1216001, 1216050, "itNj1216"], [8091701, 8091724, "itNjCab"]],
   trenitaliareg: [[521001, 521099, "itRockCab"], [104001, 104099, "itPopCab"], [425001, 425099, "itJazzCab"], [312001, 312099, "itMasCab"],
     [501001, 501100, "itMinElFirst"], [501101, 501204, "itMinDFirst"], [426001, 426060, "itTafCab"], [220001, 220040, "itSwingCab"]],
   tper: [[350001, 350026, "itFlirt350Cab"], [521101, 521143, "itRockCab"], [104101, 104147, "itPopCab"]],
@@ -867,11 +1167,20 @@ const BLUES = set("Blues: a three-car Hitachi unit (electric, diesel and battery
 const FLIRT = set("FLIRT (ETR 350): a five-section electric unit", ["itFlirt350Cab", 1], ["itFlirt350Mid", 3], ["itFlirt350Cab", 1]);
 const TPER_ROCK = set("Rock: a five-car double-deck electric unit, in Tper's paint", ["itRockCab", 1], ["itRockMid", 3], ["itRockCab", 1]);
 const TPER_POP = set("Pop: a four-car electric unit, in Tper's paint", ["itPopCab", 1], ["itPopMid", 2], ["itPopCab", 1]);
+const GIRUNO = set("EuroCity: an SBB Giruno (RABe 501), eleven cars: first class in the four at one end, the restaurant car, then second class",
+  ["itGirunoCab1", 1], ["itGirunoFirst", 2], ["itGirunoFirstH", 1], ["itGirunoRest", 1], ["itGirunoSecondF", 1], ["itGirunoSecond", 4], ["itGirunoCab2", 1]);
+const ASTORO = set("EuroCity: an SBB Astoro (ETR 610), seven tilting cars: first class in cars 1 and 2, the restaurant in car 3, second class in 4–7",
+  ["itAstoroCab1", 1], ["itAstoroFirst", 1], ["itAstoroRest", 1], ["itAstoroSecond", 3], ["itAstoroCab2", 1]);
+const ETR610 = set("EuroCity: a Trenitalia ETR 610 in the euroCity paint, seven tilting cars: first class in cars 1 and 2, the bar in car 3, second class in 4–7",
+  ["itEtr610Cab1", 1], ["itEtr610First", 1], ["itEtr610Rest", 1], ["itEtr610Second", 3], ["itEtr610Cab2", 1]);
+const NIGHTJET = set("Nightjet (ÖBB): a Taurus (1216) and a new-generation Nightjet, sleeping cars, couchettes with Mini Cabins, a multi-function car and the control car",
+  ["itNj1216", 1], ["itNjSleeper", 2], ["itNjCouchette", 3], ["itNjMulti", 1], ["itNjCab", 1]);
 // The formation a reported unit runs in (the fleet pages draw these).
 const BY_MODEL = { itFr1000Cab: FR1000, itFr1000Exec: FR1000, itEtr700CabBiz: ETR700, itEtr600CabBiz: ETR600, itEtr485CabFirst: ETR485("Frecciargento"), itHtrPlus: HTR412,
   itMinElFirst: MIN_E, itMinDFirst: MIN_D, itE404: ETR500, itEtr700Cab: ETR700, itEtr600Cab: ETR600, itEtr485Cab: ETR485("Frecciargento"),
   itE401: IC_DAY, itE414: IC_414, itE402B: ICN, itE464: IC_464, itRockCab: ROCK5, itPopCab: POP, itJazzCab: JAZZ, itMinElCab: MIN_E, itMinDCab: MIN_D,
-  itTafCab: TAF, itSwingCab: SWING, itFlirt350Cab: FLIRT, itVivaltoCab: VIVALTO };
+  itTafCab: TAF, itSwingCab: SWING, itFlirt350Cab: FLIRT, itVivaltoCab: VIVALTO,
+  itGirunoCab1: GIRUNO, itGirunoCab2: GIRUNO, itAstoroCab1: ASTORO, itAstoroCab2: ASTORO, itEtr610Cab1: ETR610, itEtr610Cab2: ETR610, itNj1216: NIGHTJET, itNjCab: NIGHTJET };
 const byModel = (agency, reported) => (reported === "itMasCab" ? (agency === "trenitaliaic" ? HTR412 : BLUES)
   : reported === "itE464" && agency !== "trenitaliaic" ? VIVALTO : agency === "tper" && reported === "itRockCab" ? TPER_ROCK : agency === "tper" && reported === "itPopCab" ? TPER_POP : BY_MODEL[reported]);
 
@@ -895,6 +1204,19 @@ const sicily = (t) => Number.isFinite(t.lat) && t.lat > 36.6 && t.lat < 38.35 &&
 // Regionale: Leonardo Express a Jazz in its paint; Sardinia's and Sicily's
 // trains Minuetto diesels; around Naples and Turin TAFs; Regionale Veloce an
 // E.464 with Vivalto coaches; the others a Rock.
+// EuroCity (de.wikipedia "EuroCity" list, 14 June 2026; Trenitalia's and
+// SBB's notices): over the Gotthard SBB's Girunos, Zürich-Milano and on to
+// Venezia, Firenze, Genova-La Spezia-Livorno, Basel-Milano via Luzern and
+// Frankfurt-Milano (EC 150/151), but for the Zürich-Milano pairs 10/19,
+// 20/29 with a Trenitalia ETR 610; over the Simplon ETR 610s, SBB's on EC
+// 40, 41, 45, 46, 47 and 146, Trenitalia's on 42, 43, 44 and 144; and on
+// Milano-Basel by the Lötschberg (EC 60-67) Trenitalia's (610 012 on EC 60
+// photographed in 2025; the two railroads' units share the work).
+const euroCity = (t, n) => {
+  if ([10, 19, 20, 29, 42, 43, 44, 144].includes(n) || (n >= 60 && n <= 67)) return ETR610;
+  if ([40, 41, 45, 46, 47, 146].includes(n) || /Brig|Geneve|Genève/.test(ends(t))) return ASTORO;
+  return GIRUNO;
+};
 export const TYPICAL = {
   frecce: (t, reported) => {
     if (byModel(t.agency, reported)) return byModel(t.agency, reported);
@@ -909,6 +1231,8 @@ export const TYPICAL = {
     if (byModel(t.agency, reported)) return byModel(t.agency, reported);
     const r = t.route || "", n = num(t);
     if (r === "Intercity Notte") return n >= 1500 && n <= 1999 ? ICN_BEDS : ICN;
+    if (r === "EuroNight") return NIGHTJET;
+    if (r === "EuroCity") return euroCity(t, n);
     if (r !== "Intercity") return null;
     if (between(t, /Taranto/, /Reggio/) || between(t, /Bari/, /Napoli/)) return HTR412;
     return IC_DAY;
@@ -963,6 +1287,13 @@ const TAF_F = { model: "TAF (ALe 426 / Le 736 / ALe 506)", type: "Double-deck el
 const SWING_F = { model: "Swing (Pesa ATR 220)", type: "Articulated diesel multiple unit", builder: "Pesa Bydgoszcz", built: "2014–2016", fleet: "40", seats: 155, lengthFt: ft(55.6),
   source: `${ITW}ATR_220` };
 const VIV_F = { model: "Vivalto", type: "Double-deck coach", builder: "AnsaldoBreda and Firema (later Hitachi Rail)", built: "Since 2004", topSpeedMph: mph(160), lengthFt: ft(26.06), source: `${ITW}Carrozza_Vivalto` };
+const GIR_F = { model: "Giruno (SBB RABe 501, Stadler SMILE)", type: "High-speed electric multiple unit", builder: "Stadler Rail", built: "Since 2016", fleet: "41 with SBB",
+  topSpeedMph: mph(250), seats: 405, lengthFt: ft(202), source: "https://de.wikipedia.org/wiki/SBB_RABe_501" };
+const T610_F = { model: "ETR 610 (Alstom New Pendolino)", type: "Tilting electric multiple unit", builder: "Alstom (Savigliano)", built: "2007–2015", topSpeedMph: mph(250), seats: 402, lengthFt: ft(187.4),
+  source: "https://www.sbb.ch/de/reiseinformationen/services-im-zug/unsere-zuege/astoro.html" };
+const ECL_SRC = "https://www.ferrovie.it/portale/articoli/11872";
+const NJN_F = { model: "Nightjet, new generation (Siemens Viaggio Next Level)", type: "Night train", builder: "Siemens Mobility", built: "Since 2023", fleet: "24 seven-car sets",
+  source: "https://de.wikipedia.org/wiki/Nightjet" };
 const FLIRT_F = { model: "Stadler FLIRT (ETR 350)", type: "Electric multiple unit", builder: "Stadler Rail", fleet: "26", topSpeedMph: mph(160), seats: 269, source: `${WP}Stadler_FLIRT` };
 
 export const FACTS = {
@@ -1041,4 +1372,28 @@ export const FACTS = {
   itFlirt350Cab: { ...FLIRT_F, about: "Tper's FLIRTs run Bologna's suburban lines to Portomaggiore and Vignola." },
   itFlirt350Mid: { ...FLIRT_F, about: "Five sections on shared trucks, with 269 seats and 77 tip-up seats." },
   "coach@trenitaliaic": { ...Z1_F, about: "InterCity's UIC-Z1 coaches." },
+  itGirunoCab1: { ...GIR_F, lengthFt: ft(22.25), about: "SBB's train for the Gotthard base tunnel, on the EuroCitys from Zürich, Basel and Frankfurt to Milano, Venezia, Firenze, Genova and Livorno. This end car (L) is first class, the quiet zone; first class has 117 seats in the four cars at this end." },
+  itGirunoFirst: { ...GIR_F, lengthFt: ft(17.5), about: "First class, 2+1 seats (K has the business zone with 19 seats). The cars share Jakobs trucks; the floor is low between them, with a step-free door in the middle." },
+  itGirunoFirstH: { ...GIR_F, lengthFt: ft(17.5), about: "Car H, first class, next to the restaurant: two wheelchair places, an accessible toilet, a pantograph, and a second door at platform height (55 cm)." },
+  itGirunoRest: { ...GIR_F, lengthFt: ft(17.5), about: "Car G, the restaurant: 17 seats at tables and the galley, in the middle of the train between first and second class." },
+  itGirunoSecondF: { ...GIR_F, lengthFt: ft(17.5), about: "Car F, second class, next to the restaurant: an accessible toilet, a pantograph and a second door at 55 cm." },
+  itGirunoSecond: { ...GIR_F, lengthFt: ft(17.5), about: "Second class, 2+2 seats; E has the family zone and C the bicycle spaces. Second class has 288 seats." },
+  itGirunoCab2: { ...GIR_F, lengthFt: ft(22.25), about: "The second-class end car (A), 54 seats. The Giruno runs on 15 kV and 25 kV AC and Italy's 3 kV DC." },
+  itAstoroCab1: { ...T610_F, model: "Astoro (SBB RABe 503, ETR 610)", fleet: "19 with SBB", about: "SBB's tilting train, built for Cisalpino, on the EuroCitys over the Simplon: Milano–Brig–Genève and Venezia–Genève. First class is in this end car and the next." },
+  itAstoroFirst: { ...T610_F, model: "Astoro (SBB RABe 503, ETR 610)", about: "First class, 2+1 seats, one large window to each pair of rows." },
+  itAstoroRest: { ...T610_F, model: "Astoro (SBB RABe 503, ETR 610)", about: "Car 3, the restaurant car, between first and second class." },
+  itAstoroSecond: { ...T610_F, model: "Astoro (SBB RABe 503, ETR 610)", about: "Second class, 2+2 seats." },
+  itAstoroCab2: { ...T610_F, model: "Astoro (SBB RABe 503, ETR 610)", about: "The second-class end car. The train tilts into the curves of the Simplon and Lötschberg lines." },
+  itEtr610Cab1: { ...T610_F, model: "ETR 610 (Trenitalia)", source: ECL_SRC,
+    about: "Trenitalia's ETR 610s run with SBB's Girunos and Astoros on the EuroCitys between Italy and Switzerland; refurbished from 2024 in the new euroCity paint (some still in the old silver and red). First class is in this end car and the next." },
+  itEtr610First: { ...T610_F, model: "ETR 610 (Trenitalia)", source: ECL_SRC, about: "First class, 2+1 seats, with a meal served at the seat." },
+  itEtr610Rest: { ...T610_F, model: "ETR 610 (Trenitalia)", source: ECL_SRC, about: "Car 3, with the bar-bistro." },
+  itEtr610Second: { ...T610_F, model: "ETR 610 (Trenitalia)", source: ECL_SRC, about: "Second class, 2+2 seats; the refurbished trains have Wi-Fi and sockets for e-bikes." },
+  itEtr610Cab2: { ...T610_F, model: "ETR 610 (Trenitalia)", source: ECL_SRC, about: "The second-class end car." },
+  itNj1216: { model: "Siemens Taurus (ÖBB 1216)", type: "Electric locomotive", builder: "Siemens", built: "2006–2008", fleet: "50", topSpeedMph: mph(230), powerHp: hp(6400), lengthFt: ft(19.58),
+    source: "https://de.wikipedia.org/wiki/%C3%96BB_1216", about: "The three-system Taurus (15 kV, 25 kV and 3 kV) hauls ÖBB's Nightjets through Austria and Italy to Rome (1216 005 photographed on NJ 294 at Bologna in 2025)." },
+  itNjSleeper: { ...NJN_F, model: "Nightjet sleeping car (WLAmz)", about: "Ten compartments, 20 berths, some compartments with their own shower and toilet. The new Nightjets run Wien–Roma and München–Roma since September 2024." },
+  itNjCouchette: { ...NJN_F, model: "Nightjet couchette car (Bcmz)", about: "40 berths: three four-berth compartments and 28 Mini Cabins, single capsules stacked in two rows, their windows one above the other." },
+  itNjMulti: { ...NJN_F, model: "Nightjet multi-function car (ABbmpvz)", about: "26 seats, two accessible sleeping places, bicycle spaces and the staff compartment." },
+  itNjCab: { ...NJN_F, model: "Nightjet control car (Bfmpz)", about: "70 seats and a cab like a Vectron's, so the set can be driven from either end." },
 };
