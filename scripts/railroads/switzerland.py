@@ -81,7 +81,7 @@ COMMON = {"region": "Switzerland", "country": "CH", "tz": TZ, "credit": CREDIT, 
 
 AGENCIES = {
     "sbb": {"name": "SBB", "short": "SBB", "color": "#eb0000", "kind": "intercity", "cars": "sbb", **COMMON},
-    "sbbregio": {"name": "SBB Regional", "short": "SBB Regio", "color": "#eb0000", "kind": "commuter", "cars": "sbbregio",
+    "sbbregio": {"name": "SBB Regional", "short": "SBB Regio", "color": "#eb0000", "kind": "commuter",
                  "after": "sbb", **COMMON},
     "bls": {"name": "BLS", "short": "BLS", "color": "#7ab929", "kind": "commuter", "cars": "chstd", "after": "sbbregio", **COMMON},
     "sob": {"name": "Südostbahn", "short": "SOB", "color": "#a0806a", "kind": "commuter", "cars": "chstd", "after": "bls", **COMMON},
@@ -98,7 +98,7 @@ AGENCIES = {
     "zb": {"name": "Zentralbahn", "short": "zb", "color": "#0a3a7d", "kind": "commuter", "cars": "chnarrow", "after": "mgb", **COMMON},
     "mob": {"name": "MOB GoldenPass", "short": "MOB", "color": "#1d3c6e", "kind": "commuter", "cars": "chnarrow", "after": "zb", **COMMON},
     "chnarrowother": {"name": "Swiss metre-gauge and rack railways", "short": "CH narrow gauge", "color": "#7b4a2a",
-                      "kind": "commuter", "cars": "chnarrow", "after": "mob", **COMMON},
+                      "kind": "commuter", "after": "mob", **COMMON},
     "chintl": {"name": "International trains in Switzerland", "short": "International", "color": "#4a4a4a",
                "kind": "intercity", "cars": "chintl", "after": "chnarrowother", **COMMON},
 }
