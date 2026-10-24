@@ -33,11 +33,13 @@ export const GW = { orange: "#f07d1d", green: "#1f8443", dark: "#165f31" };
 export const ZS = { red: "#d7212b", dark: "#1d1e20", white: "#f3f4f5", gray: "#9aa1a9" };
 export const HT = { blue: "#0a5aa8", red: "#d71920", violet: "#3b2c85", lilac: "#9184d3", sky: "#56aee2", yellow: "#f5c400", cream: "#f1efe9", white: "#f2f3f4" };
 // The railroads whose trains cross into Czechia and Slovakia (drawn under
-// "Other railroads' trains" below): ÖBB's traffic red, its railjets' deeper
-// red over slate gray, the Nightjets' night blue with a red line; MÁV's
-// blue and turquoise; Raaberbahn's (GySEV's) yellow and green; PKP
-// Intercity's navy over light gray; Die Länderbahn's alex blue and silver.
-export const OBB = { red: "#e1251b", rj: "#a8202a", slate: "#3a3c40", nj: "#28327a", njLine: "#e5392f" };
+// "Other railroads' trains" below): ÖBB's traffic red, its railjets'
+// carmine with a bright red stripe over slate gray, the Nightjets' night
+// blue with a red line; MÁV's blue and turquoise; Raaberbahn's (GySEV's)
+// yellow and green; PKP Intercity's navy over light gray; Die Länderbahn's
+// alex blue and silver.
+export const OBB = { red: "#e1251b", rj: "#b9252a", rjRed: "#ec4127", rjLight: "#cf4b3d", slate: "#4b5455", skirt: "#c9cdd0", orange: "#f39220",
+  nj: "#2b2d6a", njLine: "#e5392f", njDoor: "#b9bcbd" };
 export const MAV = { blue: "#1d5fc4", deep: "#163f8c", sky: "#22b3c9", white: "#f1f3f5" };
 export const GYSEV = { yellow: "#f4c20d", green: "#3a9a35", dark: "#1f5e2a" };
 export const PKP = { navy: "#1f2e78", gray: "#d9dde1", orange: "#e8501e", red: "#d7161e" };
@@ -78,6 +80,19 @@ export const mark = (c, x, y, inner) => `<g transform="translate(${n(x)} ${n(y)}
 const txt = (x, y, h, text, fill, { weight = 700, family = SANS, spacing = 0, style = "", anchor = "middle", extra = "" } = {}) =>
   `<text x="${n(x)}" y="${n(y + h * 0.36)}" font-size="${n(h)}" text-anchor="${anchor}" font-weight="${weight}" letter-spacing="${spacing}" font-family="${family}" fill="${fill}"${style ? ` font-style="${style}"` : ""}${extra ? " " + extra : ""}>${text}</text>`;
 export const letters = (c, x, y, h, text, fill, opts) => mark(c, x, y, txt(0, 0, h, text, fill, opts));
+// A word fitted to its measured width w (ÖBB's railjet and nightjet
+// lettering is wider than Helvetica's), and the same in outline: a thin
+// line round each letter, nothing inside.
+const fit = (w) => `textLength="${n(w)}" lengthAdjust="spacingAndGlyphs"`;
+const wide = (c, x, y, h, text, fill, w, opts = {}) => letters(c, x, y, h, text, fill, { ...opts, extra: fit(w) });
+const outlined = (c, x, y, h, text, w, stroke) => letters(c, x, y, h, text, "none", { weight: 700, style: "italic", extra: `${fit(w)} stroke="${stroke}" stroke-width="0.045"` });
+// ÖBB railjet, small, from x0 to x1: ÖBB in fill, railjet in white bold
+// italics.
+const obbRailjet = (c, x0, x1, y, h, fill, weight = 700) => {
+  const w = x1 - x0;
+  return mark(c, (x0 + x1) / 2, y, txt(-w / 2, 0, h, "ÖBB", fill, { weight, anchor: "start", extra: fit(w * 0.32) }) +
+    txt(w / 2, 0, h, "railjet", "#ffffff", { weight: 700, style: "italic", anchor: "end", extra: fit(w * 0.62) }));
+};
 // ČD's mark, "ČD" in a rounded frame, h tall; with "České dráhy" beside it.
 const cdFrame = (h, color) => `<rect x="${n(-0.82 * h)}" y="${n(-0.5 * h)}" width="${n(1.64 * h)}" height="${n(h)}" rx="${n(0.5 * h)}" fill="none" stroke="${color}" stroke-width="${n(0.12 * h)}"/>` +
   txt(0, -0.02 * h, 0.68 * h, "ČD", color, { weight: 800, spacing: "-0.03em" });
@@ -169,36 +184,43 @@ function front(c, o, { coupler = "scharf", lampY = o.sill + 1.75 } = {}) {
 // ---------- Bodies ----------
 
 // A body with a cab at each end: drawn once with its cab on the left, then
-// that left half again mirrored for the right. half(c) draws the whole body.
-export function twinEnded(c, half) {
-  const id = newId(), L = c.L;
-  const h = half({ ...c, cabL: true, cabR: false, coupledL: false, coupledR: false });
+// that left half again mirrored for the right. half(c) draws the whole body;
+// halfR(c), if given, draws the right half's instead (also cab left, then
+// mirrored), for a body painted differently at each end.
+export function twinEnded(c, half, halfR = null) {
+  const id = newId(), L = c.L, cc = { ...c, cabL: true, cabR: false, coupledL: false, coupledR: false };
+  const h = half(cc), hr = halfR ? halfR(cc) : h;
   return `<clipPath id="${id}"><rect x="-5" y="-5" width="${L / 2 + 5.3}" height="30"/></clipPath>` +
-    `<g clip-path="url(#${id})">${h}</g><g transform="matrix(-1 0 0 1 ${L} 0)"><g clip-path="url(#${id})">${h}</g></g>`;
+    `<g clip-path="url(#${id})">${h}</g><g transform="matrix(-1 0 0 1 ${L} 0)"><g clip-path="url(#${id})">${hr}</g></g>`;
 }
 
 // A four-axle European locomotive with a cab at each end. o: roof, sill,
 // nose (points, bottom up), rake ([p, q] of the windshield), centers (truck
 // centers apart), wheel (in), pans (electric), grilles ([x, w, y0, y1] from
 // the middle), paint(c, L) for each half's side (drawn mirrored, so
-// symmetric), over(c, L) for what is drawn once over the whole side
-// (lettering, the logo), under(c, L) for what hangs between the trucks.
+// symmetric; paintR(c, L) for the right half's, if it differs), over(c, L)
+// for what is drawn once over the whole side (lettering, the logo),
+// under(c, L) for what hangs between the trucks. door: x of the side door
+// from the end (doors: [left, right], null for none), doorW its width,
+// doorGlass false for a door without a window.
 export function euroLoco(c, o) {
-  const L = c.L, { roof, sill } = o;
-  const half = (h) => bilevel(h, {
-    roof, sill, cornerR: 1.0, end: 0.6, noTrucks: true, nose: o.nose, badge: false, cabLen: 0,
-    paint: () => (o.paint ? o.paint(c, L) : side(c, L, { eave: roof - 1.1, low: sill + 2.2, skirt: sill + 0.55 })),
-    doors: [{ x: o.door ?? 6.2, w: 1.9, y0: sill + 0.5, y1: roof - 1.7, glassY: 0.62, glassH: 0.25, grabs: false }],
-    rows: [{ xs: [o.rake[1][0] + 0.6], y: o.rake[0][1] - 0.4, w: 1.6, h: 2.2, r: 0.3 }],
-    cab: () => screen(c, o.rake[0], o.rake[1], 2.0, o.surround),
-    // The cab door's grab handles and step, a plow under the nose, the lamps,
-    // buffers and coupling.
-    extra: () => grab((o.door ?? 6.2) - 0.3, sill + 1.2, roof - 3.0) + grab((o.door ?? 6.2) + 2.2, sill + 1.2, roof - 3.0) +
-      rect((o.door ?? 6.2) - 0.1, sill - 0.6, 2.1, 0.25, "currentColor") +
-      path(poly([[noseX(o.nose, sill) + 0.7, 2.5], [5.6, 2.5], [5.0, 0.6], [noseX(o.nose, sill) + 1.5, 0.55], [noseX(o.nose, sill) + 0.8, 1.5]]), C.black, 0, 'opacity="0.92"') +
-      front(c, o, { coupler: "buffers", lampY: sill + 1.3 }),
-  });
-  let s = twinEnded(c, half);
+  const L = c.L, { roof, sill } = o, dw = o.doorW ?? 1.9;
+  const half = (h, right = false) => {
+    const d = o.doors ? o.doors[right ? 1 : 0] : o.door ?? 6.2;
+    return bilevel(h, {
+      roof, sill, cornerR: 1.0, end: 0.6, noTrucks: true, nose: o.nose, badge: false, cabLen: 0,
+      paint: () => (right && o.paintR ? o.paintR(c, L) : o.paint ? o.paint(c, L) : side(c, L, { eave: roof - 1.1, low: sill + 2.2, skirt: sill + 0.55 })),
+      doors: d == null ? [] : [{ x: d, w: dw, y0: sill + 0.5, y1: roof - 1.7, glassY: 0.62, glassH: 0.25, grabs: false, glass: o.doorGlass ?? true }],
+      rows: [{ xs: [o.rake[1][0] + 0.6], y: o.rake[0][1] - 0.4, w: 1.6, h: 2.2, r: 0.3 }],
+      cab: () => screen(c, o.rake[0], o.rake[1], 2.0, o.surround),
+      // The door's grab handles and step, a plow under the nose, the lamps,
+      // buffers and coupling.
+      extra: () => (d == null ? "" : grab(d - 0.3, sill + 1.2, roof - 3.0) + grab(d + dw + 0.3, sill + 1.2, roof - 3.0) + rect(d - 0.1, sill - 0.6, dw + 0.2, 0.25, "currentColor")) +
+        path(poly([[noseX(o.nose, sill) + 0.7, 2.5], [5.6, 2.5], [5.0, 0.6], [noseX(o.nose, sill) + 1.5, 0.55], [noseX(o.nose, sill) + 0.8, 1.5]]), C.black, 0, 'opacity="0.92"') +
+        front(c, o, { coupler: "buffers", lampY: sill + 1.3 }),
+    });
+  };
+  let s = o.doors || o.paintR ? twinEnded(c, half, (h) => half(h, true)) : twinEnded(c, half);
   // Side grilles either side of the middle; equipment on the roof.
   for (const [dx, w, y0 = sill + 3.1, y1 = roof - 2.1] of o.grilles || [[-14.5, 9.5], [5.0, 9.5]]) {
     const x = L / 2 + dx;
@@ -219,26 +241,31 @@ export function euroLoco(c, o) {
 
 // A UIC-Z passenger coach, 26.4 m: two trucks 19 m apart, a single plug door
 // at each end, ten big windows between. o: rows, cab (a driving trailer's
-// end). The paint goes by the railroad (coachPaint); the roof carries the
-// air-conditioning unit and vents, the ends buffers and screw couplings.
+// end), door ({ x from the end, cab: x behind the cab, w, h, glassY, glassH,
+// glass, grabs } where the railroad's door differs), farDoor false for a
+// driving trailer with no door at its far end. The paint goes by the
+// railroad (coachPaint); the roof carries the air-conditioning unit and
+// vents, the ends buffers and screw couplings.
 export function euroCoach(c, o = {}) {
   const L = c.L, roof = 13.3, sill = 3.9;
   const p = coachPaint(c);
   const rows = o.rows ?? [{ a: 6.0, b: L - 6.0, y: 7.3, w: 4.6, h: 3.0, pitch: 6.45, r: 0.45 }];
+  const { x: dEnd = 2.0, cab: dCab = 9.0, w: dw = 2.6, h: dh = 7.0, ...dmore } = o.door || {};
   // A driving trailer's door is behind its cab.
-  const dx = c.cabL && o.cab ? 9.0 : 2.0;
+  const cabbed = c.cabL && o.cab, dx = cabbed ? dCab : dEnd;
+  const xs = cabbed && o.farDoor === false ? [dx] : [dx, L - dEnd - dw];
   return coachCar(c, {
     roof, sill, end: 0.6, endR: 1.2, base: p.base, badge: false, under: true,
     trucks: { centers: o.centers ?? 62.3, wb: 8.2, d: 36 }, diaphragm: [4.25, 11.8], rows,
-    doors: [{ x: dx, w: 2.6, h: 7.0, glassY: 0.55, glassH: 0.3 }, { x: L - 4.6, w: 2.6, h: 7.0, glassY: 0.55, glassH: 0.3 }],
-    livery: (cc) => p.side(cc, L) + [dx, L - 4.6].map((x) => rect(x, sill + 0.15, 2.6, 7.0, p.door)).join("") + (cc.cabL && o.cab && p.cabEnd ? p.cabEnd(cc, L) : ""),
+    doors: xs.map((x) => ({ x, w: dw, h: dh, glassY: 0.55, glassH: 0.3, ...dmore })),
+    livery: (cc) => p.side(cc, L, xs) + (p.door ? xs.map((x) => rect(x, sill + 0.15, dw, dh, p.door)).join("") : "") + (cc.cabL && o.cab && p.cabEnd ? p.cabEnd(cc, L) : ""),
     extra: (cc) => {
       let s = hvac(L / 2 - 7, roof, 14, 0.7) + [12, 24, L - 24, L - 12].map((x) => path(`M${x - 1.1} ${roof - 0.05}Q${x} ${roof + 0.7} ${x + 1.1} ${roof - 0.05}Z`, C.steelDark, 0.4)).join("");
       s += rect(L / 2 - 3.5, sill - 1.9, 7, 0.75, C.steelDark, 0.4, 'rx="0.37"');                       // water tank
       const cab = cc.cabL && o.cab;
       s += buffers(0, -1, { sill, end: cab ? 0.9 : 0.6 }) + buffers(L, 1, { sill });
       if (cab) s += lamp(0.55, 5.6, 0.5, 0.5) + rect(0.6, 5.0, 0.4, 0.32, "#d8262c", 0.3, 'rx="0.1"') + horns(3.6, roof);
-      return s + (p.over ? p.over(cc, L, rows) : "");
+      return s + (p.over ? p.over(cc, L, xs) : "");
     },
     ...(o.cab ? { cab: o.cab, cabLen: 8, cabR: 3.2 } : {}),
   });
@@ -887,26 +914,39 @@ export const leoFlirtMid = (c) => unit(c, { roof: 14.06, sill: 3.0,
 // The coach paints (coachPaint uses these by c.livery).
 const kindWord = (c, words) => words[c.kind] || words.coach;
 const FOREIGN_PAINT = {
-  // ÖBB railjet (Siemens Viaggio, 2008-2013, 60 sets; photographs at Wien
-  // Meidling, Villach and the Semmering): a deep carmine red above the
-  // windows, which sit in a black band, slate gray below, a red line low
-  // along the gray; the driving trailer's rounded cab red down to the
-  // coupler; railjet lettered in gray low on the side.
-  railjet: (c) => ({ base: OBB.rj, door: OBB.slate,
-    side: (cc, L) => bands(L, [[12.25, 3, "#8f979f"], [0, 6.75, OBB.slate], [4.65, 0.24, OBB.rj], [0, 4.35, "#25272a"]]) +
-      rect(-1, 6.95, L + 2, 3.6, "#16181b"),
-    cabEnd: (cc, L) => path("M0 4.35L3.2 4.35Q5.0 6.6 5.6 13.3L0 13.3Z", OBB.rj) + path("M3.2 4.35Q5.0 6.6 5.6 13.3L6.4 13.3Q5.6 7.0 4.6 4.35Z", OBB.rj),
-    over: (cc, L) => letters(cc, L * 0.55, 5.55, 1.05, "railjet", "#6f7378", { weight: 700, style: "italic" }) +
-      letters(cc, 6.7, 8.75, 1.4, cc.firstClass ? "1" : "2", "#ffffff", { weight: 600 }) + letters(cc, L - 6.7, 8.75, 1.4, cc.firstClass ? "1" : "2", "#ffffff", { weight: 600 }) }),
-  // ÖBB Nightjet (2016 on; photographs of WLABmz 72-90 and the couchettes
-  // at Bruxelles-Midi and Innsbruck, 2020-2025): night blue all over, a red
-  // line under the windows, the roof gray; ÖBB in red and nightjet in white
-  // italic low on the side, the car's kind (schlafwagen, liegewagen) ahead.
-  nightjet: (c) => ({ base: OBB.nj, door: "#3a4490",
-    side: (cc, L) => bands(L, [[12.25, 3, "#9aa1a9"], [6.75, 0.3, OBB.njLine], [0, 4.35, "#1b1f3d"]]),
-    over: (cc, L) => mark(cc, L / 2, 5.35, txt(-0.4, 0, 0.95, "ÖBB", OBB.njLine, { weight: 800, anchor: "end" }) + txt(0.1, 0, 1.05, "nightjet", "#ffffff", { weight: 700, style: "italic", anchor: "start" })) +
-      letters(cc, L * 0.22, 5.4, 0.7, kindWord(cc, { sleeper: "schlafwagen", couchette: "liegewagen", coach: "sitzwagen" }), "#ffffff", { weight: 500, style: "italic" }) +
-      (cc.kind === "sleeper" ? "" : letters(cc, 6.7, 8.75, 1.4, "2", "#ffffff", { weight: 600 })) }),
+  // ÖBB railjet (Siemens Viaggio, 2008-2013; photographs of Bmpz 22-90 553
+  // at St. Valentin, Ampz 19-90 602 at Zürich, Afmpz 80-90 728 at Wien Hbf
+  // in 2025, and sets at Nendeln and Landeck in 2025): carmine from the
+  // roof down to the windows, which sit in one dark band, a bright red
+  // stripe at their sills, slate gray below, light gray skirts; the stripe
+  // and the gray run on across the doors; the driving trailer's gray ends
+  // in a curve behind the cab, the stripe sweeping down past it (rjSide).
+  // Lettering (rjOver): ÖBB railjet small by the door, the class in red
+  // italics under the windows, railjet big in outline on the gray.
+  railjet: (c) => ({ base: OBB.rj, door: null, side: rjSide, over: rjOver }),
+  // ÖBB Nightjet, the cars of before the new generation (photographs of
+  // WLABmz 72-90 011 and Bcmz 59-91 210 at Bruxelles-Midi, May 2025): night
+  // blue, a red line under the windows with a light gray line beneath it,
+  // light gray doors the lines run across, the roof gray; ÖBB in red and
+  // the car's kind small (schlafwagen, liegewagen) low at one end, nightjet
+  // big in outline, and the kind in English with nightjet.com toward the
+  // other; a big 2 by the windows of a couchette or seated car; Austria's
+  // flag at the corner over the door.
+  nightjet: (c) => ({ base: OBB.nj, door: null,
+    side: (cc, L, xs) => bands(L, [[12.25, 3, "#a9afb4"], [0, 4.35, "#1c1d2e"]]) + xs.map((x) => rect(x, 4.05, 2.6, 7.0, OBB.njDoor)).join("") +
+      bands(L, [[7.6, 0.15, "#b9bdc0"], [7.75, 0.33, OBB.njLine]]),
+    over: (cc, L) => {
+      const kind = cc.kind, word = { sleeper: "sleeping car", couchette: "couchette" }[kind];
+      let s = letters(cc, 22.55, 6.83, 1.4, "ÖBB", OBB.njLine, { weight: 700 }) + outlined(cc, 56.25, 6.66, 1.5, "nightjet", 11.3, "#c9cfdb");
+      if (word) s += wide(cc, 12.6, 7.2, 0.5, kind === "sleeper" ? "schlafwagen" : "liegewagen", "#b9bdc6", 3.8, { weight: 500 }) +
+        wide(cc, 73.1, 7.92, 0.3, "nightjet.com", "#ffffff", 3.0, { weight: 600 }) +
+        wide(cc, kind === "sleeper" ? 74.2 : 74.25, 7.08, 0.75, word, "#e9ecf2", kind === "sleeper" ? 5.4 : 4.5, { weight: 700, style: "italic" }) +
+        rect(83.8, 12.0, 0.9, 0.12, "#d8262c") + rect(83.8, 12.12, 0.9, 0.12, "#ffffff") + rect(83.8, 12.24, 0.9, 0.12, "#d8262c");
+      // The 2s between windows, the second and the last but one.
+      const at = kind === "couchette" ? [13.6, 73.0] : [14.3, 72.3];
+      if (kind !== "sleeper") s += at.map((x) => letters(cc, x, 10.0, 1.8, "2", "#ffffff", { weight: 500 })).join("");
+      return s;
+    } }),
   // ČD's night cars (sleeping cars and couchettes refurbished 2019-2024,
   // photograph of a Bcmz at Budapest-Nyugati): navy from the roof down
   // through the windows, a white line under the roof edge, a sky-blue band
@@ -943,9 +983,9 @@ const FOREIGN_PAINT = {
 };
 
 // The cars, on euroCoach's body (26.4 m, unless noted): o.rows its window
-// row, o.centers its trucks apart.
+// row, o.centers its trucks apart, o.door its doors (euroCoach's).
 const coachIn = (livery, kind, o = {}) => (c) => euroCoach({ ...c, agency: o.agency || c.agency, livery, kind, firstClass: o.first ?? false },
-  { rows: o.rows ? o.rows(c.L) : undefined, centers: o.centers });
+  { rows: o.rows ? o.rows(c.L) : undefined, centers: o.centers, door: o.door });
 // Sleeping cars: a small window to each of the twelve compartments
 // (Siemens's WLABmz of 2003-2005, ÖBB 72-90 and ČD 72-70, 26.4 m; photograph
 // of 72-90 010 at Bruxelles-Midi); the older Görlitz-built WLABmee and PKP's
@@ -955,9 +995,13 @@ const GORLITZ_ROWS = (L) => [{ a: 5.8, b: L - 5.8, y: 7.6, w: 3.8, h: 2.9, pitch
 // Couchettes: eleven compartments, each with a wide window (Bcmz 59-90 and
 // 59-70, 26.4 m).
 const COUCHETTE_ROWS = (L) => [{ a: 6.2, b: L - 6.2, y: 7.3, w: 4.4, h: 3.0, pitch: 6.6, r: 0.4 }];
-export const njSleeper = coachIn("nightjet", "sleeper", { rows: SLEEPER_ROWS });
-export const njCouchette = coachIn("nightjet", "couchette", { rows: COUCHETTE_ROWS });
-export const njCoach = coachIn("nightjet", "coach");
+// ÖBB's Nightjet cars as photographed: the windows higher, their sills on
+// the line, the doors' windows level with them.
+const njRows = (rows) => (L) => rows(L).map((r) => ({ ...r, y: 8.2, h: 2.75 }));
+const NJ_DOOR = { glassY: 0.59, glassH: 0.37 };
+export const njSleeper = coachIn("nightjet", "sleeper", { rows: njRows(SLEEPER_ROWS), door: NJ_DOOR });
+export const njCouchette = coachIn("nightjet", "couchette", { rows: njRows(COUCHETTE_ROWS), door: NJ_DOOR });
+export const njCoach = coachIn("nightjet", "coach", { rows: njRows((L) => [{ a: 6.0, b: L - 6.0, w: 4.6, pitch: 6.45, r: 0.45 }]), door: NJ_DOOR });
 // ČD's WLABmz (826) and Bcmz (834) in its night paint; ZSSK's Görlitz
 // WLABmee and its Bcmh couchettes in its white and red (photograph of
 // WLABmee 71-90 005 at Poprad-Tatry); MÁV's sleeping car, couchette and
@@ -979,33 +1023,97 @@ export const cdCoach = (c) => euroCoach({ ...c, agency: "czcd" });
 // 1216, for Italy, Slovenia and the Czech and Slovak lines, 2006-2008):
 // 19.28 m over the buffers (the 1216 19.58 m), Bo'Bo', trucks 9.9 m apart
 // on 1,150 mm wheels; the rounded nose under a deep windshield raked well
-// back, the crew door behind it, smooth sides with the louvers high near
-// the middle (de.wikipedia "Siemens ES64U2", "ÖBB 1216"). The railjet
-// 1116s: the carmine red with a slate band low that swells toward the
-// middle, railjet big in a lighter red; the others traffic red with a dark
-// gray underframe and ÖBB in white.
+// back, smooth sides with the louvers high under the roof (de.wikipedia
+// "Siemens ES64U2", "ÖBB 1216"). As photographed: the 1216s (1216 012 at
+// München Ost) traffic red over a dark gray band low on the side, a door
+// behind each cab, the roof's louvers toward each end, ÖBB big in white
+// toward one end. The railjet 1116s (1116 248 at Vöcklabruck, 1116 209
+// and 241 in Bavaria in 2025), painted differently at each end: carmine
+// over a bright red stripe over slate gray; at one end (2) the gray ends
+// in a point and the stripe sweeps down to the bottom ahead of it, a
+// lighter red under the sweep and in a thin line under the gray, ÖBB
+// railjet small behind the cab; at the other (1) the stripe and gray run
+// on round the cab, a light gray strip at its foot; a single door, toward
+// end 2; railjet big in outline over the stripe toward end 1.
 const NOSE_TAURUS = [[1.7, 4.1], [1.1, 6.3], ["q", 0.95, 8.5, 2.3, 9.3], [3.9, 12.15], ["q", 4.6, 13.0, 6.4, 13.0]];
-function taurusPaint(c, L) {
-  if (c.livery === "railjet") return bands(L, [[0, 20, OBB.rj], [12.0, 3, "#55595f"], [0, 5.2, OBB.slate]]) +
-    path(`M9.0 5.2Q${L * 0.3} 5.4 ${L / 2} 8.6L${L / 2} 5.2Z`, OBB.slate) + path("M0 5.2L0 7.6L2.0 7.6L3.4 5.2Z", "#1d1e20");
-  return bands(L, [[0, 20, OBB.red], [12.0, 3, "#6d737a"], [0, 5.0, "#3a3d42"], [5.0, 0.14, "#f2f3f4"]]) + path("M0 5.0L0 7.4L2.0 7.4L3.3 5.0Z", "#3a3d42");
-}
-const taurusOver = (c, L) => (c.livery === "railjet"
-  ? letters(c, L / 2 + 1, 8.3, 2.6, "railjet", "#c9414a", { weight: 800, style: "italic", spacing: "-0.02em" }) +
-    mark(c, 14.5, 6.0, txt(-0.2, 0, 0.6, "ÖBB", "#ffffff", { weight: 800, anchor: "end" }) + txt(0.1, 0, 0.6, "railjet", "#ffffff", { weight: 600, anchor: "start" })) +
-    letters(c, L - 14, 11.4, 0.5, "1116", "#ffffff", { weight: 600 })
-  : letters(c, L / 2, 8.6, 2.4, "ÖBB", "#ffffff", { weight: 800 }) + letters(c, L - 14, 11.4, 0.5, c.cls || "1216", "#ffffff", { weight: 600 }));
-export const taurus = (c) => euroLoco(c, { roof: 13.0, sill: 4.1, nose: NOSE_TAURUS, rake: [[2.3, 9.3], [3.9, 12.15]], centers: 32.5, door: 7.2, wheel: 45,
-  paint: taurusPaint, over: taurusOver, surround: "#141518", grilles: [[-13.5, 6.5, 9.8, 11.5], [7.0, 6.5, 9.8, 11.5]], grilleFill: "rgba(20,22,25,0.24)" });
+const TAURUS = { roof: 13.0, sill: 4.1, nose: NOSE_TAURUS, rake: [[2.3, 9.3], [3.9, 12.15]], centers: 32.5, wheel: 45, surround: "#141518", grilleFill: "rgba(20,22,25,0.3)" };
+// The roof's edge (a darker line where the side meets it); the roof itself
+// in the body's color.
+const taurusRoof = (L, fill) => rect(-1, 12.0, L + 2, 3, fill) + rect(-1, 11.96, L + 2, 0.08, "rgba(0,0,0,0.25)");
+// End 2: the sweep, as photographed on 1116 248.
+const rj2 = (c, L) => taurusRoof(L, OBB.rj) + rect(-1, 0, L + 2, 12.0, OBB.rj) +
+  path("M5.0 3.5L5.0 4.1Q9.0 5.2 12.0 5.6L12.6 5.6L12.6 3.5Z", OBB.rjLight) +
+  path(`M${L} 0L${L} 6.8L17.5 6.8Q13.6 6.7 12.3 5.75Q11.5 5.0 12.2 4.3L12.4 0Z`, OBB.slate) + rect(11.9, 3.5, 13.0, 0.95, OBB.rjLight) +
+  path(`M${L} 7.55L17.5 7.55Q12.5 7.0 9.0 5.8Q7.2 5.0 5.4 4.1L6.9 4.1Q8.6 4.9 10.0 5.45Q13.0 6.55 17.5 6.8L${L} 6.8Z`, OBB.rjRed);
+// End 1: the stripe and gray round the cab, the light strip at its foot.
+const rj1 = (c, L) => taurusRoof(L, OBB.rj) + rect(-1, 0, L + 2, 12.0, OBB.rj) + rect(-1, 0, L + 2, 6.8, OBB.slate) + rect(-1, 6.8, L + 2, 0.75, OBB.rjRed) +
+  rect(1.7, 4.1, 4.1, 0.4, "#c8c6be");
+export const taurus = (c) => euroLoco(c, { ...TAURUS, doors: [21.8, null], doorW: 2.2, doorGlass: false, paint: rj2, paintR: rj1,
+  grilles: [[-16.4, 3.8, 10.9, 11.8], [-12.0, 2.6, 10.9, 11.8], [16.5, 4.0, 10.9, 11.8]],
+  over: (cc, L) => outlined(cc, 41.15, 7.73, 3.7, "railjet", 20.5, "#ffffff") + obbRailjet(cc, 13.7, 17.1, 10.14, 0.55, "#f4dede", 400) });
+// The 1216 (Czechia's Nightjet, and Trenitalia's file draws it too).
+export const taurus1216 = (c) => euroLoco(c, { ...TAURUS, door: 7.2,
+  paint: (cc, L) => taurusRoof(L, OBB.red) + rect(-1, 0, L + 2, 12.0, OBB.red) + rect(-1, 0, L + 2, 5.55, "#3a3d42") + path("M0 5.55L0 7.4L2.0 7.4L3.3 5.55Z", "#3a3d42"),
+  grilles: [[-13.1, 4.0, 11.1, 11.9], [17.9, 4.6, 11.1, 11.9]],
+  over: (cc, L) => letters(cc, 47.5, 8.85, 3.1, "ÖBB", "#f4f4f2", { weight: 700 }) });
 
 // The railjet's coaches (26.5 m) and its driving trailer (80-90.7, 26.8 m):
-// ČD's bodies (rjCoach, rjCab) in ÖBB's railjet paint. The set: the
-// driving trailer with business and first class, a first-class car, the
-// restaurant car, four second-class cars.
+// ČD's bodies in ÖBB's railjet paint. The set (sets 01-51), from the
+// locomotive: four economy cars (the first with bicycles), the first-class
+// car with the restaurant (ARbmpz), the first-class car (Ampz) and the
+// driving trailer with business and first class (Afmpz). The doors as
+// photographed: wider, a narrow window with the class's numeral, an orange
+// bar beside each on the side toward the car's end (round each door on
+// the sets that run to Switzerland), the driving trailer's only behind its
+// cab.
 const RJ_CAB = () => path(poly([[1.0, 8.6], [2.6, 11.6], [5.4, 11.6], [5.4, 8.6]]), C.glass) + path(poly([[0.75, 8.3], [0.75, 11.9], [2.4, 12.2], ["q", 1.0, 11.6, 0.75, 8.3]]), "#111214") +
   rect(3.2, 11.1, 1.9, 0.3, "#f39a26", 0, 'opacity="0.9"') + line(1.6, 8.8, 2.3, 10.4, "#0d0f12", 0.7);
-export const obbRjCoach = (c) => euroCoach({ ...c, livery: "railjet", firstClass: c.index === 1 || c.index === 2 }, { rows: RJ_ROWS(c.L) });
-export const obbRjCab = (c) => euroCoach({ ...c, livery: "railjet", firstClass: true }, { rows: RJ_ROWS(c.L), cab: RJ_CAB });
+const RJ_DOOR = { x: 1.7, cab: 15.8, w: 4.2, h: 6.35, glass: false, grabs: false };
+// The window band: from the first window to the last (the driving
+// trailer's from behind its door to the far end).
+const rjBand = (c, L) => (c.rjKind === "cab" ? [25.0, 84.4] : [12.9, L - 12.6]);
+const rjRows = (c, L) => { const [a, b] = rjBand(c, L); return [{ a: a + 0.2, b: b - 0.2, y: 7.95, w: 4.9, h: 1.65, pitch: 6.1, r: 0.3 }]; };
+function rjSide(c, L, xs) {
+  const [a, b] = rjBand(c, L);
+  let s = bands(L, [[12.25, 3, "#aeb3b8"], [7.5, 0.72, OBB.rjRed], [4.95, 2.55, OBB.slate], [0, 4.95, OBB.skirt]]) + rect(a, 7.8, b - a, 1.95, "#1a1c20", 0, 'rx="0.35"');
+  // The driving trailer: behind the cab the gray ends in a curve and the
+  // stripe sweeps down past it to the foot of the cab; carmine under both.
+  if (c.rjKind === "cab" && c.cabL) s += rect(-1, 4.95, 18, 3.4, OBB.rj) + rect(-1, 0, 14.4, 5.0, OBB.rj) +
+    path("M17 7.5L15 7.5C11 7.2 6 5.9 3.0 5.15Q2.2 4.95 3.0 4.95L17 4.95Z", OBB.slate) +
+    path("M17 8.22L15.9 8.22C11.5 8.1 7 7.0 0.6 5.0L0.6 4.25C7 6.25 11.5 7.35 15.9 7.47L17 7.47Z", OBB.rjRed);
+  return s;
+}
+const RJ_WORD = { economy: 4.8, first: 2.7, business: 5.5 };
+const rjWord = (c, x0, word) => wide(c, x0 + RJ_WORD[word] / 2, 6.75, 0.85, word, OBB.rjRed, RJ_WORD[word], { weight: 700, style: "italic" });
+function rjOver(c, L, xs) {
+  const kind = c.rjKind, cab = kind === "cab" && c.cabL;
+  let s = "";
+  // Each door: its window with the class's numeral, the orange bar with
+  // the door's button at its foot.
+  for (const x of xs) {
+    // The restaurant car's loading door, at its kitchen end, is plain.
+    if (kind === "restaurant" && x < L / 2) continue;
+    const num = kind === "economy" ? "2" : "1";
+    const bx = cab ? x + 4.55 : x < L / 2 ? x - 0.7 : x + 4.55;
+    s += rect(x + 1.2, 7.2, 1.3, 2.2, "#24272c", 0, 'rx="0.45"') + (num ? letters(c, x + 1.85, 9.0, 0.75, num, "#ffffff", { weight: 700 }) : "") +
+      rect(bx, 6.2, 0.35, 3.2, OBB.orange) + circle(bx + 0.175, 6.0, 0.2, "#c9cdd0");
+  }
+  // By the door: ÖBB railjet, the passenger display, the red emergency
+  // handle; the class in red under the windows; railjet big on the gray.
+  const near = cab ? 8.3 : 9.0;
+  s += obbRailjet(c, near, near + 3.4, 10.4, 0.55, "#e8463c") + rect(near + (cab ? 1.7 : 0), 8.2, 2.1, 0.9, "#16181b", 0, 'rx="0.12"') +
+    rect(near + (cab ? 1.95 : 0.25), 8.5, 1.5, 0.25, "#f2a33a", 0, 'opacity="0.85"') + rect(near + (cab ? 1.3 : 0), 5.85, 1.0, 0.5, "#d8262c", 0, 'rx="0.08"');
+  if (kind === "cab") return s + rjWord(c, 25.1, "business") + rjWord(c, 77.4, "first") + wide(c, 82.4, 6.75, 0.85, "quiet zone", "#e9ecf2", 3.2, { weight: 600, style: "italic" }) +
+    rect(83.4, 5.85, 1.0, 0.5, "#d8262c", 0, 'rx="0.08"') + outlined(c, 59.3, 6.46, 1.42, "railjet", 11.2, "#c4c8cc");
+  // The class by each door (not on the restaurant car, not photographed
+  // closely enough).
+  const word = kind === "economy" ? "economy" : "first";
+  if (kind !== "restaurant") s += rjWord(c, 12.8, word) + rjWord(c, 75.0 - RJ_WORD[word], word);
+  return s + rect(79.2, 5.85, 1.0, 0.5, "#d8262c", 0, 'rx="0.08"') + outlined(c, 31.4, 6.46, 1.42, "railjet", 11.2, "#c4c8cc");
+}
+const RJ_KIND = { 5: "restaurant", 6: "first" };
+export const obbRjCoach = (c) => { const cc = { ...c, livery: "railjet", rjKind: RJ_KIND[c.index] || "economy" }; return euroCoach(cc, { rows: rjRows(cc, c.L), door: RJ_DOOR }); };
+export const obbRjCab = (c) => { const cc = { ...c, livery: "railjet", rjKind: "cab" }; return euroCoach(cc, { rows: rjRows(cc, c.L), cab: RJ_CAB, door: RJ_DOOR, farDoor: false }); };
 
 // Siemens Desiro ML (ÖBB 4744 and 4746 "cityjet", 2015 on; Raaberbahn's
 // 4744.3 and 4746.3 "Ventus", 2016 and 2021): three cars, 75.15 m over the
@@ -1201,8 +1309,8 @@ export const MODELS = {
   czRegioSprinter: M(regioSprinter, 81.36),
   czEso: M(eso, 55.1),
   cz816: M((c) => twinEnded(c, regionova), 46.65),
-  atTaurus: M((c) => taurus({ ...c, livery: "railjet" }), 63.25),
-  at1216: M(taurus, 64.24),
+  atTaurus: M(taurus, 63.25),
+  at1216: M(taurus1216, 64.24),
   atRjCoach: M(obbRjCoach, 86.9, false, byIndex),
   atRjCab: M(obbRjCab, 87.9, true),
   atNjSleeper: M(njSleeper, 86.6),
