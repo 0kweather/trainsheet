@@ -725,16 +725,19 @@ const sbbMark = (c, x, y, h) => {
 // with the business zone; J; H with the wheelchair places), the restaurant
 // car G, then second class (F to the cab car A, family zone in E);
 // pantographs on cars B, D, F and H. Photographs (Brescia 2024, Zürich HB
-// 2026, Steinen 2025): the restaurant car's window band red, "Restaurant"
-// in red over it; the canton's or region's arms under the cab side window
-// differ by unit and are left out.
+// 2026, Steinen 2025; 501 017 near Schübelbach 2021): the restaurant car's
+// window band red over its dining room only (the half toward first class),
+// "Restaurant" in red over it; SBB's flag near each car's end, toward
+// first class on a first-class car and away from it on a second-class one;
+// the canton's or region's arms under the cab side window differ by unit
+// and are left out.
 const GIR = { roof: 13.96, sill: 3.5, top: 12.35 };
 const girRows = (xs) => [{ xs, y: 6.7, w: 4.5, h: 2.85, r: 0.5 }];
 const girDoor = (x, fill = SBB.red) => ({ x, w: 3.7, y0: 1.9, y1: 10.5, glassY: 0.5, glassH: 0.42, grabs: false, fill });
 function girPaint(c, g, { band0 = -1, rest = false } = {}) {
   const L = g.L;
   return rect(-1, 0, L + 2, 20, SBB.white) + rect(-1, GIR.top + 0.6, L + 2, 4, SBB.roof) + rect(-1, GIR.top, L + 2, 0.6, SBB.red) + rect(-1, 0, L + 2, 3.0, SBB.skirt) +
-    rect(band0, 5.3, L - band0 + 1, 4.5, rest ? SBB.red : SBB.band, 0, band0 > 0 ? 'rx="0.9"' : "");
+    rect(band0, 5.3, L - band0 + 1, 4.5, SBB.band, 0, band0 > 0 ? 'rx="0.9"' : "") + (rest ? rect(band0, 5.3, L / 2 - band0, 4.5, SBB.red) : "");
 }
 // The class at each passenger door: a yellow stripe over it (first) or a
 // white 2 at the top of the band beside it, the pictogram strip under it.
@@ -774,13 +777,15 @@ function girMid(c, { first, kind = "plain" }) {
   let xs = girMidRows(d);
   if (extra != null) xs = [d - 20.0, d - 6.9, d + 5.1, d + 11.3, d + 17.5];
   const doors = kind === "rest" ? [] : [d, ...(extra != null ? [extra] : [])];
-  if (kind === "rest") xs = [16.0, 24.6, 31.0, 37.4, 43.8];
-  const rows = kind === "rest" ? [{ xs: [16.0], y: 6.7, w: 1.6, h: 2.85, r: 0.4 }, { xs: xs.slice(1), y: 6.7, w: 4.3, h: 2.85, r: 0.5 }] : girRows(xs);
+  // The restaurant: four windows in the red over the dining room (the
+  // Schübelbach photograph), the galley's three in the black beyond.
+  if (kind === "rest") xs = [2.6, 8.6, 14.6, 20.6, 33.6, 39.8, 46.0];
+  const rows = girRows(xs);
   const pan = c.index === 3 || c.index === 5 || c.index === 7 || c.index === 9;
   return sec(c, { roof: GIR.roof, sill: GIR.sill, rows, doors: doors.map((x) => girDoor(x)), drop: { a: 7.5, b: L - 7.5, y: 1.8 },
     trucks: [[0, 36, 9.0], [L, 36, 9.0]], diaphragm: [3.8, 12.4],
     paint: (cc, g) => girPaint(cc, g, { rest: kind === "rest" }),
-    marks: (cc) => girClass(cc, doors, first) + (kind === "rest" ? letters(cc, 23.0, 10.95, 0.8, "Restaurant", SBB.red, { weight: 500, spacing: 0.06 }) : sbbMark(cc, 4.4, 4.25, 1.1)),
+    marks: (cc) => girClass(cc, doors, first) + (kind === "rest" ? letters(cc, 14.0, 10.95, 0.8, "Restaurant", SBB.red, { weight: 500, spacing: 0.06 }) : sbbMark(cc, first ? 4.4 : L - 9.6, 4.25, 1.1)),
     extra: (cc, g) => girRoof(L, pan, c.index === 5) + boxes(9, L - 9, 1.8, 3, 0.5) });
 }
 const giruno = {
