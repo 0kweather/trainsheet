@@ -38,6 +38,9 @@ EXTRACTS = [
     "europe/italy", "europe/switzerland", "europe/slovenia",
     "europe/france/provence-alpes-cote-d-azur", "europe/france/rhone-alpes", "europe/germany/baden-wuerttemberg",
     "europe/france/alsace", "europe/france/franche-comte", "europe/liechtenstein",
+    "europe/belgium", "europe/luxembourg", "europe/netherlands/noord-brabant", "europe/netherlands/zuid-holland",
+    "europe/netherlands/limburg", "europe/france/nord-pas-de-calais", "europe/france/picardie", "europe/france/lorraine",
+    "europe/germany/nordrhein-westfalen/koeln-regbez", "europe/germany/rheinland-pfalz",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
