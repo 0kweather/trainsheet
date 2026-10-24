@@ -34,7 +34,7 @@ EXTRACTS = [
     "europe/finland", "europe/norway", "europe/sweden",
     "europe/estonia", "europe/latvia", "europe/lithuania",
     "europe/greece", "europe/ireland-and-northern-ireland",
-    "europe/romania", "europe/moldova", "europe/bulgaria",
+    "europe/romania", "europe/moldova", "europe/bulgaria", "europe/serbia", "europe/turkey",
     "europe/italy", "europe/switzerland", "europe/slovenia",
     "europe/france/provence-alpes-cote-d-azur", "europe/france/rhone-alpes", "europe/germany/baden-wuerttemberg",
     "europe/france/alsace", "europe/france/franche-comte", "europe/liechtenstein",
@@ -48,6 +48,7 @@ EXTRACTS = [
     "europe/germany/nordrhein-westfalen", "europe/netherlands",
     "europe/united-kingdom/england/kent", "europe/united-kingdom/england/essex",
     "europe/united-kingdom/england/greater-london",
+    "europe/germany/niedersachsen",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]

@@ -352,12 +352,15 @@ const LOCOMOTIVE = new Set(["diesel", "electric"]);
 // number (Switzerland's Train Formation Service: "WRB6(502)", an ADLER's
 // "Ath150", often with no number at all): its car file's FORMATION[agency]
 // names each car's drawing, (car, i, cars) => TYPES key, car being
-// { number, cls, model, order }.
+// { number, cls, model, order, unit, side } (unit and side where the feed
+// gives them: iRail's SNCB compositions, which unit of the train a vehicle
+// belongs to, 1 first, and its orientation, "LEFT" or "RIGHT").
 const FORMATION = {};
 function formationKey(t, i) {
   const f = FORMATION[t.agency];
   if (!f || !t.cars?.models) return null;
-  const cars = t.cars.numbers.map((number, j) => ({ number: number || null, cls: t.cars.classes?.[j] ?? null, model: t.cars.models[j] ?? null, order: t.cars.orders?.[j] ?? null }));
+  const cars = t.cars.numbers.map((number, j) => ({ number: number || null, cls: t.cars.classes?.[j] ?? null, model: t.cars.models[j] ?? null, order: t.cars.orders?.[j] ?? null,
+    unit: t.cars.units?.[j] ?? null, side: t.cars.sides?.[j] ?? null }));
   const key = f(cars[i], i, cars);
   return key && TYPES[key] ? key : null;
 }
