@@ -62,6 +62,7 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | Australia | Adelaide Metro trains | Adelaide | Adelaide Metro GTFS-realtime, kept to the train routes by the relay | relay |
 | Australia | Sydney Trains, NSW TrainLink (intercity lines, XPT, Xplorer, Endeavour, Hunter) | New South Wales | Transport for NSW GTFS-realtime (Sydney Trains v2 with each train's set type, NSW Trains v1); placed from TfNSW's timetable until the key is set | relay + free key |
 | Australia | Metro Trains Melbourne, V/Line | Victoria | Transport Victoria GTFS-realtime (Metro's whole train, V/Line's lead unit); placed from its timetable until the key is set | relay + free key |
+| Bulgaria | БДЖ – Пътнически превози (Бърз влак, Пътнически влак, Крайградски пътнически влак, Международен бърз влак, the Rhodope narrow gauge) | Bulgaria | Placed from BDZ's timetable (GTFS on Bulgaria's National Access Point, BGNAP) and moved by the NAP's GTFS-realtime trip updates and positions (each position is the timetable's place shifted by BDZ's reported delay, so it's read for the delay) | relay |
 | Czechia | České dráhy, RegioJet, Leo Express, Arriva vlaky, GW Train Regio | Czechia | The Oběhy project's GTFS and GTFS-realtime of the national CZPTT timetable and SŽ's positions | relay |
 | Estonia | Elron | Estonia | Elron's own live map (elron.ee), plus the ministry's timetable | relay |
 | Finland | VR (long distance), commuter trains (HSL and VR) | Finland | Fintraffic's Digitraffic train locations and GTFS-realtime trip updates | relay |
@@ -216,6 +217,7 @@ Data outside the US and Canada, credited on the map with each railroad:
 - Trenitalia and Italo timetables from Italy's National Access Point (cciss.it; published with no licence stated); live details of opened trains from Trenitalia's ViaggiaTreno; Regione Lombardia (Trenord), CC BY 4.0; STA – Südtiroler Transportstrukturen via the Open Data Hub, CC0; EAV, Italian Open Data Licence 2.0; ARST via Sardegna Mobilità, CC BY 4.0; Trentino Trasporti, CC BY 4.0 (Italy).
 - CP – Comboios de Portugal timetable (publico.cp.pt, listed on nap-portugal.imt-ip.pt with no licence stated); Fertagus timetable via the National Access Point, free of charge (Portugal).
 - Informatica Feroviară's timetables (Mersul Trenurilor de Călători) via data.gov.ro, Open Government Licence Romania 1.0 (OGL-ROU-1.0), and Transitous's GTFS conversion of them (jbb.ghsq.de); station places from OpenStreetMap (Romania).
+- BDZ – Пътнически превози's timetable and GTFS-realtime via Bulgaria's National Access Point (sipbg.gov.bg/bgnap; published as open data, no licence stated); stops placed and halts named from OpenStreetMap where the timetable's are off (Bulgaria).
 - Elron and the Regionaal- ja Põllumajandusministeerium, timetable CC0 (Estonia).
 - Vivi timetable and Pieturas live data (gsvalbe.id.lv), credited as Pieturas asks (Latvia).
 - Oběhy (SŽ, CIS JŘ) (Czechia); railway.gov.gr (Greece); Ministry of Transport and Hasadna Open Bus (Israel): no licence published. Railroad logos on the train drawings (`img/logos/`) are the railroads' trademarks, from the public-domain versions on Wikimedia Commons.

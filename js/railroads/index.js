@@ -7,6 +7,7 @@ export const AGENCIES = {
   arst: {"after": "eav", "bbox": [8.322, 39.53, 9.323, 40.796], "cars": true, "clip": true, "color": "#38761d", "country": "IT", "credit": {"href": "https://www.sardegnamobilita.it/open-data/quadri-orari-arst", "label": "ARST (Sardegna Mobilità open data)"}, "kind": "commuter", "license": "CC BY 4.0", "name": "ARST trains", "region": "Sardinia", "short": "ARST", "tz": "Europe/Rome"},
   astratc: {"after": "transferoviar", "bbox": [21.207, 43.822, 28.645, 46.19], "cars": true, "clip": true, "color": "#19b29e", "country": "RO", "credit": {"href": "https://data.gov.ro/organization/sc-informatica-feroviara-sa", "label": "Informatica Feroviară via data.gov.ro"}, "kind": "intercity", "license": "OGL-ROU-1.0", "name": "Astra Trans Carpatic", "region": "Romania", "short": "Astra", "tz": "Europe/Bucharest"},
   atmetro: {"bbox": [174.576, -37.203, 174.952, -36.844], "cars": true, "color": "#2d7caf", "country": "NZ", "credit": {"href": "https://at.govt.nz/about-us/at-data-sources", "label": "Auckland Transport"}, "kind": "commuter", "license": "CC BY 4.0", "name": "AT Metro", "region": "Auckland", "short": "AT Metro", "tz": "Pacific/Auckland"},
+  bdz: {"bbox": [22.476, 41.391, 28.115, 44.114], "cars": "bdz", "clip": true, "color": "#00418a", "country": "BG", "credit": {"href": "https://sipbg.gov.bg/bgnap/portal/en/catalog", "label": "BDZ via BGNAP"}, "kind": "intercity", "license": null, "name": "БДЖ – Пътнически превози", "region": "Bulgaria", "short": "БДЖ", "tz": "Europe/Sofia"},
   bls: {"after": "sbbregio", "bbox": [6.812, 46.115, 8.31, 47.547], "cars": "chstd", "clip": true, "color": "#7ab929", "country": "CH", "credit": {"href": "https://opentransportdata.swiss", "label": "opentransportdata.swiss"}, "detail": "chfobls", "kind": "commuter", "license": "opentransportdata.swiss terms of use", "name": "BLS", "region": "Switzerland", "short": "BLS", "tz": "Europe/Zurich"},
   capmetro: {"after": "railrunner", "bbox": [-97.856, 30.262, -97.7, 30.588], "color": "#e0218a", "country": "US", "credit": {"href": "https://data.texas.gov", "label": "CapMetro"}, "kind": "commuter", "license": null, "logo": {"aspect": 4.14, "file": "img/logos/capmetro.svg", "white": "img/logos/capmetro-white.svg"}, "name": "CapMetro Rail", "region": "Austin", "short": "CapMetro", "tz": "America/Chicago"},
   cercanias: {"after": "renfe", "bbox": [-8.231, 36.409, 3.163, 43.686], "cars": true, "color": "#d6001c", "country": "ES", "credit": {"href": "https://data.renfe.com", "label": "Renfe"}, "kind": "commuter", "license": "CC BY 4.0", "name": "Renfe Cercanías and Rodalies", "region": "Spain", "short": "Cercanías", "tz": "Europe/Madrid"},
@@ -98,6 +99,7 @@ export const SOURCES = [
   {"agencies": ["adelaidemetro"], "credit": {"href": "https://www.adelaidemetro.com.au/developer-info", "label": "Adelaide Metro – Department for Infrastructure and Transport, South Australia", "license": "CC BY 3.0 AU"}, "format": "pb", "id": "adelaidemetro", "interval": 30, "module": "adelaidemetro", "needsKey": false, "relay": true, "scope": "view"},
   {"agencies": ["arst"], "credit": {"href": "https://www.sardegnamobilita.it/open-data/quadri-orari-arst", "label": "ARST (Sardegna Mobilità open data)", "license": "CC BY 4.0"}, "format": "timetable", "id": "arst", "interval": 60, "module": "arst", "scope": "view"},
   {"agencies": ["atmetro", "tehuia"], "credit": {"href": "https://at.govt.nz/about-us/at-data-sources", "label": "Auckland Transport", "license": "CC BY 4.0"}, "format": "pb", "id": "aucklandtransport", "interval": 30, "module": "aucklandtransport", "needsKey": "AT_API_KEY", "relay": true, "scope": "view", "untilKey": "timetable"},
+  {"agencies": ["bdz"], "credit": {"href": "https://sipbg.gov.bg/bgnap/portal/en/catalog", "label": "BDZ via BGNAP", "license": null}, "format": "pb", "id": "bdz", "interval": 30, "module": "bdz", "needsKey": false, "relay": true, "scope": "view"},
   {"after": "uta", "agencies": ["capmetro"], "credit": {"href": "https://data.texas.gov", "label": "CapMetro", "license": null}, "format": "pb", "id": "capmetro", "interval": 30, "module": "capmetro", "needsKey": false, "relay": true, "scope": "always"},
   {"after": "renfe", "agencies": ["cercanias"], "credit": {"href": "https://data.renfe.com", "label": "Renfe", "license": "CC BY 4.0"}, "format": "pb", "id": "cercanias", "interval": 30, "module": "renfe", "needsKey": false, "relay": true, "scope": "view"},
   {"agencies": ["cplc", "cpreg", "cplisboa", "cpporto"], "credit": {"href": "https://nap-portugal.imt-ip.pt", "label": "CP – Comboios de Portugal via the National Access Point", "license": null}, "format": "timetable", "id": "cp", "interval": 60, "module": "cp", "scope": "view"},
@@ -141,6 +143,7 @@ export const SOURCES = [
 export const PARSERS = {
   adelaidemetro: () => import("./adelaidemetro.js?v=dev"),
   aucklandtransport: () => import("./aucklandtransport.js?v=dev"),
+  bdz: () => import("./bdz.js?v=dev"),
   capmetro: () => import("./capmetro.js?v=dev"),
   czechia: () => import("./czechia.js?v=dev"),
   digitraffic: () => import("./digitraffic.js?v=dev"),
@@ -170,6 +173,7 @@ export const PARSERS = {
 export const RAIL_REGIONS = [
   {"bbox": [-59.49, -35.66, -57.91, -34.04], "bytes": 71704, "file": "data/rail/ar.geojson", "region": "ar"},
   {"bbox": [138.48, -35.19, 153.4, -26.14], "bytes": 81744, "file": "data/rail/au.geojson", "region": "au"},
+  {"bbox": [22.47, 41.39, 28.12, 44.12], "bytes": 135133, "file": "data/rail/bg.geojson", "region": "bg"},
   {"bbox": [5.82, 45.48, 10.29, 48.35], "bytes": 313857, "file": "data/rail/ch.geojson", "region": "ch"},
   {"bbox": [12.11, 48.55, 18.79, 51.05], "bytes": 651986, "file": "data/rail/cz.geojson", "region": "cz"},
   {"bbox": [24.06, 56.96, 28.2, 59.45], "bytes": 21801, "file": "data/rail/ee.geojson", "region": "ee"},
@@ -195,6 +199,7 @@ export const RAIL_REGIONS = [
 export const DATA_REGIONS = [
   {"agencies": ["trenesba"], "bbox": [-59.434, -35.579, -57.919, -34.098], "files": ["stations"], "region": "ar"},
   {"agencies": ["adelaidemetro", "translinkseq"], "bbox": [138.483, -35.189, 153.4, -26.159], "files": ["stations", "departures", "firsts", "linecolors", "trips"], "region": "au"},
+  {"agencies": ["bdz"], "bbox": [22.476, 41.391, 28.115, 44.114], "files": ["stations", "departures", "linecolors"], "region": "bg"},
   {"agencies": ["bls", "chintl", "chnarrowother", "chstdother", "mgb", "mob", "regionalps", "rhb", "sbb", "sbbregio", "sob", "thurbo", "tpf", "zb"], "bbox": [5.9, 45.8, 10.287, 47.85], "files": ["stations", "departures", "linecolors"], "region": "ch"},
   {"agencies": ["czarriva", "czcd", "czgwtrain", "czleo", "czregiojet"], "bbox": [12.12, 48.557, 18.788, 51.008], "files": ["stations", "departures", "firsts", "linecolors"], "region": "cz"},
   {"agencies": ["elron"], "bbox": [24.061, 56.947, 28.198, 59.44], "files": ["stations", "departures", "firsts"], "region": "ee"},

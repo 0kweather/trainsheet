@@ -39,7 +39,7 @@ OUT = SCHEDULES / "now"
 NEAR = 2 + 1     # timetableTrains() without live data: 120 s
 WIDE = 180 + 1   # timetableTrains() with live delays (3 hours), czechia.js (90 minutes)
 # Plug-ins whose railroads get the wide set too.
-WIDE_MODULES = {"switzerland", "czechia"}
+WIDE_MODULES = {"switzerland", "czechia", "bdz"}
 
 
 def railroads():
