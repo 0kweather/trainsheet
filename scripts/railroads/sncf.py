@@ -101,7 +101,7 @@ AGENCIES = {
     "ter": {"name": "TER", "short": "TER", "region": "France", "color": "#0088ce", "kind": "commuter", "after": "frintl",
             "credit": {"label": "SNCF Voyageurs, Transdev Rail Sud Intermétropole via transport.data.gouv.fr",
                        "href": PAN + "horaires-sncf"},
-            "license": "ODbL; Licence Ouverte 2.0", "bbox": BBOX, "cars": "ter", **COMMON},
+            "license": "ODbL; Licence Ouverte 2.0", "bbox": BBOX, **COMMON},
     "transilien": {"name": "RER and Transilien", "short": "Transilien", "region": "Île-de-France", "color": "#6e1e78",
                    "kind": "commuter", "after": "ter",
                    "credit": {"label": "SNCF / Île-de-France Mobilités via transport.data.gouv.fr",
