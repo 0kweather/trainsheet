@@ -12,12 +12,12 @@
 // ÖBB's Nightjets) in their own railroads' paint. Names are lettered here
 // (no logo files). Detail helpers come from Finland's file
 // (digitraffic.cars.js), as the Baltic and Norwegian files take them; the
-// Taurus's body (euroLoco) from Czechia's.
+// Taurus (ÖBB's 1216) from Czechia's.
 
 import { newId, bilevel, cabUnit } from "../carmodels.js?v=dev";
 import { C, rect, circle, path, line, lines, poly, truck, pantograph, slats, win } from "../carart.js?v=dev";
 import { letters, hvac, roofCover, panGear, horns, lamp, RED_LAMP, wiper, emuFront, buffers, boxes, frames, strokes, bothEnds, flirt } from "./digitraffic.cars.js?v=dev";
-import { euroLoco, OBB } from "./czechia.cars.js?v=dev";
+import { taurus1216 } from "./czechia.cars.js?v=dev";
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -914,17 +914,9 @@ function njCar(c, kind) {
     extra: (cc, g) => roofCover(6, NJ.roof, L - 12, 0.35, "#8f969e", 6) + hvac(L / 2 - 7, NJ.roof + 0.3, 14, 0.6) + boxes(L / 2 - 22, L / 2 + 22, 2.25, 4, 0.6) +
       (cc.index === 1 ? buffers(0, -1, { y: 3.45 }) : "") });
 }
-// The Taurus (ES64U4, ÖBB 1216; 50, 2006-2008), on czechia.cars.js's
-// body (euroLoco, with its Taurus's nose, 19.58 m): traffic red over a dark
-// grey underframe, ÖBB in white big across the middle of the side, as on
-// 1216 005 at Bologna in 2025 (czechia.cars.js's taurus letters it at half
-// that size, with a white line over the grey that 1216 005 doesn't carry).
-const NOSE_1216 = [[1.7, 4.1], [1.1, 6.3], ["q", 0.95, 8.5, 2.3, 9.3], [3.9, 12.15], ["q", 4.6, 13.0, 6.4, 13.0]];
-const t1216 = (c) => euroLoco(c, { roof: 13.0, sill: 4.1, nose: NOSE_1216, rake: [[2.3, 9.3], [3.9, 12.15]], centers: 32.5, door: 7.2, wheel: 45,
-  paint: (cc, L) => rect(-1, 0, L + 2, 20, OBB.red) + rect(-1, 12.0, L + 2, 3, "#6d737a") + rect(-1, 0, L + 2, 5.0, "#3a3d42") + path("M0 5.0L0 7.4L2.0 7.4L3.3 5.0Z", "#3a3d42"),
-  over: (cc, L) => letters(cc, L / 2 - 2, 8.55, 5.6, "ÖBB", "#f4f4f2", { weight: 800, spacing: -0.15 }),
-  surround: "#141518", grilles: [[-13.5, 6.5, 9.8, 11.5], [7.0, 6.5, 9.8, 11.5]], grilleFill: "rgba(20,22,25,0.24)" });
-
+// The Taurus (ES64U4, ÖBB 1216; 50, 2006-2008): czechia.cars.js's, drawn
+// from photographs of the 1216s (traffic red over a dark gray band, ÖBB
+// big in white toward one end).
 // The control car (Bfmpz, 70 seats): the Vectron's cab, a door behind it.
 const NOSE_NJC = [[1.5, 3.1], [1.3, 7.2], ["q", 1.35, 8.3, 2.1, 9.0], [3.1, 12.4], ["q", 3.5, 13.3, 4.7, 13.3]];
 function njCab(c) {
@@ -1120,7 +1112,7 @@ export const MODELS = {
   itEtr610Rest: M((c) => etr610Mid({ ...c, livery: "ec" }, { rest: true }), 86.0, false, byIndex),
   itEtr610Second: M((c) => etr610Mid({ ...c, livery: "ec" }), 86.0, false, byIndex),
   itEtr610Cab2: M((c) => etr610Cab({ ...c, livery: "ec" }, false), 92.5, true),
-  itNj1216: M(t1216, 64.24),
+  itNj1216: M(taurus1216, 64.24),
   itNjSleeper: M((c) => njCar(c, "sleeper"), 86.9, false, byIndex),
   itNjCouchette: M((c) => njCar(c, "couchette"), 86.9, false, byIndex),
   itNjMulti: M((c) => njCar(c, "multi"), 86.9, false, byIndex),
