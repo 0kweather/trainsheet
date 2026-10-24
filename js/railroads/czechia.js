@@ -1,9 +1,10 @@
 // Czechia's trains (scripts/railroads/czechia.py): the Oběhy project's
 // GTFS-realtime positions for the whole SŽ network, each train given its
 // railroad, line and stops by its number in that railroad's timetable
-// (data/schedules/<railroad>.json), and its delay by the feed's stop times.
+// (data/schedules/<railroad>.json, the hour's runs: sources.js loadRuns),
+// and its delay by the feed's stop times.
 
-import { train, valid, delayText, loadSchedule, runNow, runStops } from "../sources.js?v=dev";
+import { train, valid, delayText, loadRuns, runNow, runStops } from "../sources.js?v=dev";
 import { decodeFeed } from "../gtfsrt.js?v=dev";
 
 const RAILROADS = ["czcd", "czregiojet", "czleo", "czarriva", "czgwtrain"];
@@ -75,7 +76,7 @@ export const parse = {
   czechia: async (buf) => {
     const feed = decodeFeed(buf);
     const now = Math.round(Date.now() / 1000);
-    const tts = await Promise.all(RAILROADS.map((a) => loadSchedule(a).catch(() => null)));
+    const tts = await Promise.all(RAILROADS.map((a) => loadRuns(a, SLACK, now).catch(() => null)));
     // Each train's stop times, by its vehicle (a run is one trip per operator, or per bus section).
     const times = new Map();
     for (const u of feed.tripUpdates) {

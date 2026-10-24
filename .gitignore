@@ -4,3 +4,5 @@ __pycache__/
 node_modules/
 scripts/.osm-cache/
 scripts/.osm-extracts/
+# Timetables cut by the hour, built at deploy (scripts/slice_schedules.py)
+data/schedules/now/

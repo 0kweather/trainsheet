@@ -195,7 +195,7 @@ relay/                    Cloudflare Worker for CORS-less and keyed feeds
 relay/feeds/              the plug-ins' relay feeds (index.js generated) and their own fetchers
 ```
 
-Deploys run through `.github/workflows/pages.yml`, which stamps every file reference (`?v=dev` in the source) with the commit ID so browsers never mix cached files from different versions.
+Deploys run through `.github/workflows/pages.yml`, which cuts the timetables of railroads placed from them into hourly files (`scripts/slice_schedules.py`, into `data/schedules/now/`, not committed: run it once to try them locally, else the full timetables are used) and stamps every file reference (`?v=dev` in the source) with the commit ID so browsers never mix cached files from different versions.
 
 Refresh the static data occasionally with `python3 scripts/build_static.py`, `python3 scripts/build_stations.py` (`.github/workflows/stations.yml` also rebuilds the stations every Monday afternoon), then `python3 scripts/build_rail.py` (it uses the stations), and `python3 scripts/build_trips.py` (stop and trip lookups for Caltrain, SMART, Metrolink, RTD and CapMetro; it uses the stations too); the workflow runs neither of those two, so run them by hand when a station changes.
 

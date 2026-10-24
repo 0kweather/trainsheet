@@ -770,6 +770,63 @@ async function parseCtrail(board) {
 const schedules = {};
 export const loadSchedule = (agency) => (schedules[agency] ??= fetch(`data/schedules/${agency}.json?v=dev`)
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`No timetable for ${agency} (HTTP ${r.status})`)))));
+
+// The runs going now (data/schedules/now/, scripts/slice_schedules.py):
+// placing trains needs only the runs on the road, so the timetable of a
+// railroad placed from it is also cut, at deploy, into the hours of its day.
+// An hour's file has every train number with a run going in that hour, or
+// due within the slack its set is cut for, with all that number's runs; so
+// runNow() over it, within that slack and in that hour, finds what it would
+// over the full file. A railroad with no such files, a wider slack, or a
+// file that fails gets the full timetable. The next hour's file is fetched
+// in the last minutes of this one.
+let runsIndex = null;
+const runsFiles = new Map(); // "railroad/hour" + set -> promise of that hour's timetable (null: failed)
+const runsIndexLoaded = () => (runsIndex ??= fetch("data/schedules/now/index.json?v=dev")
+  .then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+// An hour's file in the full timetable's shape (the files list their stops
+// and flatten each run's: [stop's place, arrival, minutes stopped, ...]).
+function unpackRuns({ stops, trips, ...rest }) {
+  const tt = { ...rest, stops: {}, trips: {} };
+  for (const [id, ...v] of stops) tt.stops[id] = v;
+  for (const [number, runs] of trips) {
+    tt.trips[number] = runs.map(([mask, line, flat]) => {
+      const pat = [];
+      for (let i = 0; i < flat.length; i += 3) pat.push([stops[flat[i]][0], flat[i + 1], flat[i + 1] + flat[i + 2]]);
+      return [mask, line, pat];
+    });
+  }
+  return tt;
+}
+function runsFile(agency, hour, set) {
+  const k = `${agency}/${hour}${set}`;
+  if (!runsFiles.has(k)) {
+    runsFiles.set(k, fetch(`data/schedules/now/${agency}/${hour}${set}.json?v=dev`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then(unpackRuns)
+      .catch((err) => {
+        console.warn(`runs ${k}`, err);
+        runsFiles.delete(k);
+        return null;
+      }));
+  }
+  return runsFiles.get(k);
+}
+// A railroad's timetable for runNow(tt, number, now, slack) at the moment
+// `now` and up to a minute past it: its hour's file, or the full one.
+export async function loadRuns(agency, slack, now = nowSec()) {
+  const idx = (await runsIndexLoaded())[agency];
+  const set = !idx ? null : idx.near >= slack ? "" : idx.wide >= slack ? "w" : null;
+  if (set == null) return loadSchedule(agency);
+  const min = localMinutes(now, idx.tz), hour = Math.floor(min / 60), next = (hour + 1) % 24;
+  // Only this hour's and the next are kept.
+  for (const k of runsFiles.keys()) if (k.startsWith(`${agency}/`) && k !== `${agency}/${hour}${set}` && k !== `${agency}/${next}${set}`) runsFiles.delete(k);
+  if (min % 60 >= 57) runsFile(agency, next, set);
+  const tt = await runsFile(agency, hour, set);
+  if (!tt) return loadSchedule(agency);
+  // Slow enough to see the hour out: the next one's.
+  return Math.floor(localMinutes(nowSec(), idx.tz) / 60) === hour ? tt : loadRuns(agency, slack);
+}
 const clocks = {};
 // Minutes past midnight at epoch second `sec` in time zone `tz`.
 export function localMinutes(sec, tz) {
@@ -858,12 +915,13 @@ function gpsRunTrain(agency, tt, number, run, fields, { delay = 0, live = {}, tr
 // the day, in another railway's timetable): the train is shown by the
 // number before it.
 export async function timetableTrains(agency, live = null) {
-  const file = await loadSchedule(agency).catch(() => null);
+  const slack = live ? 3 * 3600 : 120;
+  const file = await loadRuns(agency, slack).catch(() => null);
   if (!file?.trips) return [];
   const tt = file.tz ? file : { ...file, tz: AGENCIES[agency]?.tz || "America/New_York" };
   const now = nowSec(), out = [];
   for (const number of Object.keys(tt.trips)) {
-    const run = runNow(tt, number, now, live ? 3 * 3600 : 120);
+    const run = runNow(tt, number, now, slack);
     if (!run) continue;
     let stops = runStops(run);
     const rt = live?.(run, stops, number) || null;
