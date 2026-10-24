@@ -2,6 +2,7 @@ import { AGENCIES, SOURCES, fetchSource, creditOf, advanceEstimated, detailUrl, 
 import { loadStations, mergeStations, trainsDue, mbtaPredictions, mbtaFacilities, amtrakAddress, meters, norm, fold, stopKey } from "./stations.js?v=dev";
 import { RailIndex, snapToTrack } from "./estimate.js?v=dev";
 import { RAIL_REGIONS, DATA_REGIONS } from "./railroads/index.js?v=dev";
+import { watchRegions } from "./railregions.js?v=dev";
 import { NETWORKS, networkColor } from "./networks.js?v=dev";
 import { trainNotices, stationNotices } from "./notices.js?v=dev";
 import { loadDisruptions, aboutLine } from "./disruptions.js?v=dev";
@@ -1398,19 +1399,39 @@ function computePositions() {
   for (const id of snapCache.keys()) if (!state.trains.has(id)) snapCache.delete(id);
 }
 
-let railLoading = null;
+// The track: North America's (data/rail.geojson) and each region's abroad
+// (js/railregions.js), each joining the drawn rail and the index the first
+// time the map shows it, so a view of Europe neither fetches North America's
+// nor waits for it. Until a file is in, trains there stay at their reported
+// positions. North America's is also loaded when something off the map needs
+// it (needTrack: a ride followed there, History's distances).
+const NA_TRACK = { region: "na", file: "data/rail.geojson", bbox: [-150.2, 25.7, -63.2, 65] }; // index.html's preload has the same extent
+let trackWatch = null;   // watchRegions()'s handle
+let naTrackIn = false;   // North America's track is indexed
+let railSettled = false; // the opening view's track is in (or none was wanted)
 function loadRail() {
-  railLoading ??= fetch("data/rail.geojson?v=dev")
-    .then((r) => r.json())
-    .then((geojson) => {
-      state.railGeo = geojson;
-      redrawRail();
-      state.rail = new RailIndex(geojson);
-      resnap();
-      loadRailRegions();
-    })
-    .catch((err) => console.warn("rail index", err)); // trains stay at reported positions
-  return railLoading;
+  trackWatch = watchRegions(map, [NA_TRACK, ...RAIL_REGIONS], (geojson, r) => {
+    // North America's first, as it always was, so it draws below the rest.
+    const had = state.railGeo?.features || [];
+    state.railGeo = { type: "FeatureCollection", features: r === NA_TRACK ? geojson.features.concat(had) : had.concat(geojson.features) };
+    focusCache.key = null; // an open railroad's track may run on into this region
+    redrawRail();
+    if (state.rail) state.rail.add(geojson);
+    else state.rail = new RailIndex(geojson);
+    resnap();
+    if (r === NA_TRACK) {
+      naTrackIn = true;
+      if (state.tab === "history") renderAgencies(); // its distances, along the track now
+    }
+  }, (p, r) => (r === NA_TRACK ? p : arrival(p))); // the fades wait for track abroad only, as before
+  trackWatch.first.then(() => (railSettled = true));
+}
+// Whether a railroad's track can be used; North America's is asked for if it isn't in yet.
+const inNA = (agency) => !DATA_REGIONS.some((r) => r.agencies.includes(agency));
+function needTrack(agency) {
+  if (naTrackIn || !inNA(agency)) return true;
+  trackWatch?.load(NA_TRACK);
+  return false;
 }
 
 // The track just indexed (or grown): everything placed on it goes back on.
@@ -1422,22 +1443,6 @@ function resnap() {
   computePositions();
   animateTo();
   applyFocus(); // a line's track is traced along the rails
-}
-
-// Track outside North America (js/railregions.js): a region's joins the
-// drawn rail and the index the first time the map shows it. With no regions
-// built yet, the watcher isn't loaded at all.
-function loadRailRegions() {
-  if (!RAIL_REGIONS.length) return;
-  import("./railregions.js?v=dev")
-    .then(({ watchRegions }) => watchRegions(map, (geojson) => {
-      state.railGeo = { type: "FeatureCollection", features: state.railGeo.features.concat(geojson.features) };
-      focusCache.key = null; // an open railroad's track may run on into this region
-      redrawRail();
-      state.rail.add(geojson);
-      resnap();
-    }, arrival))
-    .catch((err) => console.warn("rail regions", err));
 }
 
 // Stations and timetables outside the US and Canada (js/regiondata.js): a
@@ -1769,7 +1774,7 @@ async function poll(src, attempt = 0, once = false) {
 async function start() {
   loadRail();
   dataRegions();
-  for (const r of state.tracked) needData(r.agency); // a ride followed abroad
+  for (const r of state.tracked) needData(r.agency), needTrack(r.agency); // a ride followed elsewhere
   loadStations()
     .then((stations) => {
       state.stations = stations;
@@ -2391,7 +2396,7 @@ function tripMeters(r) {
   if (!a || !b) return 0;
   const key = `${r.agency}|${a.lat},${a.lon}|${b.lat},${b.lon}`;
   if (tripMetersCache.has(key)) return tripMetersCache.get(key);
-  if (!state.rail) return meters(a, b);
+  if (!state.rail || !needTrack(r.agency)) return meters(a, b);
   const coords = traceLeg(a, b, r.agency);
   let m = 0;
   for (let i = 1; i < coords.length; i++) m += meters({ lon: coords[i - 1][0], lat: coords[i - 1][1] }, { lon: coords[i][0], lat: coords[i][1] });
@@ -6326,7 +6331,7 @@ function showLoadingTrains() {
 }
 const loadingWait = setInterval(() => {
   const since = performance.now(); // since the visit began
-  if (!(mapLoaded && state.railGeo) && since < 12000) {
+  if (!(mapLoaded && railSettled) && since < 12000) {
     if (!loadingShown && since > 500) showLoadingTrains();
     return;
   }

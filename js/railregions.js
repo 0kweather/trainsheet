@@ -1,11 +1,11 @@
-// Track outside North America, one file per region (scripts/build_rail.py
-// writes data/rail/<region>.geojson; the registry lists them with their
-// extents as RAIL_REGIONS). A region's file loads the first time the map
-// shows part of it, close enough to matter: zoomed in a little, or with the
-// view centered inside it. So the opening view of North America, which can
-// reach well past the US border on a wide screen, asks for none.
-
-import { RAIL_REGIONS } from "./railroads/index.js?v=dev";
+// Track, one file per region: North America's (data/rail.geojson) and each
+// region's abroad (scripts/build_rail.py writes data/rail/<region>.geojson;
+// the registry lists them with their extents as RAIL_REGIONS). A region's
+// file loads the first time the map shows part of it, close enough to
+// matter: zoomed in a little, or with the view centered inside it. So the
+// opening view of North America, which can reach well past the US border on
+// a wide screen, asks for none abroad, and a view of Europe none of North
+// America's.
 
 const MIN_ZOOM = 4.5;
 const asked = new Set(); // regions fetched or being fetched
@@ -23,24 +23,27 @@ function contains(b, lon, lat) {
 }
 
 // Watch the map, and call add(geojson, region) once for each region's track
-// as it arrives; track(promise) is handed each fetch while it's out.
-export function watchRegions(map, add, track = (p) => p) {
+// as it arrives; track(promise, region) is handed each fetch while it's out.
+// Gives { first: settles once the opening view's files are in (or failed),
+// load(region): fetch one now, wherever the map is }.
+export function watchRegions(map, regions, add, track = (p) => p) {
+  const load = (r) => {
+    if (asked.has(r.region)) return null;
+    asked.add(r.region);
+    return track(fetch(`${r.file}?v=dev`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))), r)
+      .then((geojson) => add(geojson, r))
+      .catch((err) => {
+        console.warn(`rail region ${r.region}`, err);
+        asked.delete(r.region); // try again on the next move
+      });
+  };
   const check = () => {
     const bounds = map.getBounds(), center = map.getCenter();
     const view = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
     const near = map.getZoom() >= MIN_ZOOM;
-    for (const r of RAIL_REGIONS) {
-      if (asked.has(r.region) || !meets(r.bbox, view) || !(near || contains(r.bbox, center.lng, center.lat))) continue;
-      asked.add(r.region);
-      track(fetch(`${r.file}?v=dev`)
-        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))))
-        .then((geojson) => add(geojson, r))
-        .catch((err) => {
-          console.warn(`rail region ${r.region}`, err);
-          asked.delete(r.region); // try again on the next move
-        });
-    }
+    return regions.filter((r) => !asked.has(r.region) && meets(r.bbox, view) && (near || contains(r.bbox, center.lng, center.lat))).map(load);
   };
   map.on("moveend", check);
-  check();
+  return { first: Promise.all(check()), load };
 }

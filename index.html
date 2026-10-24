@@ -42,13 +42,17 @@
        the browser would otherwise find level by level as each one is read:
        app.js, then its ten imports, then the car drawings) and the two data
        files everything starts with, so they come in while the modules are
-       still being read; and the map's tile server is connected to early. -->
+       still being read; and the map's tile server is connected to early.
+       North America's track only when the map opens on it (the usual view,
+       or a shared one centered there; js/app.js's NA_TRACK has the same
+       extent): elsewhere it isn't wanted, and would hold up the track there. -->
   <link rel="preconnect" href="https://tiles.openfreemap.org">
   <link rel="modulepreload" href="js/app.js?v=dev">
   <link rel="modulepreload" href="js/sources.js?v=dev">
   <link rel="modulepreload" href="js/railroads/index.js?v=dev">
   <link rel="modulepreload" href="js/stations.js?v=dev">
   <link rel="modulepreload" href="js/estimate.js?v=dev">
+  <link rel="modulepreload" href="js/railregions.js?v=dev">
   <link rel="modulepreload" href="js/networks.js?v=dev">
   <link rel="modulepreload" href="js/notices.js?v=dev">
   <link rel="modulepreload" href="js/disruptions.js?v=dev">
@@ -60,7 +64,16 @@
   <link rel="modulepreload" href="js/carmodels.js?v=dev">
   <link rel="modulepreload" href="js/carart.js?v=dev">
   <link rel="modulepreload" href="js/emblems.js?v=dev">
-  <link rel="preload" href="data/rail.geojson?v=dev" as="fetch" crossorigin>
+  <script>
+    (function () {
+      var v = /(?:^#|&)map=[\d.]+\/(-?[\d.]+)\/(-?[\d.]+)/.exec(location.hash);
+      var lat = v ? +v[1] : 38.6, lon = v ? ((+v[2] + 540) % 360) - 180 : -96.5;
+      if (lon < -150.2 || lon > -63.2 || lat < 25.7 || lat > 65) return;
+      var l = document.createElement("link");
+      l.rel = "preload"; l.as = "fetch"; l.crossOrigin = "anonymous"; l.href = "data/rail.geojson?v=dev";
+      document.head.appendChild(l);
+    })();
+  </script>
   <link rel="preload" href="data/stations.json?v=dev" as="fetch" crossorigin>
 </head>
 <body>
