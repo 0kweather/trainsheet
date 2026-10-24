@@ -7,6 +7,7 @@ import { fetchFeed as fgc } from "./fgc.js";
 import { fetchFeed as hellenictrain } from "./hellenictrain.js";
 import { fetchFeed as israelrail } from "./israelrail.js";
 import { fetchFeed as nl } from "./nl.js";
+import { fetchFeed as sncb } from "./sncb.js";
 import { fetchFeed as sweden } from "./sweden.js";
 import { fetchFeed as switzerland } from "./switzerland.js";
 import { fetchFeed as tfnsw } from "./tfnsw.js";
@@ -16,6 +17,7 @@ import { fetchFeed as viaggiatreno } from "./viaggiatreno.js";
 export const FEEDS = {
   adelaidemetro: {"also": ["https://gtfs.adelaidemetro.com.au/v1/realtime/trip_updates"], "format": "pb", "routes": ["BEL", "FLNDRS", "GAW", "GAWC", "GRNG", "NOAR", "OSBORN", "OUTHA", "PTDOCK", "SALIS", "SEAFRD"], "ttl": 20, "ua": true, "url": "https://gtfs.adelaidemetro.com.au/v1/realtime/vehicle_positions"},
   aucklandtransport: {"format": "pb", "keys": ["AT_API_KEY"], "ttl": 60, "fetchFeed": aucklandtransport },
+  bdz: {"also": ["https://sipbg.gov.bg/bgnap/portal/api/catalog/subsets/cc43fe99-141e-4eb8-bef1-cae144870a0f/realtime-download"], "format": "pb", "ttl": 30, "ua": true, "url": "https://sipbg.gov.bg/bgnap/portal/api/catalog/subsets/cddd12ef-5ae8-46a6-9afc-faeaafbc552d/realtime-download"},
   capmetro: {"also": ["https://data.texas.gov/download/rmk2-acnw/application%2Foctet-stream"], "format": "pb", "routes": ["550"], "url": "https://data.texas.gov/download/eiei-9rpf/application%2Foctet-stream"},
   cercanias: {"also": ["https://gtfsrt.renfe.com/trip_updates.pb"], "format": "pb", "ttl": 30, "ua": true, "url": "https://gtfsrt.renfe.com/vehicle_positions.pb"},
   chfobls: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
@@ -33,6 +35,7 @@ export const FEEDS = {
   flytoget: {"also": ["https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=FLT"], "format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "ttl": 30, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions?datasource=FLT", "vehicles": "."},
   goaheadnorge: {"also": ["https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=GOA"], "format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "ttl": 30, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions?datasource=GOA", "vehicles": "."},
   hellenictrain: {"format": "json", "ttl": 30, "ua": true, "fetchFeed": hellenictrain },
+  irail: {"detail": true, "format": "json", "ttl": 60, "fetchFeed": sncb },
   irishrail: {"format": "xml", "ttl": 30, "ua": true, "url": "https://api.irishrail.ie/realtime/realtime.asmx/getCurrentTrainsXML"},
   israelrail: {"format": "json", "ttl": 60, "ua": true, "fetchFeed": israelrail },
   metlink: {"also": ["https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates"], "format": "pb", "headers": {"Accept": "application/x-protobuf", "x-api-key": "{METLINK_API_KEY}"}, "keys": ["METLINK_API_KEY"], "routes": ["2", "3", "4", "5", "6"], "ttl": 20, "url": "https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions"},
