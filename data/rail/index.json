@@ -12,6 +12,7 @@
 {"region": "it", "bbox": [5.92, 36.72, 18.17, 48.0], "file": "data/rail/it.geojson", "bytes": 507607},
 {"region": "lv", "bbox": [21.01, 55.75, 28.18, 57.78], "file": "data/rail/lv.geojson", "bytes": 55645},
 {"region": "my", "bbox": [100.25, 1.36, 103.93, 7.06], "file": "data/rail/my.geojson", "bytes": 115365},
+{"region": "nl", "bbox": [3.59, 50.61, 8.07, 53.47], "file": "data/rail/nl.geojson", "bytes": 115718},
 {"region": "no", "bbox": [5.33, 56.66, 16.56, 67.34], "file": "data/rail/no.geojson", "bytes": 313259},
 {"region": "nsw", "bbox": [141.47, -37.82, 153.14, -27.47], "file": "data/rail/nsw.geojson", "bytes": 246271},
 {"region": "nz", "bbox": [174.58, -41.28, 175.65, -36.84], "file": "data/rail/nz.geojson", "bytes": 40889},

@@ -1,6 +1,6 @@
 # Trainsheet
 
-A live map of passenger trains across the United States and Canada: Amtrak, VIA and Brightline plus the commuter railroads that publish real-time positions, and railroads in nineteen more countries: those whose live positions are public, Italy's from its timetables, and those (Australia's New South Wales and Victoria, New Zealand, Sweden, Switzerland) whose free keys switch on live positions or delays, placed from their timetables until then; all on one map.
+A live map of passenger trains across the United States and Canada: Amtrak, VIA and Brightline plus the commuter railroads that publish real-time positions, and railroads in twenty more countries: those whose live positions are public, Italy's from its timetables, and those (Australia's New South Wales and Victoria, New Zealand, Sweden, Switzerland) whose free keys switch on live positions or delays, placed from their timetables until then; all on one map.
 
 **Live site:** https://0kweather.github.io/trainsheet/
 
@@ -72,6 +72,7 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | Italy | Trenord, South Tyrol's trains (SAD, ÖBB), EAV (Naples), ARST (Sardinia), Trento–Malè–Mezzana | Lombardy, South Tyrol, Campania, Sardinia, Trentino | Placed from each one's open GTFS timetable | — |
 | Latvia | Vivi | Latvia | The Pieturas app's Baltic GTFS-realtime (Vivi's trains only), plus Vivi's timetable | relay |
 | Malaysia | KTMB (ETS, Intercity), KTM Komuter | Peninsular Malaysia | data.gov.my GTFS-realtime (positions only; fetched by each browser, since the API allows 4 requests a minute per address) | direct |
+| Netherlands | NS (Intercity, Intercity direct, Sprinter), the regional railways (Arriva, Blauwnet, RRReis, R-net), and the international trains (ICE, Eurostar, Nightjet, EuroCity, European Sleeper, GoVolta, and VIAS's, eurobahn's, DB's and NMBS's trains over the border) | Netherlands | Placed from OVapi's national timetable (GTFS) and moved by its GTFS-realtime trainUpdates (NS's InfoPlus delays, cancellations and skipped stops for every railway's trains) | relay |
 | New Zealand | AT Metro, Te Huia | Auckland, Hamilton–Auckland | Auckland Transport GTFS-realtime (trains only, with their units); placed from AT's timetable until the key is set | relay + free key |
 | New Zealand | Metlink (Kāpiti, Hutt Valley, Melling, Johnsonville, Wairarapa) | Wellington | Metlink GTFS-realtime (rail); placed from Metlink's timetable until the key is set | relay + free key |
 | Norway | Vy, Go-Ahead Norge, Flytoget, SJ Nord | Norway | Entur GTFS-realtime (SJ Nord sends no positions, and Entur's GTFS-realtime has none of its delays yet: placed from its timetable, shown as scheduled) | relay |
@@ -93,6 +94,7 @@ Northstar (Minneapolis) ended rail service; its route is now a bus, so it isn't 
 - Italo's live data: its tracker's terms (italotreno.com, Note legali §7) allow only personal, non-commercial use, so Italo is placed from its timetable alone. Italy publishes no live train positions openly; ViaggiaTreno's own terms forbid reusing its data, and a Rome court (Trenitalia v. GoBright, 4 September 2019) allowed it only "in misura non sostanziale", so the relay can ask it for one opened train at a time and never polls it (relay/feeds/viaggiatreno.js); that's switched off for now, because ViaggiaTreno's CDN refuses every request from Cloudflare's network.
 - CP's and Infraestruturas de Portugal's live data (Portugal): CP's live times come from an API keyed for its own site, and IP's train-running pages are closed to automated access by its robots.txt and its terms (content only for personal information, reuse only with IP's written consent), so CP and Fertagus are placed from their timetables.
 - Romania's live positions: Informatica Feroviară's maps (bilete.infofer.ro, mersultrenurilor.infofer.ro) publish no open feed, sit behind a robot check, and their terms forbid reproducing or copying the site's content without its written consent, so Romania's trains are placed from their timetables.
+- Dutch train positions and formations (Netherlands): OVapi's GTFS-realtime vehiclePositions carry buses, trams and metros but no trains, so the trains are placed from the timetable with InfoPlus's delays. NS's own GPS positions (NStreinposities, every 10 seconds, NS's units only) and every train's units in order (InfoPlus DVS: "VIRM 6", "SLT 4", "FLIRT ARL 2/6" and each NS unit's number) are open (CC0) and keyless, but only as NDOV Loket's best-effort ZeroMQ streams, which a Worker can't subscribe to without a long-lived connection (one per consumer per stream); NS's own API (virtual train, positions) needs a key.
 - MÁV and GYSEV (Hungary): the live positions on mavplusz.hu work without a key, but MÁV's legal notice forbids storing or republishing the site's content, and its own GTFS needs registration.
 
 ## Using it
@@ -211,6 +213,7 @@ Data outside the US and Canada, credited on the map with each railroad:
 - Trafikverket, CC0; Samtrafiken / Trafiklab GTFS Sweden 3, CC0 1.0, read from the Mobility Database's copy (Sweden).
 - opentransportdata.swiss (Open Data Platform Mobility Switzerland): the national timetable (GTFS), GTFS-realtime and the Train Formation Service, under its terms of use (free to process and publish, citing opentransportdata.swiss as the source) (Switzerland).
 - data.gov.my, CC BY 4.0 (Malaysia).
+- OVapi (gtfs.ovapi.nl, Stichting OpenGeo): the national timetable (GTFS) and GTFS-realtime trainUpdates, from NDOV Loket's CC0 data (NS, the regional railways); free to use, best effort (Netherlands).
 - ŽSR timetable (data.slovensko.sk), CC BY 1.0; live positions from jbb.ghsq.de (Slovakia).
 - Buenos Aires Data timetable, CC BY 2.5 AR; live data from SOFSE / Trenes Argentinos (Argentina).
 - Trenitalia and Italo timetables from Italy's National Access Point (cciss.it; published with no licence stated); live details of opened trains from Trenitalia's ViaggiaTreno; Regione Lombardia (Trenord), CC BY 4.0; STA – Südtiroler Transportstrukturen via the Open Data Hub, CC0; EAV, Italian Open Data Licence 2.0; ARST via Sardegna Mobilità, CC BY 4.0; Trentino Trasporti, CC BY 4.0 (Italy).
