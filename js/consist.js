@@ -899,10 +899,15 @@ export function consistHtml(c, color, uid = `tsc${++renderSeq}`) {
       drawing = `<g id="${id}">${drawCar(car)}</g>`;
     }
     const label = esc([t.name, number].filter(Boolean).join(" "));
+    // The number under the car, where it fits: not under a power module
+    // (a GTW's or FLIRT's short box between the cars), nor under any car
+    // narrower than its number (a 12-digit European vehicle number is
+    // about 7 px a digit), which would run into its neighbours'.
+    const caption = number && t.kind !== "module" && L * PX_PER_FT >= String(number).length * 7 + 6 ? number : null;
     // Tapping a car shows what it is (app.js).
     return `<figure class="car" data-car="${i}" role="button" tabindex="0" title="${label}">
       <svg viewBox="0 0 ${L} ${HEIGHT_FT}" width="${Math.round(L * PX_PER_FT)}" height="${HEIGHT_FT * PX_PER_FT}" role="img" aria-label="${label}"><g transform="matrix(1 0 0 -1 0 ${HEIGHT_FT})">${drawing}</g></svg>
-      ${number ? `<figcaption>${esc(number)}</figcaption>` : ""}
+      ${caption ? `<figcaption>${esc(caption)}</figcaption>` : ""}
     </figure>`;
   }).join(""), uid);
 }
