@@ -65,6 +65,7 @@ Each of these is a plug-in (`scripts/railroads/<id>.py`, parsed by `js/railroads
 | Czechia | České dráhy, RegioJet, Leo Express, Arriva vlaky, GW Train Regio | Czechia | The Oběhy project's GTFS and GTFS-realtime of the national CZPTT timetable and SŽ's positions | relay |
 | Estonia | Elron | Estonia | Elron's own live map (elron.ee), plus the ministry's timetable | relay |
 | Finland | VR (long distance), commuter trains (HSL and VR) | Finland | Fintraffic's Digitraffic train locations and GTFS-realtime trip updates | relay |
+| France | SNCF: TGV INOUI, TGV Lyria, OUIGO, OUIGO Train Classique, Intercités, Intercités de Nuit, every region's TER (Train Jaune, Mont-Blanc Express and the Nantes–Châteaubriant tram-train among them), the RER A–E and Transilien H–V; Transdev's ZOU! trains (Marseille–Toulon–Nice); DB's ICEs and Eurostar | France, Île-de-France | Placed from SNCF's national timetable (GTFS, with its NeTEx for TER regions and OUIGO Train Classique), SNCF Transilien's, Eurostar's and ZOU!'s (transport.data.gouv.fr), and moved by SNCF's, Eurostar's and ZOU!'s GTFS-realtime trip updates (delays, cancellations, skipped stops; no positions are published); Île-de-France's RER and Transilien by Île-de-France Mobilités' PRIM times, placed from the timetable until its key is set | relay (+ free key for Île-de-France) |
 | Greece | Hellenic Train | Athens–Thessaloniki axis | railway.gov.gr's public live train tracker (read by the relay), with its timetable as Transitous's GTFS | relay |
 | Ireland | Irish Rail (InterCity, DART, Commuter) | Ireland | Iarnród Éireann's realtime API (positions from signalling), plus the NTA's timetable | relay |
 | Israel | Israel Railways | Israel | The Ministry of Transport's SIRI positions as Hasadna's Open Bus Stride API keeps them (about two minutes behind) | relay |
@@ -93,6 +94,7 @@ Northstar (Minneapolis) ended rail service; its route is now a bus, so it isn't 
 - Italo's live data: its tracker's terms (italotreno.com, Note legali §7) allow only personal, non-commercial use, so Italo is placed from its timetable alone. Italy publishes no live train positions openly; ViaggiaTreno's own terms forbid reusing its data, and a Rome court (Trenitalia v. GoBright, 4 September 2019) allowed it only "in misura non sostanziale", so the relay can ask it for one opened train at a time and never polls it (relay/feeds/viaggiatreno.js); that's switched off for now, because ViaggiaTreno's CDN refuses every request from Cloudflare's network.
 - CP's and Infraestruturas de Portugal's live data (Portugal): CP's live times come from an API keyed for its own site, and IP's train-running pages are closed to automated access by its robots.txt and its terms (content only for personal information, reuse only with IP's written consent), so CP and Fertagus are placed from their timetables.
 - Romania's live positions: Informatica Feroviară's maps (bilete.infofer.ro, mersultrenurilor.infofer.ro) publish no open feed, sit behind a robot check, and their terms forbid reproducing or copying the site's content without its written consent, so Romania's trains are placed from their timetables.
+- France's train positions and formations: SNCF, Eurostar and Île-de-France Mobilités publish delays and cancellations but no positions and no train compositions, so France's trains are placed from their timetables and moved by those delays. Trenitalia France's Frecciarossa (Paris–Lyon–Milano, Paris–Marseille) is shown from Italy's national timetable and Renfe's AVE to Lyon and Marseille from Renfe's, not from their French files.
 - MÁV and GYSEV (Hungary): the live positions on mavplusz.hu work without a key, but MÁV's legal notice forbids storing or republishing the site's content, and its own GTFS needs registration.
 
 ## Using it
@@ -148,6 +150,7 @@ then open http://localhost:8000. To try the relay feeds locally, run `python3 sc
    - `TRAFIKVERKET_API_KEY`: https://data.trafikverket.se (Sweden)
    - `CH_GTFSRT_KEY`: https://api-manager.opentransportdata.swiss (GTFS-RT; Switzerland's delays and cancellations; 2 requests a minute, so the relay keeps its answer a minute)
    - `CH_FORMATION_KEY`: https://api-manager.opentransportdata.swiss (Train Formation Service; an opened train's cars; 50 requests a minute and 20,000 a day, so the relay asks at most 30 a minute and keeps each answer five minutes)
+   - `IDFM_PRIM_KEY`: https://prim.iledefrance-mobilites.fr (create an account, then a token; Île-de-France's RER and Transilien times, SIRI Lite estimated-timetable, one request a line: 14 every two minutes, so the relay keeps its answer two minutes; check the quota the token comes with)
 
    Every other railroad outside the US and Canada needs none. Until a railroad's key is set, it is placed from its timetable.
 4. Put the Worker's URL in `config.js` (`window.TRAINSHEET_RELAY = "https://trainsheet-relay.<you>.workers.dev"`) and push.
@@ -209,6 +212,7 @@ Data outside the US and Canada, credited on the map with each railroad:
 - Translink (Queensland), CC BY 4.0; Adelaide Metro – Department for Infrastructure and Transport, South Australia, CC BY 3.0 AU; Transport for NSW, CC BY 4.0; Transport Victoria (opendata.transport.vic.gov.au), CC BY 4.0 (Australia).
 - Auckland Transport, CC BY 4.0; Metlink (Greater Wellington Regional Council), CC BY 4.0 (New Zealand).
 - Trafikverket, CC0; Samtrafiken / Trafiklab GTFS Sweden 3, CC0 1.0, read from the Mobility Database's copy (Sweden).
+- SNCF Voyageurs (national timetable, GTFS and NeTEx, and GTFS-realtime; SNCF Transilien's timetable, Île-de-France Mobilités' data), ODbL with the National Access Point's special conditions; Eurostar (GTFS and GTFS-realtime) and Transdev Rail Sud Intermétropole (ZOU!, GTFS and GTFS-realtime), Licence Ouverte 2.0; all via transport.data.gouv.fr. Île-de-France Mobilités' PRIM real-time data once its key is set (France).
 - opentransportdata.swiss (Open Data Platform Mobility Switzerland): the national timetable (GTFS), GTFS-realtime and the Train Formation Service, under its terms of use (free to process and publish, citing opentransportdata.swiss as the source) (Switzerland).
 - data.gov.my, CC BY 4.0 (Malaysia).
 - ŽSR timetable (data.slovensko.sk), CC BY 1.0; live positions from jbb.ghsq.de (Slovakia).

@@ -101,6 +101,10 @@ def parts(geom):
 
 # Commuter stations, bucketed on a ~0.1° grid for the nearest-station fallback.
 stations = json.loads((ROOT / "data" / "stations.json").read_text())
+# The railroads abroad keep their stations in their regions' files
+# (data/regions/<region>/stations.json): join_at_stations needs them too.
+for _part in sorted((ROOT / "data" / "regions").glob("*/stations.json")):
+    stations.update({k: v for k, v in json.loads(_part.read_text()).items() if k not in stations})
 grid = defaultdict(list)
 for agency, rows in stations.items():
     if agency in COMMUTER_STATIONS:
@@ -939,12 +943,33 @@ def tie_hidden_ends(segs, hidden):
                 continue
             hit = cov.nearest(tuple(end), PARALLEL_M, exclude=touching.get(key(end), set()))
             # Only the line it runs alongside (which took on its railroads when
-            # it was hidden), not some other line crossing nearby.
-            if not hit or hit[0] < 1.0 or not set(segs[drawn_idx[hit[1]]][0]) & set(nets):
+            # it was hidden), not some other line crossing nearby. An end
+            # already on it (the drawn line is the same track) still needs a
+            # node there, or nothing joins them: cut it, with no link.
+            if not hit or not set(segs[drawn_idx[hit[1]]][0]) & set(nets):
                 continue
             _d, j, i, t, q = hit
             done.add(key(end))
             cuts.append((drawn_idx[j], i, t, q))
+            if key(q) != key(end):
+                links.append((nets, [list(end), list(q)]))
+    # A drawn branch can end on a hidden stretch too, mid-way along it (Les
+    # Aubrais: the Orléans line leaves the Paris-Vierzon line from the track
+    # that was hidden, not from the one drawn beside it): tie that end to
+    # the drawn line alongside as well, or a train on the drawn line can't
+    # turn off there.
+    on_hidden = {key(p) for k in hidden for p in segs[k][1]}
+    for j, k in enumerate(drawn_idx):
+        nets, c = segs[k]
+        for end in (c[0], c[-1]):
+            if key(end) in done or key(end) not in on_hidden:
+                continue
+            hit = cov.nearest(tuple(end), PARALLEL_M, exclude=touching.get(key(end), set()) | {j})
+            if not hit or not set(segs[drawn_idx[hit[1]]][0]) & set(nets):
+                continue
+            _d, jj, i, t, q = hit
+            done.add(key(end))
+            cuts.append((drawn_idx[jj], i, t, q))
             if key(q) != key(end):
                 links.append((nets, [list(end), list(q)]))
     split_segments(segs, cuts)
@@ -1376,6 +1401,7 @@ def candidate_track(tiles):
     if a tile can't be fetched."""
     ways = {}
     skipped = 0
+    FAST_WAYS.clear()
     for tx, ty in tiles:
         w, s = tx * ROUTE_TILE, ty * ROUTE_TILE
         box = f"{s},{w},{s + ROUTE_TILE},{w + ROUTE_TILE}"
@@ -1391,10 +1417,26 @@ def candidate_track(tiles):
             if e.get("type") == "way" and e.get("geometry"):
                 # Four decimals, as the plug-ins' own track is kept, so the two join up.
                 ways[e["id"]] = [(round(g["lon"], 4), round(g["lat"], 4)) for g in e["geometry"]]
+                if (e.get("tags") or {}).get("highspeed") == "yes":
+                    FAST_WAYS.add(e["id"])
     if skipped:
         print(f"  {skipped} of {len(tiles)} tiles not fetched yet (OSM_ROUTE_FETCH=0)")
+    FAST_TRACK.clear()
+    for i in FAST_WAYS & set(ways):
+        w = ways[i]
+        FAST_TRACK.update(zip(w, w[1:]))
+        FAST_TRACK.update(zip(w[1:], w))
     return list(ways.values())
 
+
+# High-speed lines (highspeed=yes: the LGVs): a plug-in's RAIL "highspeed"
+# railroads (France's TGVs) are routed between stops as if other track were
+# SLOW_TRACK times as long, so a TGV that runs on an LGV is drawn on it, not
+# on the classic line beside it that happens to be a few km shorter (Lyon-
+# Avignon down the Rhône valley). FAST_TRACK: the LGVs' edges, both ways.
+FAST_WAYS, FAST_TRACK = set(), set()
+SLOW_TRACK = 1.25
+FAST = set()  # the railroads routed so
 
 WALK_FREE_M = 120  # a stop's platform track usually lies within this of its point
 OSM_GAP_M = 30     # a way's end this close to other track runs on into it (RailGraph)
@@ -1454,7 +1496,7 @@ class RailGraph:
         found = self.near(p, 1)
         return found[0][1] if found else None
 
-    def route(self, a, b):
+    def route(self, a, b, fast=False):
         """The nodes from track near a to track near b (A*), or None. Every
         node near each stop is a way on or off: the nearest is often a
         platform track tied to the main lines only by sidings, which aren't
@@ -1470,6 +1512,8 @@ class RailGraph:
             return None
         goal = {n: walk(d) for d, n in ends}
         limit = ROUTE_DETOUR * meters(a, b) + 5000
+        if fast:
+            limit *= SLOW_TRACK
         best, prev, heap = {}, {}, []
         for d, n in starts:
             best[n] = walk(d)
@@ -1491,7 +1535,7 @@ class RailGraph:
                 prev[END] = n
                 heapq.heappush(heap, (best[END], best[END], END))
             for m, d in self.adj[n]:
-                ng = g + d
+                ng = g + (d if not fast or (n, m) in FAST_TRACK else d * SLOW_TRACK)
                 if ng < best.get(m, math.inf) and ng + meters(m, b) <= limit:
                     best[m] = ng
                     prev[m] = n
@@ -1523,8 +1567,13 @@ def route_timetables(segments, mods):
         graph = RailGraph(own + ways)
         for pair in missing:
             routed[pair] = graph.route(*pair)
+    FAST.clear()
+    FAST.update(a for m in mods for a in m.RAIL.get("highspeed", ()))
+    if FAST and FAST_TRACK:
+        for pair in sorted(set().union(*(pairs.get(a, set()) for a in FAST))):
+            routed[("fast", pair)] = graph.route(*pair, fast=True) or routed[pair]
     for agency, ps in pairs.items():
-        got = [routed[p] for p in ps if routed[p] and len(routed[p]) > 1]
+        got = [route_of(routed, agency, p) for p in ps if route_of(routed, agency, p) and len(route_of(routed, agency, p)) > 1]
         paths[agency] = got
         print(f"  {agency}: {len(got)} of {len(ps)} hops routed")
     kind = {a: m.AGENCIES[a].get("kind") for m in mods for a in m.AGENCIES}
@@ -1563,6 +1612,11 @@ def route_timetables(segments, mods):
     print(f"  {retagged} pieces retagged, {shared} shared by more than one railroad, "
           f"{len(TWINS)} by more than three (hidden twins carry the others)")
     return pairs, routed
+
+
+def route_of(routed, agency, pair):
+    """A railroad's route for a hop: the high-speed one for FAST railroads."""
+    return routed.get(("fast", pair)) or routed.get(pair) if agency in FAST else routed.get(pair)
 
 
 # The page's routing (js/estimate.js RailIndex), for checking the drawn
@@ -1655,7 +1709,7 @@ def unroutable(features, pairs, routed):
     route on these features, both ways."""
     page = PageRoutes(features)
     return [(agency, pair) for agency, ps in sorted(pairs.items()) for pair in sorted(ps)
-            if routed.get(pair) and len(routed[pair]) > 1
+            if route_of(routed, agency, pair) and len(route_of(routed, agency, pair)) > 1
             and not (page.routes(pair[0], pair[1], agency) and page.routes(pair[1], pair[0], agency))]
 
 
@@ -1666,7 +1720,7 @@ def add_whole(segments, bad, routed):
     cuts = []
     for agency, pair in bad:
         pts = []
-        for x, y in routed[pair]:
+        for x, y in route_of(routed, agency, pair):
             q = [round(x, 4), round(y, 4)]
             if not pts or q != pts[-1]:
                 pts.append(q)
@@ -1699,6 +1753,13 @@ def build_regions(only=None):
         # A region whose plug-ins have no track of their own (Italy's, built
         # from Geofabrik's tiles alone) gets it all from routing its timetables.
         pairs, routed = route_timetables(segments, here)
+        # Track a plug-in gives by hand (RAIL "track": lines of [lon, lat],
+        # its network's), where routing its timetables over OpenStreetMap
+        # leaves a stretch out: France's horseshoe south of Vif, which the
+        # Vif-Monestier route cuts across by starting from the track that
+        # passes beside the station. Added after the routing, so no hop is
+        # routed over it alone.
+        segments += [((m.RAIL["network"],), [list(p) for p in c]) for m in here for c in m.RAIL.get("track", [])]
         if segments:
             # Every hop routed over OSM's track must route on the drawn track
             # as the page routes it. Where it doesn't (its route ran within a

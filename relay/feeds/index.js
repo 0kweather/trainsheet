@@ -6,6 +6,7 @@ import { fetchFeed as digitraffic } from "./digitraffic.js";
 import { fetchFeed as fgc } from "./fgc.js";
 import { fetchFeed as hellenictrain } from "./hellenictrain.js";
 import { fetchFeed as israelrail } from "./israelrail.js";
+import { fetchFeed as sncf } from "./sncf.js";
 import { fetchFeed as sweden } from "./sweden.js";
 import { fetchFeed as switzerland } from "./switzerland.js";
 import { fetchFeed as tfnsw } from "./tfnsw.js";
@@ -32,12 +33,14 @@ export const FEEDS = {
   flytoget: {"also": ["https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=FLT"], "format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "ttl": 30, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions?datasource=FLT", "vehicles": "."},
   goaheadnorge: {"also": ["https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=GOA"], "format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "ttl": 30, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions?datasource=GOA", "vehicles": "."},
   hellenictrain: {"format": "json", "ttl": 30, "ua": true, "fetchFeed": hellenictrain },
+  idfm: {"format": "json", "keys": ["IDFM_PRIM_KEY"], "ttl": 120, "fetchFeed": sncf },
   irishrail: {"format": "xml", "ttl": 30, "ua": true, "url": "https://api.irishrail.ie/realtime/realtime.asmx/getCurrentTrainsXML"},
   israelrail: {"format": "json", "ttl": 60, "ua": true, "fetchFeed": israelrail },
   metlink: {"also": ["https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates"], "format": "pb", "headers": {"Accept": "application/x-protobuf", "x-api-key": "{METLINK_API_KEY}"}, "keys": ["METLINK_API_KEY"], "routes": ["2", "3", "4", "5", "6"], "ttl": 20, "url": "https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions"},
   metrotrains: {"also": ["https://api.opendata.transport.vic.gov.au/opendata/public-transport/gtfs/realtime/v1/metro/trip-updates"], "format": "pb", "headers": {"KeyId": "{VIC_OPENDATA_KEY}"}, "keys": ["VIC_OPENDATA_KEY"], "ttl": 20, "ua": true, "url": "https://api.opendata.transport.vic.gov.au/opendata/public-transport/gtfs/realtime/v1/metro/vehicle-positions", "vehicles": "^"},
   renfe: {"also": ["https://gtfsrt.renfe.com/trip_updates_LD.pb"], "format": "pb", "ttl": 30, "ua": true, "url": "https://gtfsrt.renfe.com/vehicle_positions_LD.pb"},
   sjnord: {"format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "routes": ["SJN:Line:21", "SJN:Line:22", "SJN:Line:25", "SJN:Line:26", "SJN:Line:71", "SJN:Line:72", "SJN:Line:79", "SJN:Line:F6", "SJN:Line:F7", "SJN:Line:R60", "SJN:Line:R65", "SJN:Line:R70", "SJN:Line:R71", "SJN:Line:R75"], "ttl": 600, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=BNR"},
+  sncf: {"format": "json", "ttl": 60, "fetchFeed": sncf },
   sweden: {"format": "json", "keys": ["TRAFIKVERKET_API_KEY"], "ttl": 30, "fetchFeed": sweden },
   switzerland: {"format": "json", "keys": ["CH_GTFSRT_KEY"], "ttl": 60, "fetchFeed": switzerland },
   tfnsw: {"format": "pb", "keys": ["TFNSW_API_KEY"], "ttl": 20, "fetchFeed": tfnsw },

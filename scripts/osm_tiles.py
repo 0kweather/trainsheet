@@ -38,6 +38,16 @@ EXTRACTS = [
     "europe/italy", "europe/switzerland", "europe/slovenia",
     "europe/france/provence-alpes-cote-d-azur", "europe/france/rhone-alpes", "europe/germany/baden-wuerttemberg",
     "europe/france/alsace", "europe/france/franche-comte", "europe/liechtenstein",
+    "europe/france/aquitaine", "europe/france/auvergne", "europe/france/basse-normandie", "europe/france/bourgogne",
+    "europe/france/bretagne", "europe/france/centre", "europe/france/champagne-ardenne",
+    "europe/france/haute-normandie", "europe/france/ile-de-france", "europe/france/languedoc-roussillon",
+    "europe/france/limousin", "europe/france/lorraine", "europe/france/midi-pyrenees",
+    "europe/france/nord-pas-de-calais", "europe/france/pays-de-la-loire", "europe/france/picardie",
+    "europe/france/poitou-charentes", "europe/monaco", "europe/belgium", "europe/luxembourg",
+    "europe/germany/saarland", "europe/germany/rheinland-pfalz", "europe/germany/hessen",
+    "europe/germany/nordrhein-westfalen", "europe/netherlands",
+    "europe/united-kingdom/england/kent", "europe/united-kingdom/england/essex",
+    "europe/united-kingdom/england/greater-london",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
@@ -82,6 +92,8 @@ def main():
             coords = f["geometry"]["coordinates"]
             wid = int(str(p["@id"]).lstrip("w"))
             way = {"type": "way", "id": wid, "geometry": [{"lat": y, "lon": x} for x, y in coords]}
+            if p.get("highspeed") == "yes":  # build_rail.py's FAST_TRACK
+                way["tags"] = {"highspeed": "yes"}
             for t in {(math.floor(x / TILE), math.floor(y / TILE)) for x, y in coords}:
                 tiles[t][wid] = way
             kept += 1
