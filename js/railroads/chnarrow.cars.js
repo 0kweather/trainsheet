@@ -703,10 +703,14 @@ function zbBody(c, o) {
       // the front's foot, the windscreen in a dark mask, the side window.
       if (cab && o.spatz) s += P([[0.06, 1.75], [0.22, 2.75], ["q", 0.4, 3.45, 1.2, 3.75], [2.4, 3.75], [2.4, 1.75]], "#5b636b") + R(-0.5, 1.72, 1.3, 0.55, ZB.red) +
         P([[0.4, 2.3], [0.6, 3.1], ["q", 0.9, 3.55, 1.6, 3.6], [1.95, 3.6], [1.95, 2.3]], GLASS) + RR(2.15, 1.85, 0.5, 1.45, 0.08, GASKET) + RR(2.2, 1.9, 0.4, 1.35, 0.06, GLASS);
-      else if (cab) s += P([[2.75, 0.5], [2.75, 3.42], [2.2, 3.42], ["q", 0.85, 3.1, 0.55, 1.6], ["q", 0.45, 1.1, 0.3, 0.5]], ZB.red) +
-        R(-0.5, 0.5, 1.2, 0.45, ZB.red) + P([[0.06, 1.55], [0.18, 2.6], ["q", 0.32, 3.3, 0.95, 3.6], [1.25, 3.6], [1.25, 1.55]], "#2b3035") +
+      // The cab (photographs at Meiringen): a white nose, the windscreen in a
+      // black mask, a red band across the front's foot; a red crescent
+      // sweeping up from it behind the cab's side window to the window
+      // band.
+      else if (cab) s += P([[-0.5, 0.9], [1.0, 0.9], ["q", 1.5, 2.55, 2.4, 3.44], [-0.5, 3.44]], ZB.white) + R(-0.5, 0.5, 2.7, 0.45, ZB.red) + P([[0.9, 0.5], ["q", 1.45, 2.55, 2.35, 3.42], [3.7, 3.42], [3.7, 3.05], ["q", 2.75, 2.7, 2.35, 0.95], [2.2, 0.5]], ZB.red) +
+        P([[0.06, 1.55], [0.18, 2.6], ["q", 0.32, 3.3, 0.95, 3.6], [1.25, 3.6], [1.25, 1.55]], "#2b3035") +
         P([[0.2, 1.75], [0.3, 2.6], ["q", 0.42, 3.15, 0.98, 3.42], [1.18, 3.42], [1.18, 1.75]], GLASS) + R(0.6, 3.62, 0.8, 0.2, "#2b3035") +
-        P([[1.65, 1.5], [2.55, 1.5], [2.55, 3.15], [2.1, 3.15], ["q", 1.72, 2.95, 1.65, 2.4]], GASKET) + P([[1.72, 1.56], [2.49, 1.56], [2.49, 3.09], [2.12, 3.09], ["q", 1.78, 2.92, 1.72, 2.4]], GLASS);
+        P([[1.75, 1.95], [2.65, 1.95], [2.65, 3.25], [2.25, 3.25], ["q", 1.85, 3.0, 1.75, 2.4]], GASKET) + P([[1.82, 2.01], [2.59, 2.01], [2.59, 3.19], [2.27, 3.19], ["q", 1.9, 2.95, 1.82, 2.4]], GLASS);
       s += o.windows.map((b) => band(b, ZBD.hi, ZBD.lo)).join("");
       // Roof windows over the end cars' high-floor seats.
       s += (o.sky || []).map(([a, b]) => RR(a, ZB.band[1] + 0.12, b - a, 0.26, 0.06, "#59697a", 0, 'opacity="0.9"')).join("");
@@ -715,8 +719,8 @@ function zbBody(c, o) {
     extra: (cc) => {
       let s = o.doors.map((x) => door(x, 1.6, 0.42, 3.08, { fill: "#c9ced2", win: [0.18, 0.9], winW: 0.42 }) + T(cc, x + 0.8, 2.75, 0.3, o.cls(x), "#ffffff", { weight: 700 })).join("");
       if (cab && o.spatz) s += lamp(0.08, 1.5, 0.12, 0.12) + autoCoupler(-0.05, 0.4, 0.62);
-      else if (cab) s += R(2.8, 0.5, 0.62, 2.95, "none", 0.5) + lamp(0.12, 1.12, 0.12, 0.12) + lamp(0.13, 0.98, 0.09, 0.07, "#ff5a4a") + autoCoupler(-0.05, 0.4, 0.62) +
-        T(cc, 2.0, 1.05, 1.55, "zb", "#ffffff", { weight: 800, spacing: "-0.05em" }) + RR(0.55, 3.62, 1.0, 0.18, 0.04, "#16181b", 0.4);
+      else if (cab) s += lamp(0.12, 1.12, 0.12, 0.12) + lamp(0.13, 0.98, 0.09, 0.07, "#ff5a4a") + autoCoupler(-0.05, 0.4, 0.62) +
+        T(cc, 3.05, 1.2, 1.7, "zb", "#ffffff", { weight: 800, spacing: "-0.06em" }) + M(cc, 1.3, 0.72, zbDisc(0.13)) + RR(0.55, 3.62, 1.0, 0.18, 0.04, "#16181b", 0.4);
       s += (o.roofBoxes || []).map(([x, w]) => roofBox(x, w, ZBD.roof, 0.16)).join("") + (o.pan != null ? panto(o.pan, ZBD.roof, c.wires !== false, 1) : "");
       if (o.name != null) s += zbName(cc, o.name, 1.25, 0.32);
       return s;
@@ -726,19 +730,19 @@ function zbBody(c, o) {
 const fCls = (k) => () => k;
 // FINK ABeh 160/161/162: Bth (cab, second class), Beh (the middle car,
 // rack bogies, the pantograph), ABth (cab, first class behind the cab).
-const zbFinkB = (c) => zbBody(c, { cab: true, bogies: [[3.48]], drop: [9.6, 17.6], cls: fCls("2"), name: 6.0, sky: [[3.0, 4.7], [5.0, 6.7], [7.0, 8.7]],
-  windows: [[[2.9, 4.75], [4.98, 6.8], [7.0, 8.83]], [[13.5, 15.07, true], [15.27, 16.86, true]]], doors: [10.9], roofBoxes: [[2.6, 3.4], [6.5, 1.6]] });
+const zbFinkB = (c) => zbBody(c, { cab: true, bogies: [[3.48]], drop: [9.6, 17.6], cls: fCls("2"), name: 6.6, sky: [[4.4, 5.9], [6.1, 7.6], [7.8, 9.3]],
+  windows: [[[4.4, 5.9], [6.1, 7.6], [7.8, 9.3]], [[13.5, 15.07, true], [15.27, 16.86, true]]], doors: [10.9], roofBoxes: [[2.6, 3.4], [6.5, 1.6]] });
 const zbFinkC = (c) => zbBody(c, { bogies: [[2.93, true], [15.9, true]], cls: fCls("2"), pan: 3.0, name: null,
   windows: [[[1.18, 2.7], [2.9, 4.5], [4.7, 6.3], [6.5, 8.1], [8.15, 9.8]], [[12.33, 13.87], [14.1, 15.65], [15.8, 17.3]]], doors: [10.3], roofBoxes: [[5.0, 1.6], [8.6, 3.2]] });
-const zbFinkA = (c) => zbBody(c, { cab: true, bogies: [[3.4]], drop: [9.6, 17.6], cls: (x) => "1", name: 6.4, yellow: [[2.9, 9.6]], sky: [[3.9, 5.3], [5.6, 7.1], [7.3, 8.9]],
-  windows: [[[3.0, 3.6], [3.85, 5.35], [5.6, 7.1], [7.3, 8.9]], [[11.8, 13.4, true], [13.6, 15.1, true], [15.4, 16.8, true]]], doors: [9.8], roofBoxes: [[2.6, 3.4], [6.5, 1.6]] });
+const zbFinkA = (c) => zbBody(c, { cab: true, bogies: [[3.4]], drop: [9.6, 17.6], cls: (x) => "1", name: 6.6, yellow: [[3.6, 9.6]], sky: [[4.4, 5.9], [6.1, 7.6], [7.8, 9.3]],
+  windows: [[[4.4, 5.9], [6.1, 7.6], [7.8, 9.3]], [[11.8, 13.4, true], [13.6, 15.1, true], [15.4, 16.8, true]]], doors: [9.8], roofBoxes: [[2.6, 3.4], [6.5, 1.6]] });
 // The ADLER ABeh 150 (2012-2013, four seven-car trains): two half-trains,
 // each an end car Ath (first class, cab), the rack car Beh and a low-floor
 // Bh, the bistro car BR in the middle; 126 m. Car lengths from zb's ADLER
 // elevation (Commons "ZB ABeh 150 - Drehgestelle"), its windows from a
 // photograph at Meiringen (2017) and the FINK's: approximate.
-const zbAdA = (c) => zbBody(c, { cab: true, bogies: [[3.4]], drop: [9.6, 17.6], cls: fCls("1"), name: 6.4, yellow: [[2.9, 17.4]], sky: [[3.9, 5.3], [5.6, 7.1], [7.3, 8.9]],
-  windows: [[[3.0, 3.6], [3.85, 5.35], [5.6, 7.1], [7.3, 8.9]], [[11.8, 13.4, true], [13.6, 15.1, true], [15.4, 16.8, true]]], doors: [9.8], roofBoxes: [[2.6, 3.4]] });
+const zbAdA = (c) => zbBody(c, { cab: true, bogies: [[3.4]], drop: [9.6, 17.6], cls: fCls("1"), name: 6.6, yellow: [[3.6, 17.4]], sky: [[4.4, 5.9], [6.1, 7.6], [7.8, 9.3]],
+  windows: [[[4.4, 5.9], [6.1, 7.6], [7.8, 9.3]], [[11.8, 13.4, true], [13.6, 15.1, true], [15.4, 16.8, true]]], doors: [9.8], roofBoxes: [[2.6, 3.4]] });
 const zbAdB = (c) => zbBody(c, { bogies: [[15.0]], drop: [0.3, 12.0], cls: fCls("2"), name: 13.6,
   windows: [[[0.9, 2.45, true], [2.65, 4.2, true], [4.4, 6.0, true]], [[8.4, 9.95, true], [10.15, 11.7, true]], [[12.5, 14.0], [14.2, 15.8]]], doors: [6.5], roofBoxes: [[9.0, 3.0]] });
 const zbAdWR = (c) => zbBody(c, { bogies: [[3.0], [16.2]], cls: fCls("2"), name: null,
@@ -1146,10 +1150,12 @@ function avaEnd(c, { len, blueTo, doors, windows, first, saphir = false }) {
     colors: { base: AVA.white, skirt: [0.4, "#2a2d33"], mask: "#14172a" },
     paint: () => P([[-0.5, 0], [blueTo + 0.6, 0], [blueTo, 4.2], [-0.5, 4.2]], AVA.blue) + R(-0.5, 3.55, len + 1, 1, "#c9ced3") +
       (saphir ? P([[0.2, 1.3], [0.55, 2.7], ["q", 0.85, 3.55, 1.65, 3.85], [2.4, 3.85], [2.4, 3.45], [1.7, 3.45], ["q", 1.0, 3.2, 0.8, 2.3], [0.6, 1.3]], "#f1f3f5") : ""),
-    // The mark as seen with the cab at the right, turned for the cab at the
-    // left (bar, V, slash from the rear toward the cab), stretched 1.35
-    // times its own width as on the cars.
-    extra: (cc) => `<g transform="translate(${n(ft(8.4))} 0) scale(-1.35 1) translate(${n(-ft(2.6))} 0)">${avaMark(2.6, 0.55, 2.55)}</g>` + (first ? R(doors[0][0], 2.95, doors[0][1], 0.2, "#f3c300") : ""),
+    // The mark big on the blue behind the cab (photograph of 5011): a V,
+    // a stroke parallel to its right arm, and a short bar off that stroke
+    // toward the rear: the letters AVA run together.
+    extra: (cc) => P([[3.9, 3.0], [4.45, 3.0], [6.05, 0.7], [5.5, 0.7]], "#ffffff") + P([[5.5, 0.7], [6.05, 0.7], [7.3, 3.0], [6.75, 3.0]], "#ffffff") +
+      P([[6.6, 0.7], [7.15, 0.7], [8.4, 3.0], [7.85, 3.0]], "#ffffff") + R(7.45, 1.8, 1.6, 0.35, "#ffffff") +
+      (first ? R(doors[0][0], 2.95, doors[0][1], 0.2, "#f3c300") : ""),
     windows, doors, yellow: first ? [[doors[0][0] - 2.6, doors[0][0] - 0.1]] : [], boxes: [[4.0, 2.0], [len - 6.0, 2.4]], pans: first ? [] : [[len - 4.0, true]] });
 }
 const avaMid = (c, len) => regio(c, { roof: 3.9, sill: 0.4, low: [0.3, len - 0.3], colors: { base: AVA.white, skirt: [0.4, "#2a2d33"] },
@@ -1287,7 +1293,7 @@ const nstcm = (first) => (c) => regio(c, { roof: 3.85, sill: 0.45, nose: NOSE_ST
   paint: () => P([[0.2, 1.05], [0.22, 1.6], [0.5, 2.6], ["q", 0.8, 3.45, 1.6, 3.78], [2.6, 3.85], [2.55, 3.6], ["q", 1.55, 3.3, 1.15, 1.05]], "#f2f3f4") +
     P([[1.75, 1.45], [2.7, 1.45], [2.7, 3.35], ["q", 2.0, 3.2, 1.75, 1.45]], "#16181b") + P([[1.95, 1.6], [2.6, 1.6], [2.6, 3.15], ["q", 2.1, 3.0, 1.95, 1.6]], GLASS),
   windows: [[[3.0, 3.35]], [[4.0, 5.2], [5.4, 6.6], [6.8, 8.0]], [[10.2, 11.5, true], [11.7, 13.0, true]], [[14.6, 15.9, true], [16.1, 17.2, true]]], doors: [[8.6, 1.3]], doorFill: "#eef0f2",
-  yellow: first ? [[4.0, 8.0]] : [], pans: first ? [] : [[14.0, true]], boxes: [[4.0, 2.4]], extra: (cc) => T(cc, 0.7, 1.15, 0.12, "NStCM", "#d9261e", { weight: 600 }) });
+  yellow: first ? [[4.0, 8.0]] : [], pans: first ? [] : [[14.0, true]], boxes: [[4.0, 2.4]], extra: (cc) => R(2.85, 0.55, 0.75, 2.75, "none", 0.5) + Ln(3.7, 1.0, 3.7, 2.6, "#e8eaec", 0.8) + T(cc, 0.7, 1.15, 0.12, "NStCM", "#d9261e", { weight: 600 }) });
 
 // LEB (Lausanne-Echallens-Bercher): Be 4/8 61-66 (Stadler 2019-2020, the
 // Worbla's sister), three cars, 44.8 m; photograph at Echallens (2023):
@@ -1332,17 +1338,26 @@ const wabEnd = (c) => regio(c, { roof: 3.42, sill: 0.4, nose: NOSE_WAB, low: [2.
   extra: (cc) => T(cc, 9.5, 0.75, 0.24, "WENGERNALPBAHN", WABC.yellow, { weight: 500 }) });
 const wabMid = (c) => regio(c, { roof: 3.42, sill: 0.6, bogies: [[2.2, 700, true, 1.8], [12.6, 700, true, 1.8]], colors: { base: WABC.yellow, roof: "#5a5f66", roofH: 0.18, skirt: [1.35, WABC.green], bands: [[1.05, 1.15, WABC.yellow]] },
   hi: [1.6, 3.15], windows: [seq(0.7, 1.55, 9).map((x) => [x, x + 1.4])] });
-// Jungfraubahn Bhe 4/8 221-224 (Stadler 2016): 47.86 m, 2.60 m wide,
-// 3.35 m high, two halves; three-phase current through a double
-// pantograph. Red, the window band dark, a yellow line along the foot of
-// the side; yellow numbers on the front.
-const NOSE_JB = [[0.2, 0.3], [0.1, 0.9], [0.1, 3.1], ["q", 0.15, 3.35, 0.5, 3.35], [1.0, 3.35]];
-const jbHalf = (c) => regio(c, { roof: 3.35, sill: 0.35, nose: NOSE_JB, bogies: [[2.2, 700, true, 2.0], [12.5, 700, true, 2.0], [21.8, 700, true, 2.0]],
-  mask: [[[0.1, 1.2], [0.1, 3.1], ["q", 0.15, 3.3, 0.5, 3.3], [1.5, 3.3], [1.5, 1.2]], [[0.2, 1.65], [0.2, 3.0], [1.4, 3.0], [1.4, 1.65]]],
-  colors: { base: "#d3192a", roof: "#59606a", roofH: 0.18, skirt: [0.35, "#2c2f33"], mask: "#1c1e22", bands: [[0.55, 0.62, "#f2c21b"], [1.4, 3.05, "#1c1e22"]] }, hi: [1.55, 2.95], lo: [1.55, 2.95],
-  paint: (cc) => R(8.0, 0.35, 0.3, 3.0, "#1c1e22") + R(16.0, 0.35, 0.3, 3.0, "#1c1e22"),
-  windows: [[[2.0, 3.4], [3.6, 5.0], [5.2, 6.6]], [[9.6, 11.0], [11.2, 12.6], [12.8, 14.2]], [[17.4, 18.8], [19.0, 20.4], [20.6, 22.0]]], doors: [[6.9, 0.95, 1], [14.6, 0.95, 1], [22.5, 0.95, 1]], doorFill: "#f2c21b",
-  pans: [[11.0, true]], extra: (cc) => T(cc, 0.75, 0.95, 0.3, "224", "#f2c21b", { weight: 700 }) });
+// Jungfraubahn Bhe 4/8 221-224 (Stadler 2016): 47.86 m in three bodies (a
+// cab car at each end, a car between them), 2.60 m wide, 3.35 m high;
+// three-phase current through a double pantograph. Photograph of 224 at
+// Kleine Scheidegg (2019): red, the windows each in a black frame, a yellow
+// line low along the side over a dark gray skirt, the doors yellow,
+// "JUNGFRAUBAHN" in yellow outline letters under the windows behind the
+// cab, the number in yellow on the front's black mask. (Body lengths,
+// about 16 m each, estimated from the photograph.)
+const NOSE_JB = [[0.25, 0.3], [0.12, 0.9], [0.12, 3.05], ["q", 0.18, 3.35, 0.55, 3.35], [1.0, 3.35]];
+const JBC = { red: "#d0172c", yellow: "#f2c21b", gray: "#2f3236" };
+const jbPaint = (L) => R(-0.5, 0, L + 1, 0.78, JBC.gray) + R(-0.5, 0.78, L + 1, 0.08, JBC.yellow);
+const jbEnd = (c) => regio(c, { roof: 3.35, sill: 0.35, nose: NOSE_JB, bogies: [[2.4, 700, true, 2.0], [13.6, 700, true, 2.0]],
+  mask: [[[0.12, 1.0], [0.12, 3.05], ["q", 0.18, 3.3, 0.55, 3.3], [1.65, 3.3], [1.65, 1.0]], [[0.22, 1.6], [0.22, 2.95], [1.55, 2.95], [1.55, 1.6]]],
+  colors: { base: JBC.red, mask: "#151618" }, hi: [1.6, 2.95],
+  paint: (cc, L) => jbPaint(L) + R(-0.5, 0.86, 2.3, 0.5, "#151618"),
+  windows: [[[1.95, 2.55]], [[2.85, 3.85]], [[4.05, 5.05]], [[5.25, 6.25]], [[6.45, 7.45]], [[7.65, 8.65]], [[8.85, 9.85]], [[10.05, 11.05]], [[11.25, 12.25]], [[14.9, 15.6]]], doors: [[12.8, 0.95, 1]], doorFill: JBC.yellow, doorY: [0.4, 2.98],
+  extra: (cc) => T(cc, 0.9, 1.15, 0.3, "224", JBC.yellow, { weight: 700 }) + T(cc, 4.3, 1.25, 0.32, "JUNGFRAUBAHN", "none", { weight: 600 }).replace('fill="none"', `fill="none" stroke="${JBC.yellow}" stroke-width="0.6" vector-effect="non-scaling-stroke"`) });
+const jbMid = (c) => regio(c, { roof: 3.35, sill: 0.35, bogies: [[2.4, 700, true, 2.0], [13.4, 700, true, 2.0]], colors: { base: JBC.red }, hi: [1.6, 2.95],
+  paint: (cc, L) => jbPaint(L), windows: [[[0.7, 1.7]], [[1.9, 2.9]], [[3.1, 4.1]], [[4.3, 5.3]], [[5.5, 6.5]], [[9.8, 10.8]], [[11.0, 12.0]], [[12.2, 13.2]], [[13.4, 14.4]]],
+  doors: [[7.6, 1.5]], doorFill: JBC.yellow, doorY: [0.4, 2.98], pans: [[4.0, true], [11.0, false]] });
 // Gornergrat Bahn Polaris Bhe 4/6 3091-3095 (Stadler 2022): drawn as two
 // 16 m halves (estimated); terracotta red-orange, the windows in a broad
 // dark band edged in brushed silver, a gray skirt band; the cab's mask
@@ -1361,24 +1376,39 @@ const ggbHalf = (c) => regio(c, { roof: 3.65, sill: 0.42, nose: NOSE_GGB, bogies
 // skirt, the cab's lamps set in blue, first class's yellow line, a blue
 // "fart" behind the cab; photograph of 1102 (InnoTrans, 2024).
 const FARTC = { sand: "#cdb78d", blue: "#1d3f99" };
-const fartEnd = (first) => (c) => regio(c, { roof: 3.85, sill: 0.42, nose: NOSE_ST, low: [6.0, 16.0], bogies: [[2.9, 760, false, 2.0]], mask: MASK_ST,
-  colors: { base: FARTC.sand, roof: "#8a8f95", roofH: 0.2, skirt: [0.7, "#24272b"], mask: "#121418" }, hi: [1.7, 3.0], lo: [1.7, 3.0],
-  paint: () => R(-0.5, 0.95, 1.2, 0.45, FARTC.blue) + RR(2.4, 1.7, 1.2, 1.3, 0.12, GASKET) + RR(2.45, 1.75, 1.1, 1.2, 0.1, GLASS),
-  windows: [[[4.4, 6.0]], [[8.4, 9.9, true], [10.1, 11.6, true]], [[13.3, 14.8, true]]], doors: [[6.6, 1.3]], doorFill: "#24272b",
-  yellow: first ? [[8.4, 11.6]] : [], boxes: [[4.0, 2.0]], pans: first ? [] : [[13.0, true]], extra: (cc) => T(cc, 5.2, 3.35, 0.3, "fart", FARTC.blue, { weight: 600 }) });
+const fartEnd = (first) => (c) => regio(c, { roof: 3.85, sill: 0.42, nose: NOSE_ST, low: [8.6, 16.0], bogies: [[2.9, 760, false, 2.0]], mask: MASK_ST,
+  colors: { base: FARTC.sand, roof: "#8a8f95", roofH: 0.2, skirt: [0.6, "#24272b"], mask: "#121418" }, hi: [1.6, 3.05], lo: [1.6, 3.05],
+  paint: () => R(-0.5, 0.95, 1.0, 0.5, FARTC.blue) + RR(2.4, 1.5, 1.9, 1.6, 0.25, GASKET) + RR(2.47, 1.57, 1.76, 1.46, 0.22, GLASS),
+  windows: [[[5.8, 8.0]], [[8.2, 8.8]], [[10.7, 12.6], [12.8, 14.7]], [[14.95, 15.9]]], doors: [[9.1, 1.3]], doorFill: "#24272b",
+  yellow: first ? [[5.8, 8.8], [10.7, 15.9]] : [], yellowY: 3.2, boxes: [[4.0, 2.0]], pans: first ? [] : [[13.0, true]],
+  extra: (cc) => T(cc, 5.0, 2.95, 0.42, "Fart", FARTC.blue, { weight: 700, italic: true, family: COND }) + T(cc, 1.05, 1.3, 0.2, "Fart", "#ffffff", { weight: 700, italic: true, family: COND }) +
+    (first ? T(cc, 9.0, 2.85, 0.32, "1", "#ffffff", { weight: 600 }) : "") });
 const fartMid = (c) => regio(c, { roof: 3.85, sill: 0.42, low: [0.3, 15.8], colors: { base: FARTC.sand, roof: "#8a8f95", roofH: 0.2, skirt: [0.7, "#24272b"] }, hi: [1.7, 3.0], lo: [1.7, 3.0],
   windows: [[[0.8, 2.3, true], [2.5, 4.0, true], [4.2, 5.7, true]], [[8.5, 10.0, true], [10.2, 11.7, true], [11.9, 13.4, true]]], doors: [[6.4, 1.3]], doorFill: "#24272b", boxes: [[8.0, 3.0]] });
 // CJ ABe 4/12 671-675 (Stadler 2024-2025, R 36 and R 37): three cars
-// (about 18 m each, estimated); red, a white band low along the side
-// carrying the CJ mark and "Chemins de fer du Jura", the windows framed in
-// black; each unit's name behind the cab.
+// (about 18 m each, estimated); photographs of 672 at Le Noirmont (2024) and
+// 673 (2026): red, the roof gray, the windows in black frames, a white band
+// along the windows' foot from behind the cab, cut on a slant at its ends,
+// carrying the CJ mark and "Chemins de fer du Jura" in red; the doors
+// white; first class behind one cab (a "1" by the door, the yellow line at
+// the roof's edge); the CJ mark and the number in white on the front. (The
+// unit's name and the horse drawn in white lines on the cab side are left
+// out.)
+const CJC = { red: "#d81e26", white: "#f4f4f2" };
+const cjBand = (a, b) => RR(a, 1.0, b - a, 0.46, 0.22, CJC.white);
+const cjMarkIn = (h, fill, dx = 0) => `<path transform="translate(${n(dx)} 0)" d="M${n(-h * 0.6)} ${n(-h * 0.25)}h${n(h * 1.2)}l${n(-h * 0.25)} ${n(h * 0.25)}h${n(-h * 0.35)}l${n(-h * 0.35)} ${n(h * 0.55)}h${n(-h * 0.3)}l${n(h * 0.35)} ${n(-h * 0.55)}h${n(-h * 0.3)}Z" fill="${fill}"/>`;
+const cjMark = (cc, x, y, h, fill) => M(cc, x, y, `<path d="M${n(-h * 0.6)} ${n(-h * 0.25)}h${n(h * 1.2)}l${n(-h * 0.25)} ${n(h * 0.25)}h${n(-h * 0.35)}l${n(-h * 0.35)} ${n(h * 0.55)}h${n(-h * 0.3)}l${n(h * 0.35)} ${n(-h * 0.55)}h${n(-h * 0.3)}Z" fill="${fill}"/>`);
 const cjEnd = (first) => (c) => regio(c, { roof: 3.85, sill: 0.42, nose: NOSE_ST, low: [7.5, 17.7], bogies: [[2.9, 760, false, 2.0]], mask: MASK_ST,
-  colors: { base: "#dc2027", roof: "#a3a9af", roofH: 0.2, skirt: [0.55, "#2a2d31"], mask: "#16181b", bands: [[0.95, 1.4, "#f3f4f5"]] }, hi: [1.65, 3.0], lo: [1.65, 3.0],
-  windows: [[[2.4, 3.1]], [[3.6, 5.1], [5.3, 6.8]], [[9.6, 11.1, true], [11.3, 12.8, true]], [[14.6, 16.1, true], [16.3, 17.4, true]]], doors: [[7.8, 1.3]], doorFill: "#f3f4f5",
-  yellow: first ? [[3.6, 6.8]] : [], boxes: [[4.0, 2.4]], extra: (cc) => T(cc, 11.5, 1.18, 0.3, "Chemins de fer du Jura", "#dc2027", { weight: 600 }) });
-const cjMid = (c) => regio(c, { roof: 3.85, sill: 0.42, low: [0.3, 17.7], colors: { base: "#dc2027", roof: "#a3a9af", roofH: 0.2, skirt: [0.55, "#2a2d31"], bands: [[0.95, 1.4, "#f3f4f5"]] },
-  hi: [1.65, 3.0], lo: [1.65, 3.0], windows: [[[0.8, 2.3, true], [2.5, 4.0, true], [4.2, 5.7, true]], [[9.4, 10.9, true], [11.1, 12.6, true], [12.8, 14.3, true], [14.5, 16.0, true]]],
-  doors: [[7.6, 1.3]], doorFill: "#f3f4f5", pans: [[9.0, true]], boxes: [[2.0, 3.0]] });
+  colors: { base: CJC.red, roof: "#a7adb3", roofH: 0.3, skirt: [0.55, "#2a2d31"], mask: "#16181b" }, hi: [1.5, 3.05], lo: [1.5, 3.05],
+  paint: (cc, L) => cjBand(2.9, L + 0.5) + RR(2.55, 1.5, 0.75, 1.55, 0.1, GASKET) + RR(2.6, 1.55, 0.65, 1.45, 0.08, GLASS),
+  windows: [[[4.6, 6.2], [6.35, 7.85]], [[9.8, 12.3], [12.5, 15.0], [15.2, 17.6]]], doors: [[8.05, 1.4]], doorFill: CJC.white,
+  yellow: first ? [[4.4, 7.95]] : [], yellowY: 3.5, boxes: [[4.0, 2.4]],
+  extra: (cc) => cjMark(cc, 1.2, 1.2, 0.35, "#ffffff") + T(cc, 7.75, 2.75, 0.32, first ? "1" : "2", "#ffffff", { weight: 600 }) +
+    M(cc, 5.0, 1.23, cjMarkIn(0.3, CJC.red, -1.75) + txt(0.2, 0, 0.34, "Chemins de fer du Jura", CJC.red, { weight: 500, family: COND, stretch: "condensed" })) });
+const cjMid = (c) => regio(c, { roof: 3.85, sill: 0.42, low: [0.3, 17.7], colors: { base: CJC.red, roof: "#a7adb3", roofH: 0.3, skirt: [0.55, "#2a2d31"] },
+  hi: [1.5, 3.05], lo: [1.5, 3.05], paint: (cc, L) => cjBand(-0.8, L + 0.5),
+  windows: [[[0.9, 3.0], [3.2, 5.3], [5.5, 7.6]], [[9.9, 12.0], [12.2, 14.3], [14.5, 16.6]]], doors: [[8.0, 1.4]], doorFill: CJC.white, pans: [[9.0, true]], boxes: [[2.0, 3.0]],
+  extra: (cc) => T(cc, 7.7, 2.75, 0.32, "2", "#ffffff", { weight: 600 }) });
 // Stadler GTW: two low-floor end cars resting on the power module between
 // them (its own two bogies), the rack drive in it on the rack lines. o:
 // paint { base, front, skirt, extra }. TPC's Beh 2/6 541-547 (AOMC, 2016):
@@ -1396,6 +1426,54 @@ const gtwEnd = (col, name) => (c) => regio(c, { roof: 3.75, sill: 0.4, nose: NOS
   extra: (cc) => (name ? T(cc, 12.0, 1.1, 0.32, name, col.text || "#ffffff", { weight: 600 }) : "") });
 const gtwPower = (col, rack) => (c) => regio(c, { roof: 3.9, sill: 0.62, bogies: [[1.4, 760, rack, 1.7], [3.9, 760, rack, 1.7]], colors: { base: col.module || col.base, roof: col.roof || "#9aa0a6", roofH: 0.2, skirt: [0.7, "#2a2d31"] },
   paint: () => slats(ft(1.0), ft(1.6), ft(3.3), ft(1.2), 0.4, "rgba(0,0,0,0.25)"), pans: [[2.65, true]] });
+// The rack GTWs of the TPC (Beh 2/6 541-547, AOMC, 2016) and the MVR (ABeh
+// 2/6 7501-7508 "SURF", 2015-2017): Stadler's fourth-generation GTW with the
+// crash-proof front, 39.23 m over the couplers: two low-floor cars (about
+// 17.4 m) resting on the short power module (4.4 m) that carries the
+// motors, the rack drive and the pantograph. Each car: the cab, its side
+// window, two windows, a double door, four windows. Photographs of TPC 542
+// at Aigle (2024) and MVR 7503 at Montreux (2024).
+//   TPC: pale lime, broad soft green swirls with white contour lines on
+//   the sides, the cab's crown and the band round the windscreen bright
+//   green, the doors violet, the violet "tpc" mark and the unit's number on
+//   the front, the mark again behind the door; the module lime with a big
+//   outlined "tpc".
+//   MVR: polished stainless sides, champagne below a navy-edged sweep, the
+//   roof and the cab's crown night blue with a champagne line along the
+//   roof's edge curving down behind the cab; "MVR" in gray on the side,
+//   "SURF" and the number on the front.
+const NOSE_G4 = [[0.35, 0.35], [0.12, 0.95], [0.1, 1.55], [0.32, 2.75], ["q", 0.55, 3.55, 1.5, 3.78], [2.4, 3.82]];
+function gtw4End(c, rail) {
+  const tpc = rail === "tpc", L = c.L / F;
+  const base = tpc ? "#e3ef8f" : "#a9aaa1";
+  return regio(c, { roof: 3.82, sill: 0.4, nose: NOSE_G4, low: [3.2, L - 0.3], bogies: [[2.4, 680, false, 1.8]],
+    mask: [[[0.12, 1.55], [0.32, 2.75], ["q", 0.52, 3.38, 1.45, 3.6], [2.35, 3.6], [2.35, 1.55]], [[0.3, 1.75], [0.46, 2.72], ["q", 0.64, 3.24, 1.45, 3.46], [2.2, 3.46], [2.2, 1.75]]],
+    colors: { base, skirt: [0.42, "#3a3d42"], mask: "#121416", roof: tpc ? "#5d6168" : "#1f2a55", roofH: 0.3 }, hi: [1.55, 3.05], lo: [1.55, 3.05],
+    paint: (cc, L2) => (tpc
+      ? P([[-0.5, 0], [-0.5, 3.9], [3.3, 3.9], ["q", 2.6, 3.4, 2.6, 2.0], ["q", 2.6, 1.1, 2.2, 0.9], [0.4, 0.9]], "#7fd03c") + R(-0.5, 0.42, 3, 0.55, "#e3ef8f") +
+        [[6.5, 2.2, 3.2], [12.0, 1.6, 2.4], [15.5, 2.6, 2.0]].map(([x, y, r]) => `<ellipse cx="${n(ft(x))}" cy="${n(ft(y))}" rx="${n(ft(r))}" ry="${n(ft(r * 0.7))}" fill="#b8de52" opacity="0.75"/>` +
+          [0.75, 0.5].map((k) => `<ellipse cx="${n(ft(x))}" cy="${n(ft(y))}" rx="${n(ft(r * k))}" ry="${n(ft(r * 0.7 * k))}" fill="none" stroke="#f4f8d8" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`).join("")).join("")
+      // Stainless with a lighter sheen in the window zone; the front night
+      // blue down to the lamps, champagne below it and back to the cab
+      // door; a champagne line along the roof's edge curving down there.
+      : R(-0.5, 1.5, L2 + 1, 1.75, "#bebfb6") + R(-0.5, 0.42, L2 + 1, 1.0, "#d9d2b8") +
+        P([[-0.5, 0.42], [-0.5, 3.9], [2.75, 3.9], ["q", 2.35, 3.45, 2.32, 2.4], [2.3, 0.42]], "#1f2a55") +
+        P([[-0.5, 0.42], [2.3, 0.42], [2.3, 1.2], ["q", 1.2, 1.15, 0.2, 0.95], [-0.5, 0.95]], "#e8dfc2") +
+        P([[2.48, 0.42], ["q", 2.48, 3.3, 3.4, 3.5], [L2 + 0.5, 3.5], [L2 + 0.5, 3.57], [3.38, 3.57], ["q", 2.4, 3.35, 2.4, 0.42]], "#e8dfc2")) +
+      RR(2.55, 1.5, 0.75, 1.55, 0.12, GASKET) + RR(2.6, 1.55, 0.65, 1.45, 0.1, GLASS),
+    windows: [[[3.7, 5.4], [5.6, 7.3]], [[9.25, 10.6], [10.78, 12.13], [12.31, 13.66], [13.84, 15.19], [15.37, 16.72]]], doors: [[7.6, 1.3]], doorFill: tpc ? "#4a3a98" : "#a3a59b",
+    boxes: [[3.6, 3.2], [9.0, 2.0]],
+    extra: (cc) => (tpc ? T(cc, 1.05, 1.15, 0.3, "tpc", "#4a3a98", { weight: 800 }) + T(cc, 7.0, 1.2, 0.36, "tpc", "#4a3a98", { weight: 800 })
+      : T(cc, 1.0, 0.62, 0.16, "SURF", "#1f2a55", { weight: 700 }) + T(cc, 3.3, 1.2, 0.5, "MVR", "#5c5d58", { weight: 300, family: "Georgia, 'Times New Roman', serif", spacing: "0.06em" })) });
+}
+function gtw4Module(c, rail) {
+  const tpc = rail === "tpc";
+  return regio(c, { roof: 3.95, sill: 0.62, bogies: [[1.1, 760, true, 1.6], [3.3, 760, true, 1.6]], endInset: 0.15,
+    colors: { base: tpc ? "#e3ef8f" : "#a9aaa1", roof: tpc ? "#5d6168" : "#1f2a55", roofH: 0.3, skirt: [0.75, "#3a3d42"] },
+    paint: () => (tpc ? "" : R(-0.5, 0.75, 6, 0.7, "#d9d2b8")) + R(0.7, 0.9, 1.4, 2.4, "none", 0.4) + R(2.3, 0.9, 1.4, 2.4, "none", 0.4) + RR(0.8, 3.45, 2.8, 0.3, 0.05, tpc ? "#c9cfa0" : "#5f6f8f", 0.4),
+    pans: [[2.2, true]],
+    extra: (cc) => (tpc ? M(cc, 2.2, 2.2, `<text y="0.35" font-size="1.3" text-anchor="middle" font-weight="800" font-family="${SANS}" fill="none" stroke="#3b3384" stroke-width="0.06">tpc</text>`) : "") });
+}
 const TPCC = { base: "#a5cf43", roof: "#8fb83a", door: "#33307a", top: null, oneDoor: true };
 const MVRC = { base: "#e8e2d2", top: [2.95, "#1b2348"], front: null, roof: "#1b2348", door: "#d8d2c2", module: "#1b2348", text: "#1b2348" };
 const ASMG = { base: "#c9cdd1", front: "#d8262c", stripe: "#2aa3a5", door: "#e4e7ea" };
@@ -1437,6 +1515,317 @@ const pilatus = (c) => regio(c, { roof: 3.4, sill: 0.7, nose: [[0.25, 0.7], [0.1
   colors: { base: "#c8162a", roof: "#c8162a", skirt: [0.95, "#2a2d31"], mask: "#16181b", bands: [[1.25, 3.05, "#16181b"]] }, hi: [1.35, 2.95],
   windows: [[[1.6, 2.6], [2.75, 3.75], [3.9, 4.9], [5.05, 6.05], [6.2, 7.2], [7.35, 8.35], [8.5, 9.5], [9.65, 10.65]]], pans: [[6.1, true]],
   extra: (cc) => T(cc, 6.1, 1.1, 0.26, "PILATUS", "#ffffff", { weight: 800 }) });
+
+// ===================== The smaller lines (drawn 2026-10) =====================
+// A flat-fronted older railcar's cab: an upright front, rounded into the
+// roof; its windscreen as a dark rectangle. roof: the roof's height.
+const noseFlat = (sill, roof, r = 0.35, lean = 0.06) => [[0.18, sill], [0.12, sill + 0.4], [0.12 + lean, roof - r], ["q", 0.14 + lean, roof, 0.12 + lean + r, roof], [0.6 + r, roof]];
+const maskFlat = (y0, y1, x1 = 1.2, lean = 0.06) => [[[0.12, y0 - 0.08], [0.12 + lean, y1 + 0.08], [x1 + 0.08, y1 + 0.08], [x1 + 0.08, y0 - 0.08]], [[0.2, y0], [0.18 + lean, y1], [x1, y1], [x1, y0]]];
+// A row of k panes from a to b, each w wide (evenly spread).
+const row = (a, b, k, w) => (k === 1 ? [[(a + b - w) / 2, (a + b + w) / 2]] : seq(a, (b - a - w) / (k - 1), k).map((x) => [x, x + w]));
+const each = (list) => list.map((p) => [p]);
+
+// --- zb Be 2/6 125 013 (Meiringen-Innertkirchen, R 71) ---
+// Stadler's first GTW for metre gauge (1997, the CEV's 7004, MIB's 13 from
+// 2018, zb's since 2021): 30.1 m, two low-floor cars on the power module.
+// Photograph at the Aareschlucht (2021): white, the cab ends red with the
+// zb sweep, the power module red, the doors red; the giant white "zb" on
+// the cab side.
+const NOSE_GTW1 = [[0.25, 0.35], [0.15, 0.9], [0.15, 2.6], ["q", 0.22, 3.3, 0.8, 3.5], [1.5, 3.55]];
+const mibEnd = (c) => regio(c, { roof: 3.55, sill: 0.4, nose: NOSE_GTW1, low: [2.6, 12.6], bogies: [[2.0, 680, false, 1.8]],
+  mask: [[[0.15, 1.5], [0.15, 2.6], ["q", 0.22, 3.2, 0.8, 3.38], [1.3, 3.38], [1.3, 1.5]], [[0.28, 1.65], [0.28, 2.6], ["q", 0.34, 3.08, 0.82, 3.25], [1.2, 3.25], [1.2, 1.65]]],
+  colors: { base: ZB.white, roof: "#5b6168", roofH: 0.25, skirt: [0.6, ZB.gray], mask: "#16181b", bands: [[3.22, 3.3, ZB.red]] }, hi: [1.55, 3.0],
+  paint: (cc, L) => P([[-0.5, 0.6], [-0.5, 3.3], [2.4, 3.3], ["q", 2.0, 2.0, 1.2, 1.4], [-0.5, 1.4]], ZB.red) + Ci(3.1, 1.5, 0.95, ZB.red),
+  windows: [[[1.5, 2.2]], [[2.5, 3.7], [3.9, 5.1]], [[7.1, 8.4], [8.6, 9.9], [10.1, 11.4]], [[11.6, 12.3]]], doors: [[5.4, 1.3]], doorFill: ZB.red,
+  extra: (cc) => T(cc, 3.1, 1.45, 1.0, "zb", "#ffffff", { weight: 800, spacing: "-0.05em" }) + zbName(cc, 7.4, 1.05, 0.22) });
+const mibModule = (c) => regio(c, { roof: 3.75, sill: 0.62, bogies: [[1.2, 760, false, 1.7], [3.7, 760, false, 1.7]], endInset: 0.15,
+  colors: { base: ZB.red, roof: "#9aa0a6", roofH: 0.2, skirt: [0.75, ZB.gray] }, paint: () => R(0.6, 0.9, 1.6, 2.4, "none", 0.4) + R(2.5, 0.9, 1.6, 2.4, "none", 0.4), pans: [[2.4, true]] });
+
+// --- MOB's Lenk shuttle (R 31, Zweisimmen-Lenk) ---
+// The four sets ABt 341-344, Be 4/4 5001-5004 (SIG/SAAS 1976-1979, rebuilt
+// 2004-2009 as a cabless high-floor motor car, 16.9 m) and Bt 241-244 (R&J
+// low-floor cab cars, about 19 m each; the set 55 m). Photographs at St.
+// Stephan (2023) and Chernex (2024): the cab cars gold with the windows in
+// a dark band and the front's lower half black; the motor car gold over
+// dark gray. (The sets carry advertising wraps, set 3's "Simmental"
+// bears; drawn in the gold ground without them.)
+const LKC = { gold: "#b7a157", dark: "#2c2e30" };
+const NOSE_LK = [[0.35, 0.4], [0.18, 1.0], [0.15, 2.4], ["q", 0.2, 3.3, 0.9, 3.6], [1.8, 3.7]];
+const lenkCab = (first) => (c) => regio(c, { roof: 3.7, sill: 0.42, nose: NOSE_LK, low: [3.2, 15.5], bogies: [[2.4, 680, false, 1.8], [16.8, 680, false, 1.8]],
+  mask: [[[0.15, 1.6], [0.17, 2.5], ["q", 0.25, 3.2, 0.9, 3.45], [1.6, 3.45], [1.6, 1.6]], [[0.27, 1.75], [0.3, 2.5], ["q", 0.36, 3.05, 0.92, 3.3], [1.5, 3.3], [1.5, 1.75]]],
+  colors: { base: LKC.gold, roof: "#8c8f92", roofH: 0.2, skirt: [0.42, LKC.dark], mask: "#1b1c1d", bands: [[1.5, 3.05, "#2a2b2c"]] }, hi: [1.55, 3.0],
+  paint: () => R(-0.5, 0.42, 1.1, 1.1, LKC.dark), windows: [[[1.9, 2.5]], [[4.5, 5.8], [6.0, 7.3], [7.5, 8.8]], [[11.5, 12.8], [13.0, 14.3], [14.5, 15.8], [16.0, 17.3]]],
+  doors: [[2.75, 1.3], [9.4, 1.3]], doorFill: "#c3ae6a", yellow: first ? [[4.5, 8.8]] : [], yellowY: 3.15,
+  extra: (cc) => T(cc, 13.0, 1.05, 0.3, "GoldenPass", "#2a2b2c", { weight: 700, italic: true }) });
+const lenkMotor = (c) => regio(c, { roof: 3.8, sill: 1.0, bogies: [[3.0, 860, false, 2.2], [13.9, 860, false, 2.2]], colors: { base: LKC.gold, roof: "#8c8f92", roofH: 0.25, skirt: [1.6, LKC.dark] },
+  hi: [2.0, 3.1], windows: [[[1.2, 2.6], [2.8, 4.2], [4.4, 5.8], [6.0, 7.4], [9.5, 10.9], [11.1, 12.5], [12.7, 14.1], [14.3, 15.7]]], pans: [[4.5, true], [12.4, false]], boxes: [[6.5, 3.5]] });
+
+// --- Frauenfeld-Wil (S 15): ABe 4/8 7001-7005 "Zebra" (Stadler 2013) ---
+// The Diamant lengthened: 45.5 m in three cars (end cars about 17.5 m, the
+// middle 10.5 m). Photographs of 7002 at Wil (2024) and near Matzingen
+// (2021): white, broad red stripes slanting back across the sides and the
+// cab end (a zebra's), the windows in a black band; "fwb" in red, small
+// "Frauenfeld-Wil-Bahn" over it; first class's yellow line behind one cab.
+// The zebra sweeps: broad red bands curving down and back across the
+// white, each w wide at the foot.
+const sweep = (x0, x1, w) => P([[x0, 4.2], [x0 + w, 4.2], ["q", x1 + w * 1.3, 2.6, x1 + w, -0.1], [x1, -0.1], ["q", x1 + w * 0.3, 2.6, x0, 4.2]], "#d6232a");
+const fwBand = (L) => R(-0.5, 1.55, L + 1, 1.45, "#2b2d30");
+const fwEnd = (first) => (c) => regio(c, { roof: 3.95, sill: 0.4, nose: NOSE_AVA, low: [9.0, 17.2], bogies: [[2.9, 810, false, 2.0]], mask: MASK_ST,
+  colors: { base: "#f3f4f5", roof: "#1f2124", roofH: 0.12, skirt: [0.4, "#2a2d33"], mask: "#14161a" }, hi: [1.6, 2.95],
+  paint: (cc, L) => sweep(3.2, 6.6, 1.6) + sweep(9.5, 11.5, 1.8) + sweep(13.6, 15.4, 1.5) + fwBand(L).replace(`x="${n(ft(-0.5))}"`, `x="${n(ft(2.3))}"`),
+  windows: [[[2.5, 3.3]], [[3.8, 5.4], [5.6, 7.2]], [[11.0, 12.6], [12.8, 14.4], [14.6, 16.2]]], doors: [[7.6, 1.4]], doorFill: "#26282b", yellow: first ? [[3.8, 7.2]] : [], yellowY: 3.03,
+  boxes: [[4.0, 2.4]], pans: first ? [] : [[15.5, true]],
+  extra: (cc) => R(7.55, 0.45, 1.5, 2.55, "none", 0, 'stroke="#ffffff" stroke-width="1" vector-effect="non-scaling-stroke"') + T(cc, 5.6, 1.05, 0.5, "fwb", "#d6232a", { weight: 800, spacing: "-0.04em" }) +
+    T(cc, 6.9, 1.12, 0.1, "Frauenfeld-Wil-Bahn", "#d6232a", { weight: 500, anchor: "start" }) });
+const fwMid = (c) => regio(c, { roof: 3.95, sill: 0.4, low: [0.3, 10.2], colors: { base: "#f3f4f5", roof: "#1f2124", roofH: 0.12, skirt: [0.4, "#2a2d33"] }, hi: [1.6, 2.95],
+  paint: (cc, L) => sweep(-0.6, 1.6, 1.6) + sweep(4.8, 6.6, 1.6) + fwBand(L), windows: [[[0.8, 2.4], [2.6, 4.2]], [[6.4, 8.0], [8.2, 9.8]]], doors: [[4.6, 1.4]], doorFill: "#26282b", boxes: [[1.0, 3.0]],
+  extra: () => R(4.55, 0.45, 1.5, 2.55, "none", 0, 'stroke="#ffffff" stroke-width="1" vector-effect="non-scaling-stroke"') });
+
+// --- Appenzeller Bahnen: Gais-Altstätten (S 24), BDeh 4/4 16-17 + ABt ---
+// SWA/SLM/ABB 1993 (rack, 17.41 m) with a PA-90 cab car ABt (17.07 m).
+// Photographs at Altstätten (2023-2024): AB red, the window band dark
+// gray, the white AB mark on the front and the name on the side; the
+// doors swing out, flush.
+const abMark = (cc, x, y, h) => M(cc, x, y, `<rect x="${n(-h * 0.75)}" y="${n(-h * 0.45)}" width="${n(h * 1.5)}" height="${n(h * 0.9)}" rx="${n(h * 0.15)}" fill="none" stroke="#ffffff" stroke-width="${n(h * 0.1)}" transform="skewX(-15)"/>` +
+  `<text y="${n(h * 0.3)}" font-size="${n(h * 0.75)}" text-anchor="middle" font-weight="800" font-style="italic" font-family="${SANS}" fill="#ffffff">AB</text>`);
+const ABCK = { red: "#d9221c", band: "#3a3d42" };
+const abGaisMotor = (c) => regio(c, { roof: 3.75, sill: 0.95, nose: noseFlat(0.95, 3.75), bogies: [[3.0, 860, true, 2.2], [14.4, 860, true, 2.2]], mask: maskFlat(1.95, 3.05, 1.3),
+  colors: { base: ABCK.red, roof: "#8f959b", roofH: 0.25, skirt: [1.1, "#2a2d31"], bands: [[1.1, 1.62, "#8a8e92"], [1.9, 3.15, ABCK.band]] }, hi: [1.95, 3.05],
+  paint: () => R(-0.5, 1.0, 2.6, 2.3, ABCK.red),
+  windows: [[[1.6, 2.5]], [[4.2, 5.4], [5.6, 6.8], [7.0, 8.2], [8.4, 9.6], [9.8, 11.0]], [[13.4, 14.2]]], doors: [[2.8, 1.0, 1], [11.5, 1.6, 1], [15.6, 1.0, 1]], doorFill: ABCK.red, doorY: [1.0, 3.1],
+  pans: [[8.0, true]], boxes: [[3.0, 3.0], [11.5, 3.0]], extra: (cc) => abMark(cc, 0.6, 1.55, 0.35) + T(cc, 7.6, 1.55, 0.26, "Appenzeller Bahnen", "#ffffff", { weight: 600 }) });
+const abGaisABt = (c) => regio(c, { roof: 3.75, sill: 0.95, nose: noseFlat(0.95, 3.75), bogies: [[2.8, 750, true, 2.0], [14.3, 750, true, 2.0]], mask: maskFlat(1.95, 3.05, 1.3),
+  colors: { base: ABCK.red, roof: "#8f959b", roofH: 0.25, skirt: [1.1, "#2a2d31"], bands: [[1.1, 1.62, "#8a8e92"], [1.9, 3.15, ABCK.band]] }, hi: [1.95, 3.05],
+  paint: () => R(-0.5, 1.0, 2.4, 2.3, ABCK.red),
+  windows: [[[1.6, 2.4]], [[3.8, 5.0], [5.2, 6.4], [6.6, 7.8], [8.0, 9.2], [9.4, 10.6], [10.8, 12.0], [12.2, 13.4]]], doors: [[2.6, 1.0, 1], [15.6, 1.0, 1]], doorFill: ABCK.red, doorY: [1.0, 3.1],
+  yellow: [[3.8, 7.8]], yellowY: 3.25, extra: (cc) => abMark(cc, 0.6, 1.55, 0.35) });
+
+// --- Rorschach-Heiden (S 25): BDeh 3/6 25 (Stadler 1998) ---
+// Standard gauge, Riggenbach rack: two bodies on a Jakobs bogie, 33.12 m.
+// Photographs at Rorschach Hafen and Heiden (2023): red, a broad white band
+// along the foot of the side, the front red over white with the AB mark,
+// the cab's windows in black; "Appenzeller Bahnen" with its mark on the
+// white; one pantograph over the valley-end cab.
+const rhbBdeh = (c) => regio(c, { roof: 4.1, sill: 0.95, nose: noseFlat(0.95, 4.1, 0.45, 0.05), bogies: [[2.9, 860, true, 2.4], [16.56, 860, true, 2.4]],
+  mask: maskFlat(2.15, 3.35, 1.35, 0.05),
+  colors: { base: ABCK.red, roof: "#9aa0a6", roofH: 0.3, skirt: [1.1, "#2a2d31"], bands: [[1.1, 1.85, "#f3f4f5"]] }, hi: [2.1, 3.35],
+  windows: [[[1.55, 2.4]], [[3.7, 4.9]], [[5.1, 6.3]], [[8.6, 9.8]], [[10.0, 11.2]], [[11.4, 12.6]], [[13.6, 14.6]]], doors: [[6.8, 1.4], [15.0, 1.4]], doorFill: ABCK.red, doorY: [1.0, 3.4],
+  boxes: [[5.0, 3.0]], extra: (cc) => abMark(cc, 0.6, 1.95, 0.4) + T(cc, 9.0, 1.5, 0.28, "Appenzeller Bahnen", ABCK.red, { weight: 600 }) +
+    (cc.index ? "" : panto(3.2, 4.1, cc.wires !== false, -1)) });
+
+// --- Rheineck-Walzenhausen (S 26): BDeh 1/2 1 (SLM/FFA/BBC 1958) ---
+// 1200 mm gauge, Riggenbach rack, 10.7 m, a cab at each end. Photographs at
+// Rheineck (2024-2025): red, white mountain peaks along the foot of the
+// side made of small lettering, "BERGBAHN RHEINECK - WALZENHAUSEN" in white
+// mid-side, the white AB mark on the front.
+const rhwCar = (c) => {
+  const L = c.L / F;
+  return regio(c, { roof: 3.45, sill: 0.62, nose: noseFlat(0.62, 3.45, 0.3, 0.05), bogies: [[2.4, 700, true, 2.6], [L - 2.4, 700, false, 2.6]], endInset: 0.15,
+    mask: maskFlat(1.95, 3.15, 1.3, 0.05),
+    colors: { base: "#c8202a", roof: "#7c8187", roofH: 0.25, skirt: [0.7, "#2a2d31"] }, hi: [1.95, 3.15],
+    paint: () => {
+      let d = ""; for (let x = 0.4; x < L - 0.8; x += 1.35) d += `M${n(ft(x))} ${n(ft(0.7))}L${n(ft(x + 0.65))} ${n(ft(1.45))}L${n(ft(x + 1.3))} ${n(ft(0.7))}Z`;
+      return `<path d="${d}" fill="#ffffff" opacity="0.85"/>` + P([[L - 0.2, 0.6], [L - 0.12, 3.15], [L - 1.3, 3.15], [L - 1.3, 0.6]], "#c8202a");
+    },
+    windows: [[[1.65, 2.3]], [[2.5, 3.3]], [[5.2, 6.05]], [[6.25, 7.1]], [[7.3, 8.15]], [[8.35, 9.2]], [[9.4, 9.8]], [[10.0, 10.4]]].map((r) => r.filter(([a, b]) => b < L - 0.2)),
+    doors: [[3.5, 1.55]], doorFill: "#c8202a", doorY: [0.7, 3.2],
+    pans: [[7.5, true]], extra: (cc) => abMark(cc, 0.65, 1.5, 0.32) + T(cc, 7.2, 1.62, 0.2, "BERGBAHN RHEINECK - WALZENHAUSEN", "#ffffff", { weight: 600, family: COND, stretch: "condensed" }) });
+};
+
+// --- TPC: Aigle-Leysin (R 70): BDeh 4/4 311-313 + Bt 361-363 ---
+// ACMV/SLM/BBC 1987-1993: motor car 15.4 m (Abt rack) and a cab car
+// (about 15 m), the motor car at the downhill end. Photographs at Rennaz
+// (2024): TPC's green, the lower body pale yellow-green, the upper bright
+// green, the roof dark gray, the window band black; the violet number and
+// "tpc" on the front.
+const TPCO = { pale: "#d9ea8c", green: "#86c943", roof: "#41464c" };
+const alPaint = (L) => R(-0.5, 1.95, L + 1, 2.5, TPCO.green) + R(-0.5, 1.85, L + 1, 1.25, "#16181b");
+const alMotor = (c) => regio(c, { roof: 3.7, sill: 0.95, nose: noseFlat(0.95, 3.7), bogies: [[2.7, 860, true, 2.2], [12.7, 860, true, 2.2]], mask: maskFlat(1.95, 3.0, 1.35),
+  colors: { base: TPCO.pale, roof: TPCO.roof, roofH: 0.3, skirt: [1.05, "#2a2d31"] }, hi: [1.95, 3.0],
+  paint: (cc, L) => alPaint(L), windows: [[[1.6, 2.5]], [[4.2, 5.3], [5.5, 6.6], [6.8, 7.9], [8.1, 9.2], [9.4, 10.5]], [[12.6, 13.6]]], doors: [[2.8, 1.0, 1], [11.0, 1.2, 1]], doorFill: TPCO.pale, doorY: [1.0, 3.05],
+  pans: [[7.5, true]], boxes: [[3.0, 3.0], [10.5, 2.5]] });
+const alBt = (c) => regio(c, { roof: 3.7, sill: 0.95, nose: noseFlat(0.95, 3.7), bogies: [[2.6, 750, true, 2.0], [12.4, 750, true, 2.0]], mask: maskFlat(1.95, 3.0, 1.35),
+  colors: { base: TPCO.pale, roof: TPCO.roof, roofH: 0.3, skirt: [1.05, "#2a2d31"] }, hi: [1.95, 3.0],
+  paint: (cc, L) => alPaint(L), windows: [[[1.6, 2.4]], [[3.9, 5.0], [5.2, 6.3], [6.5, 7.6], [7.8, 8.9], [9.1, 10.2], [10.4, 11.5]], [[12.8, 13.7]]], doors: [[2.6, 1.0, 1], [11.8, 0.9, 1]], doorFill: TPCO.pale, doorY: [1.0, 3.05] });
+
+// --- TPC: Aigle-Les Diablerets (R 71): ABe 4/8 471-473 (Stadler 2024) ---
+// Two cars, Bo'2' + 2'Bo', 39.3 m (19.65 m each), low floor. Photograph at
+// Les Planches (2024): pale lime with darker green and yellow-green swirls,
+// the cab's mask in bright green with a black windscreen, the doors violet,
+// the violet "tpc". (First class, 11 seats: drawn behind one cab.)
+const asdCar = (first) => (c) => regio(c, { roof: 3.85, sill: 0.42, nose: NOSE_G4, low: [3.2, 19.3], bogies: [[2.6, 810, false, 2.0], [17.0, 680, false, 1.8]],
+  mask: [[[0.12, 1.55], [0.32, 2.75], ["q", 0.52, 3.38, 1.45, 3.6], [2.35, 3.6], [2.35, 1.55]], [[0.3, 1.75], [0.46, 2.72], ["q", 0.64, 3.24, 1.45, 3.46], [2.2, 3.46], [2.2, 1.75]]],
+  colors: { base: "#e3ef8f", skirt: [0.42, "#3a3d42"], mask: "#121416", roof: TPCO.roof, roofH: 0.3 }, hi: [1.55, 3.05], lo: [1.55, 3.05],
+  paint: (cc, L) => P([[-0.5, 0], [-0.5, 3.9], [3.3, 3.9], ["q", 2.6, 3.4, 2.6, 2.0], ["q", 2.6, 1.1, 2.2, 0.9], [0.4, 0.9]], "#7fd03c") +
+    [[7.0, 2.0, 3.0], [13.0, 2.4, 3.4]].map(([x, y, r]) => `<ellipse cx="${n(ft(x))}" cy="${n(ft(y))}" rx="${n(ft(r))}" ry="${n(ft(r * 0.6))}" fill="#b8de52" opacity="0.75"/>`).join("") +
+    RR(2.55, 1.5, 0.75, 1.55, 0.12, GASKET) + RR(2.6, 1.55, 0.65, 1.45, 0.1, GLASS),
+  windows: [[[3.7, 5.2], [5.4, 6.9]], [[9.3, 10.8], [11.0, 12.5], [12.7, 14.2], [14.4, 15.9], [16.1, 17.6]]], doors: [[7.4, 1.4]], doorFill: "#4a3a98",
+  yellow: first ? [[3.7, 6.9]] : [], yellowY: 3.15, boxes: [[3.6, 3.0], [10.0, 3.0]], pans: first ? [] : [[16.0, true]],
+  extra: (cc) => T(cc, 1.05, 1.15, 0.3, "tpc", "#4a3a98", { weight: 800 }) + T(cc, 8.1, 2.8, 0.3, first ? "1" : "2", "#ffffff", { weight: 600 }) });
+
+// --- TPC: Bex-Villars-Bretaye (R 74): Beh 4/8 91-93 (Stadler 2001) ---
+// Two cars, 31.87 m, Abt rack, a double door each by the joint. Photograph
+// at Bex (2023): lime with darker green contour swirls, the cab front
+// bright green with a black windscreen and gray roof, the violet number.
+const bvbCar = (c) => regio(c, { roof: 3.6, sill: 0.62, nose: noseFlat(0.62, 3.6, 0.4, 0.1), bogies: [[2.6, 760, true, 2.0], [13.6, 760, true, 2.0]], mask: maskFlat(1.85, 3.1, 1.5, 0.1),
+  colors: { base: "#c4e26a", roof: TPCO.roof, roofH: 0.3, skirt: [0.7, "#2a2d31"], mask: "#16181b" }, hi: [1.85, 3.05],
+  paint: (cc, L) => R(-0.5, 0.7, 2.0, 3.0, "#6fbf3a") + [[6.0, 1.8, 3.0], [11.5, 2.2, 3.2]].map(([x, y, r]) => `<ellipse cx="${n(ft(x))}" cy="${n(ft(y))}" rx="${n(ft(r))}" ry="${n(ft(r * 0.6))}" fill="#8ccc48" opacity="0.7"/>`).join(""),
+  windows: [[[2.2, 3.4]], [[3.8, 5.2], [5.4, 6.8], [7.0, 8.4], [8.6, 10.0], [10.2, 11.6]]], doors: [[13.6, 1.4]], doorFill: "#a9b0b4", doorY: [0.7, 3.05], pans: [[13.2, true]], boxes: [[4.0, 3.0]],
+  extra: (cc) => T(cc, 0.85, 1.6, 0.32, "93", "#3b3384", { weight: 800 }) });
+
+// --- transN: Le Locle-Les Brenets (R 24): BDe 4/4 3 and 5 (1950) ---
+// Reggiane/TIBB/SAAS, the bodies rebuilt 1986, a cab at each end (about
+// 16 m, estimated). Photograph of 3 at Le Locle (2020; the line runs on
+// to 2031): white, the lower body red, the window band dark gray, the
+// roof silver, the doors red; "transN" in green. (No. 3's "Top Secret"
+// advertising silhouettes are left out.)
+const brenets = (c) => {
+  const L = c.L / F;
+  return regio(c, { roof: 3.55, sill: 0.7, nose: noseFlat(0.7, 3.55, 0.45, 0.06), bogies: [[2.4, 800, false, 2.0], [L - 2.4, 800, false, 2.0]], mask: maskFlat(2.0, 2.95, 1.3),
+    colors: { base: "#f2f3f4", roof: "#b9bfc4", roofH: 0.35, skirt: [1.35, "#d5262c"], mask: "#3b4046", bands: [[1.95, 3.0, "#3b4046"], [0.6, 0.75, "#2a2d31"]] }, hi: [2.0, 2.95],
+    windows: [[[1.55, 2.3]], [[3.6, 4.6]], [[4.8, 5.8]], [[6.0, 7.0]]], doors: [[2.5, 1.0, 1]], doorFill: "#d5262c", doorY: [0.75, 3.0],
+    pans: [[5.5, c.index === 0]], extra: (cc) => T(cc, 4.6, 1.6, 0.34, "transN", "#4f9a2a", { weight: 500, italic: true }) });
+};
+
+// --- Travys: Yverdon-Ste-Croix (R 12, R 22): Be 4/4 + AB + Be 4/4 3001-3006 ---
+// Stadler 2015-2016 (the Westschweizer family), 60.11 m: motor cars 20.16 m
+// (a cab and a pantograph each), the AB between them with first class.
+// Photographs at Ste-Croix and Yverdon (2026): silver gray, a white band low
+// along the side, the cab's mask red with a red band running back along
+// the roof's edge, a black windscreen; white "travys" on the red; the
+// yellow first-class line over the windows behind one cab (photograph of
+// 3000; the research's "1st class in the AB" is not borne out by it).
+const TVY = { gray: "#bcc0c4", red: "#c8263a" };
+const tvyMotor = (first) => (c) => regio(c, { roof: 3.85, sill: 0.45, nose: NOSE_ST, low: [8.7, 12.3], bogies: [[3.2, 810, false, 2.0], [16.96, 810, false, 2.0]], mask: MASK_ST,
+  colors: { base: TVY.gray, roof: TVY.red, roofH: 0.45, skirt: [0.45, "#2e3138"], mask: "#16181b", bands: [[0.45, 1.25, "#eef0f2"], [3.33, 3.43, "#eef0f2"]] }, hi: [1.62, 3.05], lo: [1.62, 3.05],
+  paint: () => P([[-0.5, 1.25], [-0.5, 4.2], [3.4, 4.2], [3.4, 3.4], ["q", 2.6, 3.3, 2.5, 2.2], [2.4, 1.25]], TVY.red) + R(-0.5, 0.45, 2.9, 0.8, "#9ea3a8"),
+  windows: [[[2.9, 3.6]], [[4.0, 5.4], [5.6, 7.0]], [[11.9, 13.3], [13.5, 14.9], [15.1, 16.5], [16.7, 18.1]]], doors: [[7.6, 1.4]], doorFill: TVY.red, pans: [[16.0, true]], boxes: [[6.5, 1.6], [12.0, 1.6]],
+  yellow: first ? [[3.6, 7.4]] : [], yellowY: 3.2,
+  extra: (cc) => T(cc, 1.0, 1.38, 0.2, "travys", "#ffffff", { weight: 700, italic: true }) + T(cc, 5.0, 1.55, 0.32, "travys", "#55595e", { weight: 600, italic: true }) });
+const tvyAB = (c) => regio(c, { roof: 3.85, sill: 0.45, low: [3.0, 16.8], bogies: [[2.2, 680], [17.6, 680]], colors: { base: TVY.gray, roof: TVY.red, roofH: 0.45, skirt: [0.45, "#2e3138"], bands: [[0.45, 1.25, "#eef0f2"], [3.33, 3.43, "#eef0f2"]] },
+  hi: [1.62, 3.05], lo: [1.62, 3.05], windows: [[[3.2, 4.6], [4.8, 6.2], [6.4, 7.8]], [[11.4, 12.8], [13.0, 14.4], [14.6, 16.0]]], doors: [[8.9, 1.4]], doorFill: TVY.red });
+
+// --- BLM: Grütschalp-Mürren (R 66): Be 4/6 101-103 (Stadler 2023-2024) ---
+// Two cars on a Jakobs bogie, 29.9 m, a double door by the joint in each.
+// Photograph of 103 at Grütschalp (2025): the cab ends silver gray with a
+// black windscreen, the sides yellow shading to orange toward the middle,
+// the doors orange; "Bergbahn Lauterbrunnen - Mürren" in black, the
+// Jungfrau mark with the unit's name behind the cab.
+const NOSE_BLM = [[0.3, 0.4], [0.15, 1.0], [0.15, 2.4], ["q", 0.25, 3.3, 1.0, 3.5], [1.8, 3.55]];
+const blmCar = (c) => {
+  const L = c.L / F, id = newId();
+  return regio(c, { roof: 3.55, sill: 0.42, nose: NOSE_BLM, low: [3.5, L - 0.3], bogies: [[2.5, 680, false, 1.8]],
+    mask: [[[0.15, 1.55], [0.18, 2.4], ["q", 0.28, 3.15, 1.0, 3.35], [1.6, 3.35], [1.6, 1.55]], [[0.28, 1.7], [0.3, 2.4], ["q", 0.38, 3.0, 1.0, 3.2], [1.5, 3.2], [1.5, 1.7]]],
+    colors: { base: "#c3c7cb", roof: "#c3c7cb", skirt: [0.42, "#3a3d42"], mask: "#16181b" }, hi: [1.6, 3.0], lo: [1.6, 3.0],
+    paint: () => `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="#f6e000"/><stop offset="0.55" stop-color="#f7d200"/><stop offset="1" stop-color="#f28a10"/></linearGradient></defs>` +
+      P([[4.3, 0.42], [L + 0.5, 0.42], [L + 0.5, 3.3], [3.7, 3.3]], `url(#${id})`) + RR(2.2, 1.55, 1.0, 1.45, 0.25, GASKET) + RR(2.26, 1.61, 0.88, 1.33, 0.22, GLASS),
+    windows: [[[5.2, 6.7], [6.9, 8.4], [8.6, 10.1], [10.3, 11.8]], [[L - 0.9, L - 0.3]]], doors: [[12.4, 1.4]], doorFill: "#f08a10", pans: c.index ? [] : [[L - 1.0, true]],
+    extra: (cc) => T(cc, 7.2, 1.25, 0.32, "Bergbahn Lauterbrunnen – Mürren", "#1b1c1e", { weight: 700 }) + T(cc, 3.4, 2.7, 0.12, "JUNGFRAU", "#3a3d42", { weight: 500 }) });
+};
+
+// --- Schynige Platte (Wilderswil-Schynige Platte, 800 mm, Riggenbach) ---
+// He 2/2 11-20 and 61-63 (1910-1914, 5.74 m, pushing from the valley end)
+// with two compartment coaches B 41-52 (rebuilt 1992-2002, about 9.5 m,
+// estimated). Photographs at Wilderswil (2020): the locomotives dark
+// green, a yellow number; the coaches red below, cream above, each window
+// framed in cream, "SCHYNIGE PLATTE BAHN" in white on the red, the doors
+// along the side.
+const spbLoco = (c) => {
+  const L = c.L / F;
+  let s = rackBogie(L / 2, 2.4, 760, 0.5) + R(0.1, 0.45, L - 0.2, 0.35, "#1c1e20");
+  s += P([[0.45, 0.8], [L - 0.45, 0.8], [L - 0.45, 3.05], [0.45, 3.05]], "#1f5e3a", 0.6) + P([[1.3, 3.05], [L - 0.3, 3.05], [L - 0.25, 3.4], [1.25, 3.4]], "#6b6f73", 0.5);
+  s += [1.0, 2.0, 3.0].map((x) => RR(x, 2.15, 0.45, 0.55, 0.05, "#16181b")).join("") + R(L - 1.5, 0.85, 0.9, 2.1, "none", 0.5) + RR(L - 1.35, 2.15, 0.6, 0.6, 0.05, "#16181b");
+  s += lines(seq(1.0, 0.55, 6).map((x) => [ft(x), ft(0.9), ft(x), ft(2.0)]), "rgba(0,0,0,0.25)", 0.5) + T(c, 2.2, 1.6, 0.3, "62", "#f2c21b", { weight: 700 });
+  s += panto(L / 2, 3.4, true, -1) + cbc(0, -1) + cbc(L, 1);
+  return s;
+};
+const spbCoach = (c) => {
+  const L = c.L / F;
+  return regio(c, { roof: 3.3, sill: 0.62, bogies: [[1.9, 600, true, 1.6], [L - 1.9, 600, false, 1.6]], endInset: 0.2, endR: 0.2,
+    colors: { base: "#e2222a", roof: "#d7d3c8", roofH: 0.18, bands: [[1.75, 3.12, "#ecd496"]], skirt: [0.68, "#2a2d31"] }, hi: [1.9, 3.0],
+    windows: row(0.6, L - 0.6, 8, 0.85).map((w) => [w]), extra: (cc) => seq(0.55, (L - 1.1) / 8, 9).map((x) => Ln(x, 0.75, x, 1.65, "rgba(0,0,0,0.35)", 0.5)).join("") +
+      T(cc, L / 2, 1.2, 0.3, "SCHYNIGE   PLATTE   BAHN", "#ffffff", { weight: 500 }) });
+};
+
+// --- Rigi (Vitznau-Rigi Kulm, Arth-Goldau-Rigi Kulm): Bhe 4/6 41-46 ---
+// Stadler 2021-2022, standard gauge, Riggenbach rack: two cars on a Jakobs
+// bogie, 34.8 m, 3.0 m wide (drawn level). Photograph of 41 at Rigi Kaltbad
+// (2026): white, the window band black, the cab sides bronze, the front
+// black; "Rigi" in script on the side.
+const RIGI = { bronze: "#bfae86", black: "#1b1c1e" };
+const rigiCar = (c) => {
+  const L = c.L / F;
+  return regio(c, { roof: 3.85, sill: 0.7, nose: [[0.3, 0.7], [0.12, 1.2], [0.1, 3.4], ["q", 0.12, 3.85, 0.6, 3.85], [1.0, 3.85]], bogies: [[2.6, 860, true, 2.2], [L, 860, true, 2.2]],
+    mask: [[[0.1, 0.9], [0.1, 3.4], ["q", 0.12, 3.75, 0.6, 3.75], [1.2, 3.75], [1.2, 0.9]], [[0.2, 1.7], [0.2, 3.3], [1.1, 3.3], [1.1, 1.7]]],
+    colors: { base: "#f2f3f4", roof: "#d8dbde", roofH: 0.25, skirt: [0.75, "#2a2d31"], mask: RIGI.black, bands: [[1.7, 3.2, RIGI.black]] }, hi: [1.75, 3.15],
+    paint: () => P([[1.1, 0.75], [4.0, 0.75], [4.0, 3.6], [1.1, 3.6]], RIGI.bronze) + R(4.0, 0.75, 0.12, 2.9, "#c9a47a"),
+    windows: [[[1.6, 3.4]], [[5.4, 7.1], [7.3, 9.0], [9.2, 10.9], [11.1, 12.8]], [[14.6, 16.4]]], doors: [[3.95, 1.3], [13.1, 1.3]], doorFill: "#d6d8da", doorY: [0.75, 3.2],
+    pans: c.index ? [] : [[L - 1.0, true]], extra: (cc) => T(cc, 9.0, 1.25, 0.5, "Rigi", "#1b1c1e", { weight: 500, italic: true, family: "Georgia, 'Times New Roman', serif" }) });
+};
+
+// --- Brienz Rothorn (800 mm, Abt): H 2/3 steam (1891-1996) and coaches ---
+// The locomotive pushes from the valley end, its boiler tilted for the
+// grade (drawn level, as the coaches). Photograph of No. 6 at Brienz (2022):
+// a black boiler and smokebox, the cab and side tanks green with yellow
+// "BRB" and the number, a red buffer beam; the coaches red, open-sided
+// with curtains or glazed (about 10 m, estimated).
+const brbLoco = (c) => {
+  const L = c.L / F;
+  let s = [1.2, 2.5, 3.8].map((x) => circle(ft(x), ft(0.42), ft(0.42), "currentColor") + circle(ft(x), ft(0.42), ft(0.12), C.steelDark)).join("") +
+    RR(1.0, 0.3, 3.2, 0.5, 0.1, "#1c1e20") + Ln(1.2, 0.5, 3.8, 0.5, "#7a7f84", 1.2);
+  s += R(0.2, 0.85, L - 0.4, 0.35, "#1c1e20") + R(0.1, 0.9, 0.3, 0.5, "#c32026") + R(L - 0.4, 0.9, 0.3, 0.5, "#c32026");
+  // The boiler and smokebox black, outlined in the ink so they show on a
+  // dark page too.
+  s += RR(0.6, 1.2, 3.4, 1.15, 0.5, "#232528", 0.6) + R(0.75, 2.3, 0.3, 1.15, "#232528", 0.6) + circle(ft(2.0), ft(2.55), ft(0.32), "#232528", 0.6) + circle(ft(3.1), ft(2.5), ft(0.25), "#232528", 0.6);
+  s += P([[3.3, 1.2], [L - 0.3, 1.2], [L - 0.3, 3.0], [3.3, 3.0]], "#1f6b4a", 0.6) + P([[3.2, 3.0], [L - 0.2, 3.0], ["q", L - 0.2, 3.35, L - 0.6, 3.4], [3.6, 3.4], ["q", 3.2, 3.35, 3.2, 3.0]], "#1f6b4a", 0.5);
+  s += RR(L - 1.4, 2.1, 0.75, 0.7, 0.05, "#16181b") + T(c, 4.4, 1.85, 0.32, "B R B", "#f2c21b", { weight: 700 }) + T(c, 4.4, 1.45, 0.28, "6", "#f2c21b", { weight: 700 });
+  return s;
+};
+const brbCoach = (c) => {
+  const L = c.L / F;
+  return regio(c, { roof: 3.3, sill: 0.62, bogies: [[1.9, 600, true, 1.6], [L - 1.9, 600, false, 1.6]], endInset: 0.2, endR: 0.2,
+    colors: { base: "#c8202a", roof: "#c8202a", skirt: [0.68, "#2a2d31"] }, hi: [1.7, 3.0],
+    windows: row(0.5, L - 0.5, 7, 1.0).map((w) => [w]), extra: (cc) => seq(0.45, (L - 0.9) / 7, 8).map((x) => Ln(x, 0.75, x, 3.05, "rgba(0,0,0,0.35)", 0.5)).join("") +
+      T(cc, L / 2, 1.15, 0.24, "BRIENZ ROTHORN BAHN", "#f2c21b", { weight: 600 }) });
+};
+
+// --- BLS Re 465 001-018 (SLM/ABB 1994-1997): the GoldenPass Express's
+// locomotive between Zweisimmen and Interlaken Ost ---
+// Standard gauge, 18.5 m over the buffers, 4.3 m high, Bo'Bo' on 1,100 mm
+// wheels, two pantographs; the Re 460's body (raked nose, a ribbed side).
+// Photographs of 014 at Spiez (2024) and 002 at Zweisimmen with the
+// GoldenPass Express (2023): BLS lime all over, the roof and the lower body
+// dark gray, the windscreen in a black band; the huge dark blue "bls" with
+// its mark over the ribbed side, the small mark and "bls" on the front,
+// the number by the cab door. (001 and 011 now carry Stadler's livery; drawn
+// in BLS's.)
+const NOSE_465 = [[0.45, 0.95], [0.3, 1.5], [0.3, 2.3], ["q", 0.4, 2.65, 0.9, 2.85], [2.0, 3.85], ["q", 2.5, 4.25, 3.2, 4.3]];
+const BLSC = { lime: "#b6dc1e", gray: "#3b3f44", blue: "#24318c" };
+// The BLS mark: a broad bar on top, a cup hanging from it, a dot in the
+// cup (from the photographs), h tall, centred on its cup.
+const blsMark = (h, fill) => `<path d="M${n(-h * 0.55)} ${n(-h * 0.5)}h${n(h * 1.1)}l${n(-h * 0.12)} ${n(h * 0.2)}h${n(-h * 0.86)}Z" fill="${fill}"/>` +
+  `<path d="M${n(-h * 0.42)} ${n(-h * 0.22)}a${n(h * 0.42)} ${n(h * 0.5)} 0 0 0 ${n(h * 0.84)} 0h${n(-h * 0.2)}a${n(h * 0.22)} ${n(h * 0.3)} 0 0 1 ${n(-h * 0.44)} 0Z" fill="${fill}"/>` +
+  `<circle cx="0" cy="${n(-h * 0.02)}" r="${n(h * 0.1)}" fill="${fill}"/>`;
+const blsWord = (h, fill) => `<text x="${n(h * 0.45)}" y="${n(h * 0.35)}" font-size="${n(h * 1.15)}" font-weight="800" font-family="${SANS}" letter-spacing="-0.03em" fill="${fill}">bls</text>`;
+function re465(c) {
+  return loco(c, {
+    half: (cc, L) => body({ ...cc, coupledL: false, coupledR: false }, { roof: 4.3, sill: 1.15, nose: NOSE_465, base: BLSC.lime, endInset: 0.3,
+      under: () => bogie(4.4, 2.8, 1100, 1.15, "loco") + R(6.5, 0.45, 2.7, 0.55, "currentColor", 0, 'opacity="0.85"'),
+      paint: () => bands(L, [[3.85, 1, "#7b8085"], [0, 1.6, BLSC.gray]]) + P([[0.3, 2.3], [0.4, 2.65], [0.9, 2.85], [2.05, 3.9], [3.2, 3.9], [3.2, 2.3]], "#16181b") +
+        P([[0.9, 2.9], [2.0, 3.8], [2.9, 3.8], [2.9, 2.9]], GLASS) + RR(3.3, 2.55, 0.65, 0.95, 0.06, GASKET) + RR(3.35, 2.6, 0.55, 0.85, 0.05, GLASS),
+      extra: () => locoFront(0.3, 1.15, 1.95) }),
+    side: (cc, L) => {
+      let s = R(4.2, 1.6, 0.75, 2.2, "none", 0.5) + lines(seq(1.8, 0.17, 12).map((y) => [ft(5.3), ft(y), ft(L - 4.8), ft(y)]), "rgba(0,0,0,0.13)", 0.5);
+      // The small mark on each front (drawn here, not in the mirrored half,
+      // so it reads the right way at both ends).
+      s += [1.3, L - 2.05].map((x) => M(cc, x, 2.0, blsMark(0.22, BLSC.blue) + blsWord(0.2, BLSC.blue))).join("");
+      s += M(cc, L * 0.6, 2.65, `<g transform="translate(${n(-1.6)} 0)">${blsMark(1.35, BLSC.blue)}${blsWord(1.35, BLSC.blue)}</g>`);
+      s += T(cc, 3.65, 2.35, 0.22, "014", BLSC.blue, { weight: 700, italic: true });
+      s += panto(5.2, 4.3, false, 1) + panto(L - 5.2, 4.3, c.wires !== false, -1) + roofBox(L / 2 - 2.2, 4.4, 4.3, 0.15, "#7b8085");
+      return s;
+    },
+  });
+}
 
 // ===================== Tables =====================
 // Each car with a driving cab has a twin key ending in "R": the same car
@@ -1525,7 +1914,8 @@ export const TYPES = {
   bobMid: { name: "BOB ABeh 4/8 middle car", kind: "emu", pan: true },
   wabEnd: { name: "WAB Bhe 4/8 end car (low floor)", kind: "emu", pan: true },
   wabMid: { name: "WAB Bhe 4/8 panorama middle car", kind: "emu" },
-  jbHalf: { name: "Jungfraubahn Bhe 4/8 (half)", kind: "emu", pan: true },
+  jbEnd: { name: "Jungfraubahn Bhe 4/8 end car", kind: "emu" },
+  jbMid: { name: "Jungfraubahn Bhe 4/8 middle car", kind: "emu", pan: true },
   ggbHalf: { name: "Gornergrat Bahn Polaris Bhe 4/6 (half)", kind: "emu", pan: true },
   fartA: { name: "FART Stadler end car (first and second class)", kind: "emu", amenities: ["first"] },
   fartB: { name: "FART Stadler end car (second class)", kind: "emu", pan: true },
@@ -1544,6 +1934,34 @@ export const TYPES = {
   mgnHalf: { name: "MGN Bhe 4/8 car", kind: "emu", pan: true },
   mgHalf: { name: "Monte Generoso Bhe 4/8 car", kind: "emu", pan: true },
   pilatus: { name: "Pilatus Bhe 2/2 railcar", kind: "emu", pan: true },
+  zbMibEnd: { name: "Be 2/6 125 013 end car (GTW)", kind: "emu" },
+  zbMibModule: { name: "Be 2/6 125 013 power module", kind: "emu", pan: true },
+  mobLenkABt: { name: "Lenk shuttle cab car ABt 341-344 (first and second class)", kind: "emu", amenities: ["first"] },
+  mobLenkBe: { name: "Lenk shuttle motor car Be 4/4 5001-5004", kind: "emu", pan: true },
+  mobLenkBt: { name: "Lenk shuttle cab car Bt 241-244", kind: "emu" },
+  fwEndA: { name: "Zebra ABe 4/8 end car (first and second class)", kind: "emu", amenities: ["first"] },
+  fwEndB: { name: "Zebra ABe 4/8 end car (second class)", kind: "emu", pan: true },
+  fwMid: { name: "Zebra ABe 4/8 middle car", kind: "emu" },
+  abGaisBDeh: { name: "BDeh 4/4 16-17 rack railcar", kind: "emu", pan: true },
+  abGaisABt: { name: "ABt cab car (first and second class)", kind: "emu", amenities: ["first"] },
+  abRhbBDeh: { name: "BDeh 3/6 25 rack railcar (half)", kind: "emu", pan: true },
+  abRhw: { name: "BDeh 1/2 1 rack railcar", kind: "emu", pan: true },
+  tpcAlBDeh: { name: "BDeh 4/4 311-313 rack railcar", kind: "emu", pan: true },
+  tpcAlBt: { name: "Bt 361-363 cab car", kind: "emu" },
+  tpcAsdA: { name: "ABe 4/8 471-473 car (first and second class)", kind: "emu", amenities: ["first"] },
+  tpcAsdB: { name: "ABe 4/8 471-473 car (second class)", kind: "emu", pan: true },
+  tpcBvb: { name: "Beh 4/8 91-93 rack car", kind: "emu", pan: true },
+  transnBrenets: { name: "BDe 4/4 3 railcar", kind: "emu", pan: true },
+  tvyBeA: { name: "Travys motor car (first and second class)", kind: "emu", pan: true, amenities: ["first"] },
+  tvyBe: { name: "Travys Be 4/4 motor car", kind: "emu", pan: true },
+  tvyAB: { name: "Travys middle car", kind: "emu" },
+  blmBe: { name: "BLM Be 4/6 car", kind: "emu", pan: true },
+  spbHe: { name: "He 2/2 rack locomotive", kind: "electric", pan: true },
+  spbB: { name: "Schynige Platte coach B", kind: "coach" },
+  rigiBhe: { name: "Rigi Bhe 4/6 car", kind: "emu", pan: true },
+  brbH23: { name: "H 2/3 rack steam locomotive", kind: "diesel" },
+  brbB: { name: "Brienz Rothorn coach", kind: "coach" },
+  blsRe465: { name: "BLS Re 465 electric locomotive", kind: "electric", pan: true },
   mgbOrEnd: { name: "Orion end car (first and second class)", kind: "emu", amenities: ["first"] },
   mgbOrMid: { name: "Orion middle car (second class, pantographs)", kind: "emu", pan: true },
   mgbKoA: { name: "Komet end car (first and second class, low floor)", kind: "emu", amenities: ["first"] },
@@ -1641,7 +2059,8 @@ export const MODELS = {
   bobMid: Mo(bobMid, 17.7),
   wabEnd: Mo(wabEnd, 13.5),
   wabMid: Mo(wabMid, 14.83),
-  jbHalf: Mo(jbHalf, 23.93),
+  jbEnd: Mo(jbEnd, 16.0),
+  jbMid: Mo(jbMid, 15.86),
   ggbHalf: Mo(ggbHalf, 16.0),
   fartA: Mo(fartEnd(true), 16.3),
   fartB: Mo(fartEnd(false), 16.3),
@@ -1649,10 +2068,10 @@ export const MODELS = {
   cjA: Mo(cjEnd(true), 18.0),
   cjB: Mo(cjEnd(false), 18.0),
   cjMid: Mo(cjMid, 18.0),
-  tpcGtw: Mo(gtwEnd(TPCC, null), 15.0),
-  tpcGtwPower: Mo(gtwPower(TPCC, true), 5.3),
-  mvrGtw: Mo(gtwEnd(MVRC, "MVR"), 15.0),
-  mvrGtwPower: Mo(gtwPower(MVRC, true), 5.3),
+  tpcGtw: Mo((c) => gtw4End(c, "tpc"), 17.42),
+  tpcGtwPower: Mo((c) => gtw4Module(c, "tpc"), 4.4),
+  mvrGtw: Mo((c) => gtw4End(c, "mvr"), 17.42),
+  mvrGtwPower: Mo((c) => gtw4Module(c, "mvr"), 4.4),
   asmGtw: Mo(gtwEnd(ASMG, null), 15.0),
   asmGtwPower: Mo(gtwPower(ASMG, false), 5.3),
   asmStar: Mo(asmStar, 19.5),
@@ -1660,6 +2079,34 @@ export const MODELS = {
   mgnHalf: Mo(mgnHalf, 11.95),
   mgHalf: Mo(mgHalf, 11.5),
   pilatus: Mo(pilatus, 12.32),
+  zbMibEnd: Mo(mibEnd, 12.6),
+  zbMibModule: Mo(mibModule, 4.9),
+  mobLenkABt: Mo(lenkCab(true), 19.05),
+  mobLenkBe: Mo(lenkMotor, 16.9),
+  mobLenkBt: Mo(lenkCab(false), 19.05),
+  fwEndA: Mo(fwEnd(true), 17.5),
+  fwEndB: Mo(fwEnd(false), 17.5),
+  fwMid: Mo(fwMid, 10.5),
+  abGaisBDeh: Mo(abGaisMotor, 17.41),
+  abGaisABt: Mo(abGaisABt, 17.07),
+  abRhbBDeh: Mo(rhbBdeh, 16.56),
+  abRhw: Mo(rhwCar, 10.7),
+  tpcAlBDeh: Mo(alMotor, 15.4),
+  tpcAlBt: Mo(alBt, 15.0),
+  tpcAsdA: Mo(asdCar(true), 19.65),
+  tpcAsdB: Mo(asdCar(false), 19.65),
+  tpcBvb: Mo(bvbCar, 15.93),
+  transnBrenets: Mo(twoCabs(brenets), 16.0),
+  tvyBeA: Mo(tvyMotor(true), 20.16),
+  tvyBe: Mo(tvyMotor(false), 20.16),
+  tvyAB: Mo(tvyAB, 19.79),
+  blmBe: Mo(blmCar, 14.95),
+  spbHe: Mo(spbLoco, 5.74),
+  spbB: Mo(spbCoach, 9.5),
+  rigiBhe: Mo(rigiCar, 17.4),
+  brbH23: Mo(brbLoco, 6.3),
+  brbB: Mo(brbCoach, 10.0),
+  blsRe465: Mo(re465, 18.5),
   mgbOrEnd: Mo(orionEnd, 19.35),
   mgbOrMid: Mo(orionMid, 17.9),
   mgbKoA: Mo((c) => kometEnd(c, true), 18.95),
@@ -1699,9 +2146,26 @@ const KOMET = set("Komet (ABDeh 4/8): three cars, first class at one end, the ba
 const GPX_MOB = set("GoldenPass Express: MOB Ge 4/4 with the Prestige coaches (Ast at the Montreux end, ABst at the Interlaken end)",
   ["mobGe44", 1], ["mobGpxAst", 1], ["mobGpxAs", 1], ["mobGpxBsNF", 1], ["mobGpxBs", 1], ["mobGpxABstR", 1]);
 export const SAMPLE_SETS = {
+  mib: { agency: "zb", set: set("MIB", ["zbMibEnd", 1], ["zbMibModule", 1], ["zbMibEndR", 1]) },
+  lenk: { agency: "mob", set: set("Lenk", ["mobLenkABt", 1], ["mobLenkBe", 1], ["mobLenkBtR", 1]) },
+  fw: { agency: "chnarrowother", set: set("FW", ["fwEndA", 1], ["fwMid", 1], ["fwEndBR", 1]) },
+  gais: { agency: "chnarrowother", set: set("Gais", ["abGaisBDeh", 1], ["abGaisABtR", 1]) },
+  rhb25: { agency: "chnarrowother", set: set("RHB 25", ["abRhbBDeh", 1], ["abRhbBDehR", 1]) },
+  rhw: { agency: "chnarrowother", set: set("RhW", ["abRhw", 1]) },
+  al: { agency: "chnarrowother", set: set("AL", ["tpcAlBDeh", 1], ["tpcAlBtR", 1]) },
+  asd: { agency: "chnarrowother", set: set("ASD", ["tpcAsdA", 1], ["tpcAsdBR", 1]) },
+  bvb: { agency: "chnarrowother", set: set("BVB", ["tpcBvb", 1], ["tpcBvbR", 1]) },
+  brenets: { agency: "chnarrowother", set: set("Brenets", ["transnBrenets", 1]) },
+  tvy: { agency: "chnarrowother", set: set("Travys", ["tvyBeA", 1], ["tvyAB", 1], ["tvyBeR", 1]) },
+  blm: { agency: "chnarrowother", set: set("BLM", ["blmBe", 1], ["blmBeR", 1]) },
+  spb: { agency: "chnarrowother", set: set("SPB", ["spbB", 2], ["spbHe", 1]) },
+  rigi: { agency: "chnarrowother", set: set("Rigi", ["rigiBhe", 1], ["rigiBheR", 1]) },
+  brb: { agency: "chnarrowother", set: set("BRB", ["brbB", 2], ["brbH23", 1]) },
+  re465: { agency: "bls", set: set("Re 465", ["blsRe465", 1], ["mobGpxBsi", 1], ["mobGpxAst", 1]) },
+
   bob: { agency: "chnarrowother", set: set("BOB", ["bobEndA", 1], ["bobMid", 1], ["bobEndBR", 1]) },
   wab: { agency: "chnarrowother", set: set("WAB", ["wabEnd", 1], ["wabMid", 1], ["wabEndR", 1]) },
-  jb: { agency: "chnarrowother", set: set("JB", ["jbHalf", 1], ["jbHalfR", 1]) },
+  jb: { agency: "chnarrowother", set: set("JB", ["jbEnd", 1], ["jbMid", 1], ["jbEndR", 1]) },
   ggb: { agency: "chnarrowother", set: set("GGB", ["ggbHalf", 1], ["ggbHalfR", 1]) },
   fart: { agency: "chnarrowother", set: set("FART", ["fartA", 1], ["fartMid", 1], ["fartBR", 1]) },
   cj: { agency: "chnarrowother", set: set("CJ", ["cjA", 1], ["cjMid", 1], ["cjBR", 1]) },
@@ -1914,6 +2378,17 @@ const ADLER1 = [["zbAdA", 1], ["zbAdC", 1], ["zbAdB", 1], ["zbAdWR", 1], ["zbAdB
 // standard-gauge bogies when drawn for agency "bls"; there the BLS Re 465
 // and the interface coach mobGpxBsi go at the Interlaken end).
 export const GPX_COACHES = [["mobGpxAst", 1], ["mobGpxAs", 1], ["mobGpxBsNF", 1], ["mobGpxBs", 1], ["mobGpxABstR", 1]];
+// The GoldenPass Express on BLS's track (Zweisimmen-Interlaken Ost), for
+// chstd.cars.js's TYPICAL.bls: from the Interlaken end, the BLS Re 465, the
+// interface coach Bsi (no gangway), then the Prestige coaches, the ABst
+// first (photograph at Zweisimmen, 2022: 465 006, Bsi 291, Ast 184, As 194,
+// Bs 284, ABst 384, seen from the Montreux end). A train toward Interlaken
+// runs Re 465 first; toward Zweisimmen, give the units reversed with each
+// key's "R" twin swapped (GPX_BLS_TOWARD_ZWEISIMMEN).
+export const GPX_BLS = { label: "GoldenPass Express: BLS Re 465 with the interface coach and the Prestige coaches (MOB's Ge 4/4 beyond Zweisimmen)",
+  units: [["blsRe465", 1], ["mobGpxBsi", 1], ["mobGpxABst", 1], ["mobGpxBsR", 1], ["mobGpxBsNFR", 1], ["mobGpxAsR", 1], ["mobGpxAstR", 1]] };
+export const GPX_BLS_TOWARD_ZWEISIMMEN = { label: GPX_BLS.label,
+  units: [["mobGpxAst", 1], ["mobGpxAs", 1], ["mobGpxBsNF", 1], ["mobGpxBs", 1], ["mobGpxABstR", 1], ["mobGpxBsiR", 1], ["blsRe465R", 1]] };
 const toward = (t, re) => re.test(t.destination || "");
 export const TYPICAL = {
   // MGB: the Zermatt shuttle (R 40); the Komets on R 41 and R 42 (Brig/
@@ -1945,22 +2420,20 @@ export const TYPICAL = {
       const u = [["mobPanoAst", 1], ["mobPanoB", 2], ["mobBe92R", 1], ["mobABe93R", 1]];
       return set("GoldenPass Panoramic: a panorama control car and coaches with an ABe 4/4 and a Be 4/4", ...(up ? turn(u) : u));
     }
-    if (r === "R 31") return null;
+    // Zweisimmen-Lenk: the Lenk shuttle sets (which end the ABt runs at is
+    // not known: drawn leading).
+    if (r === "R 31" || /Lenk|St. Stephan/.test(ends(t)) && !/Gstaad|Montreux/.test(ends(t))) return set("Lenk shuttle: ABt 341-344, Be 4/4 5001-5004 and Bt 241-244 (advertising wraps on the sets)", ["mobLenkABt", 1], ["mobLenkBe", 1], ["mobLenkBtR", 1]);
     return set("ABe 4/4 9300 and Be 4/4 9200 (first class in the ABe, at the Montreux end)", ...(up ? turn([["mobABe93", 1], ["mobBe92R", 1]]) : [["mobABe93", 1], ["mobBe92R", 1]]));
   },
   // The other railways, told by their lines and ends (routes as the
-  // timetable names them, 2026). Lines whose trains aren't drawn here give
-  // no train (Frauenfeld-Wil's Zebras, Gais-Altstätten, Rorschach-Heiden,
-  // Rheineck-Walzenhausen, Aigle-Leysin, Aigle-Les Diablerets, Bex-Villars,
-  // Le Locle-Les Brenets, Yverdon-Ste-Croix, Lauterbrunnen-Mürren, the
-  // Schynige Platte, Rigi and Brienz Rothorn railways).
+  // timetable names them, 2026).
   chnarrowother: (t) => {
     const r = t.route || "", e = ends(t), two = (a, b) => [[a, 1], [b + "R", 1]];
     if (r === "S 17" || /Dietikon|Wohlen|Bremgarten/.test(e)) return set("Diamant (ABe 4/8): three cars, first class behind one cab", ["avaDiaA", 1], ["avaDiaMid", 1], ["avaDiaBR", 1]);
     if (r === "S 14" || /Menziken|Schöftland/.test(e)) return set("Saphir (ABe 4/12): three cars (some trains the two-car Saphir II)", ["avaSaphA", 1], ["avaSaphMid", 1], ["avaSaphBR", 1]);
     if (r === "S 60" || /Ponte Tresa|Lugano FLP/.test(e)) return set("Tramlink (Be 6/8)", ["flpTl", 1], ["flpTlR", 1]);
     if (r === "R 85" || /Martigny|Châtelard|Vallorcine|Marécottes|Finhaut/.test(e)) return set("Mont-Blanc Express (Beh 4/8, Stadler 2025)", ["tmrEndF", 1], ["tmrMid", 1], ["tmrEndSR", 1]);
-    if (/Worb|Bolligen|Unterzollikofen/.test(e) || /^S [79]$/.test(r)) return set("Worbla (Be 4/10): four cars", ["rbsWorEnd", 1], ["rbsWorMid", 2], ["rbsWorEndR", 1]);
+    if (/^S [79]$/.test(r) || r !== "S 8" && r !== "RE 5" && /Worb Dorf|Bolligen|Unterzollikofen/.test(e)) return set("Worbla (Be 4/10): four cars", ["rbsWorEnd", 1], ["rbsWorMid", 2], ["rbsWorEndR", 1]);
     if (r === "RE 5" || r === "S 8" || /Solothurn|Jegenstorf|Bätterkinden/.test(e) && /Bern/.test(e))
       return set(`NExT (RABe 4/12): three cars, first class at the Bern end${r === "S 8" ? " (the S 8 also has the older Seconda units)" : ""}`, ...(toward(t, /Bern$/) ? [["rbsNextA", 1], ["rbsNextMid", 1], ["rbsNextBR", 1]] : [["rbsNextB", 1], ["rbsNextMid", 1], ["rbsNextAR", 1]]));
     if (/^R 5[67]$/.test(r) || /Morges|Bière|L'Isle|Apples/.test(e)) return set("Stadler Be 4/4 with a low-floor coach and another Be 4/4", ["mbcBe", 1], ["mbcB", 1], ["mbcBeR", 1]);
@@ -1978,10 +2451,26 @@ export const TYPICAL = {
     if (r === "S 37" || /Täuffelen|Ins/.test(e)) return set("Stadler GTW (Be 2/6)", ["asmGtw", 1], ["asmGtwPower", 1], ["asmGtwR", 1]);
     if (r === "R 72" || /Champéry|Monthey/.test(e)) return set("Rack GTW (Beh 2/6)", ["tpcGtw", 1], ["tpcGtwPower", 1], ["tpcGtwR", 1]);
     if (/Wengernalp/.test(r)) return set("Bhe 4/8: three cars, the panorama car in the middle", ["wabEnd", 1], ["wabMid", 1], ["wabEndR", 1]);
-    if (/Jungfrau/.test(r)) return set("Bhe 4/8: two halves", ["jbHalf", 1], ["jbHalfR", 1]);
+    if (/Jungfrau/.test(r)) return set("Bhe 4/8: three cars (some trains an older BDhe 4/8)", ["jbEnd", 1], ["jbMid", 1], ["jbEndR", 1]);
     if (/Gornergrat/.test(r)) return set("Polaris (Bhe 4/6)", ["ggbHalf", 1], ["ggbHalfR", 1]);
     if (/Pilatus/.test(r)) return set("Bhe 2/2: two railcars", ["pilatus", 1], ["pilatus", 1]);
     if (/Generoso/.test(r)) return set("Bhe 4/8: two cars", ["mgHalf", 1], ["mgHalfR", 1]);
+    // The rest, drawn October 2026. A rack train's locomotive or motor car
+    // stays at the valley end: last going up, first coming down.
+    const up = (re) => re.test(t.destination || "");
+    if (r === "S 15" || /Frauenfeld|Wängi/.test(e)) return set("Zebra (ABe 4/8): three cars, first class behind one cab", ["fwEndA", 1], ["fwMid", 1], ["fwEndBR", 1]);
+    if (r === "S 24" || /Altstätten|Rietli/.test(e)) return set("BDeh 4/4 rack railcar and a cab car", ...(up(/Gais/) ? [["abGaisABt", 1], ["abGaisBDehR", 1]] : [["abGaisBDeh", 1], ["abGaisABtR", 1]]));
+    if (r === "S 25" || /Heiden|Rorschach/.test(e)) return set("BDeh 3/6 25: a two-body rack railcar", ["abRhbBDeh", 1], ["abRhbBDehR", 1]);
+    if (r === "S 26" || /Walzenhausen|Rheineck/.test(e)) return set("BDeh 1/2 1: a single rack railcar", ["abRhw", 1]);
+    if (/Leysin/.test(e)) return set("BDeh 4/4 rack railcar and a Bt cab car (the motor car at the valley end)", ...(up(/Leysin/) ? [["tpcAlBt", 1], ["tpcAlBDehR", 1]] : [["tpcAlBDeh", 1], ["tpcAlBtR", 1]]));
+    if (/Diablerets|Sépey/.test(e)) return set("ABe 4/8 (Stadler 2024): two cars, first class behind one cab", ["tpcAsdA", 1], ["tpcAsdBR", 1]);
+    if (r === "R 74" || /Villars|Bretaye|Bévieux|Gryon/.test(e)) return set("Beh 4/8 91-93: two rack cars", ["tpcBvb", 1], ["tpcBvbR", 1]);
+    if (r === "R 24" || /Brenets/.test(e)) return set("BDe 4/4 3: a single railcar", ["transnBrenets", 1]);
+    if (/Ste-Croix|Yverdon/.test(e)) return set("Be 4/4 + AB + Be 4/4 (Stadler 2015-2016): three cars", ["tvyBeA", 1], ["tvyAB", 1], ["tvyBeR", 1]);
+    if (r === "R 66" || /Mürren|Grütschalp/.test(e)) return set("Be 4/6 (Stadler 2023-2024): two cars", ["blmBe", 1], ["blmBeR", 1]);
+    if (/Schynige/.test(r) || /Schynige|Wilderswil/.test(e)) return set("He 2/2 rack locomotive pushing two coaches", ...(up(/Schynige/) ? [["spbB", 2], ["spbHe", 1]] : [["spbHeR", 1], ["spbBR", 2]]));
+    if (/Rigi/.test(r) || /Rigi|Vitznau|Arth-Goldau/.test(e)) return set("Bhe 4/6 (Stadler 2021-2022): two cars (some trains older railcars)", ["rigiBhe", 1], ["rigiBheR", 1]);
+    if (/Rothorn/.test(r) || /Rothorn|Brienz BRB/.test(e)) return set("H 2/3 steam locomotive pushing two coaches", ...(up(/Rothorn/) ? [["brbB", 2], ["brbH23", 1]] : [["brbH23R", 1], ["brbBR", 2]]));
     return null;
   },
   // zb (formations, 2026-10-23): the Luzern-Interlaken Express an ADLER,
@@ -1997,8 +2486,8 @@ export const TYPICAL = {
       return set("HGe 101 with the Luzern-Engelberg Express coaches and the ABt control-car set (the locomotive at the Engelberg end)", ...(away ? u : turn(u)));
     }
     if (/^(S 4|S 41|S 44|S 5)$/.test(r)) return set("SPATZ (ABe 130): two three-car units (some trains a FINK)", ...SPATZ1, ...SPATZ1);
-    // Meiringen-Innertkirchen (the former MIB's GTW and Be 4/4): not drawn.
-    if (r === "R 71" || /Innertkirchen/.test(ends(t))) return null;
+    // Meiringen-Innertkirchen: the former MIB's GTW (BDe 4/4 11 in reserve).
+    if (r === "R 71" || /Innertkirchen/.test(ends(t))) return set("Stadler GTW Be 2/6 125 013 (the former MIB 13)", ["zbMibEnd", 1], ["zbMibModule", 1], ["zbMibEndR", 1]);
     return set("FINK (ABeh 160/161/162): three cars, first class behind one cab", ...FINK1);
   },
   rhb: (t, reported) => {

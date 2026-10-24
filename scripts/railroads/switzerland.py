@@ -98,7 +98,7 @@ AGENCIES = {
     "zb": {"name": "Zentralbahn", "short": "zb", "color": "#0a3a7d", "kind": "commuter", "cars": "chnarrow", "after": "mgb", **COMMON},
     "mob": {"name": "MOB GoldenPass", "short": "MOB", "color": "#1d3c6e", "kind": "commuter", "cars": "chnarrow", "after": "zb", **COMMON},
     "chnarrowother": {"name": "Swiss metre-gauge and rack railways", "short": "CH narrow gauge", "color": "#7b4a2a",
-                      "kind": "commuter", "after": "mob", **COMMON},
+                      "kind": "commuter", "cars": "chnarrow", "after": "mob", **COMMON},
     "chintl": {"name": "International trains in Switzerland", "short": "International", "color": "#4a4a4a",
                "kind": "intercity", "cars": "chintl", "after": "chnarrowother", **COMMON},
 }

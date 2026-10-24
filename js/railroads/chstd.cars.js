@@ -20,6 +20,7 @@ import { C, rect, circle, path, line, lines, poly, truck, pantograph, slats, win
 import { newId } from "../carmodels.js?v=dev";
 import { mark } from "./czechia.cars.js?v=dev";
 import { hvac, roofCover, lamp, RED_LAMP, wiper, panGear } from "./digitraffic.cars.js?v=dev";
+import { TYPES as NG_TYPES, MODELS as NG_MODELS, GPX_BLS, GPX_BLS_TOWARD_ZWEISIMMEN } from "./chnarrow.cars.js?v=dev";
 
 const n = (v) => Math.round(v * 100) / 100;
 const SANS = "Helvetica Neue, Helvetica, Arial, sans-serif";
@@ -1217,6 +1218,9 @@ export const MODELS = {
   blsMikaS4: M((c) => mikaCar(c, "s4"), MK.mid),
   blsMikaS5: M((c) => mikaCar(c, "s5"), MK.mid),
 };
+// The GoldenPass Express's cars, from chnarrow.cars.js, carried here so
+// BLS's trains draw them whichever file loaded first.
+for (const [k] of [...GPX_BLS.units, ...GPX_BLS_TOWARD_ZWEISIMMEN.units]) { TYPES[k] ??= NG_TYPES[k]; MODELS[k] ??= NG_MODELS[k]; }
 // Every car drawn the other way round (its cab, if any, at the right): the
 // key with "R" added. A formation's units face either way, and so does
 // the second unit of two coupled; the last car of a train is mirrored by
@@ -1461,9 +1465,10 @@ export const TYPICAL = {
   // regional trains (R 12, RE 8, RE 9, RE 12).
   bls: (t) => {
     const r = lineNo(t);
-    // The GoldenPass Express's standard-gauge leg is MOB's coaches behind
-    // a BLS Re 465 (not drawn here).
-    if (/GoldenPass/i.test(t.route || "")) return null;
+    // The GoldenPass Express's standard-gauge leg: MOB's Prestige coaches
+    // behind a BLS Re 465 (both drawn in chnarrow.cars.js), the Re 465
+    // leading toward Interlaken.
+    if (/GoldenPass/i.test(t.route || "")) return /Interlaken/.test(t.destination || "") ? GPX_BLS : GPX_BLS_TOWARD_ZWEISIMMEN;
     if (/^IR (17|65)$/.test(r)) return set("MUTZ (RABe 515): a six-car double-deck unit (often two)", ...MUTZ6);
     if (/^S (1|3|31)$/.test(r)) return set("MUTZ (RABe 515): a four-car double-deck unit, usually two coupled", ...two(MUTZ4, MUTZ4));
     if (/^S (5|52|35|36|11|22|46)$/.test(r)) return set("NINA (RABe 525): three- or four-car low-floor units, often two coupled", ...two(NINA3, NINA4));
