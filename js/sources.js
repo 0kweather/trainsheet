@@ -1017,6 +1017,8 @@ export function applyDetail(t, d, now = nowSec()) {
     }
     return false;
   }
+  // A run that also gives its composition (iRail's, SNCB's trains): its cars.
+  if (d.cars?.numbers?.length) t.cars = d.cars;
   const late = d.cancelled ? null : d.delay ?? null;
   t.cancelled = Boolean(d.cancelled);
   t.delayMin = late;

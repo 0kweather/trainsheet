@@ -6,6 +6,7 @@ import { fetchFeed as digitraffic } from "./digitraffic.js";
 import { fetchFeed as fgc } from "./fgc.js";
 import { fetchFeed as hellenictrain } from "./hellenictrain.js";
 import { fetchFeed as israelrail } from "./israelrail.js";
+import { fetchFeed as sncb } from "./sncb.js";
 import { fetchFeed as sweden } from "./sweden.js";
 import { fetchFeed as switzerland } from "./switzerland.js";
 import { fetchFeed as tfnsw } from "./tfnsw.js";
@@ -33,6 +34,7 @@ export const FEEDS = {
   flytoget: {"also": ["https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=FLT"], "format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "ttl": 30, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions?datasource=FLT", "vehicles": "."},
   goaheadnorge: {"also": ["https://api.entur.io/realtime/v1/gtfs-rt/trip-updates?datasource=GOA"], "format": "pb", "headers": {"ET-Client-Name": "trainsheet-livemap"}, "ttl": 30, "ua": true, "url": "https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions?datasource=GOA", "vehicles": "."},
   hellenictrain: {"format": "json", "ttl": 30, "ua": true, "fetchFeed": hellenictrain },
+  irail: {"detail": true, "format": "json", "ttl": 60, "fetchFeed": sncb },
   irishrail: {"format": "xml", "ttl": 30, "ua": true, "url": "https://api.irishrail.ie/realtime/realtime.asmx/getCurrentTrainsXML"},
   israelrail: {"format": "json", "ttl": 60, "ua": true, "fetchFeed": israelrail },
   metlink: {"also": ["https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates"], "format": "pb", "headers": {"Accept": "application/x-protobuf", "x-api-key": "{METLINK_API_KEY}"}, "keys": ["METLINK_API_KEY"], "routes": ["2", "3", "4", "5", "6"], "ttl": 20, "url": "https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions"},
