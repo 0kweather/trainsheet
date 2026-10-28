@@ -25,7 +25,9 @@ import { roofCover, panGear, lamp, RED_LAMP, wiper, boxes } from "./digitraffic.
 // ÖBB's classic Nightjet cars, as chintl.cars.js draws them (the
 // Brussels-Wien Nightjet), and CFL's Coradia Duplex, as cfl.cars.js draws
 // it (the CFL-run trains Luxembourg-Athus in SNCB's timetable).
-import { TYPES as CHI_TYPES, MODELS as CHI_MODELS } from "./chintl.cars.js?v=dev";
+import { TYPES as CHI_TYPES, MODELS as CHI_MODELS, dbLogo } from "./chintl.cars.js?v=dev";
+// DB's ICE logo (from DB's own ICE-Logo.svg).
+import { iceLogo } from "./icelogo.js?v=dev";
 import { TYPES as CFL_TYPES, MODELS as CFL_MODELS, SETS as CFL_SETS } from "./cfl.cars.js?v=dev";
 
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -741,13 +743,23 @@ const am75Mid = (c, pan) => classic(c, { ...AM75S, frame: "#a9a9a4", windows: am
 // bodies 3.89 m tall (de.wikipedia "DB-Baureihe 408"). On Frankfurt-
 // Brussels since 2024 (8016 and 8035 at Bruxelles-Midi, April 2025): light
 // grey-white, the traffic-red stripe low along the side, rising and then
-// curving down the nose to its tip; "ICE" in big grey capitals behind the
-// cab, breaking the stripe; the DB mark in the stripe and on the nose;
+// curving down the nose to its tip; DB's ICE logo behind the cab,
+// breaking the stripe; the DB mark in the stripe and on the nose;
 // the windows in a dark band; one door a car side; the first-class cars'
-// "1" by their doors.
-const VEL = { white: "#e9ebec", red: "#ec0016", grey: "#9aa0a6", band: "#252a30", R: m(3.89), sill: m(0.45), stripe: [m(1.1), m(1.42)], winLo: m(1.72), winHi: m(2.62) };
-const dbMark = (c, x, y, h) => rect(x - h * 0.72, y - h / 2, h * 1.44, h, "#ffffff", 0, `rx="${r2(h * 0.18)}" stroke="${VEL.red}" stroke-width="${r2(h * 0.11)}"`) +
-  T(c, x, y - h * 0.02, h * 0.74, "DB", VEL.red, { weight: 800 });
+// "1" by their doors. Checked again against 8008 at Haldern (2026) and
+// 408 526 at Berlin Ostbahnhof (2025): the stripe about 0.24 m wide, as far
+// under the window band as it is wide; the nose's stripe a little wider,
+// ending a little lower than the side's, just before the logo, the side's
+// going on just after it; the DB logo in the stripe the upright one; white
+// class numerals, "1" or "2", at both ends of every car's window band; the
+// yellow first-class mark down the top of the door's edge.
+const VEL = { white: "#e9ebec", red: "#ec0016", grey: "#9aa0a6", band: "#252a30", R: m(3.89), sill: m(0.45), stripe: [m(1.235), m(1.475)], winLo: m(1.72), winHi: m(2.62) };
+const dbMark = (c, x, y, h) => dbLogo(c, x, y, h, 0.65);
+// The side's stripe from a to b, broken round the DB logo at x.
+const vStripe = (a, b, x) => { const [s0, s1] = VEL.stripe, g = (s1 - s0) * 0.6;
+  return rect(a, s0, x - g - a, s1 - s0, VEL.red) + rect(x + g, s0, b - x - g, s1 - s0, VEL.red) };
+// The class numeral at both ends of the window band, a to b.
+const vNums = (c, a, b, cls, both = true) => T(c, a + 0.95, m(2.4), 1.1, cls, "#ffffff", { weight: 600 }) + (both ? T(c, b - 0.95, m(2.4), 1.1, cls, "#ffffff", { weight: 600 }) : "");
 const VNOSE = [[0.0, 0.95], [0.25, 1.35], [0.75, 1.68], [1.6, 2.05], [2.7, 2.48], [3.8, 2.92], [5.0, 3.38], [6.2, 3.72], [7.4, 3.88], [8.2, 3.89]].map(([x, y]) => [m(x), m(y)]);
 const VLOW = [[0.0, 0.95], [0.3, 0.55], [1.0, 0.38], [2.0, 0.36]].map(([x, y]) => [m(x), m(y)]);
 function velaroBody(L, cab) {
@@ -768,27 +780,34 @@ const vTrucks = (L, b1, b2) => truck(b1, { wb: m(2.5), d: 36.2, top: VEL.sill + 
 // An end car (cab on the left): o.cls "1" or "2".
 function ice3neoEnd(c, o) {
   const L = c.L, R = VEL.R, [s0, s1] = VEL.stripe;
-  const sweep = [[0.05, 1.02], [1.2, 1.12], [2.6, 1.15], [4.2, 1.2], [5.6, 1.3], [6.8, 1.45], [7.6, 1.6]].map(([x, y]) => [m(x), m(y)]);
-  const sweepUp = [[7.6, 1.9], [6.8, 1.75], [5.6, 1.58], [4.2, 1.46], [2.6, 1.38], [1.2, 1.3], [0.05, 1.2]].map(([x, y]) => [m(x), m(y)]);
+  // The nose's stripe, from the tip to just before the logo (26.8 ft),
+  // ending a third of its width under the side's line.
+  const w = s1 - s0, cut = 26.8, top = s1 - 0.3 * w, foot = top - 1.15 * w;
+  const sweep = [[m(0.05), 3.35], [4.0, 3.38], [9.0, 3.45], [14.0, 3.55], [19.0, foot - 0.08], [23.0, foot - 0.03], [cut, foot]];
+  const sweepUp = [[cut, top], [23.0, top - 0.12], [19.0, top - 0.32], [14.0, top - 0.55], [9.0, 4.0], [4.0, 3.94], [m(0.05), 3.92]];
   const paint = rect(-1, 0, L + 2, 20, VEL.white) + path(M_(sweep[0]) + smooth(sweep) + L_([sweepUp[0]]) + smooth(sweepUp) + "Z", VEL.red) +
-    rect(m(10.6), s0, L - m(10.6) + 1, s1 - s0, VEL.red) + rect(-1, 0, L + 2, m(0.7), "#c9cdd1") +
+    vStripe(32.3, L + 1, m(14.5)) + rect(-1, 0, L + 2, m(0.7), "#c9cdd1") +
     path(M_([m(1.1), m(2.1)]) + smooth([[m(1.1), m(2.1)], [m(2.5), m(2.6)], [m(4.0), m(3.1)], [m(5.4), m(3.5)], [m(6.4), m(3.7)]]) +
       L_([[m(6.8), m(3.2)], [m(5.6), m(2.95)], [m(4.0), m(2.55)], [m(2.6), m(2.2)]]) + "Z", "#1f242a");
   let s = shell(velaroBody(L, true), VEL.white, paint, { hi: R });
   s += path(M_([m(7.0), m(1.85)]) + L_([[m(7.6), m(2.75)], [m(10.0), m(2.75)], [m(10.0), m(1.85)]]) + "Z", VEL.band);
-  s += T(c, m(9.0), m(1.3), m(0.85) / 0.72, "ICE", VEL.grey, { weight: 500, family: "DB Head, Helvetica Neue, Arial, sans-serif", stretch: 0.92 });
-  s += vDoor(m(10.65)) + vWindows(m(12.0), L - m(1.6), m(1.78)) + dbMark(c, m(14.5), (s0 + s1) / 2, m(0.26)) + dbMark(c, m(1.15), m(1.5), m(0.24));
-  if (o.cls === "1") s += T(c, m(11.95), m(2.4), m(0.32) / 0.72, "1", "#ffffff", { weight: 700 }) + rect(m(11.62), m(2.0), m(0.06), m(0.55), "#f6c400");
+  // DB's ICE logo, its caps 2.7 times the stripe's width, their tops just
+  // over the side's stripe.
+  s += iceLogo(c, m(9.0), s1 + 0.25 - 1.075, 2.15, VEL.grey);
+  s += vDoor(m(10.65)) + vWindows(m(12.0), L - m(1.6), m(1.78)) + dbMark(c, m(14.5), (s0 + s1) / 2, (s1 - s0) * 0.96) + dbLogo(c, m(1.15), m(1.5), m(0.24));
+  s += vNums(c, m(12.0), L - m(1.6), o.cls);
+  if (o.cls === "1") s += rect(m(11.62), m(2.25), m(0.06), m(0.7), "#f6c400");
   s += roofCover(m(9.0), R, m(8.0), 0.35, "#c3c8cd", 3) + vTrucks(L, m(4.6), L - m(3.7));
   return s + (c.coupledR ? gangway(L, 1, m(0.9), m(3.0)) : "");
 }
 // A middle car: o.cls, o.pan (a pantograph car), o.bistro.
 function ice3neoMid(c, o) {
   const L = c.L, R = VEL.R, [s0, s1] = VEL.stripe;
-  const paint = rect(-1, 0, L + 2, 20, VEL.white) + rect(-1, s0, L + 2, s1 - s0, VEL.red) + rect(-1, 0, L + 2, m(0.7), "#c9cdd1");
+  const paint = rect(-1, 0, L + 2, 20, VEL.white) + vStripe(-1, L + 1, L / 2) + rect(-1, 0, L + 2, m(0.7), "#c9cdd1");
   let s = shell(velaroBody(L, false), VEL.white, paint, { hi: R });
-  s += vDoor(m(1.0)) + vWindows(m(2.4), L - m(1.4), m(1.78)) + dbMark(c, L / 2, (s0 + s1) / 2, m(0.26));
-  if (o.cls === "1") s += T(c, m(2.35), m(2.4), m(0.32) / 0.72, "1", "#ffffff", { weight: 700 }) + rect(m(2.0), m(2.0), m(0.06), m(0.55), "#f6c400");
+  s += vDoor(m(1.0)) + vWindows(m(2.4), L - m(1.4), m(1.78)) + dbMark(c, L / 2, (s0 + s1) / 2, (s1 - s0) * 0.96);
+  s += vNums(c, m(2.4), L - m(1.4), o.cls, !o.bistro);
+  if (o.cls === "1") s += rect(m(1.97), m(2.25), m(0.06), m(0.7), "#f6c400");
   if (o.pan) s += pantograph(L / 2, R + 0.1, { up: c.wires !== false, facing: -1 }) + roofCover(L / 2 - m(4.5), R, m(2.0), 0.35, "#c3c8cd", 1);
   else s += roofCover(m(4.0), R, L - m(8.0), 0.3, "#c3c8cd", 4);
   s += vTrucks(L, m(3.7), L - m(3.7));
@@ -887,7 +906,7 @@ add("hle19", "HLE 19 locomotive (Siemens Eurosprinter)", (c) => hle18({ ...c, nu
 addR("ice3neoEnd1", "ICE 3neo end car, first class", (c) => ice3neoEnd(c, { cls: "1" }), m(25.68), { kind: "emu", amenities: ["first"] });
 addR("ice3neoEnd2", "ICE 3neo end car, second class", (c) => ice3neoEnd(c, { cls: "2" }), m(25.68), { kind: "emu" });
 add("ice3neoFirst", "ICE 3neo first-class car", (c) => ice3neoMid(c, { cls: "1" }), m(24.78), { kind: "emu", amenities: ["first"] });
-add("ice3neoBistro", "ICE 3neo car with the bistro", (c) => ice3neoMid(c, { cls: "2", pan: true }), m(24.78), { kind: "emu", amenities: ["cafe"] });
+add("ice3neoBistro", "ICE 3neo car with the bistro", (c) => ice3neoMid(c, { cls: "2", pan: true, bistro: true }), m(24.78), { kind: "emu", amenities: ["cafe"] });
 add("ice3neoSecond", "ICE 3neo second-class car", (c) => ice3neoMid(c, { cls: "2" }), m(24.78), { kind: "emu" });
 add("ice3neoPan", "ICE 3neo second-class car with pantograph", (c) => ice3neoMid(c, { cls: "2", pan: true }), m(24.78), { kind: "emu" });
 addR("icngEnd", "ICNG (NS) end car", (c) => icngCar(c, { cab: true, cls: "2" }), m(27.4), { kind: "emu" });
