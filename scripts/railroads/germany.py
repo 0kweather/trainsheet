@@ -1,12 +1,19 @@
 """Germany: every railway's passenger trains (DB Fernverkehr, DB Regio, the
 S-Bahns, the private regional railways and the foreign railways' trains in
-Germany). WORK IN PROGRESS: agencies and their routes first, so the car files
-can be drawn; the timetable and live data follow.
+Germany), placed from DELFI's national timetable: gtfs.de's rail GTFS (CC BY
+4.0, no key, rebuilt daily), its trains numbered from DELFI's own GTFS (CC BY
+4.0, opendata-oepnv.de's public sharing link for the dataset; the dataset
+page itself asks visitors to sign in to download, so the lead may prefer to
+drop it: the trains then run unnumbered). No live data yet: DB's Timetables
+API (free key, 60 requests a minute) is to come as a detail source for an
+opened train; gtfs.de's free GTFS-realtime (beta, CC BY-SA 4.0) names trips
+and stops by ids that change with each daily rebuild, so it can't be matched
+to this weekly timetable.
 
 Railroads (the car files that draw them in brackets) and their lines (the
 category as sold and the line number, "RE 1", "RB 33", "S 1"; long-distance
 trains by category, "ICE", "IC", "EC", with their train numbers):
-  dbfv       DB Fernverkehr [dbfv]: ICE, IC, EC and ECE trains DB runs,
+  dbfv       DB Fernverkehr [dbfv]: ICE, IC and EC trains DB runs,
              with the ICEs run jointly with NS (Amsterdam), SBB (Basel,
              Zürich, Interlaken, Chur), ÖBB (Wien, Innsbruck) and SNCF
              (Paris) as far as they're DB's in Germany; DB's IC 2 (Twindexx)
@@ -19,8 +26,8 @@ trains by category, "ICE", "IC", "EC", with their train numbers):
              Germany, SNCF's TGVs, Eurostar (the former Thalys, Köln-Aachen),
              ČD's ECs Praha-Dresden-Berlin/Hamburg, PKP Intercity (Berlin-
              Warszawa EC, Berlin-Przemyśl/Kraków), SBB's ECEs (München-Lindau-
-             Zürich, Frankfurt-Basel-Milano), DSB's ICs and ECEs to
-             Flensburg and Hamburg, SJ/BTE's EuroNight Berlin-Stockholm,
+             Zürich, Frankfurt-Basel-Milano), DSB's ICs to Flensburg and
+             its ECEs Hamburg-Padborg-København (ECE 392-397, Talgo 230), SJ/BTE's EuroNight Berlin-Stockholm,
              the Alpen-Sylt Nachtexpress, WESTbahn, LEO Express, the
              Autozug Sylt
   dbregio    DB Regio, north and east (Schleswig-Holstein, Hamburg,
