@@ -1,10 +1,9 @@
 """Germany: every railway's passenger trains (DB Fernverkehr, DB Regio, the
 S-Bahns, the private regional railways and the foreign railways' trains in
 Germany), placed from DELFI's national timetable: gtfs.de's rail GTFS (CC BY
-4.0, no key, rebuilt daily), its trains numbered from DELFI's own GTFS (CC BY
-4.0, opendata-oepnv.de's public sharing link for the dataset; the dataset
-page itself asks visitors to sign in to download, so the lead may prefer to
-drop it: the trains then run unnumbered). No live data yet: DB's Timetables
+4.0, no key, rebuilt daily). It has no train numbers, and DELFI's own GTFS,
+which has them, is given to registered users only, so the trains run
+unnumbered for now (see DELFI_GTFS below). No live data yet: DB's Timetables
 API (free key, 60 requests a minute) is to come as a detail source for an
 opened train; gtfs.de's free GTFS-realtime (beta, CC BY-SA 4.0) names trips
 and stops by ids that change with each daily rebuild, so it can't be matched
@@ -12,7 +11,7 @@ to this weekly timetable.
 
 Railroads (the car files that draw them in brackets) and their lines (the
 category as sold and the line number, "RE 1", "RB 33", "S 1"; long-distance
-trains by category, "ICE", "IC", "EC", with their train numbers):
+trains by category, "ICE", "IC", "EC"):
   dbfv       DB Fernverkehr [dbfv]: ICE, IC and EC trains DB runs,
              with the ICEs run jointly with NS (Amsterdam), SBB (Basel,
              Zürich, Interlaken, Chur), ÖBB (Wien, Innsbruck) and SNCF
@@ -120,17 +119,20 @@ AGENCIES = {
 # EN, RJ) and regional rail ("rv": RE, RB, S-Bahn, the private railways,
 # the neighbours' trains over the border), every train already split by the
 # railway that runs each part ("ICE 78": NS to Arnhem, then DB). Neither
-# carries train numbers, so each trip takes its number from DELFI's own
-# GTFS of the same timetable (opendata-oepnv.de, CC BY 4.0: its public
-# sharing link for the dataset; 515 MB, weekly), whose trips are found by
-# the stations and minutes they call at. Without it the trains run
-# unnumbered.
+# carries train numbers. DELFI's own GTFS of the same timetable does
+# (trip_short_name), and delfi_numbers()/number_of() below read them, each
+# trip found by the stations and minutes it calls at; but DELFI publishes it
+# (opendata-oepnv.de, and the national access point mobilithek.info) to
+# registered users only, so it isn't fetched: DELFI_GTFS stays None and the
+# trains run unnumbered (their line shown, no number). To number them, the
+# user registers with DELFI/mobilithek; the build then fetches the file with
+# a key from a secret (an environment variable, never a share link) by
+# setting DELFI_GTFS to a function returning its bytes.
 UA = "Trainsheet/1.0 (+https://trainsheet.com)"
 GTFSDE = {"fv": "https://download.gtfs.de/germany/fv_free/latest.zip",
           "rv": "https://download.gtfs.de/germany/rv_free/latest.zip"}
-DELFI_GTFS = ("https://www.opendata-oepnv.de/ht/de/datensaetze/sharing?tx_vrrkit_view%5Bsharing%5D="
-              "eyJkYXRhc2V0IjoiZGV1dHNjaGxhbmR3ZWl0ZS1zb2xsZmFocnBsYW5kYXRlbi1ndGZzIn0")
-TIMETABLE = "germany:gtfs.de+delfi"  # the url every railroad's GTFS entry names (it's gathered: "make")
+DELFI_GTFS = None  # needs a DELFI/mobilithek registration (see above)
+TIMETABLE = "germany:gtfs.de"  # the url every railroad's GTFS entry names (it's gathered: "make")
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 
@@ -240,12 +242,12 @@ def _slug(name):
 
 
 # DB's station numbers (EVA, "8000105" Frankfurt (Main) Hbf) and the state or
-# country of each station, by its name here: germany_stations.json, made by
-# hand from DELFI's stops (their ids name the state: "de:06412:..." is
-# Hessen) and Wikidata's IBNR numbers (CC0), and kept in the repository so a
-# station's id never depends on a download. {name: [eva or "", region]}:
-# region "DE-SH".."DE-TH" for a German state, else the country ("AT", "CH",
-# ...).
+# country of each station, by its name here: germany_stations.json, made from
+# Wikidata (CC0: each station's IBNR, its state and country; the state of a
+# station Wikidata gives none or two taken from its numbered neighbours, a
+# few put right by hand) and kept in the repository so a station's id never
+# depends on a download. {name: [eva or "", region]}: region "DE-SH"..
+# "DE-TH" for a German state, else the country ("AT", "CH", ...).
 STATIONS = json.loads((HERE / "germany_stations.json").read_text()) if (HERE / "germany_stations.json").exists() else {}
 NORTH_EAST = {"DE-" + s for s in ("SH", "HH", "NI", "HB", "MV", "BB", "BE", "ST", "SN", "TH")}
 SOUTH_WEST = {"DE-" + s for s in ("NW", "HE", "RP", "SL", "BW", "BY")}
@@ -398,6 +400,8 @@ def category(line):
 def line_name(kind, line, agency_name):
     """The line as the trains are sold: "RE 1", "S 41", "MEX 12", "FLX 10";
     long-distance trains by category alone ("ICE", "IC", "EC")."""
+    if re.fullmatch(r"\d+N", line):  # the night trains' lines (ÖBB's and DB's "12N", "40N"...): Nightjets, and the EuroNight Metropol
+        return "EN" if line == "27N" else "NJ"
     if not re.search(r"\d", line) and len(line) > 4:  # a railway's name ("Weißeritztalbahn")
         return line
     cat, num = category(line)
@@ -405,6 +409,8 @@ def line_name(kind, line, agency_name):
         return cat or line
     if cat == "THA":
         return "Eurostar"
+    if cat == "DRB" and agency_name.startswith("Sächsisch-Oberlausitzer"):
+        return "Zittauer Schmalspurbahn"
     if cat == "DRF" or cat == "DRB":
         return {"European Sleeper": "European Sleeper", "WESTbahn": "WESTbahn", "LEO Express": "LEO Express",
                 "Nachtzug": "Alpen-Sylt Nachtexpress", "BahnTouristikExpress": "EN"}.get(agency_name, cat)
@@ -422,7 +428,8 @@ def line_name(kind, line, agency_name):
 def railroad(agency_name, line, kind, region):
     """The map's railroad for one part of a train, or None to leave it out.
     region: the state ("DE-NW") most of its German stations are in."""
-    if LEFT_OUT.search(agency_name) or (agency_name, line) in LEFT_OUT_LINES or line.startswith("SEV"):
+    # "LEER": S-Bahn Hannover's empty runs to and from the depots.
+    if LEFT_OUT.search(agency_name) or (agency_name, line) in LEFT_OUT_LINES or line.startswith("SEV") or line == "LEER":
         return None
     cat, num = category(line)
     if agency_name in ("DB Fernverkehr AG", "DB Fernverkehr (Codesharing)"):
@@ -835,14 +842,17 @@ def write_gtfs(trips, stations, runs, calendar, dates, log=print):
     agency = [{"agency_id": a, "agency_name": AGENCIES[a]["name"], "agency_url": "https://gtfs.de", "agency_timezone": TZ} for a in AGENCIES]
     stop_rows = [{"stop_id": ids[k], "stop_name": stations[k][0], "stop_lat": stations[k][1], "stop_lon": stations[k][2]}
                  for k in sorted(used, key=lambda k: ids[k])]
+    # direction_id: the station it sets out from, so that while the trains
+    # are unnumbered each run is known by it and its first departure
+    # ("8011160-0605", build_schedules.py's key for unnumbered runs).
     trip_rows = [{"route_id": t["route_id"], "service_id": t["service"], "trip_id": t["tid"], "trip_short_name": t["short"],
-                  "trip_headsign": ""} for t in sorted(trips, key=lambda t: t["tid"])]
+                  "trip_headsign": "", "direction_id": ids[t["seq"][0][0]]} for t in sorted(trips, key=lambda t: t["tid"])]
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as z:
         z.writestr("agency.txt", table(agency, ["agency_id", "agency_name", "agency_url", "agency_timezone"]))
         z.writestr("routes.txt", table(sorted(routes.values(), key=lambda r: r["route_id"]),
                                        ["route_id", "agency_id", "route_short_name", "route_long_name", "route_type", "route_color"]))
-        z.writestr("trips.txt", table(trip_rows, ["route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name"]))
+        z.writestr("trips.txt", table(trip_rows, ["route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name", "direction_id"]))
         z.writestr("stops.txt", table(stop_rows, ["stop_id", "stop_name", "stop_lat", "stop_lon"]))
         z.writestr("stop_times.txt", st.getvalue())
         z.writestr("calendar.txt", table([c for c in calendar if c["service_id"] in services],
@@ -862,18 +872,28 @@ def make():
     if cache.exists():
         return cache.read_bytes()
     feeds = {k: _get(u) for k, u in GTFSDE.items()}
-    try:
-        delfi = delfi_numbers(_get(DELFI_GTFS, timeout=1800))
-    except Exception as err:  # numbers are a nicety: the trains run without them
-        print(f"  germany: DELFI's timetable not read ({err}); the trains go unnumbered this time")
-        delfi = None
+    delfi = None
+    if DELFI_GTFS:  # off until DELFI's file can be fetched with a registered key (see above)
+        try:
+            delfi = delfi_numbers(DELFI_GTFS())
+        except Exception as err:  # numbers are a nicety: the trains run without them
+            print(f"  germany: DELFI's timetable not read ({err}); the trains go unnumbered this time")
     data = build(feeds, delfi)
     cache.write_bytes(data)
     return data
 
 
-EXTRAS = {"make": make, "number": lambda t: t.get("trip_short_name") or None, "tz": TZ}
-GTFS = {a: (TIMETABLE, lambda r, a=a: r["agency_id"] == a, lambda r: r["route_short_name"], EXTRAS) for a in AGENCIES}
+# Numbered by DELFI's numbers when they're read, else unnumbered (each run
+# by the station it sets out from and its first departure).
+EXTRAS = {"make": make, "tz": TZ, **({"number": lambda t: t.get("trip_short_name") or None} if DELFI_GTFS else {})}
+# Stations placed where a railroad's own track reaches them ({railroad:
+# {station id: [lat, lon]}}): Berlin Potsdamer Platz's regional platforms
+# lie in the main-line tunnel, a few metres from the S-Bahn's, which the
+# station's point is nearer; every railroad but the S-Bahn stops in the
+# main-line one.
+POSITIONS = {a: {"8089032": [52.50962, 13.37575]} for a in AGENCIES if a != "sbahn"}
+GTFS = {a: (TIMETABLE, lambda r, a=a: r["agency_id"] == a, lambda r: r["route_short_name"], {**EXTRAS, "positions": POSITIONS.get(a, {})})
+        for a in AGENCIES}
 
 # Until the live data below is in: every train placed from the timetable.
 SOURCES = [{"id": "germany", "agencies": list(AGENCIES), "format": "timetable", "interval": 60, "scope": "view"}]

@@ -899,11 +899,11 @@
 "8011057",
 "DE-TH"
 ],
-"Auerbach (V) ob Bf": [
+"Auerbach (V) oberer Bahnhof": [
 "8010011",
 "DE-SN"
 ],
-"Auerbach (V) unt Bf": [
+"Auerbach (V) unterer Bahnhof": [
 "8010012",
 "DE-SN"
 ],
@@ -1527,11 +1527,11 @@
 "8000753",
 "DE-HE"
 ],
-"Bad St Peter Süd": [
+"Bad St. Peter Süd": [
 "8000754",
 "DE-SH"
 ],
-"Bad St Peter-Ording": [
+"Bad St. Peter-Ording": [
 "8000755",
 "DE-SH"
 ],
@@ -1789,7 +1789,7 @@
 ],
 "Bantzenheim": [
 "8700329",
-"DE-BW"
+"FR"
 ],
 "Barbelroth": [
 "8000802",
@@ -1861,7 +1861,7 @@
 ],
 "Basse-Ham": [
 "8700662",
-""
+"FR"
 ],
 "Bassum": [
 "8000354",
@@ -1919,7 +1919,7 @@
 "8000028",
 "DE-BY"
 ],
-"Bayreuth-St Georgen": [
+"Bayreuth-St. Georgen": [
 "8000833",
 "DE-BY"
 ],
@@ -2061,7 +2061,7 @@
 ],
 "Bening": [
 "8700270",
-""
+"FR"
 ],
 "Benneckenstein": [
 "8017002",
@@ -2131,11 +2131,7 @@
 "",
 "DE-TH"
 ],
-"Benneckenstein Benneckenstein Gleis 1": [
-"",
-"DE-ST"
-],
-"Benneckenstein Benneckenstein Gleis 2": [
+"Benneckenstein Benneckenstein": [
 "",
 "DE-ST"
 ],
@@ -2167,7 +2163,7 @@
 "",
 "DE-TH"
 ],
-"Benneckenstein Kälberbruch Gleis 1": [
+"Benneckenstein Kälberbruch": [
 "",
 "DE-TH"
 ],
@@ -2801,7 +2797,7 @@
 ],
 "Bischwiller": [
 "8700428",
-""
+"FR"
 ],
 "Bisingen": [
 "8000999",
@@ -3401,7 +3397,7 @@
 ],
 "Breitscheidt": [
 "8001153",
-"DE-RP"
+"DE-NW"
 ],
 "Breitungen (Werra)": [
 "8011265",
@@ -3471,7 +3467,7 @@
 "8001164",
 "DE-HB"
 ],
-"Bremen-St Magnus": [
+"Bremen-St. Magnus": [
 "8001165",
 "DE-HB"
 ],
@@ -3501,7 +3497,7 @@
 ],
 "Brenk": [
 "",
-"DE"
+"DE-RP"
 ],
 "Brennero/Brenner": [
 "8300092",
@@ -5011,11 +5007,11 @@
 "8001405",
 "DE-BW"
 ],
-"Delitzsch ob Bf": [
+"Delitzsch oberer Bahnhof": [
 "8080280",
 "DE-SN"
 ],
-"Delitzsch unt Bf": [
+"Delitzsch unterer Bahnhof": [
 "8010076",
 "DE-SN"
 ],
@@ -5181,7 +5177,7 @@
 ],
 "Diemeringen": [
 "8700304",
-""
+"FR"
 ],
 "Dienheim": [
 "8001448",
@@ -5395,10 +5391,6 @@
 "5400882",
 "CZ"
 ],
-"Dolni Zleb": [
-"",
-"CZ"
-],
 "Dolni Zleb zast.": [
 "",
 "CZ"
@@ -5415,8 +5407,8 @@
 "5400884",
 "CZ"
 ],
-"Dolní Zleb": [
-"5400890",
+"Dolní Žleb": [
+"",
 "CZ"
 ],
 "Domazlice mesto": [
@@ -5865,7 +5857,7 @@
 ],
 "Drusenheim": [
 "8701020",
-""
+"FR"
 ],
 "Dubicna": [
 "5400929",
@@ -6631,7 +6623,7 @@
 "",
 "DE-ST"
 ],
-"Elend Allerbach Gleis 1": [
+"Elend Allerbach": [
 "",
 "DE-ST"
 ],
@@ -6751,11 +6743,7 @@
 "",
 "DE-ST"
 ],
-"Elend Elend Gleis 1": [
-"",
-"DE-ST"
-],
-"Elend Elend Gleis 2": [
+"Elend Elend": [
 "",
 "DE-ST"
 ],
@@ -6925,7 +6913,7 @@
 ],
 "Engeln": [
 "8070368",
-"DE"
+"DE-RP"
 ],
 "Engelskirchen": [
 "8001789",
@@ -8127,7 +8115,7 @@
 "8002068",
 "DE-BW"
 ],
-"Freiburg-St Georgen": [
+"Freiburg-St. Georgen": [
 "8002069",
 "DE-BW"
 ],
@@ -8417,7 +8405,7 @@
 ],
 "Friesdorf Ost": [
 "8011587",
-"DE"
+"DE-ST"
 ],
 "Friesenheim (Baden)": [
 "8002123",
@@ -8593,7 +8581,7 @@
 ],
 "Gambsheim": [
 "8701177",
-""
+"FR"
 ],
 "Gamburg (Tauber)": [
 "8002177",
@@ -9101,7 +9089,7 @@
 ],
 "Glogow": [
 "",
-"PL"
+""
 ],
 "Glöwen": [
 "8011641",
@@ -9383,7 +9371,7 @@
 "8100022",
 "AT"
 ],
-"Grimma ob Bf": [
+"Grimma oberer Bahnhof": [
 "8011705",
 "DE-SN"
 ],
@@ -9409,7 +9397,7 @@
 ],
 "Gronau (Westf) Gr": [
 "",
-"DE"
+"NL"
 ],
 "Gronsdorf": [
 "8002383",
@@ -9649,7 +9637,7 @@
 ],
 "Gryfino": [
 "",
-"PL"
+""
 ],
 "Gräfelfing": [
 "8002339",
@@ -9669,7 +9657,7 @@
 ],
 "Gräfenstuhl-Klippmühle": [
 "8011685",
-"DE"
+"DE-ST"
 ],
 "Gräfentonna": [
 "8011687",
@@ -10065,7 +10053,7 @@
 ],
 "Haguenau": [
 "8700347",
-""
+"FR"
 ],
 "Haidenaab-Göppmannsbühl": [
 "8002523",
@@ -11369,7 +11357,7 @@
 ],
 "Herny": [
 "",
-""
+"FR"
 ],
 "Heroldsberg": [
 "8002782",
@@ -11401,7 +11389,7 @@
 ],
 "Herrlisheim (Bas-Rhin)": [
 "8700308",
-""
+"FR"
 ],
 "Herrnburg": [
 "8011864",
@@ -11733,7 +11721,7 @@
 ],
 "Hoelschloch Surbourg": [
 "8701265",
-""
+"FR"
 ],
 "Hoenheim-Tram": [
 "8705312",
@@ -11761,7 +11749,7 @@
 ],
 "Hoffen": [
 "8701255",
-""
+"FR"
 ],
 "Hoffenheim": [
 "8002931",
@@ -11969,7 +11957,7 @@
 ],
 "Hombourg-Haut": [
 "8700525",
-""
+"FR"
 ],
 "Homburg (Saar) Hbf": [
 "8000176",
@@ -12440,22 +12428,14 @@
 "DE-ST"
 ],
 "Ilfeld": [
-"8017014",
+"",
 "DE-TH"
 ],
 "Ilfeld Bad": [
 "8080998",
 "DE-TH"
 ],
-"Ilfeld Bad Gleis 1": [
-"",
-"DE-TH"
-],
-"Ilfeld Eisfelder Talmühle Gleis 1": [
-"",
-"DE-TH"
-],
-"Ilfeld Eisfelder Talmühle Gleis 2": [
+"Ilfeld Eisfelder Talmühle": [
 "",
 "DE-TH"
 ],
@@ -12543,12 +12523,8 @@
 "",
 "DE-TH"
 ],
-"Ilfeld Ilfeld Gleis 1": [
-"",
-"DE-TH"
-],
-"Ilfeld Ilfeld Gleis 2": [
-"",
+"Ilfeld Ilfeld": [
+"8017014",
 "DE-TH"
 ],
 "Ilfeld Neanderklinik": [
@@ -12607,7 +12583,7 @@
 "",
 "DE-TH"
 ],
-"Ilfeld Tiefenbachmühle Gleis 1": [
+"Ilfeld Tiefenbachmühle": [
 "",
 "DE-TH"
 ],
@@ -12709,7 +12685,7 @@
 ],
 "Ingwiller": [
 "8700309",
-""
+"FR"
 ],
 "Inningen": [
 "8003079",
@@ -12729,7 +12705,7 @@
 ],
 "Inowroclaw": [
 "",
-"PL"
+""
 ],
 "Inselstadt Malchow": [
 "8012296",
@@ -13257,7 +13233,7 @@
 ],
 "Kalenborn (Westerw)": [
 "",
-"DE"
+"DE-RP"
 ],
 "Kalhausen": [
 "8700314",
@@ -13865,7 +13841,7 @@
 ],
 "Kilstett": [
 "8701343",
-""
+"FR"
 ],
 "Kimpling": [
 "8101045",
@@ -14209,7 +14185,7 @@
 ],
 "Klostermansfeld Randsiedlung": [
 "8010204",
-"DE"
+"DE-ST"
 ],
 "Klosterreichenbach": [
 "8003343",
@@ -14289,7 +14265,7 @@
 ],
 "Koenigsmacker": [
 "8701341",
-""
+"FR"
 ],
 "Kohlscheid": [
 "8003395",
@@ -14639,15 +14615,11 @@
 "8003442",
 "DE-HE"
 ],
-"Krimderode Krimderode Gleis 1": [
-"",
+"Krimderode Krimderode": [
+"8017019",
 "DE-TH"
 ],
-"Krimderode Krimderode Gleis 2": [
-"",
-"DE-TH"
-],
-"Krimderode Nordhausen Ricarda-Huch-Straße Gleis 1": [
+"Krimderode Nordhausen Ricarda-Huch-Straße": [
 "",
 "DE-TH"
 ],
@@ -15149,7 +15121,7 @@
 ],
 "La Wantzenau": [
 "",
-""
+"FR"
 ],
 "Laaber": [
 "8003485",
@@ -16771,7 +16743,7 @@
 "8000237",
 "DE-SH"
 ],
-"Lübeck St Jürgen": [
+"Lübeck St. Jürgen": [
 "8003774",
 "DE-SH"
 ],
@@ -17049,7 +17021,7 @@
 ],
 "Malling (F)": [
 "",
-"DE"
+"FR"
 ],
 "Mallnitz-Obervellach": [
 "8100093",
@@ -17149,11 +17121,11 @@
 ],
 "Mansfeld (Südharz)": [
 "8012300",
-"DE"
+"DE-ST"
 ],
 "Mansfeld Schleife": [
 "",
-"DE"
+"DE-ST"
 ],
 "Manternach": [
 "8270690",
@@ -17699,7 +17671,7 @@
 "8003982",
 "DE-BY"
 ],
-"Mering-St Afra": [
+"Mering-St. Afra": [
 "8004008",
 "DE-BY"
 ],
@@ -17793,7 +17765,7 @@
 ],
 "Metz": [
 "8700019",
-""
+"FR"
 ],
 "Metzingen (Württ)": [
 "8004009",
@@ -17863,16 +17835,16 @@
 "5401975",
 "CZ"
 ],
-"Mikulasovice dolni nadrazi": [
-"",
-"CZ"
-],
 "Mikulasovice horni nadrazi": [
 "5401976",
 "CZ"
 ],
 "Mikulasovice stred": [
 "5401977",
+"CZ"
+],
+"Mikulášovice dolní nádraží": [
+"",
 "CZ"
 ],
 "Mikulášovice střed": [
@@ -18025,7 +17997,7 @@
 ],
 "Mommenheim": [
 "8700395",
-""
+"FR"
 ],
 "Monbach-Neuhausen": [
 "8004077",
@@ -19008,11 +18980,11 @@
 "DE-BB"
 ],
 "Netzkater": [
-"8017016",
+"",
 "DE-TH"
 ],
-"Netzkater Netzkater Gleis 1": [
-"",
+"Netzkater Netzkater": [
+"8017016",
 "DE-TH"
 ],
 "Netzschkau": [
@@ -19271,7 +19243,7 @@
 "8100023",
 "AT"
 ],
-"Neumarkt-St Veit": [
+"Neumarkt-St. Veit": [
 "8000720",
 "DE-BY"
 ],
@@ -19695,24 +19667,20 @@
 "",
 "DE-TH"
 ],
-"Niedersachswerfen Niedersachswerfen Herkules Markt Gleis 1": [
+"Niedersachswerfen Niedersachswerfen Herkules Markt": [
 "",
 "DE-TH"
 ],
-"Niedersachswerfen Niedersachswerfen Ilfelder Str. Gleis 1": [
+"Niedersachswerfen Niedersachswerfen Ilfelder Str.": [
 "",
 "DE-TH"
 ],
-"Niedersachswerfen Niedersachswerfen Ost Gleis 1": [
-"",
-"DE-TH"
-],
-"Niedersachswerfen Niedersachswerfen Ost Gleis 2": [
-"",
+"Niedersachswerfen Niedersachswerfen Ost": [
+"8017017",
 "DE-TH"
 ],
 "Niedersachswerfen Ost": [
-"8017017",
+"",
 "DE-TH"
 ],
 "Niederscheld (Dillkr) Süd": [
@@ -19721,7 +19689,7 @@
 ],
 "Niederschelden": [
 "8004406",
-"DE-RP"
+"DE-NW"
 ],
 "Niederschelden Nord": [
 "8004407",
@@ -19935,11 +19903,7 @@
 "8017020",
 "DE-TH"
 ],
-"Nordhausen Nordhausen Nord Gleis 1": [
-"",
-"DE-TH"
-],
-"Nordhausen Nordhausen Nord Gleis 2": [
+"Nordhausen Nordhausen Nord": [
 "",
 "DE-TH"
 ],
@@ -19951,16 +19915,12 @@
 "8070902",
 "DE-TH"
 ],
-"Nordhausen Schurzfell Gleis 1": [
-"",
-"DE-TH"
-],
 "Nordhausen-Altentor": [
 "8017018",
 "DE-TH"
 ],
 "Nordhausen-Krimderode": [
-"8017019",
+"",
 "DE-TH"
 ],
 "Nordhausen-Salza": [
@@ -20409,7 +20369,7 @@
 ],
 "Obermodern": [
 "8700400",
-""
+"FR"
 ],
 "Obermohr": [
 "8004557",
@@ -20661,7 +20621,7 @@
 ],
 "Oermingen": [
 "8701714",
-""
+"FR"
 ],
 "Oertzenhof": [
 "8012555",
@@ -20837,7 +20797,7 @@
 ],
 "Opoczno Poludnie": [
 "",
-"PL"
+""
 ],
 "Opole Glowne": [
 "5100046",
@@ -21097,7 +21057,7 @@
 ],
 "Pabianice": [
 "",
-"PL"
+""
 ],
 "Padborg": [
 "8601899",
@@ -21511,7 +21471,7 @@
 "8012646",
 "DE-SN"
 ],
-"Plauen (Vogtl) ob Bf": [
+"Plauen (Vogtl) oberer Bahnhof": [
 "8010275",
 "DE-SN"
 ],
@@ -21959,11 +21919,11 @@
 "8004849",
 "DE-BY"
 ],
-"Pößneck ob Bf": [
+"Pößneck oberer Bahnhof": [
 "8012657",
 "DE-TH"
 ],
-"Pößneck unt Bf": [
+"Pößneck unterer Bahnhof": [
 "8012658",
 "DE-TH"
 ],
@@ -22387,7 +22347,7 @@
 "8012738",
 "DE-SN"
 ],
-"Reichenbach (Vogtl) ob Bf": [
+"Reichenbach (Vogtl) oberer Bahnhof": [
 "8012739",
 "DE-SN"
 ],
@@ -22903,13 +22863,9 @@
 "8012777",
 "DE-ST"
 ],
-"Roedekro st": [
-"8601996",
-"DK"
-],
 "Roeschwoog": [
 "8700412",
-""
+"FR"
 ],
 "Roggentin": [
 "8012785",
@@ -23017,7 +22973,7 @@
 ],
 "Roppenheim": [
 "8701892",
-""
+"FR"
 ],
 "Rorschach": [
 "8506311",
@@ -23205,7 +23161,7 @@
 ],
 "Rountzenheim": [
 "8701914",
-""
+"FR"
 ],
 "Rovensko pod Troskami": [
 "5402689",
@@ -23341,7 +23297,7 @@
 ],
 "Rzeszow Glowny": [
 "",
-"PL"
+""
 ],
 "Rätzlingen": [
 "8012705",
@@ -23349,7 +23305,7 @@
 ],
 "Rémilly": [
 "8700169",
-""
+"FR"
 ],
 "Rödental": [
 "8004633",
@@ -23430,6 +23386,10 @@
 "Rövershagen Karls Erlebnisdorf": [
 "8012818",
 "DE-MV"
+],
+"Rødekro": [
+"8601996",
+"DK"
 ],
 "Rückersbacher Schlucht": [
 "8005208",
@@ -24432,39 +24392,31 @@
 "DE-NI"
 ],
 "Schierke": [
+"",
+"DE-ST"
+],
+"Schierke Bobbahn": [
+"",
+"DE-ST"
+],
+"Schierke Brockenmoor": [
+"",
+"DE-ST"
+],
+"Schierke Eckerloch": [
+"",
+"DE-ST"
+],
+"Schierke Goetheweg": [
+"",
+"DE-ST"
+],
+"Schierke Knaupsholz": [
+"",
+"DE-ST"
+],
+"Schierke Schierke": [
 "8017022",
-"DE-ST"
-],
-"Schierke Bobbahn Gleis 1": [
-"",
-"DE-ST"
-],
-"Schierke Brocken Gleis 1": [
-"",
-"DE-ST"
-],
-"Schierke Brockenmoor Gleis 1": [
-"",
-"DE-ST"
-],
-"Schierke Eckerloch Gleis 1": [
-"",
-"DE-ST"
-],
-"Schierke Goetheweg Gleis 1": [
-"",
-"DE-ST"
-],
-"Schierke Knaupsholz Gleis 1": [
-"",
-"DE-ST"
-],
-"Schierke Schierke Gleis 1": [
-"",
-"DE-ST"
-],
-"Schierke Schierke Gleis 2": [
-"",
 "DE-ST"
 ],
 "Schierstedt": [
@@ -25369,7 +25321,7 @@
 ],
 "Seltz": [
 "8700456",
-""
+"FR"
 ],
 "Selzthal": [
 "8100150",
@@ -25413,7 +25365,7 @@
 ],
 "Sessenheim": [
 "8701970",
-""
+"FR"
 ],
 "Seubersdorf": [
 "8005543",
@@ -25760,7 +25712,7 @@
 "DE-HE"
 ],
 "Sophienhof": [
-"8017040",
+"",
 "DE-TH"
 ],
 "Sophienhof Sh_Tf 001 P1": [
@@ -25775,8 +25727,8 @@
 "",
 "DE-TH"
 ],
-"Sophienhof Sophienhof Gleis 1": [
-"",
+"Sophienhof Sophienhof": [
+"8017040",
 "DE-TH"
 ],
 "Sopot": [
@@ -25784,7 +25736,7 @@
 "PL"
 ],
 "Sorge": [
-"8017024",
+"",
 "DE-ST"
 ],
 "Sorge So_Bek 001 P1": [
@@ -25819,8 +25771,8 @@
 "",
 "DE-ST"
 ],
-"Sorge Sorge Gleis 1": [
-"",
+"Sorge Sorge": [
+"8017024",
 "DE-ST"
 ],
 "Sosnowiec Glowny": [
@@ -25833,7 +25785,7 @@
 ],
 "Soultz-sous-Forets": [
 "",
-""
+"FR"
 ],
 "Soyen": [
 "8005614",
@@ -25955,53 +25907,9 @@
 "5103572",
 "PL"
 ],
-"St Alban": [
+"St. Alban": [
 "8005639",
 "DE-BY"
-],
-"St Avold": [
-"8700269",
-""
-],
-"St Egidien": [
-"8010331",
-"DE-SN"
-],
-"St Georgen (Schwarzw)": [
-"8005644",
-"DE-BW"
-],
-"St Goar": [
-"8005645",
-"DE-RP"
-],
-"St Ilgen-Sandhausen": [
-"8005648",
-"DE-BW"
-],
-"St Ingbert": [
-"8005649",
-"DE-SL"
-],
-"St Mang": [
-"8005653",
-"DE-BY"
-],
-"St Michaelisdonn": [
-"8005655",
-"DE-SH"
-],
-"St Ottilien": [
-"8005656",
-"DE-BY"
-],
-"St Thomas": [
-"8005658",
-"DE-RP"
-],
-"St Wendel": [
-"8005659",
-"DE-SL"
 ],
 "St. Anton am Arlberg": [
 "8100064",
@@ -26010,6 +25918,14 @@
 "St. Anton im Montafon": [
 "8100497",
 "AT"
+],
+"St. Avold": [
+"8700269",
+"FR"
+],
+"St. Egidien": [
+"8010331",
+"DE-SN"
 ],
 "St. Gallen (CH)": [
 "8506302",
@@ -26027,6 +25943,22 @@
 "8506303",
 "CH"
 ],
+"St. Georgen (Schwarzw)": [
+"8005644",
+"DE-BW"
+],
+"St. Goar": [
+"8005645",
+"DE-RP"
+],
+"St. Ilgen-Sandhausen": [
+"8005648",
+"DE-BW"
+],
+"St. Ingbert": [
+"8005649",
+"DE-SL"
+],
 "St. Johann im Pongau": [
 "8100043",
 "AT"
@@ -26039,13 +25971,33 @@
 "8506148",
 "CH"
 ],
+"St. Mang": [
+"8005653",
+"DE-BY"
+],
 "St. Margrethen SG": [
 "8506314",
 "CH"
 ],
+"St. Michaelisdonn": [
+"8005655",
+"DE-SH"
+],
+"St. Ottilien": [
+"8005656",
+"DE-BY"
+],
 "St. Paul im Lavanttal": [
 "8100501",
 "AT"
+],
+"St. Thomas": [
+"8005658",
+"DE-RP"
+],
+"St. Wendel": [
+"8005659",
+"DE-SL"
 ],
 "St.Pölten Hbf": [
 "8100008",
@@ -26749,7 +26701,7 @@
 ],
 "Swidnik Miasto": [
 "",
-"PL"
+""
 ],
 "Swiebodzin": [
 "5103284",
@@ -27069,7 +27021,7 @@
 ],
 "Teting (Moselle)": [
 "",
-""
+"FR"
 ],
 "Teuchern": [
 "8010349",
@@ -27177,7 +27129,7 @@
 ],
 "Tieffenbach-Struth": [
 "8700529",
-""
+"FR"
 ],
 "Timelkam": [
 "8101670",
@@ -27851,10 +27803,6 @@
 "8503125",
 "CH"
 ],
-"Usti nad Labem-Strekov": [
-"5403255",
-"CZ"
-],
 "Usti u Stare Paky": [
 "5403257",
 "CZ"
@@ -27941,15 +27889,15 @@
 ],
 "Vatterode": [
 "8013182",
-"DE"
+"DE-ST"
 ],
 "Vatterode Wippergrund (Parkeisenbahn)": [
 "",
-"DE"
+"DE-ST"
 ],
 "Vatteröder Teich": [
 "8079152",
-"DE"
+"DE-ST"
 ],
 "Vechelde": [
 "8006060",
@@ -28437,7 +28385,7 @@
 ],
 "Walbourg": [
 "8700326",
-""
+"FR"
 ],
 "Walddrehna": [
 "8013210",
@@ -29155,6 +29103,10 @@
 "8006349",
 "DE-BY"
 ],
+"Wernigerode": [
+"",
+"DE-ST"
+],
 "Wernigerode Bb_Eck 001 P1": [
 "",
 "DE-ST"
@@ -29180,18 +29132,6 @@
 "DE-ST"
 ],
 "Wernigerode Brm_Bro 005 P5": [
-"",
-"DE-ST"
-],
-"Wernigerode Drei Annen Hohne Gleis 1": [
-"",
-"DE-ST"
-],
-"Wernigerode Drei Annen Hohne Gleis 2": [
-"",
-"DE-ST"
-],
-"Wernigerode Drei Annen Hohne Gleis 3": [
 "",
 "DE-ST"
 ],
@@ -29287,11 +29227,7 @@
 "",
 "DE-ST"
 ],
-"Wernigerode Drängetal Gleis 1": [
-"",
-"DE-ST"
-],
-"Wernigerode Drängetal Gleis 2": [
+"Wernigerode Drängetal": [
 "",
 "DE-ST"
 ],
@@ -29336,7 +29272,7 @@
 "DE-ST"
 ],
 "Wernigerode Hochschule Harz": [
-"8017033",
+"",
 "DE-ST"
 ],
 "Wernigerode Kn_Schr 001 P1": [
@@ -29423,11 +29359,7 @@
 "",
 "DE-ST"
 ],
-"Wernigerode Steinerne Renne Gleis 1": [
-"",
-"DE-ST"
-],
-"Wernigerode Steinerne Renne Gleis 2": [
+"Wernigerode Steinerne Renne": [
 "",
 "DE-ST"
 ],
@@ -29535,31 +29467,15 @@
 "",
 "DE-ST"
 ],
-"Wernigerode Wernigerode Gleis 31": [
+"Wernigerode Wernigerode Hochschule Harz": [
+"8017033",
+"DE-ST"
+],
+"Wernigerode Wernigerode Westerntor": [
 "",
 "DE-ST"
 ],
-"Wernigerode Wernigerode Gleis 33": [
-"",
-"DE-ST"
-],
-"Wernigerode Wernigerode Gleis 34": [
-"",
-"DE-ST"
-],
-"Wernigerode Wernigerode Hochschule Harz Gleis 1": [
-"",
-"DE-ST"
-],
-"Wernigerode Wernigerode Westerntor Gleis 1": [
-"",
-"DE-ST"
-],
-"Wernigerode Wernigerode-Hasserode Gleis 1": [
-"",
-"DE-ST"
-],
-"Wernigerode Wernigerode-Hasserode Gleis 2": [
+"Wernigerode Wernigerode-Hasserode": [
 "",
 "DE-ST"
 ],
@@ -29673,7 +29589,7 @@
 ],
 "Weststeiermark": [
 "",
-"AT"
+""
 ],
 "Westönnen": [
 "8006383",
@@ -29949,7 +29865,7 @@
 ],
 "Wingen-sur-Moder": [
 "8700327",
-""
+"FR"
 ],
 "Wingerode": [
 "8013315",
@@ -30109,7 +30025,7 @@
 ],
 "Wloszczowa Polnoc": [
 "",
-"PL"
+""
 ],
 "Woffleben": [
 "8013333",
@@ -30699,7 +30615,7 @@
 "8013393",
 "DE-MV"
 ],
-"Zeulenroda unt Bf": [
+"Zeulenroda unterer Bahnhof": [
 "8013396",
 "DE-TH"
 ],
@@ -31029,6 +30945,10 @@
 ],
 "Ústí nad Labem hl.n.": [
 "5400019",
+"CZ"
+],
+"Ústí nad Labem-Střekov": [
+"5403255",
 "CZ"
 ],
 "Übach-Palenberg": [
