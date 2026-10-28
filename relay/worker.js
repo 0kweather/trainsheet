@@ -111,7 +111,7 @@ function pluginFeed(p, env) {
   const fill = (s, esc) => s.replace(/\{([A-Z0-9_]+)\}/g, (_, k) => esc(env[k] ?? ""));
   const url = (u) => fill(u, encodeURIComponent);
   return {
-    url: p.url && url(p.url), also: p.also?.map(url), routes: p.routes, vehicles: p.vehicles && new RegExp(p.vehicles), ttl: p.ttl, format: p.format, fetchFeed: p.fetchFeed, detail: p.detail,
+    url: p.url && url(p.url), also: p.also?.map(url), routes: p.routes, vehicles: p.vehicles && new RegExp(p.vehicles), ttl: p.ttl, format: p.format, fetchFeed: p.fetchFeed, detail: p.detail, by: p.by,
     headers: { ...(p.ua ? { "User-Agent": IDENTIFYING_UA } : {}), ...Object.fromEntries(Object.entries(p.headers || {}).map(([k, v]) => [k, fill(v, String)])) },
   };
 }
@@ -139,11 +139,18 @@ function detailAllowed(visitor, key, now) {
   return true;
 }
 
-function detailQuery(params) {
+// A source asking "by": "stop" (unnumbered trains: Germany's) also takes the
+// train's next station (at: a 7-digit station number), its timetabled time
+// there (time: yyMMddHHmm) and its line (line: "RE 1"); without them it's off.
+function detailQuery(params, by) {
   const train = params.get("train") || "", date = params.get("date") || "";
   if (!/^\d{1,6}$/.test(train) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const from = (params.get("from") || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
-  return { train: String(+train), date, from };
+  if (by !== "stop") return { train: String(+train), date, from };
+  const at = params.get("at") || "", time = params.get("time") || "";
+  const line = (params.get("line") || "").replace(/[^\p{L}\p{N} .-]/gu, "").slice(0, 24);
+  if (!/^\d{7}$/.test(at) || !/^\d{10}$/.test(time)) return null;
+  return { train: String(+train), date, from, at, time, line };
 }
 
 // 511 SF Bay: positions plus predicted stop times for one operator.
@@ -1070,7 +1077,7 @@ export default {
     if (!spec) return new Response("Unknown or unconfigured feed", { status: 404, headers: CORS });
     // A detail source answers for one train, the one asked for: its query,
     // checked and put in one form, is part of what's cached.
-    const query = spec.detail ? detailQuery(new URL(request.url).searchParams) : null;
+    const query = spec.detail ? detailQuery(new URL(request.url).searchParams, spec.by) : null;
     if (spec.detail && !query) return new Response("Ask for one train: ?train=<number>&date=<yyyy-mm-dd>", { status: 400, headers: CORS });
     const feedKey = query ? `${match[1]}?${new URLSearchParams(query)}` : match[1];
     if (query && feedMem.size > 2000) for (const [k, v] of feedMem) if (Date.now() - v.at > STALE_MS) feedMem.delete(k);

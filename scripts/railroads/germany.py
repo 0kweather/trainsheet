@@ -3,11 +3,12 @@ S-Bahns, the private regional railways and the foreign railways' trains in
 Germany), placed from DELFI's national timetable: gtfs.de's rail GTFS (CC BY
 4.0, no key, rebuilt daily). It has no train numbers, and DELFI's own GTFS,
 which has them, is given to registered users only, so the trains run
-unnumbered for now (see DELFI_GTFS below). No live data yet: DB's Timetables
-API (free key, 60 requests a minute) is to come as a detail source for an
-opened train; gtfs.de's free GTFS-realtime (beta, CC BY-SA 4.0) names trips
-and stops by ids that change with each daily rebuild, so it can't be matched
-to this weekly timetable.
+unnumbered for now (see DELFI_GTFS below). A train a viewer opens or tracks
+takes its delay, platform and DB train number at its next station from DB's
+Timetables API (a free key, kept by the relay; detail source "dbtt", below).
+No live data for all trains: gtfs.de's free GTFS-realtime (beta, CC BY-SA
+4.0) names trips and stops by ids that change with each daily rebuild, so it
+can't be matched to this weekly timetable.
 
 Railroads (the car files that draw them in brackets) and their lines (the
 category as sold and the line number, "RE 1", "RB 33", "S 1"; long-distance
@@ -88,7 +89,7 @@ buses, and the heritage and park railways (steam specials, museum lines run a
 few days a year).
 """
 
-import csv, datetime, io, json, math, os, pathlib, re, tempfile, time, unicodedata, urllib.request, zipfile
+import csv, datetime, io, json, math, os, pathlib, re, tempfile, time, unicodedata, urllib.error, urllib.request, zipfile
 from collections import Counter, defaultdict
 
 TZ = "Europe/Berlin"
@@ -102,12 +103,12 @@ AGENCIES = {
              "cars": "deld", "after": "dbfv", **COMMON},
     "dbregio": {"name": "DB Regio (north and east)", "short": "DB Regio", "color": "#ec0016", "kind": "commuter", "cars": "dbregio",
                 "after": "deld", **COMMON},
-    "dbregio2": {"name": "DB Regio (south and west)", "short": "DB Regio", "color": "#ec0016", "kind": "commuter",
+    "dbregio2": {"name": "DB Regio (south and west)", "short": "DB Regio", "color": "#ec0016", "kind": "commuter", "cars": "dbregio2",
                  "after": "dbregio", **COMMON},
     "deprivat": {"name": "Regional railways (north and east)", "short": "Regional", "color": "#00747a", "kind": "commuter",
                  "cars": "deprivat", "after": "dbregio2", **COMMON},
     "deprivat2": {"name": "Regional railways (south and west)", "short": "Regional", "color": "#2b6cb0", "kind": "commuter",
-                  "after": "deprivat", **COMMON},
+                  "cars": "deprivat2", "after": "deprivat", **COMMON},
     "sbahn": {"name": "S-Bahn", "short": "S-Bahn", "color": "#408335", "kind": "commuter", "cars": "sbahn", "after": "deprivat2", **COMMON},
     "deintl": {"name": "Neighbouring railways' trains in Germany", "short": "International", "color": "#5b6770", "kind": "commuter",
                "cars": "deld", "after": "sbahn", **COMMON},
@@ -906,3 +907,148 @@ SOURCES = [{"id": "germany", "agencies": list(AGENCIES), "format": "timetable", 
 # Ebensfeld-Erfurt, Wendlingen-Ulm, Hamburg-Berlin's upgraded line) to the
 # classic ones beside them.
 RAIL = {"region": "de", "bbox": BBOX, "network": "dbregio", "highspeed": ["dbfv", "deld"]}
+
+
+# ---------- One train's delay and platform (a detail source) ----------
+# DB's Timetables API (DB API Marketplace, free plan, 60 requests a minute;
+# the Worker secrets DB_CLIENT_ID and DB_API_KEY, sent as the DB-Client-Id
+# and DB-Api-Key headers), asked for only while a viewer has a train open or
+# tracks it. The trains being unnumbered, the page asks by the train's next
+# station ("by": "stop"; query at: its EVA number, time: its timetabled
+# departure there, "yyMMddHHmm" in Germany's time, line: "RE 1"): the
+# station's planned timetable for that hour (/plan/{eva}/{yyMMdd}/{HH},
+# kept 6 hours) gives the train calling then on that line (its stop id, and
+# DB's category and number for it, "ICE" "1229", shown on the page as its
+# number), the station's known changes (/fchg/{eva}, kept 90 seconds, shared
+# by every train asked for there) its forecast time, platform and
+# cancellation there. Upstream requests are held to 50 a minute per copy.
+# The answer, as every detail source's (js/sources.js applyDetail):
+#   {"found": true, "number": "1229", "shownNumber": "1229", "category": "ICE",
+#    "date": "2026-10-28", "delay": 6, "cancelled": false, "departed": false,
+#    "arrived": false, "last": null,
+#    "stops": [{"name": "Frankfurt(Main)Hbf", "arr": ..., "dep": ..., "actualArr": null,
+#               "actualDep": null, "platform": "9", "cancelled": false}]}
+# and {"found": false} when the station's timetable has no such train.
+# Relay/feeds/germany.js is its Worker twin.
+for _a in AGENCIES.values():
+    _a["detail"], _a["detailBy"] = "dbtt", "stop"
+DETAILS = {"dbtt": {"ttl": 90, "keys": ["DB_CLIENT_ID", "DB_API_KEY"], "by": "stop"}}
+DBTT = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1"
+PLAN_S, CHANGES_S, PER_MINUTE = 6 * 3600, 90, 50
+_plans, _changes, _asked = {}, {}, []
+_ATTR = re.compile(r'([a-zA-Z]+)="([^"]*)"')
+
+
+def _attrs(tag):
+    unesc = lambda s: s.replace("&quot;", '"').replace("&apos;", "'").replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+    return {k: unesc(v) for k, v in _ATTR.findall(tag)}
+
+
+def stops_of(xml):
+    """A timetable answer's stops: [{"id", "tl", "ar", "dp", ...}]."""
+    out = []
+    for m in re.finditer(r"<s\b([^>]*?)(?:/>|>([\s\S]*?)</s>)", xml or ""):
+        s = {**_attrs(m[1]), "tl": None, "ar": None, "dp": None}
+        for e in re.finditer(r"<(tl|ar|dp)\b([^>]*?)/?>", m[2] or ""):
+            s[e[1]] = _attrs(e[2])
+        out.append(s)
+    return out
+
+
+def station_of(xml):
+    m = re.search(r"<timetable\b([^>]*)>", xml or "")
+    return _attrs(m[1]).get("station") if m else None
+
+
+def epoch(t):
+    """"2610281430" in Germany's time, as epoch seconds."""
+    if not re.fullmatch(r"\d{10}", t or ""):
+        return None
+    from zoneinfo import ZoneInfo
+    d = datetime.datetime(2000 + int(t[:2]), int(t[2:4]), int(t[4:6]), int(t[6:8]), int(t[8:10]), tzinfo=ZoneInfo(TZ))
+    return int(d.timestamp())
+
+
+def _line_key(s):
+    return re.sub(r"\s+", "", s or "").upper()
+
+
+def planned(stops, time, line):
+    """The planned stop of the train asked for (see relay/feeds/germany.js)."""
+    want = _line_key(line)
+    at = [s for s in stops if (s["dp"] or {}).get("pt") == time or (s["ar"] or {}).get("pt") == time]
+    full = lambda s: _line_key(((s["tl"] or {}).get("c") or "") + ((s["dp"] or {}).get("l") or (s["ar"] or {}).get("l") or ""))
+    exact = [s for s in at if full(s) == want or ((s["tl"] or {}).get("n") and _line_key(s["tl"].get("c", "") + s["tl"]["n"]) == want)]
+    if exact:
+        return exact[0]
+
+    def by_cat(s):
+        c = _line_key((s["tl"] or {}).get("c"))
+        return bool(c) and (want == c or (want.startswith(c) and want[len(c):len(c) + 1].isdigit()))
+    cat = [s for s in at if by_cat(s)]
+    return cat[0] if len(cat) == 1 else None
+
+
+def detail(plan_xml, changes_xml, query):
+    s = planned(stops_of(plan_xml), query.get("time"), query.get("line"))
+    if not s:
+        return {"found": False}
+    ch = next((c for c in stops_of(changes_xml) if c.get("id") == s.get("id")), {})
+    ar, dp = {**(s["ar"] or {}), **(ch.get("ar") or {})}, {**(s["dp"] or {}), **(ch.get("dp") or {})}
+    ev = dp if s["dp"] else ar
+    late = round((epoch(ev["ct"]) - epoch(ev["pt"])) / 60) if ev.get("ct") and ev.get("pt") else None
+    cancelled = (not s["ar"] or ar.get("cs") == "c") and (not s["dp"] or dp.get("cs") == "c")
+    tl = s["tl"] or {}
+    return {"found": True, "number": tl.get("n") or None, "shownNumber": tl.get("n") or None, "category": tl.get("c") or None,
+            "date": query.get("date"), "delay": None if cancelled else late, "cancelled": False, "departed": False, "arrived": False,
+            "last": None,
+            "stops": [{"name": station_of(plan_xml), "arr": epoch(s["ar"]["pt"]) if s["ar"] else None,
+                       "dep": epoch(s["dp"]["pt"]) if s["dp"] else None, "actualArr": None, "actualDep": None,
+                       "platform": ev.get("cp") or ev.get("pp") or None, "cancelled": cancelled}]}
+
+
+def _cached(store, key, max_age, url, env, now, get=None):
+    hit = store.get(key)
+    if hit and now - hit[0] < max_age:
+        return hit[1]
+    _asked[:] = [t for t in _asked if now - t < 60]
+    if len(_asked) >= PER_MINUTE:
+        return hit[1] if hit else None
+    _asked.append(now)
+    try:
+        text = (get or _dbtt_get)(url, env)
+    except urllib.error.HTTPError as err:
+        if err.code == 404:
+            return ""
+        if hit:
+            return hit[1]
+        raise
+    if len(store) > 3000:
+        store.clear()
+    store[key] = (now, text)
+    return text
+
+
+def _dbtt_get(url, env):
+    req = urllib.request.Request(url, headers={"DB-Client-Id": env["DB_CLIENT_ID"], "DB-Api-Key": env["DB_API_KEY"],
+                                               "Accept": "application/xml", "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return r.read().decode("utf-8")
+
+
+def dbtt_answer(env, query, now=None, get=None):
+    now = time.time() if now is None else now
+    at, when = query.get("at") or "", query.get("time") or ""
+    if not re.fullmatch(r"\d{7}", at) or not re.fullmatch(r"\d{10}", when):
+        return {"found": False}
+    plan = _cached(_plans, f"{at}|{when[:8]}", PLAN_S, f"{DBTT}/plan/{at}/{when[:6]}/{when[6:8]}", env, now, get)
+    if not plan:
+        return {"found": False}
+    fchg = _cached(_changes, at, CHANGES_S, f"{DBTT}/fchg/{at}", env, now, get)
+    return detail(plan, fchg or "", query)
+
+
+def relay_fetch(env, source_id, query=None):
+    """One train's detail (source "dbtt"): the same bytes as relay/feeds/germany.js."""
+    out = dbtt_answer(env, query or {})
+    return json.dumps(out, ensure_ascii=False, separators=(",", ":")).encode(), "application/json"

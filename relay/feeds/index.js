@@ -4,6 +4,7 @@
 import { fetchFeed as aucklandtransport } from "./aucklandtransport.js";
 import { fetchFeed as digitraffic } from "./digitraffic.js";
 import { fetchFeed as fgc } from "./fgc.js";
+import { fetchFeed as germany } from "./germany.js";
 import { fetchFeed as hellenictrain } from "./hellenictrain.js";
 import { fetchFeed as israelrail } from "./israelrail.js";
 import { fetchFeed as nl } from "./nl.js";
@@ -30,6 +31,7 @@ export const FEEDS = {
   chfotpf: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
   chfozb: {"detail": true, "format": "json", "keys": ["CH_FORMATION_KEY"], "ttl": 300, "fetchFeed": switzerland },
   czechia: {"format": "pb", "ttl": 30, "ua": true, "url": "https://motis.obehy.cz/get-feeds/cz-czptt-gtfs-rt.pb"},
+  dbtt: {"by": "stop", "detail": true, "format": "json", "keys": ["DB_CLIENT_ID", "DB_API_KEY"], "ttl": 90, "fetchFeed": germany },
   digitraffic: {"format": "json", "ttl": 15, "ua": true, "fetchFeed": digitraffic },
   elron: {"format": "json", "ttl": 15, "ua": true, "url": "https://elron.ee/map_data.json"},
   fgc: {"format": "json", "ttl": 120, "ua": true, "fetchFeed": fgc },

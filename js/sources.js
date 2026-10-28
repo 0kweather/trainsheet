@@ -960,17 +960,39 @@ const stationKey = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u03
 const titleCase = (s) => String(s || "").toLowerCase().replace(/(^|[\s'.(/-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
 
 // Where the relay answers for train t (its number, the day it set out in its
-// railroad's zone, and the station it starts from), or null.
+// railroad's zone, and the station it starts from), or null. A railroad
+// whose AGENCIES entry says detailBy "stop" (unnumbered trains: Germany's)
+// is asked by the train's next station instead: train=0, at (the station's
+// 7-digit number), time (its timetabled departure there, yyMMddHHmm in the
+// railroad's zone) and line.
 export function detailUrl(t, relayBase) {
-  const src = AGENCIES[t.agency]?.detail;
-  if (!src || !relayBase || !/^\d{1,6}$/.test(String(t.number || ""))) return null;
+  const src = AGENCIES[t.agency]?.detail, byStop = AGENCIES[t.agency]?.detailBy === "stop";
+  if (!src || !relayBase || (!byStop && !/^\d{1,6}$/.test(String(t.number || "")))) return null;
   const s0 = (t._sched || t._progress?.stops)?.[0];
   const first = s0 ? s0.scheduled || evTime(s0) : t.stops?.[0] ? Date.parse(t.stops[0].scheduled || t.stops[0].time) / 1000 : nowSec();
   const tz = AGENCIES[t.agency].tz || t.stops?.[0]?.tz || "UTC";
   const date = dateFormat({ timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }, "en-CA").format(new Date(first * 1000));
-  const q = new URLSearchParams({ train: String(t.number), date });
+  const q = new URLSearchParams({ train: byStop ? "0" : String(t.number), date });
   if (t.origin) q.set("from", t.origin);
+  if (byStop) {
+    const at = nextCall(t, tz);
+    if (!at) return null;
+    q.set("at", at.id);
+    q.set("time", at.time);
+    if (t.route) q.set("line", t.route);
+  }
   return `${relayBase.replace(/\/$/, "")}/feed/${src}?${q}`;
+}
+
+// A detailBy "stop" train's next call it hasn't left (by its timetabled
+// departure) at a station with a 7-digit number: { id, time: yyMMddHHmm }.
+function nextCall(t, tz, now = nowSec()) {
+  const stops = t._sched || t._progress?.stops || [];
+  const s = stops.find((x) => /^\d{7}$/.test(String(x.stopId)) && (x.scheduled ?? evTime(x)) >= now - 60);
+  if (!s) return null;
+  const p = Object.fromEntries(dateFormat({ timeZone: tz, hourCycle: "h23", year: "2-digit", month: "2-digit", day: "2-digit", hour: "2-digit",
+    minute: "2-digit" }, "en-GB").formatToParts(new Date((s.scheduled ?? evTime(s)) * 1000)).map((x) => [x.type, x.value]));
+  return { id: String(s.stopId), time: `${p.year}${p.month}${p.day}${p.hour}${p.minute}` };
 }
 
 export async function fetchDetail(url) {
@@ -1019,6 +1041,8 @@ export function applyDetail(t, d, now = nowSec()) {
   }
   // A run that also gives its composition (iRail's, SNCB's trains): its cars.
   if (d.cars?.numbers?.length) t.cars = d.cars;
+  // An unnumbered train's number as its railway runs it (DB's, by station and time).
+  if (d.shownNumber && !t.number) t.number = String(d.shownNumber);
   const late = d.cancelled ? null : d.delay ?? null;
   t.cancelled = Boolean(d.cancelled);
   t.delayMin = late;

@@ -101,7 +101,12 @@ def main():
                 fail(mid, f"detail source {did}: ttl is seconds, a number > 0")
             details[did] = mid
             # "keys": the Worker secrets it needs; it's off until they're set.
-            feeds[did] = {"detail": True, "format": "json", "ttl": ttl, "fetchFeed": mid, **({"keys": d["keys"]} if d.get("keys") else {})}
+            # "by": "stop": the page asks for a train by its next station, its
+            # timetabled time there and its line (unnumbered trains), not by number.
+            if d.get("by") not in (None, "stop"):
+                fail(mid, f"detail source {did}: by is \"stop\" or left out")
+            feeds[did] = {"detail": True, "format": "json", "ttl": ttl, "fetchFeed": mid, **({"keys": d["keys"]} if d.get("keys") else {}),
+                          **({"by": d["by"]} if d.get("by") else {})}
             imports[mid] = True
         if not getattr(mod, "AGENCIES", None):
             # A relay-only plug-in: detail sources for other plug-ins' railroads.

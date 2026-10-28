@@ -979,7 +979,10 @@ function setFor(t) {
 const BY_KEY = {};
 export const TYPICAL = {
   sbahn: (t, reported) => {
-    const set = setFor(t);
+    // The lines other companies run with their own kinds of units
+    // (Regiobahn's S 28, RheinRuhrBahn's S 7, the SWEG's Ulm lines and
+    // Europabahn, the BRB's S 4): deprivat2.cars.js's sets.
+    const set = setFor(t) || DP?.sbahnSet?.(t);
     if (set) return { ...set };
     const own = reported ? BY_KEY[reported] || BY_KEY[reported.replace(/R$/, "")] : null;
     return own ? { ...own } : null;
@@ -1099,3 +1102,21 @@ for (const k of Object.keys(TYPES)) { const f = famOf(k); if (f && F[f]) FACTS[k
 // The borrowed drawings keep DB Regio's fact sheets.
 for (const [k, from] of [["sbDD146", "deR146"], ["sbDD", "deRDd"], ["sbDD1", "deRDd1"], ["sbDDcabR", "deRDdCab4"], ["sb642", "deR642"], ["sb642R", "deR642"], ["sbL54", "deR622"], ["sbL54R", "deR622"]])
   if (TYPES[k] && DR?.FACTS?.[from]) FACTS[k] = DR.FACTS[from];
+
+// ===================== The other companies' S-Bahn lines =====================
+// deprivat2.cars.js (the private railways, south and west) draws the units
+// of the S-Bahn lines run by Regiobahn, RheinRuhrBahn, the SWEG and the
+// BRB; its sets are used where this file has none (guarded: without it
+// those trains go undrawn). Their cars' types are copied in, since only
+// this file's tables are read for an S-Bahn train.
+let DP = null;
+try { DP = await import("./deprivat2.cars.js?v=dev"); } catch (e) { DP = null; }
+for (const set of Object.values(DP?.SBAHN_SETS || {})) {
+  for (const [k] of set.units || []) {
+    if (TYPES[k] || !DP.TYPES?.[k] || !DP.MODELS?.[k]) continue;
+    TYPES[k] = DP.TYPES[k];
+    MODELS[k] = DP.MODELS[k];
+    const f = DP.FACTS?.[k] || DP.FACTS?.[k.replace(/R$/, "")];
+    if (f) FACTS[k] = f;
+  }
+}
