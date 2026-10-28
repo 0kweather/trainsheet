@@ -1,8 +1,8 @@
 """Fill build_rail.py's route tiles from Geofabrik's country extracts instead of
 the public Overpass servers, which are often too busy to answer a tile.
 
-Each extract is downloaded, cut down with osmium to its railway=rail and
-railway=narrow_gauge ways (then deleted), and the ways kept are the ones
+Each extract is downloaded, cut down with osmium to its railway=rail,
+railway=narrow_gauge and railway=light_rail ways (then deleted), and the ways kept are the ones
 build_rail.py's ROUTE_WAYS selects: no service tag, usage not industrial,
 military or test. They're written as the one-degree tiles
 build_rail.py routes over (scripts/.osm-cache/route-tile-<x>-<y>.json, in
@@ -49,9 +49,18 @@ EXTRACTS = [
     "europe/united-kingdom/england/kent", "europe/united-kingdom/england/essex",
     "europe/united-kingdom/england/greater-london",
     "europe/germany/niedersachsen",
+    "europe/germany/schleswig-holstein", "europe/germany/hamburg", "europe/germany/bremen",
+    "europe/germany/mecklenburg-vorpommern", "europe/germany/berlin", "europe/germany/brandenburg",
+    "europe/germany/sachsen-anhalt", "europe/germany/thueringen", "europe/germany/bayern/mittelfranken",
+    "europe/germany/bayern/oberbayern", "europe/germany/bayern/schwaben", "europe/germany/bayern/unterfranken",
+    "europe/denmark", "europe/poland/zachodniopomorskie", "europe/poland/lubuskie",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
+# Light rail stays only where it's third-rail: OpenStreetMap files Berlin's
+# and Hamburg's S-Bahn lines as railway=light_rail (electrified=rail), the
+# trams and Stadtbahnen (overhead wire) stay out. Extracts cut before this
+# have no light rail at all.
 # Tourist lines stay: build_rail.py routes only the hops a timetable runs, so
 # a line OSM tags as tourist (Sardinia's Mandas–Isili) is drawn only where a
 # scheduled train uses it.
@@ -73,7 +82,7 @@ def rail_of(extract):
     print(f"{extract}: downloading", flush=True)
     subprocess.run(["curl", "-fsSL", "--retry", "5", "-A", "Trainsheet/1.0 (+https://trainsheet.com)",
                     "-o", str(pbf), f"{GEOFABRIK}/{extract}-latest.osm.pbf"], check=True)
-    osmium("tags-filter", str(pbf), "w/railway=rail,narrow_gauge", "-o", str(rail), "--overwrite")
+    osmium("tags-filter", str(pbf), "w/railway=rail,narrow_gauge,light_rail", "-o", str(rail), "--overwrite")
     pbf.unlink()
     osmium("export", str(rail), "-f", "geojsonseq", "--geometry-types=linestring", "-a", "id",
            "-o", str(lines), "--overwrite")
@@ -88,7 +97,9 @@ def main():
         for row in open(rail_of(extract)):
             f = json.loads(row.lstrip("\x1e"))
             p = f["properties"]
-            if p.get("railway") not in ("rail", "narrow_gauge") or "service" in p or SKIP_USAGE.match(p.get("usage", "")):
+            if p.get("railway") not in ("rail", "narrow_gauge", "light_rail") or "service" in p or SKIP_USAGE.match(p.get("usage", "")):
+                continue
+            if p.get("railway") == "light_rail" and p.get("electrified") != "rail":
                 continue
             coords = f["geometry"]["coordinates"]
             wid = int(str(p["@id"]).lstrip("w"))
