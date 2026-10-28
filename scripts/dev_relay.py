@@ -73,18 +73,26 @@ def plugin_feed(mod, sid, p):
 def detail_feed(mod, sid, d):
     """A plug-in's detail source, like the Worker's: its relay_fetch, given
     the one train asked for (detail_query)."""
-    return lambda e: {"detail": True, "ttl": d.get("ttl", CACHE_SECONDS), "fetch": lambda query: mod.relay_fetch(e, sid, query)}
+    return lambda e: {"detail": True, "ttl": d.get("ttl", CACHE_SECONDS), "by": d.get("by"), "fetch": lambda query: mod.relay_fetch(e, sid, query)}
 
 
-def detail_query(params):
+def detail_query(params, by=None):
     """As relay/worker.js's detailQuery: the train's number and day, and the
-    name of the station it starts from as a name key; None if it's off."""
+    name of the station it starts from as a name key; for a source asking
+    "by": "stop", also its next station, its time there and its line; None
+    if it's off."""
     train, date = params.get("train", [""])[0], params.get("date", [""])[0]
     if not re.fullmatch(r"\d{1,6}", train) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
         return None
     frm = unicodedata.normalize("NFD", params.get("from", [""])[0])
     frm = re.sub(r"[^a-z0-9]", "", re.sub(r"[\u0300-\u036f]", "", frm).lower())[:40]
-    return {"train": str(int(train)), "date": date, "from": frm}
+    if by != "stop":
+        return {"train": str(int(train)), "date": date, "from": frm}
+    at, when = params.get("at", [""])[0], params.get("time", [""])[0]
+    line = re.sub(r"[^\w .-]|_", "", params.get("line", [""])[0])[:24]
+    if not re.fullmatch(r"\d{7}", at) or not re.fullmatch(r"\d{10}", when):
+        return None
+    return {"train": str(int(train)), "date": date, "from": frm, "at": at, "time": when, "line": line}
 
 
 for mod in load():
@@ -186,7 +194,7 @@ class Handler(BaseHTTPRequestHandler):
         spec = FEEDS.get(name, lambda e: None)(env)
         if not path.startswith("/feed/") or not spec:
             return self.send(404, b"Unknown or unconfigured feed")
-        query = detail_query(urllib.parse.parse_qs(qs)) if spec.get("detail") else None
+        query = detail_query(urllib.parse.parse_qs(qs), spec.get("by")) if spec.get("detail") else None
         if spec.get("detail") and not query:
             return self.send(400, b"Ask for one train: ?train=<number>&date=<yyyy-mm-dd>")
         key = f"{name}?{urllib.parse.urlencode(query)}" if query else name
