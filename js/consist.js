@@ -885,18 +885,27 @@ function drawCar({ t, model, L, ctx, flip }, { couplers = true } = {}) {
 }
 
 export function consistHtml(c, color, uid = `tsc${++renderSeq}`) {
-  // Identical cars (same model, same ends) are drawn once and reused.
+  // Identical cars are drawn once and reused: identical by what they draw,
+  // since a car's drawing can depend on its place in the train (the Talgo
+  // 350's coaches rise to the power car only beside it, a class numeral
+  // changes partway along), not only on its model and ends.
   const drawn = new Map();
   return stableIds(carsOf(c, color).map((car, i) => {
     const { t, model, L, ctx, flip, number } = car;
-    const sig = [t.key, flip, ctx.lead, ctx.cabL, ctx.cabR, ctx.pan, ctx.pair, ctx.coupledL, ctx.coupledR, model.variant ? model.variant(ctx) : ""].join();
+    const art = drawCar(car);
+    // Each drawing makes its own clip ids, so compare with them numbered
+    // within the drawing.
+    const local = new Map(), sig = art.replace(/ts-(clip|tri|njt|metra|disco)-\d+/g, (m) => {
+      if (!local.has(m)) local.set(m, `#${local.size}`);
+      return local.get(m);
+    });
     let drawing;
     if (drawn.has(sig)) {
       drawing = `<use href="#${drawn.get(sig)}"/>`;
     } else {
       const id = `${uid}-${drawn.size}`;
       drawn.set(sig, id);
-      drawing = `<g id="${id}">${drawCar(car)}</g>`;
+      drawing = `<g id="${id}">${art}</g>`;
     }
     const label = esc([t.name, number].filter(Boolean).join(" "));
     // The number under the car, where it fits: not under a power module

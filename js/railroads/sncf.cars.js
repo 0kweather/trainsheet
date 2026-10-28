@@ -13,7 +13,9 @@ import { C, rect, circle, path, line, lines, poly, truck, pantograph, slats } fr
 import { letters, roofCover, panGear, lamp, RED_LAMP, wiper, boxes } from "./digitraffic.cars.js?v=dev";
 import { euroLoco, unit, buffers as uicBuffers, hvac as czHvac } from "./czechia.cars.js?v=dev";
 // TGV Lyria, as drawn for Switzerland (chintl.cars.js).
-import { TYPES as CH_TYPES, MODELS as CH_MODELS, FACTS as CH_FACTS } from "./chintl.cars.js?v=dev";
+import { TYPES as CH_TYPES, MODELS as CH_MODELS, FACTS as CH_FACTS, dbLogo } from "./chintl.cars.js?v=dev";
+// DB's ICE logo (from DB's own ICE-Logo.svg).
+import { iceLogo } from "./icelogo.js?v=dev";
 
 const r2 = (v) => Math.round(v * 100) / 100;
 const SANS = "Helvetica Neue, Helvetica, Arial, sans-serif";
@@ -491,9 +493,15 @@ const rgMid = (o = {}) => (c) => unit(c, { roof: 13.1, sill: 2.1,
 // end cars 25.5 m with the long nose, the others 24.2 m, 3.89 m tall; a door
 // at one or both ends of each car, the windows in a dark band; pantographs on
 // the transformer cars, second from each end (de.wikipedia "DB-Baureihe 407").
-// DB's paint (407 at Paris-Est, October 2025; Commons' side diagram of the
-// 407): light grey-white, a traffic-red stripe low along the side from the
-// nose's tip, "ICE" big in grey behind the cab over it, DB's mark on the nose.
+// DB's paint (407s at Paris-Est 2024-25, Ingolstadt 2025, Frankfurt 2024;
+// Commons' side diagram of the 407): light grey-white; the traffic-red
+// stripe low along the side, broken by the DB logo (the upright one) mid-car;
+// on the end car it rises from the nose's tip, wider than along the side,
+// and stops a little lower than the side's stripe just before DB's ICE
+// logo, which stands on the stripe's line under the cab's side window, the
+// stripe going on behind it to the door; DB's mark on the nose. White class
+// numerals at the ends of the window band, a yellow mark by first class's
+// doors.
 // Eurostar's e320 (Velaro, class 374, 2015-2018, sixteen cars, 390 m:
 // London-Paris, -Brussels, -Amsterdam) the same body; its paint (4003 at
 // Bruxelles-Midi, October 2026; 374 008 at St Pancras, June 2026; Hoofddorp
@@ -503,20 +511,50 @@ const rgMid = (o = {}) => (c) => unit(c, { roof: 13.1, sill: 2.1,
 const VEL_NOSE = [[1.4, 3.3], [0.5, 4.0], ["q", 0.25, 5.2, 1.4, 6.0], [10.4, 10.7], ["q", 14.0, 12.75, 21.0, 12.75]];
 const VEL = { roof: 12.75, sill: 3.3 };
 const vDoor = (x, fill = "rgba(0,0,0,0.06)") => ({ x, w: 2.6, y0: 3.5, y1: 10.5, glassY: 0.58, glassH: 0.3, grabs: false, fill });
-const dbMark = (c, x, y, h) => placed(c, x, y, h, `<rect x="-0.72" y="-0.5" width="1.44" height="1" rx="0.18" fill="#ffffff" stroke="#ec0016" stroke-width="0.11"/>` +
-  `<text x="0" y="0.27" font-size="0.74" text-anchor="middle" font-family="${SANS}" font-weight="800" fill="#ec0016">DB</text>`);
+// The stripe (0.85 ft, as wide as a third of the window band), and the
+// DB logo set into it: about its height, upright, the stripe stopping a
+// little short of it either side.
+const I3S = { lo: 4.95, hi: 5.8, red: "#ec0016", yellow: "#f6c400" };
+const i3Stripe = (a, b, mark) => {
+  const w = I3S.hi - I3S.lo, gap = w * 0.6;
+  return rect(a, I3S.lo, mark - gap - a, w, I3S.red) + rect(mark + gap, I3S.lo, b - mark - gap, w, I3S.red);
+};
+const i3Db = (c, x) => dbLogo(c, x, (I3S.lo + I3S.hi) / 2, (I3S.hi - I3S.lo) * 0.96, 0.65);
+// Which class a car of the eight carries, from its place in the set: the
+// end car at the front, the car behind it and the restaurant car's seats
+// next to that are first class (de.wikipedia "DB-Baureihe 407").
+const i3Class = (c) => (c.index <= 2 ? "1" : "2");
+// A class numeral in the window band and the first class's yellow mark by
+// a door (the side toward the seats).
+const i3Num = (c, x, cls) => (cls ? letters(c, x, 7.75, 1.1, cls, "#ffffff", { weight: 600 }) : "");
+const i3Yellow = (x, right) => rect(right ? x + 2.65 : x - 0.25, 8.9, 0.2, 1.5, I3S.yellow);
 const iceEndPaint = (c, g) => rect(-1, 0, g.L + 2, 20, "#eef0f1") + rect(-1, 12.0, g.L + 2, 2, "#c9ced3") + rect(-1, 0, g.L + 2, 2.9, "#cdd1d5") +
-  path("M-1 3.75Q6 3.9 12 4.9L21 5.15L" + (g.L + 1) + " 5.15L" + (g.L + 1) + " 5.8L21 5.8L12 5.6Q6 4.55 -1 4.45Z", "#ec0016") + rect(29.6, 6.1, g.L - 32.0, 2.6, "#252a30", 0, 'rx="0.3"');
-const iceMidPaint = (c, g) => rect(-1, 0, g.L + 2, 20, "#eef0f1") + rect(-1, 12.0, g.L + 2, 2, "#c9ced3") + rect(-1, 0, g.L + 2, 2.9, "#cdd1d5") + rect(-1, 5.15, g.L + 2, 0.65, "#ec0016") +
+  // The nose's stripe, from the tip up to just before the logo.
+  path(M([-1, 3.75]) + smooth([[-1, 3.75], [3, 3.85], [7, 4.05], [10.5, 4.25], [13.2, 4.4]]) + L_([[13.2, 5.35]]) +
+    smooth([[13.2, 5.35], [10.5, 5.15], [7, 4.85], [3, 4.5], [-1, 4.42]]) + "Z", I3S.red) +
+  i3Stripe(18.5, g.L + 1, 53.0) + rect(29.0, 6.1, g.L - 32.6, 2.6, "#252a30", 0, 'rx="0.3"') +
+  // The cab's side window over the logo, the driver's window at its front.
+  path(M([10.6, 7.6]) + L_([[12.0, 9.0], [23.6, 9.0], [23.6, 6.5], [12.2, 6.5]]) + "Z", "#252a30") +
+  path(M([11.1, 7.65]) + L_([[12.2, 8.75], [13.7, 8.75], [13.7, 6.75], [12.4, 6.75]]) + "Z", C.glass, 0, `stroke="#15181b" stroke-width="0.5" ${NS}`) +
+  rect(14.2, 7.9, 9.0, 0.7, "#3b444e", 0, 'opacity="0.7" rx="0.1"');
+const iceMidPaint = (c, g) => rect(-1, 0, g.L + 2, 20, "#eef0f1") + rect(-1, 12.0, g.L + 2, 2, "#c9ced3") + rect(-1, 0, g.L + 2, 2.9, "#cdd1d5") + i3Stripe(-1, g.L + 1, g.L / 2) +
   rect(4.8, 6.1, g.L - 9.6, 2.6, "#252a30", 0, 'rx="0.3"');
 // The windows (Commons' side diagram of the 407; e320 at Hoofddorp 2026):
 // about 5.3 ft wide, 6.8 ft apart, 2.4 ft tall.
 const velWins = (a, n) => [{ xs: Array.from({ length: n }, (_, i) => a + i * 6.8), y: 6.2, w: 5.3, h: 2.35, r: 0.4 }];
-const iceEnd = (c) => unit(c, { ...VEL, nose: VEL_NOSE, rake: [[3.6, 7.3], [12.6, 11.4]], depth: 3.0, cabLen: 18, lampY: 5.0, surround: "#1d2126",
-  rows: velWins(30.0, 7), doors: [vDoor(21.0)], trucks: [17.0, c.L - 8.0], wheel: 36, paint: iceEndPaint,
-  extra: (cc, g) => letters(cc, 26.4, 7.0, 3.3, "ICE", "#8d949b", { weight: 700, family: NARROW }) + dbMark(cc, 3.2, 5.4, 0.7) + roofCover(g.L - 22, VEL.roof, 14, 0.35, "#c3c8cd", 3) });
+// The end car: the door behind the cab's side window, the passenger
+// windows from just behind it (the Commons diagram's spacing). DB's ICE
+// logo, its caps 2.3 ft (2.7 times the stripe), their tops just over the
+// stripe's line.
+const iceEnd = (c) => unit(c, { ...VEL, nose: VEL_NOSE, rake: [[3.6, 7.3], [12.6, 11.4]], depth: 3.0, cabLen: 18, lampY: 5.0, surround: "#1d2126", bare: true,
+  rows: velWins(31.8, 7), doors: [vDoor(26.0)], trucks: [17.0, c.L - 8.0], wheel: 36, paint: iceEndPaint,
+  extra: (cc, g) => { const cls = c.index === 0 ? "1" : "2";
+    return iceLogo(cc, 15.85, 4.79, 2.3, "#8d949b") + dbLogo(cc, 3.2, 5.4, 0.7) + i3Db(cc, 53.0) + i3Num(cc, 30.4, cls) + i3Num(cc, g.L - 4.6, cls) +
+      (cls === "1" ? i3Yellow(26.0, true) : "") + roofCover(g.L - 22, VEL.roof, 14, 0.35, "#c3c8cd", 3); } });
 const iceMid = (o = {}) => (c) => unit(c, { ...VEL, rows: velWins(9.85, 9), doors: [vDoor(1.6), vDoor(c.L - 4.2)], trucks: [8.0, c.L - 8.0], wheel: 36, paint: iceMidPaint,
-  pan: o.pan ? c.L / 2 + 6 : null, extra: (cc, g) => (o.pan ? "" : roofCover(18, VEL.roof, 30, 0.3, "#c3c8cd", 4)) });
+  pan: o.pan ? c.L / 2 + 6 : null, extra: (cc, g) => { const cls = i3Class(c), bistro = c.index === 2;
+    return i3Db(cc, g.L / 2) + i3Num(cc, 8.3, cls) + i3Num(cc, g.L - 8.2, bistro ? "" : cls) + (cls === "1" ? i3Yellow(1.6, true) + (bistro ? "" : i3Yellow(g.L - 4.2, false)) : "") +
+      (o.pan ? "" : roofCover(18, VEL.roof, 30, 0.3, "#c3c8cd", 4)); } });
 // Eurostar e320.
 const ES = { grey: "#a8aeb5", blue: "#1f2f66", yellow: "#f2c21b", star: "#ffffff" };
 const esWord = (c, x, y, h, fill = "#ffffff") => placed(c, x, y, h, `<circle cx="-2.35" cy="-0.32" r="0.42" fill="none" stroke="${fill}" stroke-width="0.07"/>` +
@@ -543,7 +581,7 @@ const e320EndPaint = (c, g) => rect(-1, 0, g.L + 2, 20, ES.grey) + rect(-1, 12.0
   path("M2.0 5.3Q3.6 5.7 4.8 6.3L4.5 6.9Q3.2 6.4 1.9 6.0Z", "#1d2126");
 const e320MidPaint = (c, g) => rect(-1, 0, g.L + 2, 20, ES.grey) + rect(-1, 12.0, g.L + 2, 2, "#8f969d") + rect(-1, 0, g.L + 2, 2.9, "#5f656c") +
   rect(-1, 4.55, g.L + 2, 0.4, ES.yellow);
-const e320End = (c) => unit(c, { ...VEL, nose: VEL_NOSE, rake: [[4.6, 8.1], [12.6, 11.6]], depth: 1.4, cabLen: 18, lampY: 5.0, surround: "#1d2126",
+const e320End = (c) => unit(c, { ...VEL, nose: VEL_NOSE, rake: [[4.6, 8.1], [12.6, 11.6]], depth: 1.4, cabLen: 18, lampY: 5.0, surround: "#1d2126", bare: true,
   rows: velWins(25.6, 8), doors: [vDoor(21.0, ES.grey)], trucks: [17.0, c.L - 8.0], wheel: 36, paint: e320EndPaint,
   extra: (cc, g) => path("M15.9 9.3L17.4 9.3L17.4 10.9L16.7 10.9Z", C.glass, 0, `stroke="#15181b" stroke-width="0.6" ${NS}`) +
     starLines(18.0, 7.2, 3.0) + esWord(cc, 19.45, 10.0, 0.65) + letters(cc, 16.4, 6.0, 0.75, cc.setNo || "", "#ffffff", { weight: 600 }) + roofCover(g.L - 22, VEL.roof, 14, 0.35, "#8f969d", 3) });
@@ -666,9 +704,9 @@ export const MODELS = {
   snRgCab: Mo(rgCab, 66.6, true),
   snRgMid: Mo(rgMid(), 57.9),
   snRgMidPan: Mo(rgMid({ pan: true }), 57.9),
-  snIce3End: Mo(iceEnd, 83.66, true),
-  snIce3Mid: Mo(iceMid(), 79.4),
-  snIce3Pan: Mo(iceMid({ pan: true }), 79.4),
+  snIce3End: Mo(iceEnd, 83.66, true, (c) => (c.index === 0 ? "1" : "2")),
+  snIce3Mid: Mo(iceMid(), 79.4, false, (c) => i3Class(c) + (c.index === 2 ? "b" : "")),
+  snIce3Pan: Mo(iceMid({ pan: true }), 79.4, false, (c) => i3Class(c) + (c.index === 2 ? "b" : "")),
   snE320End: Mo(e320End, 83.66, true),
   snE320Pan: Mo(e320Mid({ pan: true }), 79.4),
   snE320Mid: Mo(e320Mid(), 79.4),

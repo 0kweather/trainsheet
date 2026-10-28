@@ -159,22 +159,26 @@ const grab = (x, y0, y1) => line(x, y0, x, y1, "currentColor", 0.6);
 
 // A raked windshield seen from the side, set in the cab's dark surround:
 // from p (where the nose's rake begins) to q (where it meets the roof); a
-// wiper and the destination display behind the glass.
-export const screen = (c, [px, py], [qx, qy], depth = 2.6, surround = scheme(c).screen) =>
+// wiper and the destination display behind the glass (display: false for a
+// cab whose display can't be seen from the side).
+export const screen = (c, [px, py], [qx, qy], depth = 2.6, surround = scheme(c).screen, { display = true } = {}) =>
   path(poly([[px + 0.15, py - 0.35], [qx + 0.2, qy + 0.25], [qx + depth + 0.6, qy + 0.25], [px + depth + 0.6, py - 0.35]]), surround) +
   path(poly([[px + 0.45, py], [qx + 0.25, qy - 0.15], [qx + 0.9, qy - 0.15], [px + 1.3, py]]), C.glass) +
   path(poly([[px + 1.6, py], [qx + 1.15, qy - 0.15], [qx + depth, qy - 0.15], [px + depth, py]]), C.glass) +
-  rect(qx + 1.25, qy - 0.7, Math.max(0.6, depth - 1.45), 0.32, "#f39a26", 0, 'opacity="0.9"') +
+  (display ? rect(qx + 1.25, qy - 0.7, Math.max(0.6, depth - 1.45), 0.32, "#f39a26", 0, 'opacity="0.9"') : "") +
   line(px + 0.75, py + 0.25, px + 0.75 + (qx - px) * 0.35, py + (qy - py) * 0.35, "#0d0f12", 0.7);
 
 // A cab end's front: lamps low on the nose and over the windshield, a red
 // tail lamp, the coupler under the nose (unless coupled to another unit),
-// horns on the roof. o: the body's nose, rake, sill; coupler: "scharf"
+// horns on the roof. o: the body's nose, rake, sill, and bare: true for a
+// streamlined nose with none of the lamp over the windshield, the horns or
+// a coupler showing (it's behind the nose's cover); coupler: "scharf"
 // (multiple units) or "buffers" (locomotives).
 function front(c, o, { coupler = "scharf", lampY = o.sill + 1.75 } = {}) {
   const { nose, rake, sill } = o;
   const xl = noseX(nose, lampY);
   let s = lamp(xl - 0.12, lampY - 0.22, 0.55, 0.5) + rect(noseX(nose, lampY - 0.75) - 0.06, lampY - 0.95, 0.4, 0.32, "#d8262c", 0.3, 'rx="0.1"');
+  if (o.bare) return s;
   s += lamp(rake[1][0] - 0.05, rake[1][1] + 0.12, 0.5, 0.36);
   if (coupler === "buffers") s += buffers(0, -1, { end: noseX(nose, sill) + 0.3, sill });
   else if (!c.coupledL) s += scharf(0.05, noseX(nose, 2.85) + 0.6);
@@ -316,7 +320,8 @@ function coachPaint(c) {
 // (on a cab section), rake, rows, doors, doorFill(c), trucks ([x...] own
 // trucks; "end"/"start" for a Jakobs truck shared at that end), wheel, pan
 // (x of a pantograph), paint(c, g) for the side, cab(c, g) for more at the
-// cab, extra(c, g) for the rest (roof equipment, underfloor, lettering).
+// cab, extra(c, g) for the rest (roof equipment, underfloor, lettering);
+// bare (front()) for a streamlined nose.
 export function unit(c, o) {
   const { roof, sill } = o;
   const cabbed = !!o.nose;
@@ -326,7 +331,7 @@ export function unit(c, o) {
     drop: o.drop || null, diaphragm: o.diaphragm ?? [sill + 0.2, roof - 1.6], cabLen: cabbed ? o.cabLen ?? 7 : 0,
     rows: o.rows, doors: (o.doors || []).map((d) => (fill && !d.fill ? { ...d, fill } : d)), roofItems: o.roofItems || [],
     paint: (cc, g) => (o.paint ? o.paint(cc, g) : side(c, g.L, { eave: roof - 1.2, low: o.low ?? sill + 1.6, skirt: sill + 0.2 })),
-    cab: cabbed ? (cc, g) => screen(c, o.rake[0], o.rake[1], o.depth ?? 2.6, o.surround) + (o.cab ? o.cab(cc, g) : "") : null,
+    cab: cabbed ? (cc, g) => screen(c, o.rake[0], o.rake[1], o.depth ?? 2.6, o.surround, { display: !o.bare }) + (o.cab ? o.cab(cc, g) : "") : null,
     extra: (cc, g) => (o.trucks || []).map((x) => (x === "end" ? truck(g.L, { wb: 8.5, d: 30, top: sill }) : x === "start" ? truck(0, { wb: 8.5, d: 30, top: sill })
       : truck(x, { wb: 8.5, d: o.wheel ?? 33, top: sill }))).join("") +
       (o.pan != null ? pantograph(o.pan, roof, { up: true, facing: -1 }) + hvLine(o.pan + 3.0, o.pan + 9.0, roof) : "") +

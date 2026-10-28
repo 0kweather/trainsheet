@@ -12,6 +12,8 @@ import { euroLoco, unit, taurus, twinEnded, buffers as uicBuffers, hvac as czHva
 // SBB's Re 460 and its EC coach, as drawn in sbb.cars.js (the Transalpin's
 // Swiss end).
 import { TYPES as SBB_TYPES, MODELS as SBB_MODELS } from "./sbb.cars.js?v=dev";
+// DB's ICE logo (from DB's own ICE-Logo.svg).
+import { iceLogo } from "./icelogo.js?v=dev";
 
 const r2 = (v) => Math.round(v * 100) / 100;
 const FT = 3.2808; // feet in a metre
@@ -94,19 +96,51 @@ const bike = (x, y, h, color) => {
 // Basel-Bern-Interlaken/Brig.
 // The paint (photographs at Tecknau 2024, Hamburg Lombardsbrücke and Berlin
 // Ostbahnhof 2025-2026): light grey-white, the traffic-red stripe low along
-// the side, rising and thinning to the nose's tip; the windows in one dark
-// band; "ICE" in big light grey capitals behind the cab, breaking the
-// stripe; the DB mark in the stripe mid-car; white class numerals at the
+// the side (about 0.85 ft wide), rising along the nose at nearly its full
+// width to the tip; the windows in one dark band; DB's ICE logo in light
+// grey behind the cab, breaking the stripe, a grille over the stripe just
+// ahead of it (on one side); the upright DB logo in the stripe mid-car
+// (rechecked at Hamburg Hbf 2025 and Berlin Ostbahnhof 2025); white class numerals at the
 // ends of the window band, a yellow bar by the first-class doors, a bicycle
 // pictogram over the bicycle car's door.
 const ICE = { white: "#eef0f1", red: "#ec0016", band: "#252a30", letter: "#a2a8ae", skirt: "#cdd1d5", seam: "rgba(0,0,0,0.28)", yellow: "#f6c400" };
-const I4 = { roof: 12.7, midRoof: 13.3, skirt: 2.0, arch: 3.35, bandLo: 6.4, bandHi: 9.2, redLo: 4.85, redHi: 5.55, doorLo: 3.0, doorHi: 11.2, doorW: 3.77, wheel: 36.2 };
-// The DB mark: "DB" in red in a red-edged white rounded box, h ft tall.
-const dbMark = (c, x, y, h) => rect(x - h * 0.72, y - h / 2, h * 1.44, h, "#ffffff", 0, `rx="${r2(h * 0.18)}" stroke="${ICE.red}" stroke-width="${r2(h * 0.11)}"`) +
+const I4 = { roof: 12.7, midRoof: 13.3, skirt: 2.0, arch: 3.35, bandLo: 6.4, bandHi: 9.2, redLo: 4.72, redHi: 5.57, doorLo: 3.0, doorHi: 11.2, doorW: 3.77, wheel: 36.2 };
+// DB's logo, drawn as its shapes: the red frame, white inside, round the red
+// letters D and B; h ft tall, centered at (x, y), w its width over its
+// height: 1.43 the usual mark (as on the ICEs' noses), about 0.65 the
+// upright one set into the ICEs' red stripe (photographs of a 407 at
+// Paris-Est and a 408 at Haldern, 2025-26). Reads the same on a mirrored car.
+const rrect = (x0, y0, x1, y1, r) => `M${r2(x0 + r)} ${r2(y0)}H${r2(x1 - r)}Q${r2(x1)} ${r2(y0)} ${r2(x1)} ${r2(y0 + r)}V${r2(y1 - r)}Q${r2(x1)} ${r2(y1)} ${r2(x1 - r)} ${r2(y1)}` +
+  `H${r2(x0 + r)}Q${r2(x0)} ${r2(y1)} ${r2(x0)} ${r2(y1 - r)}V${r2(y0 + r)}Q${r2(x0)} ${r2(y0)} ${r2(x0 + r)} ${r2(y0)}Z`;
+export function dbLogo(c, x, y, h, w = 1.43, red = "#ec0016") {
+  // In the logo's own frame: 1 tall, y down, centered.
+  const W = w / 2, t = 0.075, L = 0.62, h2 = L / 2, gap = w > 1 ? 0.06 : 0.03;
+  const lw = Math.min(0.86, 2 * W - 2 * t - 0.06), lx = (lw - gap) / 2, st = w > 1 ? 0.13 : 0.065;
+  const a1 = -lw / 2, b1 = a1 + lx, a2 = b1 + gap, b2 = a2 + lx;
+  // D: a stem and a rounded bowl, its counter cut out.
+  const rd = Math.min(lx * 0.55, h2), ri = Math.max(rd - st, 0.02);
+  const D = `M${r2(a1)} ${r2(-h2)}H${r2(b1 - rd)}Q${r2(b1)} ${r2(-h2)} ${r2(b1)} ${r2(-h2 + rd)}V${r2(h2 - rd)}Q${r2(b1)} ${r2(h2)} ${r2(b1 - rd)} ${r2(h2)}H${r2(a1)}Z` +
+    `M${r2(a1 + st)} ${r2(-h2 + st)}H${r2(b1 - st - ri)}Q${r2(b1 - st)} ${r2(-h2 + st)} ${r2(b1 - st)} ${r2(-h2 + st + ri)}V${r2(h2 - st - ri)}Q${r2(b1 - st)} ${r2(h2 - st)} ${r2(b1 - st - ri)} ${r2(h2 - st)}H${r2(a1 + st)}Z`;
+  // B: two bowls, the upper a little narrower, a counter in each.
+  const bu = b2 - lx * 0.06, ru = Math.min((bu - a2) * 0.5, h2 / 2), rl = Math.min((b2 - a2) * 0.5, h2 / 2);
+  const B = `M${r2(a2)} ${r2(-h2)}H${r2(bu - ru)}Q${r2(bu)} ${r2(-h2)} ${r2(bu)} ${r2(-h2 + ru)}V${r2(-ru * 0.6)}Q${r2(bu)} 0 ${r2(bu - ru * 0.5)} 0` +
+    `H${r2(b2 - rl * 0.5)}Q${r2(b2)} 0 ${r2(b2)} ${r2(rl * 0.6)}V${r2(h2 - rl)}Q${r2(b2)} ${r2(h2)} ${r2(b2 - rl)} ${r2(h2)}H${r2(a2)}Z` +
+    rrect(a2 + st, -h2 + st, bu - st, -st * 0.45, Math.max(ru - st, 0.02)) + rrect(a2 + st, st * 0.45, b2 - st, h2 - st, Math.max(rl - st, 0.02));
+  return `<g transform="translate(${r2(x)} ${r2(y)}) scale(${r2((c.mirrored ? -1 : 1) * h)} ${r2(-h)})">` +
+    `<path d="${rrect(-W, -0.5, W, 0.5, 0.14)}" fill="${red}"/><path d="${rrect(-W + t, -0.5 + t, W - t, 0.5 - t, 0.08)}" fill="#ffffff"/>` +
+    `<path d="${D}${B}" fill="${red}" fill-rule="evenodd"/></g>`;
+}
+// The upright DB logo in the stripe, about the stripe's height, the stripe
+// broken a little either side of it.
+const STRIPE_DB = 0.65;
+const dbMark = (c, x, y, h) => dbLogo(c, x, y, h, STRIPE_DB);
+// The DB mark on the IC2's class 147 locomotive (not part of this audit).
+const dbMark147 = (c, x, y, h) => rect(x - h * 0.72, y - h / 2, h * 1.44, h, "#ffffff", 0, `rx="${r2(h * 0.18)}" stroke="${ICE.red}" stroke-width="${r2(h * 0.11)}"`) +
   letters(c, x, y - h * 0.02, h * 0.74, "DB", ICE.red, { weight: 800, spacing: -0.02 * h });
 // The stripe from a to b (a gap left for the DB mark at x).
+const stripeGap = () => (I4.redHi - I4.redLo) * (STRIPE_DB / 2 + 0.27);
 const iceStripe = (a, b, mark) => mark == null ? rect(a, I4.redLo, b - a, I4.redHi - I4.redLo, ICE.red)
-  : rect(a, I4.redLo, mark - 1.1 - a, I4.redHi - I4.redLo, ICE.red) + rect(mark + 1.1, I4.redLo, b - mark - 1.1, I4.redHi - I4.redLo, ICE.red);
+  : rect(a, I4.redLo, mark - stripeGap() - a, I4.redHi - I4.redLo, ICE.red) + rect(mark + stripeGap(), I4.redLo, b - mark - stripeGap(), I4.redHi - I4.redLo, ICE.red);
 const iceNumeral = (c, x, cls) => letters(c, x, 8.4, 1.05, cls, "#ffffff", { weight: 700 }) +
   lines([[x - 0.35, 7.45, x + 0.35, 7.45], [x - 0.35, 7.05, x + 0.35, 7.05]], "rgba(255,255,255,0.55)", 0.5);
 // A door: grey edge, window, and the first class's yellow bar beside it.
@@ -133,7 +167,7 @@ function ice4Mid(c, o) {
   let s = shell(d, ICE.white, paint);
   s += band(8.6, 82.8, I4.bandLo, I4.bandHi, { pitch: 6.23, from: 12.6 });
   s += iceDoor(2.56, first) + iceDoor(88.3, first);
-  s += dbMark(c, 48.6, (I4.redLo + I4.redHi) / 2, 0.95);
+  s += dbMark(c, 48.6, (I4.redLo + I4.redHi) / 2, (I4.redHi - I4.redLo) * 0.96);
   s += iceNumeral(c, 14.2, o.bistro ? "" : o.cls) + iceNumeral(c, 82.0, o.cls);
   if (o.bikes) s += bike(10.4, 10.0, 1.1, "#7d848b");
   // Roof: hatches near the ends, the air-conditioning cover, a pantograph.
@@ -150,9 +184,11 @@ function ice4Mid(c, o) {
 // where the cab module meets the body.
 const NOSE_TOP = [[0, 3.54], [0.43, 4.48], [1.02, 4.82], [2.2, 5.97], [3.48, 6.73], [4.66, 7.37], [6.0, 8.06], [7.25, 8.67], [8.53, 9.31], [10.5, 10.12], [13.1, 11.13], [16.4, 12.04], [20.3, 12.62], [23.5, 12.7]];
 const NOSE_LOW = [[0, 3.54], [0.43, 2.66], [1.31, 2.03], [3.3, 1.85]];
-const VISOR = NOSE_TOP.filter(([x]) => x >= 2.2 && x <= 20.3).map(([x, y]) => [x, y + 0.3]);
-const VISOR_LOW = NOSE_TOP.filter(([x]) => x >= 2.2 && x <= 20.3).map(([x, y]) => [x + 0.3 + x * 0.03, y - 0.6 + x * 0.02]).reverse();
-const GLASS = NOSE_TOP.filter(([x]) => x >= 4.66 && x <= 16.4).map(([x, y]) => [x + 0.4, y - 0.1]);
+// From the side the windshield shows only over the front of the nose: the
+// black round it ends about 8.5 ft back, white beyond (Hamburg Hbf, 2025).
+const VISOR = NOSE_TOP.filter(([x]) => x >= 2.2 && x <= 8.53).map(([x, y]) => [x, y + 0.3]);
+const VISOR_LOW = NOSE_TOP.filter(([x]) => x >= 2.2 && x <= 8.53).map(([x, y]) => [x + 0.3 + x * 0.03, y - 0.6 + x * 0.02]).reverse();
+const GLASS = NOSE_TOP.filter(([x]) => x >= 3.48 && x <= 7.25).map(([x, y]) => [x + 0.4, y - 0.1]);
 const GLASS_LOW = GLASS.map(([x, y]) => [x + 0.3, y - 0.3]).reverse();
 function ice4End(c, o) {
   const L = c.L, b1 = 16.4, b2 = L - 15.1, x1 = L - 0.4, R = I4.roof;
@@ -160,18 +196,21 @@ function ice4End(c, o) {
   const d = M([3.3, 1.85]) + L_(bottom(3.3, x1, I4.skirt, [b1, b2], 5.8, I4.arch).slice(1)) +
     `L${r2(x1)} ${r2(R - 1.1)}Q${r2(x1)} ${R} ${r2(x1 - 1.1)} ${R}L${r2(top[0][0])} ${r2(top[0][1])}` + smooth(top) + smooth([...NOSE_LOW]).replace(/^/, "") + "Z";
   const first = o.cls === "1";
-  // The stripe: thin at the tip, rising and widening along the nose to the
-  // side's level, broken by "ICE".
-  const lowE = [[-0.5, 3.38], [4.6, 3.8], [9.5, 4.5], [15.7, I4.redLo], [19.0, I4.redLo]];
-  const upE = [[19.0, I4.redHi], [15.7, I4.redHi], [9.5, 5.15], [4.6, 4.4], [-0.5, 3.8]];
+  // The stripe (Hamburg Hbf 2025, Tecknau 2024, Lombardsbrücke 2026): from
+  // the nose's tip, where it is a little thinner, rising along the nose at
+  // nearly its full width to the side's level, cut square just before the
+  // ICE logo and going on just after it.
+  const lowE = [[-0.5, 3.1], [1.1, 3.2], [2.5, 3.4], [5.3, 3.75], [8.5, 4.2], [11.9, 4.55], [15.0, 4.7], [18.8, I4.redLo]];
+  const upE = [[18.8, I4.redHi], [15.0, 5.55], [11.9, 5.4], [8.5, 5.0], [5.3, 4.55], [2.5, 4.0], [1.1, 3.75], [-0.5, 3.6]];
   const nose = path(M(lowE[0]) + smooth(lowE) + L_([upE[0]]) + smooth(upE) + "Z", ICE.red);
-  const paint = rect(-1, 0, L + 2, 20, ICE.white) + iceSkirt(L, [26, 42, 58, 74]) + nose + iceStripe(23.75, L + 1, 50.7) +
+  const paint = rect(-1, 0, L + 2, 20, ICE.white) + iceSkirt(L, [26, 42, 58, 74]) + nose + iceStripe(24.5, L + 1, 50.7) +
     // The black visor round the windshield along the nose's top, the glass
     // in it catching the light.
     path(M(VISOR[0]) + smooth(VISOR) + L_([VISOR_LOW[0]]) + smooth(VISOR_LOW) + "Z", "#1d2126") +
     path(M(GLASS[0]) + smooth(GLASS) + L_([GLASS_LOW[0]]) + smooth(GLASS_LOW) + "Z", "#3b444e") +
-    // The cab module's seam; the access hatch low on the nose.
-    path(`M24.3 ${R}` + smooth([[24.3, R], [21.65, 9.2], [18.4, 6.4], [16.4, 4.6], [14.4, 2.0]]), "none", 0, `stroke="${ICE.seam}" stroke-width="0.6" vector-effect="non-scaling-stroke"`) +
+    // The cab module's seam, crossing the stripe about 6 ft ahead of the
+    // logo; the access hatch low on the nose.
+    path(`M21.5 ${R}` + smooth([[21.5, R], [19.0, 9.8], [14.9, 6.5], [12.7, 5.3], [11.5, 3.6], [11.3, 2.0]]), "none", 0, `stroke="${ICE.seam}" stroke-width="0.6" vector-effect="non-scaling-stroke"`) +
     rect(2.9, 4.25, 1.7, 1.95, "none", 0, `rx="0.35" stroke="${ICE.seam}" stroke-width="0.6" vector-effect="non-scaling-stroke"`);
   let s = shell(d, ICE.white, paint);
   // The windows behind the cab: the band's front end cut on the slant.
@@ -179,9 +218,12 @@ function ice4End(c, o) {
     rect(11.0, I4.bandLo + 1.75, 14.5, 0.85, "#3b444e", 0, 'opacity="0.7"') + lines([[21.4, I4.bandLo + 0.15, 21.4, I4.bandHi - 0.15]], "#4a525c", 0.5);
   s += band(33.0, 85.0, I4.bandLo, I4.bandHi, { pitch: 6.23, from: 39.2 });
   s += iceDoor(27.3, first) + iceDoor(L - 5.1, first);
-  s += letters(c, 21.15, 4.95, 3.2, "ICE", ICE.letter, { weight: 700, family: NARROW, italic: true, spacing: 0.02 });
-  s += rect(16.9, 6.2, 0.9, 1.2, "#c3c8cd", 0, `stroke="${ICE.seam}" stroke-width="0.5" vector-effect="non-scaling-stroke"`) + slats(16.9, 6.2, 0.9, 1.2, 0.22, "rgba(0,0,0,0.3)");
-  s += dbMark(c, 50.7, (I4.redLo + I4.redHi) / 2, 0.95);
+  // DB's ICE logo, its caps about 2.7 times the stripe's width, their tops
+  // just above the stripe; before it a grille from the stripe's foot up
+  // over it, the red running under its slats.
+  s += iceLogo(c, 21.5, 4.72, 2.3, ICE.letter);
+  s += rect(15.3, I4.redLo, 2.0, 1.6, "none", 0, `rx="0.15" stroke="${ICE.seam}" stroke-width="0.5" vector-effect="non-scaling-stroke"`) + slats(15.45, I4.redLo + 0.12, 1.7, 1.36, 0.2, "rgba(0,0,0,0.32)");
+  s += dbMark(c, 50.7, (I4.redLo + I4.redHi) / 2, (I4.redHi - I4.redLo) * 0.96);
   s += iceNumeral(c, 34.3, o.cls) + iceNumeral(c, 83.9, o.cls);
   if (o.bikes) s += bike(34.4, 10.1, 1.1, "#7d848b");
   s += roofCover(L - 22, R, 12.5, 0.3, "#c9ced3", 3) + roofCover(L - 6.6, R, 3.6, 0.22, "#c9ced3", 1);
@@ -608,7 +650,7 @@ function ic2Car(c, o = {}) {
 const NOSE_147 = [[1.1, 4.0], [0.9, 7.8], ["q", 0.95, 8.7, 1.6, 9.2], [2.5, 12.3], ["q", 2.8, 12.95, 3.9, 12.95]];
 const paint147 = (c, L) => rect(-1, 0, L + 2, 20, "#e3e5e6") + rect(-1, 11.9, L + 2, 3, "#9aa1a8") + rect(-1, 0, L + 2, 5.25, "#4d5258") +
   path(`M3.4 7.55L${L - 3.4} 7.55L${L - 3.0} 8.5L3.0 8.5Z`, ICE.red) + lines(Array.from({ length: 22 }, (_, i) => [17.2 + i * 1.32, 5.4, 17.2 + i * 1.32, 11.8]), "rgba(0,0,0,0.13)", 0.6);
-const over147 = (c, L) => dbMark(c, L - 14.5, 8.03, 1.0) + rect(L / 2 + 13.4, 7.55, 1.5, 0.95, "#e3e5e6") + letters(c, 12.0, 4.6, 0.45, "147 5", "#e3e5e6", { weight: 600 });
+const over147 = (c, L) => dbMark147(c, L - 14.5, 8.03, 1.0) + rect(L / 2 + 13.4, 7.55, 1.5, 0.95, "#e3e5e6") + letters(c, 12.0, 4.6, 0.45, "147 5", "#e3e5e6", { weight: 600 });
 const loco147 = (c) => euroLoco(c, { roof: 12.95, sill: 4.0, nose: NOSE_147, rake: [[1.6, 9.2], [2.5, 12.3]], centers: 34.25, door: 5.6, wheel: 49,
   paint: paint147, over: over147, surround: "#25282c", grilles: [[-14.5, 4.0, 10.2, 11.6], [10.5, 4.0, 10.2, 11.6]], grilleFill: "rgba(40,44,48,0.35)" });
 

@@ -5,6 +5,7 @@
 // service or line. Trainsheet's own side views, from published dimensions
 // and photographs; the lettering and emblems are drawn here, not copied.
 import { newId, bilevel } from "../carmodels.js?v=dev";
+import { aveMark, renfeMark, avloMark, aveV, lockup, cercaniasMark, rodaliesR, rodaliesLockup } from "./renfelogos.js?v=dev";
 import { C, rect, circle, path, line, lines, poly, win, door, truck, pantograph, slats, bodyOutline } from "../carart.js?v=dev";
 
 const seq = (from, pitch, n) => Array.from({ length: n }, (_, i) => from + i * pitch);
@@ -119,11 +120,12 @@ const panGear = (x, roof, facing = -1) => pantograph(x, roof, { up: true, facing
   line(x + 3.0, roof + 0.3, x + 7.5, roof + 0.3, "currentColor", 0.7) + cover(x + 7.5, roof, 2.6, 0.55);
 // Renfe's name as lettered on its trains, lowercase in aubergine (white on
 // Avlo's purple).
-const renfeWord = (c, x, y, h, fill = RF.word) => letters(c, x, y, h, "renfe", fill, { weight: 700, spacing: -0.02 });
+// (h: the old lettering size; the wordmark is drawn about 1.25 h tall, f to tail.)
+const renfeWord = (c, x, y, h, fill = RF.word) => renfeMark(c, x, y, h * 1.25, fill);
 // Cercanías' emblem: a red disc with a white ring open at one side, and
 // Rodalies': an orange square with a white R (both drawn here).
-const cerMark = (x, y, r) => circle(x, y, r, RF.red) + path(`M${x + r * 0.55} ${y + r * 0.3}A${r * 0.6} ${r * 0.6} 0 1 0 ${x + r * 0.55} ${y - r * 0.3}`, "none", 0, `stroke="#ffffff" stroke-width="${(r * 0.28).toFixed(2)}" stroke-linecap="round"`);
-const rodMark = (c, x, y, h) => rect(x - h / 2, y - h / 2, h, h, RF.rod, 0, 'rx="0.12"') + letters(c, x, y - h * 0.05, h * 0.8, "R", "#ffffff", { weight: 800 });
+const cerMark = (x, y, r, c = { mirrored: false }) => cercaniasMark(c, x, y, r);
+const rodMark = (c, x, y, h) => rect(x - h / 2, y - h / 2, h, h, RF.rod, 0, 'rx="0.12"') + rodaliesR(c, x, y, h * 0.62);
 
 // A band of paint following a line of points (its top edge), w deep.
 const ribbon = (pts, w, fill) => path(poly([...pts, ...[...pts].reverse().map(([x, y]) => [x, y - w])]), fill);
@@ -132,22 +134,22 @@ const ribbon = (pts, w, fill) => path(poly([...pts, ...[...pts].reverse().map(([
 // line is orange on Renfe's Avant, Alvia and Media Distancia trains and pale
 // gray on the AVEs (Series 100, 102/112 and 103, photographed 2024-26).
 const AVE_LINE = "#a4abb2";
-function rfStripes(L, y, nose = 0, color = RF.purple, line = RF.orange) {
+function rfStripes(L, y, nose = 0, color = RF.purple, line = RF.orange, lineW = 0.24) {
   const pts = nose ? [[0, y - 2.4], [nose * 0.5, y - 1.2], [nose, y - 0.15], [nose + 4, y], [L, y]] : [[0, y], [L, y]];
-  return ribbon(pts.map(([x, v]) => [x, v + 0.95]), 0.24, line) + ribbon(pts, 0.75, color);
+  return ribbon(pts.map(([x, v]) => [x, v + 0.71 + lineW]), lineW, line) + ribbon(pts, 0.75, color);
 }
 // White body, gray roof edge and skirt, the stripes; options: the window
 // band (dark glass band, from x0), the stripes' height, a cab's nose length,
 // the line's color (line), or lines: the refurbished Alvia's two thin
 // aubergine lines instead of line and stripe.
-const rfPaint = (L, { y = 5.2, nose = 0, roof = 12.0, skirt = 3.4, band = null, line = RF.orange, lines: two = false } = {}) =>
+const rfPaint = (L, { y = 5.2, nose = 0, roof = 12.0, skirt = 3.4, band = null, line = RF.orange, lineW = 0.24, lines: two = false } = {}) =>
   rect(0, 0, L, 17, RF.white) + rect(0, roof, L, 3, RF.roof) + rect(0, roof - 0.1, L, 0.12, "#8b9198") + rect(0, 0, L, skirt, RF.skirt) +
-  (band ? rect(band[0], band[1], L - band[0] - (band[3] ?? 0), band[2], RF.band, 0, 'rx="0.4"') : "") + (two ? twoLines(L, y, nose) : rfStripes(L, y, nose, RF.purple, line));
+  (band ? rect(band[0], band[1], L - band[0] - (band[3] ?? 0), band[2], RF.band, 0, 'rx="0.4"') : "") + (two ? twoLines(L, y, nose) : rfStripes(L, y, nose, RF.purple, line, lineW));
 // The Series 130 and 730 since their 2021-26 refurbishment: two thin
 // aubergine lines low along the white, sweeping down the nose on a power car.
 function twoLines(L, y, nose = 0) {
   const pts = nose ? [[0, y - 2.4], [nose * 0.5, y - 1.2], [nose, y - 0.15], [nose + 4, y], [L, y]] : [[0, y], [L, y]];
-  return ribbon(pts.map(([x, v]) => [x, v + 0.55]), 0.24, RF.purple) + ribbon(pts, 0.24, RF.purple);
+  return ribbon(pts.map(([x, v]) => [x, v + 0.8]), 0.3, RF.purple) + ribbon(pts, 0.3, RF.purple);
 }
 // Avlo (its Series 112 and 106 alike, photographed 2024-26): magenta all
 // over, a darker roof, orange doors; along the side three swooshes, orange,
@@ -168,9 +170,21 @@ const isRodalies = (c) => /Rodalies/.test(c.route || "");
 // floor; an air-conditioning unit on the roof; the windows in a dark band.
 // Drawn with the wheel pair at each end (the neighbor draws over the same
 // place).
-function talgoCoach(c, { roof = 11.2, sill = 2.6, rows, doorX = 1.2, paint, band }) {
+// A coach's outline with its roof rising at one end ("L" or "R") to the
+// height h of the power car coupled there, as the Talgo 350's end coaches do:
+// level with it for about 14 ft, then easing down to the coach's roof.
+function rampOutline(x0, x1, sill, roof, [side, h]) {
+  const m = (h + roof) / 2;
+  if (side === "L") return poly([[x0, sill], [x1, sill], [x1, roof - 1.2], ["q", x1, roof, x1 - 1.2, roof], [25, roof], ["q", 22, roof, 20, m], ["q", 18, h, 14, h],
+    [x0 + 0.6, h], ["q", x0, h, x0, h - 0.6]]);
+  const L = x0 + x1;
+  return poly([[x0, sill], [x1, sill], [x1, h - 0.6], ["q", x1, h, x1 - 0.6, h], [L - 14, h], ["q", L - 18, h, L - 20, m], ["q", L - 22, roof, L - 25, roof],
+    [x0 + 1.2, roof], ["q", x0, roof, x0, roof - 1.2]]);
+}
+function talgoCoach(c, { roof = 11.2, sill = 2.6, rows, doorX = 1.2, paint, band, door: dr = [2.4, 2.9, 6.9, 0.55], bandX = null, ramp = null, mark = null, sign: sg = null, windows = null }) {
   const { L } = c, x0 = 0.3, x1 = L - 0.3;
-  const d = bodyOutline(x0, x1, sill, roof, { endR: 1.2 });
+  // ramp: [side, height] the roof rising at that end to the power car's.
+  const d = ramp ? rampOutline(x0, x1, sill, roof, ramp) : bodyOutline(x0, x1, sill, roof, { endR: 1.2 });
   let s = "";
   for (const x of [0, L]) {
     s += rect(x - 1.3, 1.7, 2.6, 2.4, "currentColor", 0, 'opacity="0.85" rx="0.3"') + circle(x, 1.45, 1.45, "currentColor") +
@@ -178,16 +192,18 @@ function talgoCoach(c, { roof = 11.2, sill = 2.6, rows, doorX = 1.2, paint, band
       rect(x - 1.7, 3.3, 3.4, 0.5, "currentColor", 0, 'opacity="0.7"');
   }
   const avlo = isAvlo(c);
-  s += shell(d, avlo ? RF.avlo : RF.white, paint(c, L) + (band ? rect(3.2, band[0], L - 6.4, band[1], avlo ? "#3d0f38" : RF.band, 0, 'rx="0.4"') : ""));
+  const [bx0, bx1] = bandX || [3.2, L - 3.2];
+  s += shell(d, avlo ? RF.avlo : RF.white, paint(c, L) + (band ? rect(bx0, band[0], bx1 - bx0, band[1], avlo ? "#3d0f38" : RF.band, 0, 'rx="0.4"') : "") + (windows ? windows(c, L) : ""));
   s += fairing(3.4, L - 3.4, sill, 0.8, avlo ? "#3a1030" : RF.fair);
   for (const [x, y, w, h] of rows) s += win(x, y, w, h, 0.4);
-  s += door(doorX, 2.9, 2.4, 6.9, { glassY: 0.55, glassH: 0.3, fill: avlo ? RF.orange : "rgba(0,0,0,0.08)" }) + rect(doorX + 0.15, 2.7, 2.1, 0.2, "currentColor", 0, 'opacity="0.7"') +
+  const [dw, dy, dh, gy = 0.55] = dr;
+  s += door(doorX, dy, dw, dh, { glassY: gy, glassH: 0.3, fill: avlo ? RF.orange : "rgba(0,0,0,0.08)" }) + rect(doorX + 0.15, dy - 0.2, dw - 0.3, 0.2, "currentColor", 0, 'opacity="0.7"') +
     lines([[3.0, sill + 0.2, 3.0, roof - 1.0], [L - 3.0, sill + 0.2, L - 3.0, roof - 1.0]], "rgba(0,0,0,0.22)", 0.45);
   // The air-suspension columns at the joints, inside the end walls.
   for (const x of [0.55, L - 1.35]) s += rect(x, sill + 0.4, 0.8, 5.8, "#4a4f56", 0.4, 'rx="0.3"') + line(x + 0.4, sill + 1.0, x + 0.4, sill + 5.6, "rgba(255,255,255,0.25)", 0.5);
-  s += aircon(L / 2 - 5.5, roof, 11, 0.6) + line(2.0, roof - 0.65, L - 2.0, roof - 0.65, "rgba(0,0,0,0.2)", 0.5) + cover(4.0, roof, 6.0, 0.35) + aerial(L - 6, roof) +
-    sign(doorX + 0.2, roof - 1.6, 2.0, 0.4);
-  s += avlo ? letters(c, L - 8, roof - 2.3, 0.9, "avlo", "#ffffff", { weight: 800 }) : renfeWord(c, L - 7.5, sill + 1.5, 0.75);
+  s += aircon(L / 2 - 5.5, roof, 11, 0.6) + line(2.0, roof - 0.65, L - 2.0, roof - 0.65, "rgba(0,0,0,0.2)", 0.5) + cover(ramp ? L / 2 + 7 : 4.0, roof, 6.0, 0.35) + aerial(ramp?.[0] === "R" ? 6 : L - 6, roof) +
+    (sg ? sign(...sg) : sign(doorX + 0.2, roof - 1.6, 2.0, 0.4));
+  s += mark ? mark(c, L) : avlo ? avloMark(c, L - 8, roof - 2.3, 1.0, { renfe: null }) : renfeWord(c, L - 7.5, sill + 1.5, 0.75);
   return s + coupled(c, 2.9, roof - 1.0);
 }
 // The rubber diaphragm between coupled cars (carmodels.js's carEnds, which
@@ -201,14 +217,14 @@ function coupled(c, floor, top) {
 // A power car (series 102/112, 106, 130): a cab and nose at the left, a
 // machinery room behind it with grilles, two motor trucks, a pantograph
 // over the transformer's roof hood, skirts between the trucks.
-function powerCar(c, { nose, roof, sill = 3.4, glass, centers, cabLen, paint, side = [], panX, lamp, skirt, word }) {
+function powerCar(c, { nose, roof, sill = 3.4, glass, centers, cabLen, paint, side = [], panX, lamp, skirt, word, hiGrilles = true, marks = null }) {
   const avlo = isAvlo(c);
   return unit({ ...c, cabL: true, cabR: false }, {
     roof, sill, cornerR: 1.0, end: 0.6, noTrucks: true, nose, cabLen, badge: false, diaphragm: [3.2, roof - 1.4],
     paint: (c, g) => paint(c, g.L), rows: [],
     doors: [{ x: cabLen + 0.6, w: 2.2, y0: sill + 0.3, y1: sill + 6.6, glassY: 0.6, glassH: 0.25, grabs: false, fill: "rgba(0,0,0,0.08)" }],
     cabArt: () => path(poly(glass), C.glass) + path(poly(glass.slice(0, 3).map(([x, y], i) => [x + (i === 1 ? 0 : 0.6), y])), "rgba(255,255,255,0.1)") +
-      (avlo ? letters(c, word[0], word[1], 1.0, "avlo", "#ffffff", { weight: 800 }) : renfeWord(c, word[0], word[1], 1.0)),
+      (!word ? "" : avlo ? avloMark(c, word[0], word[1], 1.1, { renfe: null }) : renfeWord(c, word[0], word[1], 1.0)),
     front: { lamp, skirt, horn: [cabLen - 1.5, roof] },
     more: (c, g) => {
       let s = truck(g.L / 2 - centers / 2, { wb: 9.2, d: 40, kind: "loco", top: sill }) + truck(g.L / 2 + centers / 2, { wb: 9.2, d: 40, kind: "loco", top: sill });
@@ -219,130 +235,255 @@ function powerCar(c, { nose, roof, sill = 3.4, glass, centers, cabLen, paint, si
       // The traction converter's cooling fans on the hood, small intakes
       // high on the side, the machinery room's panel joints.
       for (const x of [cabLen + 8, cabLen + 14]) s += path(`M${x - 2} ${roof + 0.65}Q${x} ${roof + 1.35} ${x + 2} ${roof + 0.65}Z`, C.steelDark, 0.4) + line(x - 1.2, roof + 0.95, x + 1.2, roof + 0.95, "currentColor", 0.5);
-      s += grille(cabLen + 3.4, roof - 2.6, 3.0, 1.2, 0.3) + grille(g.L - 8, roof - 2.6, 3.0, 1.2, 0.3);
+      if (hiGrilles) s += grille(cabLen + 3.4, roof - 2.6, 3.0, 1.2, 0.3) + grille(g.L - 8, roof - 2.6, 3.0, 1.2, 0.3);
       s += lines([[cabLen + 3, sill + 0.3, cabLen + 3, roof - 0.9], [g.L - 9, sill + 0.3, g.L - 9, roof - 0.9]], "rgba(0,0,0,0.25)", 0.45);
       s += rect(lamp[0] + 0.9, lamp[1] + 0.6, 0.55, 0.35, "#f6f3dc", 0.4, 'rx="0.12"');
-      return s;
+      return s + (marks ? marks(c, g.L) : "");
     },
   });
 }
 
 // --- Series 103 (Siemens Velaro E, 2005-09): 26 eight-car sets, 200 m,
 // 8,800 kW spread under half the cars, 300 km/h (350 certified). End cars
-// 25.68 m with a long tapered nose, middle cars 24.78 m; a single plug door
-// at the ends of each car, small windows in a dark band; skirts closing in
-// the underfloor; pantographs on the transformer cars, second from each
-// end. Renfe white with
-// the orange and aubergine stripes sweeping down the nose.
+// 25.68 m with a long tapered nose, middle cars 24.78 m. As photographed
+// side-on at Málaga (2024) and at Barcelona-Sants and Zaragoza: one plug door
+// a side on each car, with a tall oval window, at the car's end toward the
+// nearer cab (behind the long lounge window on an end car); the windows in
+// long dark panes; the roof and the top of the nose blue-grey; a thin grey
+// line over a broad aubergine stripe low on the side, both sweeping down the
+// nose to its tip; the wi-fi sign by each door; Renfe's "renfe AVE" mark at
+// each car's far end and beside the door of the middle cars.
 const V103 = { roof: 12.8, sill: 3.4, cornerR: 1.0, end: 0.6, trucks: { centers: 57, wb: 8.2, d: 36 }, diaphragm: [3.8, 11.8], badge: false };
-const v103Door = (x) => ({ x, w: 2.6, y0: 3.6, y1: 10.6, glassY: 0.55, glassH: 0.3, grabs: false, fill: "rgba(0,0,0,0.08)" });
+const V103_CAP = "#8d9aa8", V103_SKIRT = "#cdd1d5";
+// The stripe's drop toward the nose tip (0 behind x = nose).
+const dropAt = (x, nose) => (nose && x < nose ? (1 - x / nose) ** 2 : 0);
+// The grey line and aubergine stripe along L, sweeping down over the first
+// nose ft (top/bottom edges sampled along the curve).
+function aveStripes(L, nose = 0, { lo = 4.9, hi = 5.75, grey = 6.0, x0 = 0 } = {}) {
+  const xs = nose ? [x0, ...Array.from({ length: 12 }, (_, i) => x0 + ((nose - x0) * (i + 1)) / 12), L] : [x0, L];
+  const band = (top, bot, fill) => path(poly([...xs.map((x) => [x, top(x)]), ...[...xs].reverse().map((x) => [x, bot(x)])]), fill);
+  return band((x) => grey + 0.13 - dropAt(x, nose) * 1.15, (x) => grey - dropAt(x, nose) * 1.15, "#8d949b") +
+    band((x) => hi - dropAt(x, nose) * 1.0, (x) => lo - dropAt(x, nose) * 0.65, RF.purple);
+}
+// A run of window panes from a to b, ylo..yhi, split by thin pillars about
+// every pitch ft (the Velaro's long glazing); front: a slanted front edge
+// [x at the bottom, x at the top].
+function panes(a, b, ylo, yhi, pitch = 6.4, front = null) {
+  const n = Math.max(1, Math.round((b - a) / pitch)), w = (b - a) / n;
+  let s = front ? path(poly([[front[0], ylo - 0.5], [front[1], yhi], [a, yhi], [a, ylo], [front[0] + 5.6, ylo]]), C.glass, 0, `stroke="${C.gasket}" stroke-width="0.6"`) : "";
+  s += rect(a, ylo, b - a, yhi - ylo, C.glass, 0, `rx="0.35" stroke="${C.gasket}" stroke-width="0.6"`) + rect(a + 0.12, ylo + (yhi - ylo) * 0.6, b - a - 0.24, (yhi - ylo) * 0.3, C.glassLight);
+  for (let i = 1; i < n; i++) s += rect(a + i * w - 0.12, ylo, 0.24, yhi - ylo, "#3d434a");
+  return s;
+}
+// The plug door with its tall oval window.
+const ovalDoor = (x, y0 = 4.1, y1 = 11.75, w = 3.2) => door(x, y0, w, y1 - y0, { glass: false, grabs: false, fill: "rgba(0,0,0,0.05)" }) +
+  `<ellipse cx="${x + w / 2}" cy="${(y0 + y1) / 2 + 0.85}" rx="${(w * 0.27).toFixed(2)}" ry="1.62" fill="#c3c8cd"/>` +
+  `<ellipse cx="${x + w / 2}" cy="${(y0 + y1) / 2 + 0.85}" rx="${(w * 0.22).toFixed(2)}" ry="1.45" fill="${C.glass}" stroke="${C.gasket}" stroke-width="0.5"/>`;
+// The wi-fi sign: a dot and three arcs, aubergine.
+const wifi = (x, y, r = 0.5, ink = "#2b2d31") => circle(x, y, r * 0.13, ink) +
+  [0.42, 0.72, 1.02].map((k) => path(`M${(x - r * k * 0.75).toFixed(2)} ${(y + r * k * 0.66).toFixed(2)}A${(r * k).toFixed(2)} ${(r * k).toFixed(2)} 0 0 0 ${(x + r * k * 0.75).toFixed(2)} ${(y + r * k * 0.66).toFixed(2)}`, "none", 0, `stroke="${ink}" stroke-width="${(r * 0.16).toFixed(2)}" stroke-linecap="round"`)).join("");
 export const rf103Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...V103,
-  nose: [[1.4, 3.4], [0.6, 4.1], ["q", 0.3, 5.2, 1.3, 6.0], [10.5, 10.9], ["q", 13.5, 12.8, 19.0, 12.8]],
-  rows: [{ xs: seq(26.4, 3.95, 13), y: 7.6, w: 2.7, h: 2.3, r: 0.5 }],
-  doors: [v103Door(21.6), v103Door(c.L - 4.0)], cabLen: 18,
-  paint: (c, g) => rfPaint(g.L, { y: 5.3, nose: 18, roof: 11.9, band: [25.8, 7.35, 2.8, 4.6], line: AVE_LINE }) + renfeWord(c, 12.5, 7.6, 1.2),
-  cabArt: () => path(poly([[6.4, 8.4], [9.6, 10.5], [13.0, 11.6], [14.4, 10.0], [10.4, 8.6]]), C.glass) + win(16.0, 8.4, 2.2, 1.8, 0.4) +
+  nose: [[1.4, 3.4], [0.5, 4.1], ["q", 0.2, 5.4, 1.4, 6.3], [10.0, 11.0], ["q", 13.6, 12.8, 20.0, 12.8]],
+  rows: [], doors: [], cabLen: 18,
+  paint: (c, g) => rect(0, 0, g.L, 17, RF.white) + rect(0, 0, g.L, 3.4, V103_SKIRT) +
+    path("M0 5.4Q2 6.8 4.2 7.9Q6.5 8.9 10.6 9.9Q16 10.6 20 10.85Q23 11.2 24.4 11.85L" + g.L + " 11.85L" + g.L + " 16L0 16Z", V103_CAP) + rect(0, 11.8, g.L, 0.1, "#8b9198") +
+    aveStripes(g.L, 22) + panes(11.4, 23.0, 7.15, 9.8, 7.2, [7.8, 11.4]) + panes(32.8, g.L - 7.4, 7.15, 9.8, 7.2) +
+    aveMark(c, g.L - 4.0, 8.2, 0.85) + wifi(29.2, 10.6),
+  cabArt: () => path(poly([[5.6, 8.7], [8.2, 10.4], [10.6, 11.5], [11.4, 11.2], [10.4, 9.95], [7.2, 9.0]]), C.glass, 0, `stroke="${C.gasket}" stroke-width="0.6"`) +
     path("M1.6 4.5Q2.6 3.9 4.4 4.3", "none", 0, 'stroke="rgba(0,0,0,0.35)" stroke-width="0.5"'),
-  front: { lamp: [2.6, 5.8], skirt: [[1.4, 3.4], [2.0, 1.3], [7.2, 1.3], [7.6, 3.4]], horn: [17.0, 12.8], wiper: [7.4, 8.6, 9.6, 10.2] },
+  front: { lamp: [1.9, 5.7], horn: [17.0, 12.8], wiper: [7.4, 9.4, 9.4, 10.8] },
   ac: [[20, 9, 0.6], [c.L - 16, 10, 0.6]],
-  more: (c, g) => fairing(19.4, g.L / 2 + 22.2, g.sill, 1.4, RF.fair) + aerial(36, g.roof),
+  more: (c, g) => path(poly([[1.4, 3.4], [2.0, 1.3], [7.2, 1.3], [7.6, 3.4]]), V103_SKIRT, 0.5) + fairing(19.4, g.L / 2 + 22.2, g.sill, 1.4, V103_SKIRT) + aerial(36, g.roof) + ovalDoor(24.6),
 });
-// The two transformer cars, second from each end, carry the pantographs.
+// The two transformer cars, second from each end, carry the pantographs;
+// the back half of the train is the front half turned round (doors toward
+// the nearer cab).
 const v103Pan = (c) => c.index === 1 || c.index === c.count - 2;
-export const rf103 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...V103,
-  rows: [{ xs: seq(6.0, 3.95, 18), y: 7.6, w: 2.7, h: 2.3, r: 0.5 }],
-  doors: [v103Door(1.4), v103Door(c.L - 4.0)],
-  paint: (c, g) => rfPaint(g.L, { y: 5.3, roof: 11.9, band: [5.4, 7.35, 2.8, 5.0], line: AVE_LINE }),
-  ac: [[5, 10, 0.6], [c.L - 16, 10, 0.6]],
-  more: (c, g) => fairing(g.L / 2 - 22.2, g.L / 2 + 22.2, g.sill, 1.4, RF.fair) +
-    (v103Pan(c) ? panGear(c.L - 24, 12.8) + cover(24, 12.8, 22, 0.6) : cover(26, 12.8, 30, 0.45)),
-});
+const v103Back = (c) => c.count > 2 && c.index >= c.count / 2;
+export const rf103 = (c) => {
+  const L = c.L, back = v103Back(c), X = (x, w = 0) => (back ? L - x - w : x);
+  return unit({ ...c, cabL: false, cabR: false }, { ...V103,
+    rows: [], doors: [],
+    paint: (c, g) => rect(0, 0, L, 17, RF.white) + rect(0, 0, L, 3.4, V103_SKIRT) + rect(0, 11.85, L, 3, V103_CAP) + rect(0, 11.8, L, 0.1, "#8b9198") +
+      aveStripes(L) + panes(back ? 7.4 : 11.6, L - (back ? 11.6 : 7.4), 7.15, 9.8, 7.2) +
+      aveMark(c, X(8.9), 8.2, 0.8) + aveMark(c, X(L - 4.0), 8.2, 0.85) + wifi(X(6.0), 10.6),
+    ac: [[5, 10, 0.6], [L - 16, 10, 0.6]],
+    more: (c, g) => fairing(L / 2 - 22.2, L / 2 + 22.2, g.sill, 1.4, V103_SKIRT) + ovalDoor(X(1.3, 3.2)) +
+      (v103Pan(c) ? panGear(L - 24, 12.8) + cover(24, 12.8, 22, 0.6) : cover(26, 12.8, 30, 0.45)),
+  });
+};
 
 // --- Series 102 and 112 (Talgo 350, power cars by Adtranz/Bombardier,
 // 2005-10): 16 and 30 sets, a power car at each end of twelve Talgo
 // coaches, 200 m, 8,000 kW, 330 km/h; the power cars' long flattened
 // noses earned them the nickname "Pato" (duck). Avlo's 112s are purple.
-const PATO = [[0.6, 2.9], [0.2, 3.6], ["q", 0.4, 4.4, 2.6, 4.7], [9.0, 6.0], ["q", 12.8, 7.2, 15.2, 9.8], ["q", 17.4, 12.9, 21.6, 12.9]];
-export const rf112Power = (c) => powerCar(c, { nose: PATO, roof: 12.9, sill: 3.3, cabLen: 20, centers: 34,
-  glass: [[11.8, 7.9], [14.2, 9.4], [16.4, 12.0], [19.6, 12.0], [19.6, 9.2], [15.0, 8.0]],
-  lamp: [3.4, 4.0], skirt: [[0.6, 2.9], [1.2, 1.2], [9.4, 1.2], [9.8, 3.3]], word: [52.5, 8.6],
-  side: [[25, 9], [37, 9]], paint: (c, L) => (isAvlo(c) ? avloPaint(L) : rfPaint(L, { y: 4.8, nose: 14, line: AVE_LINE })) });
-export const rf112Coach = (c) => talgoCoach(c, { roof: 11.2, rows: seq(5.4, 5.9, 6).map((x) => [x, 6.0, 4.0, 2.7]), band: [5.75, 3.2],
-  paint: (c, L) => (isAvlo(c) ? avloPaint(L, { roof: 10.4, skirt: 2.6 }) : rfPaint(L, { y: 4.3, roof: 10.4, skirt: 2.6, line: AVE_LINE })) });
+// The power car (20 m) from a line scan of a 102 at Madrid (dllu, 2018, the
+// shape) and photographs of 2024 (the paint): a long low beak rising to a
+// small windshield high under the roof; the cab door behind it; one grille
+// high near the inner end; trucks at about 28% and 82% of the length, the
+// body's skirt panels between them. AVE's paint: white, the cab's top and the
+// roof blue-grey back to the cab door, a thin dark grey line over the
+// aubergine stripe low along the side, Renfe's "renfe AVE" big mid-side and
+// the big grey-and-aubergine V at the inner end. Avlo's: the same body in
+// Avlo's magenta under the blue-grey top, a turquoise, an orange and a white
+// band falling back from the cab door to the floor, "renfe avlo" mid-side.
+// The coaches (13.14 m) from the same scan: a door at one end, a dark band
+// with five windows (four in Business), the wi-fi sign over the door, a
+// small "renfe AVE" at the far end over the band; the coaches next to the
+// power cars rise at that end to the power car's roof.
+const PATO_CAP = "#93a4b8";
+// The grey line over the aubergine stripe, at the coaches' height all along
+// the train, sweeping down the power car's beak toward its tip.
+const patoStripes = (L, nose = 0) => {
+  const xs = nose ? [-1, ...Array.from({ length: 12 }, (_, i) => ((i + 1) * nose) / 12), L + 1] : [-1, L + 1];
+  const band = (top, bot, fill) => path(poly([...xs.map((x) => [x, top - dropAt(Math.max(x, 0), nose) * 0.9]), ...[...xs].reverse().map((x) => [x, bot - dropAt(Math.max(x, 0), nose) * 0.75])]), fill);
+  return band(4.33, 4.15, "#4a4f55") + band(3.95, 3.25, RF.purple);
+};
+const patoBody = (L) => poly([[0.4, 2.7], ["q", 0.1, 3.2, 0.2, 3.9], ["q", 0.6, 4.4, 1.6, 4.5], [4.9, 5.4], ["q", 8.6, 6.4, 10.4, 7.4], ["q", 13.0, 9.2, 15.6, 10.8],
+  ["q", 18.0, 12.2, 21.0, 12.6], ["q", 22.4, 12.9, 24.0, 12.9], [L - 1.0, 12.9], ["q", L - 0.3, 12.9, L - 0.3, 12.2], [L - 0.3, 2.9], [13.2, 2.9], [12.6, 1.8], [3.0, 1.8], ["q", 1.0, 2.0, 0.4, 2.7]]);
+export const rf112Power = (c) => {
+  const L = c.L, avlo = isAvlo(c), body = avlo ? RF.avlo : RF.white, ink = avlo ? "#3d1035" : "#5a5f66";
+  // The paint, clipped to the body.
+  let liv = rect(-1, 0, L + 2, 15, body) +
+    path("M-1 4.2L9.8 5.65Q16 7.6 22.6 10.4Q24.4 11.4 24.8 12.2L" + (L + 1) + " 12.25L" + (L + 1) + " 15L-1 15Z", PATO_CAP) + rect(-1, 12.2, L + 2, 0.1, "#7f8c9a");
+  if (avlo) {
+    // The three bands, falling back from the cab door to the floor.
+    const band = (a, b, c2, d2, fill) => path(`M${a} ${b}L${a + c2} ${b}L${d2[0] + d2[1]} 2.9L${d2[0]} 2.9Z`, fill);
+    liv += band(12.5, 9.2, 1.5, [29.5, 2.0], RF.teal) + band(15.0, 10.5, 0.45, [33.0, 0.6], "#ffffff") + band(16.5, 12.0, 1.5, [41.0, 2.0], RF.orange);
+  } else liv += patoStripes(L, 26);
+  // The beak's dark spoiler under the white.
+  liv += path("M-1 1.5L13.4 1.5L13.4 2.5Q8 2.6 3 2.75Q1.2 2.9 -1 3.4Z", "#33373c");
+  let s = shell(patoBody(L), body, liv);
+  // Trucks; the skirt panels between them; the beak's underside.
+  s += truck(18.5, { wb: 8.9, d: 41, kind: "loco", top: 2.9 }) + truck(54.0, { wb: 8.9, d: 41, kind: "loco", top: 2.9 }) +
+    rect(23.6, 1.9, 25.3, 1.0, avlo ? "#7c1468" : "#dfe2e5", 0.4) + lines([[30, 1.95, 30, 2.85], [37, 1.95, 37, 2.85], [43, 1.95, 43, 2.85]], "rgba(0,0,0,0.25)", 0.4);
+  // Windshield, headlight, the cab door, the hatch, the grille.
+  s += path(poly([[10.7, 8.7], [13.5, 10.3], [16.2, 10.95], [17.2, 9.95], [12.3, 8.6]]), C.glass, 0, `stroke="${C.gasket}" stroke-width="0.7"`) +
+    path(poly([[2.4, 4.75], [6.8, 5.2], [6.5, 5.6], [3.0, 5.25]]), "#2a2f36", 0.4) + rect(5.6, 5.1, 0.7, 0.3, "#f6f3dc", 0, 'rx="0.1"') +
+    door(24.9, 3.2, 3.2, 7.2, { glass: false, grabs: true, fill: "rgba(0,0,0,0.05)" }) + circle(26.3, 6.4, 0.22, ink) + circle(26.3, 5.1, 0.22, ink) +
+    rect(19.1, 5.2, 1.8, 2.5, "none", 0, `rx="0.35" stroke="rgba(0,0,0,0.18)" stroke-width="0.25"`) + path(poly([[11.0, 4.6], [12.4, 4.95], [12.4, 4.25]]), "#16181b") +
+    grille(47.1, 7.2, 5.2, 2.5, 0.3);
+  // The marks.
+  s += avlo ? avloMark(c, 40.5, 8.0, 2.5) : aveMark(c, 38.0, 7.7, 2.6) + aveV(c, L - 3.6, 8.15, 6.0);
+  // Roof: the pantograph near the inner end, its gear, covers, horns.
+  s += panGear(L - 10, 12.9) + cover(28, 12.9, 18, 0.5) + slats(28.6, 13.0, 16.8, 0.32, 0.6, "rgba(0,0,0,0.3)") + horns(21.6, 12.75) + aerial(26, 12.9);
+  return s + coupled({ ...c, coupledL: false }, 2.9, 11.9);
+};
+export const rf112Coach = (c) => talgoCoach(c, { roof: 11.2, sill: 1.6, doorX: 2.8, door: [3.6, 1.85, 8.1, 0.37], rows: [], band: isAvlo(c) ? null : [4.75, 3.0], bandX: [6.4, 41.2],
+  ramp: c.index === 1 ? ["L", 12.9] : c.index === c.count - 2 ? ["R", 12.9] : null, sign: [1.15, 6.7, 1.4, 0.55],
+  windows: (c, L) => seq(9.8, 6.1, 5).map((x) => win(x, 4.95, 4.85, 2.6, 0.45)).join(""),
+  mark: (c, L) => (isAvlo(c) ? "" : aveMark(c, 39.2, 8.85, 0.55) + wifi(1.9, 9.6)),
+  paint: (c, L) => (isAvlo(c) ? avloPaint(L, { roof: 10.5, skirt: 1.6 }) : rect(0, 0, L, 17, RF.white) + rect(0, 10.6, L, 4, "#c9ced3") + rect(0, 0, L, 1.6, RF.skirt) +
+    patoStripes(L)) + (c.index === 1 || c.index === c.count - 2 ? rect(0, 10.9, L, 4, PATO_CAP) : "") });
 
 // --- Series 106 (Talgo Avril, 2021-24): 30 sets, half of them variable
 // gauge, two power cars and twelve wide, low Talgo coaches, 201.8 m, 8,800
 // kW, 300 km/h in service; 20 AVE and 10 Avlo (Wikipedia, Serie 106 de
-// Renfe). The AVE sets (photographed at A Coruña and Zamora, 2024-26): pearl
-// white, a black mask from the nose over the windshield and back along the
-// cab, a thin aubergine line along the bottom; on each power car "renfe AVE"
-// big on the side, the V aubergine, and a tall aubergine V at its inner
-// end; the coaches' windows in a dark band. The Avlo sets in Avlo's magenta.
+// Renfe). The AVE sets (photographed at A Coruña 2025 and Zamora 2024):
+// pearl white, a black mask from the nose over the windshield and back along
+// the cab, a thin aubergine line along the bottom; on each power car Renfe's
+// "renfe AVE" big mid-side and small on the nose behind the headlight, two
+// tall slatted grilles, and the big grey-and-aubergine V at its inner end;
+// the coaches' windows in a dark band. The Avlo sets (Valencia and Madrid,
+// 2024): Avlo's magenta under the same black mask, an orange, a white and a
+// turquoise band rising from the floor mid-car to the cab door, "renfe avlo"
+// mid-side and "avlo" on the nose; the coaches' doors orange.
 const AVRIL = [[0.6, 3.0], [0.3, 3.8], ["q", 0.6, 4.8, 3.0, 5.4], [12.0, 9.2], ["q", 15.5, 12.5, 21.0, 12.6]];
+const AVRIL_MASK = "M2.4 6.0Q8.0 6.9 12.0 8.3Q16.0 9.7 20.6 10.3L21.5 13.2L2 13.2Z";
 const avrilPaint = (c, L, { roof = 12.0, skirt = 3.3, mask = false } = {}) => isAvlo(c) ? avloPaint(L, { roof, skirt }) :
   rect(0, 0, L, 17, "#eeece7") + rect(0, roof, L, 3, RF.roof) + rect(0, roof - 0.1, L, 0.12, "#8b9198") + rect(0, 0, L, skirt, RF.skirt) + rect(0, skirt, L, 0.3, RF.purple) +
-  (mask ? path("M2.4 6.0Q8.0 6.9 12.0 8.3Q16.0 9.7 20.6 10.3L21.5 13.2L2 13.2Z", "#16181b") : "");
-// "AVE" as lettered on the AVEs: A and E in gray, the V in aubergine (the
-// letters stay in reading order on a car drawn mirrored).
-const aveWord = (c, x, y, h) => {
-  const k = c.mirrored ? -1 : 1, g = "#8d949b";
-  return letters(c, x - k * h * 0.72, y, h, "A", g, { weight: 400 }) + letters(c, x, y, h, "V", RF.purple, { weight: 400 }) + letters(c, x + k * h * 0.68, y, h, "E", g, { weight: 400 });
+  (mask ? path(AVRIL_MASK, "#16181b") : "");
+// Avlo's Avril power car: magenta, the three bands rising toward the cab
+// door, the black mask over them.
+const avrilAvloPower = (L) => {
+  const band = (top, w, bot, wb, fill) => path(`M${top} 12.4L${top + w} 12.4L${bot + wb} 3.3L${bot} 3.3Z`, fill);
+  return rect(0, 0, L, 17, RF.avlo) + rect(0, 12.0, L, 3, RF.avloDark) + rect(0, 0, L, 3.3, "#4a0f44") +
+    band(13.0, 2.0, 29.0, 2.0, RF.teal) + band(16.4, 0.7, 33.5, 0.7, "#ffffff") + band(19.0, 2.4, 40.0, 2.6, RF.orange) + path(AVRIL_MASK, "#16181b");
 };
 export const rf106Power = (c) => powerCar(c, { nose: AVRIL, roof: 12.6, sill: 3.3, cabLen: 18, centers: 40,
   glass: [[7.8, 7.0], [12.6, 10.1], [16.0, 11.6], [17.0, 10.2], [11.8, 7.3]],
-  lamp: [3.6, 4.6], skirt: [[0.6, 3.0], [1.2, 1.2], [8.8, 1.2], [9.2, 3.3]], word: [isAvlo(c) ? 30 : 38, isAvlo(c) ? 9.2 : 10.6],
-  side: [[44, 10], [58, 6]], paint: (c, L) => avrilPaint(c, L, { mask: true }) +
-    (isAvlo(c) ? "" : aveWord(c, 38, 7.4, 2.6) + path(`M${L - 9.4} 10.9L${L - 8.5} 10.9L${L - 7.4} 6.6L${L - 6.4} 10.9L${L - 6.0} 10.9L${L - 7.2} 5.6L${L - 7.7} 5.6Z`, RF.purple)) });
+  lamp: [3.6, 4.6], skirt: [[0.6, 3.0], [1.2, 1.2], [8.8, 1.2], [9.2, 3.3]], word: null, hiGrilles: false, side: [],
+  paint: (c, L) => (isAvlo(c) ? avrilAvloPower(L) : avrilPaint(c, L, { mask: true })),
+  marks: (c, L) => grille(26.6, 7.2, 2.0, 3.4, 0.3) + grille(51.6, 7.2, 1.5, 3.4, 0.3) +
+    (isAvlo(c) ? avloMark(c, 39.0, 8.4, 2.4) + avloMark(c, 12.6, 6.5, 0.6, { renfe: null }) :
+      aveMark(c, 39.0, 8.0, 2.3) + aveMark(c, 12.4, 6.6, 0.7) + aveV(c, L - 4.6, 8.7, 5.6)) });
 export const rf106Coach = (c) => talgoCoach(c, { roof: 11.8, sill: 2.4, rows: seq(6.2, 6.9, 5).map((x) => [x, 6.0, 5.2, 3.2]), band: isAvlo(c) ? null : [5.75, 3.7],
-  paint: (c, L) => avrilPaint(c, L, { roof: 11.0, skirt: 2.4 }) });
+  paint: (c, L) => avrilPaint(c, L, { roof: 11.0, skirt: 2.4 }), mark: () => "" });
 
 // --- Series 100 (GEC-Alsthom and CAF, 1992): 22 sets on the TGV
 // Atlantique pattern, two power cars and eight articulated trailers on
 // shared trucks, 200 m, 8,800 kW, 300 km/h; the first AVEs, still
-// Madrid–Seville. Power cars 22.13 m, trailers 18.7 m.
+// Madrid–Seville. Power cars 22.13 m, trailers 18.7 m. As photographed at
+// Hornachuelos (2025): white, a thin dark grey line over the aubergine stripe
+// low along the train, sweeping down the nose; the power car's side plain
+// but for the louvres high on its rear half and Renfe's small "renfe AVE" on
+// the nose behind the headlight; the trailers' windows separate (no dark
+// band), a door at the end toward the nearer power car with the small
+// "renfe AVE" over it; the first trailer carries the big grey-and-aubergine
+// V at its end against the power car.
 export const rf100Power = (c) => powerCar(c, {
   nose: [[0.8, 3.3], [0.4, 4.0], ["q", 0.6, 5.0, 2.4, 5.6], [8.6, 8.8], ["q", 10.6, 11.4, 13.2, 12.4], ["q", 14.4, 12.9, 17.0, 12.9]],
   roof: 12.9, sill: 3.3, cabLen: 15, centers: 46, glass: [[8.8, 9.0], [11.0, 11.0], [13.6, 12.1], [14.2, 10.2], [11.0, 9.0]],
-  lamp: [2.8, 4.4], skirt: [[0.8, 3.3], [1.4, 1.2], [8.0, 1.2], [8.4, 3.3]], word: [6.4, 5.4],
-  side: [[20, 12], [36, 12], [52, 8]], paint: (c, L) => rfPaint(L, { y: 5.0, nose: 12, line: AVE_LINE }) });
-export const rf100 = (c) => unit({ ...c, cabL: false, cabR: false }, {
-  roof: 11.4, sill: 3.4, cornerR: 1.0, end: 0.3, noTrucks: true, diaphragm: [3.7, 10.6], badge: false,
-  rows: [{ xs: seq(5.4, 4.7, 11), y: 6.9, w: 3.2, h: 2.4, r: 0.5 }],
-  doors: [{ x: 1.0, w: 2.5, y0: 3.6, y1: 10.0, glassY: 0.55, glassH: 0.3, grabs: false, fill: "rgba(0,0,0,0.08)" }],
-  paint: (c, g) => rfPaint(g.L, { y: 5.0, roof: 10.6, band: [4.9, 6.7, 2.8, 4.6], line: AVE_LINE }) + renfeWord(c, g.L - 9, 4.0, 0.7),
-  ac: [[6, 10, 0.55], [c.L - 17, 10, 0.55]],
-  onRoof: (c, g) => cover(20, g.roof, 14, 0.4) + aerial(38, g.roof),
-  more: (c, g) => truck(0, { wb: 9.8, d: 36, top: 3.4 }) + truck(g.L, { wb: 9.8, d: 36, top: 3.4 }) + fairing(7.2, g.L - 7.2, g.sill, 1.3, RF.fair) +
-    sign(4.0, 9.0, 1.6, 0.4) + lines([[g.L - 4.2, 3.6, g.L - 4.2, 10.4]], "rgba(0,0,0,0.22)", 0.45),
-});
+  lamp: [2.8, 4.4], skirt: [[0.8, 3.3], [1.4, 1.2], [8.0, 1.2], [8.4, 3.3]], word: null, hiGrilles: false, side: [],
+  paint: (c, L) => rfPaint(L, { y: 4.8, nose: 12, line: AVE_LINE }) + path(`M14.6 9.6L${L + 1} 9.6L${L + 1} 15L13.2 15Z`, RF.roof) + rect(14.6, 9.55, L - 14, 0.1, "#8b9198"),
+  marks: (c, L) => grille(33, 10.0, 19, 1.7, 0.45) + aveMark(c, 10.4, 6.6, 0.65) });
+// The trailers' door is at the end toward the nearer power car (left in
+// the front half of the train, right in the back half).
+const r100Back = (c) => c.count > 2 && c.index >= c.count / 2;
+export const rf100 = (c) => {
+  const L = c.L, back = r100Back(c), first = c.index === 1 || c.index === c.count - 2, X = (x, w = 0) => (back ? L - x - w : x);
+  const dx = first ? 6.6 : 1.0;
+  return unit({ ...c, cabL: false, cabR: false }, {
+    roof: 11.4, sill: 3.4, cornerR: 1.0, end: 0.3, noTrucks: true, diaphragm: [3.7, 10.6], badge: false,
+    rows: [{ xs: seq(back ? 6.0 : 14.6, 5.8, 7).map((x) => x), y: 6.9, w: 3.4, h: 2.4, r: 0.4 }],
+    doors: [{ x: X(dx, 2.5), w: 2.5, y0: 3.6, y1: 10.0, glassY: 0.55, glassH: 0.3, grabs: false, fill: "rgba(0,0,0,0.08)" }],
+    paint: (c, g) => rfPaint(L, { y: 4.8, roof: 10.6, line: AVE_LINE }) + aveMark(c, X(dx + 4.6), 9.4, 0.45) + (first ? aveV(c, X(3.4), 8.0, 4.4) + wifi(X(10.6), 9.4) : ""),
+    ac: [[6, 10, 0.55], [L - 17, 10, 0.55]],
+    onRoof: (c, g) => cover(20, g.roof, 14, 0.4) + aerial(38, g.roof),
+    more: (c, g) => truck(0, { wb: 9.8, d: 36, top: 3.4 }) + truck(L, { wb: 9.8, d: 36, top: 3.4 }) + fairing(7.2, L - 7.2, g.sill, 1.3, RF.fair) +
+      sign(X(dx + 0.4, 1.6), 9.0, 1.6, 0.4),
+  });
+};
 
 // --- Series 130 (Talgo 250, power cars by Bombardier, 2007-10) and 730
 // (15 of them made hybrid, with diesel generator cars): 45 sets, two power
 // cars and eleven Talgo coaches, 184 m, 4,800 kW, 250 km/h, changing gauge
 // on the move. Alvia, Euromed and Intercity services.
-// The refurbished power cars' pearl-gray mask around the windshield, from
-// the nose up over the cab roof.
-const alviaMask = () => path("M4.6 8.0Q9.0 8.5 15.2 9.6L15.2 14L3.6 14Z", "#a9b0b7") + path("M4.6 8.0Q9.0 8.5 15.2 9.6", "none", 0, 'stroke="#7d848c" stroke-width="0.5"');
-export const rf130Power = (c) => powerCar(c, {
+// As photographed in 2025: the 130s (130 025 at Barcelona-Sants, 130 027 at
+// Girona) in the AVE's white with a grey line over the aubergine stripe,
+// sweeping down the nose; the hybrid 730s (730 070 near Iznalloz) with two
+// thin aubergine lines instead. Both: a dark grey surround round the
+// windshield and up over the cab roof, "renfe" big mid-side on the power
+// car and small on the nose; the coaches' windows in a dark band, a small
+// "renfe" high beside the door.
+const alviaMask = () => path("M4.6 8.0Q9.0 8.5 15.2 9.6L15.2 14L3.6 14Z", "#545a61");
+const s130 = (hybrid) => (c) => powerCar(c, {
   nose: [[0.8, 3.3], [0.4, 4.2], ["q", 0.6, 5.4, 2.4, 6.2], [6.4, 9.2], ["q", 8.6, 11.8, 11.0, 12.7], ["q", 12.4, 13.1, 14.6, 13.1]],
   roof: 13.1, sill: 3.3, cabLen: 12, centers: 38, glass: [[6.8, 9.6], [8.6, 11.6], [11.4, 12.4], [11.8, 10.0], [8.6, 9.4]],
-  lamp: [2.4, 4.6], skirt: [[0.8, 3.3], [1.4, 1.2], [7.2, 1.2], [7.6, 3.3]], word: [5.6, 6.0],
-  side: [[17, 10], [30, 10], [43, 8]], paint: (c, L) => rfPaint(L, { y: 4.6, nose: 10, lines: true }) + alviaMask() });
-export const rf130Coach = (c) => talgoCoach(c, { roof: 11.0, rows: seq(5.4, 5.9, 6).map((x) => [x, 5.9, 4.0, 2.6]), band: [5.65, 3.1],
-  paint: (c, L) => rfPaint(L, { y: 3.9, roof: 10.2, skirt: 2.6, lines: true }) });
+  lamp: [2.4, 4.6], skirt: [[0.8, 3.3], [1.4, 1.2], [7.2, 1.2], [7.6, 3.3]], word: null, side: [], hiGrilles: false,
+  paint: (c, L) => (hybrid ? rfPaint(L, { y: 4.6, nose: 10, lines: true }) : rfPaint(L, { y: 4.6, nose: 10, line: "#8d949b", lineW: 0.45 })) + alviaMask(),
+  marks: (c, L) => renfeMark(c, L * 0.5, 8.0, 2.4) + renfeMark(c, 5.2, 6.4, 0.7) + grille(3.6, 7.2, 2.6, 0.9, 0.25) });
+export const rf130Power = s130(false), rf730Power = s130(true);
+const s130Coach = (hybrid) => (c) => talgoCoach(c, { roof: 11.0, rows: seq(5.4, 5.9, 6).map((x) => [x, 5.9, 4.0, 2.6]), band: [5.65, 3.1],
+  paint: (c, L) => (hybrid ? rfPaint(L, { y: 3.9, roof: 10.2, skirt: 2.6, lines: true }) : rfPaint(L, { y: 3.9, roof: 10.2, skirt: 2.6, line: "#8d949b", lineW: 0.45 })),
+  mark: (c, L) => renfeMark(c, L - 5.0, 9.4, 0.8, "#2b2d31") + wifi(4.6, 9.7, 0.4) });
+export const rf130Coach = s130Coach(false), rf730Coach = s130Coach(true);
 
 // --- Series 120 and 121 (CAF with Alstom, 2006-09): four-car electric
 // units, 106.23 m, end cars 27.35 m and middle cars 25.78 m, 4,000 kW, 250
 // km/h, changing gauge on the move; 120s on Alvia services, 121s on Avant.
 // A tapered nose, a single plug door at each end of each car; the windows
 // in a dark band; equipment covers along the roof, skirts under the floor.
+// The paint (120 564 at Valencia, 2024): white, two thin aubergine lines low
+// along the side and down the nose, the windows in a dark band, "renfe"
+// small beside the cab's door (and big on the nose's face).
 const S120 = { roof: 13.2, sill: 3.6, cornerR: 1.0, end: 0.6, trucks: { centers: 62, wb: 8.5, d: 34 }, diaphragm: [3.9, 12.0], badge: false };
 const s120Door = (x) => ({ x, w: 2.6, y0: 3.8, y1: 10.9, glassY: 0.55, glassH: 0.3, grabs: false, fill: "rgba(0,0,0,0.08)" });
 export const rf120Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...S120,
   nose: [[1.2, 3.6], [0.6, 4.4], ["q", 0.5, 5.8, 1.8, 6.8], [8.2, 11.2], ["q", 10.6, 13.2, 15.0, 13.2]],
   rows: [{ xs: seq(22.0, 5.1, 12), y: 7.2, w: 3.9, h: 2.6, r: 0.4 }],
   doors: [s120Door(17.4), s120Door(c.L - 4.0)], cabLen: 15,
-  paint: (c, g) => rfPaint(g.L, { y: 5.4, nose: 14, roof: 12.3, skirt: 3.6, band: [21.4, 6.95, 3.1, 4.6] }) + renfeWord(c, 8.2, 6.9, 1.1),
+  paint: (c, g) => rfPaint(g.L, { y: 4.9, nose: 14, roof: 12.3, skirt: 3.6, band: [21.4, 6.95, 3.1, 4.6], lines: true }) + renfeMark(c, 23.4, 6.0, 1.15),
   cabArt: () => path(poly([[5.0, 8.6], [8.6, 11.3], [11.2, 12.4], [12.2, 10.8], [8.6, 8.8]]), C.glass) + win(13.4, 8.6, 2.0, 2.2, 0.4),
   front: { lamp: [2.2, 5.6], skirt: [[1.2, 3.6], [1.8, 1.4], [8.2, 1.4], [8.6, 3.6]], horn: [15.0, 13.2], wiper: [6.0, 8.8, 7.8, 10.4] },
   ac: [[18, 10, 0.6]], gear: [[24, 8, 1.4, "g"], [33, 6, 1.2, "b"], [40, 7, 1.0, "t"]],
@@ -351,7 +492,7 @@ export const rf120Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...S120
 export const rf120 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...S120,
   rows: [{ xs: seq(6.4, 5.1, 14), y: 7.2, w: 3.9, h: 2.6, r: 0.4 }],
   doors: [s120Door(1.4), s120Door(c.L - 4.0)],
-  paint: (c, g) => rfPaint(g.L, { y: 5.4, roof: 12.3, skirt: 3.6, band: [5.8, 6.95, 3.1, 5.0] }),
+  paint: (c, g) => rfPaint(g.L, { y: 4.9, roof: 12.3, skirt: 3.6, band: [5.8, 6.95, 3.1, 5.0], lines: true }),
   ac: [[6, 10, 0.6], [c.L - 16, 10, 0.6]], gear: [[22, 9, 1.5, "g"], [32, 7, 1.3, "b"], [40, 8, 1.0, "t"], [49, 7, 1.2]],
   onRoof: (c, g) => cover(20, g.roof, 40, 0.45),
 });
@@ -359,12 +500,18 @@ export const rf120 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...S120,
 // --- Series 104 (Alstom and CAF, 2004) and 114 (Alstom, 2008-10): the
 // Avant's four-car "Pendolino" units (they don't tilt), 107 m, 4,000 kW,
 // 250 km/h; 20 and 13 sets. A rounded nose under a deep windshield.
+// The paint (an Avant at Almodóvar del Río, 2025): white, an aubergine line
+// along the top of the body curving down round the cab's windows, the
+// windows in a pale grey band, the orange line over the aubergine stripe low,
+// Renfe's "renfe Avant" behind the cab.
+const AVANT_BAND = "#c4c9ce";
+const avantTop = (L, cab = 0) => cab ? path(`M${L + 1} 11.35L${cab + 5} 11.35Q${cab + 1.5} 11.35 ${cab} 9.4L${cab - 1.2} 7.4L${cab - 0.8} 7.4L${cab + 0.4} 9.3Q${cab + 1.8} 11.0 ${cab + 5} 11.0L${L + 1} 11.0Z`, RF.purple) : rect(-1, 11.0, L + 2, 0.35, RF.purple);
 const P104 = { roof: 12.9, sill: 3.6, cornerR: 1.0, end: 0.6, trucks: { centers: 60, wb: 8.9, d: 34 }, diaphragm: [3.9, 11.8], badge: false };
 export const rf104Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...P104,
   nose: [[1.0, 3.6], [0.5, 4.6], ["q", 0.4, 6.4, 1.6, 7.6], [5.6, 11.4], ["q", 7.6, 12.9, 11.0, 12.9]],
   rows: [{ xs: seq(17.6, 5.3, 12), y: 7.1, w: 4.2, h: 2.6, r: 0.5 }],
-  doors: [s120Door(12.8), s120Door(c.L - 4.0)], cabLen: 11,
-  paint: (c, g) => rfPaint(g.L, { y: 5.4, nose: 10, roof: 12.0, skirt: 3.6, band: [17.0, 6.85, 3.1, 4.6] }) + renfeWord(c, 6.6, 6.0, 1.0),
+  doors: [s120Door(14.6), s120Door(c.L - 4.0)], cabLen: 11,
+  paint: (c, g) => rfPaint(g.L, { y: 5.4, nose: 10, roof: 12.0, skirt: 3.6 }) + rect(17.0, 6.85, g.L - 21.6, 3.1, AVANT_BAND, 0, 'rx="0.4"') + avantTop(g.L, 10) + lockup(c, "avant", 10.4, 7.6, 2.8),
   cabArt: () => path(poly([[2.2, 8.0], [5.4, 11.0], [8.4, 12.2], [9.2, 9.6], [5.6, 8.2]]), C.glass),
   front: { lamp: [1.4, 5.4], skirt: [[1.0, 3.6], [1.6, 1.4], [7.6, 1.4], [8.0, 3.6]], horn: [11.0, 12.9], wiper: [3.4, 8.4, 5.4, 10.2] },
   ac: [[14, 10, 0.6]], gear: [[20, 8, 1.4, "g"], [29, 7, 1.2, "b"], [37, 7, 1.0, "t"], [45, 6, 1.2]],
@@ -373,7 +520,7 @@ export const rf104Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...P104
 export const rf104 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...P104,
   rows: [{ xs: seq(6.0, 5.3, 14), y: 7.1, w: 4.2, h: 2.6, r: 0.5 }],
   doors: [s120Door(1.4), s120Door(c.L - 4.0)],
-  paint: (c, g) => rfPaint(g.L, { y: 5.4, roof: 12.0, skirt: 3.6, band: [5.4, 6.85, 3.1, 5.0] }),
+  paint: (c, g) => rfPaint(g.L, { y: 5.4, roof: 12.0, skirt: 3.6 }) + rect(5.4, 6.85, g.L - 10.4, 3.1, AVANT_BAND, 0, 'rx="0.4"') + avantTop(g.L),
   ac: [[6, 10, 0.6], [c.L - 16, 10, 0.6]], gear: [[22, 9, 1.5, "g"], [32, 7, 1.3, "b"], [40, 8, 1.0, "t"], [49, 7, 1.2]],
   onRoof: (c, g) => cover(20, g.roof, 40, 0.45),
 });
@@ -387,8 +534,8 @@ export const rf104 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...P104,
 const CAFMD = { roof: 13.4, sill: 3.6, cornerR: 1.0, end: 0.6, diaphragm: [3.9, 12.2], badge: false };
 const CAF_NOSE = [[1.4, 3.6], [0.7, 4.4], ["q", 0.4, 5.9, 1.4, 7.4], [4.6, 11.4], ["q", 6.2, 13.4, 9.6, 13.4]];
 const mdDoor = (x) => ({ x, w: 3.6, y0: 3.8, y1: 10.9, leaves: 2, glassY: 0.5, glassH: 0.35, grabs: false, fill: "rgba(0,0,0,0.08)" });
-const cafCab = (c) => path("M1.2 7.2Q3.6 9.8 5.0 12.2Q6.4 13.0 9.6 13.0L9.6 7.4Q5.0 6.8 1.2 7.2Z", "#1b1d21") +
-  path(poly([[1.6, 7.6], [4.6, 11.2], [7.6, 12.6], [8.4, 9.4], [5.0, 7.8]]), C.glass) + renfeWord(c, 4.8, 5.4, 0.9) + sign(5.6, 12.1, 2.6);
+const cafCab = (c) => path("M1.2 7.2Q3.6 9.8 5.0 12.2Q6.4 13.0 9.6 13.0L9.6 7.4Q5.0 6.8 1.2 7.2Z", "#5f656c") +
+  path(poly([[1.6, 7.6], [4.6, 11.2], [7.6, 12.6], [8.4, 9.4], [5.0, 7.8]]), C.glass) + lockup(c, "md", 12.5, 6.9, 1.9) + sign(5.6, 12.1, 2.6);
 const cafFront = { lamp: [1.0, 5.6], skirt: [[1.4, 3.6], [2.0, 1.4], [7.4, 1.4], [7.8, 3.6]], horn: [10.0, 13.4], wiper: [2.8, 8.0, 4.6, 10.4] };
 const jakobs = (x) => truck(x, { wb: 8.5, d: 33, top: 3.6 });
 export const rf449Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...CAFMD, noTrucks: true,
@@ -422,18 +569,23 @@ export const rf599 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...CAFMD,
   onRoof: (c, g) => cover(24, 13.4, 30, 0.45),
 });
 
-// Cercanías (photographs of Civias, 446s and 453s, 2024-26): white, a red
-// line over an aubergine one low on the side, the cab's front red around the
+// Cercanías (photographs of Civias, 446s and 453s, 2024-26; a Civia's middle
+// car at Cádiz, 2025): white, a thin red line over a broader aubergine one
+// low on the side with white between them, the small Cercanías mark high by
+// a door, the cab's front red around the
 // windshield, the emblem by the cab. (Drawn before with a broad red band
 // over a gray line, the paint of the 2000s, corrected.) Rodalies
 // (Catalonia): white, an orange front and orange doors, a thin red line
 // under the windows, its R by the cab.
 const cerPaint = (c, L, { cab = false, roof = 12.3, skirt = 3.6, y = 4.6 } = {}) => {
   let s = rect(0, 0, L, 17, RF.white) + rect(0, roof, L, 3, RF.roof) + rect(0, roof - 0.1, L, 0.12, "#8b9198") + rect(0, 0, L, skirt, RF.skirt);
-  if (isRodalies(c)) return s + rect(0, y + 2.2, L, 0.22, RF.red) + (cab ? path(`M0 ${skirt}L3.4 ${skirt}L3.4 ${roof - 0.6}Q3.4 ${roof} 2.6 ${roof}L0 ${roof}Z`, RF.rod) : "");
-  return s + rect(0, y + 0.6, L, 0.4, RF.red) + rect(0, y, L, 0.45, RF.purple) + (cab ? path(`M0 ${skirt}L2.8 ${skirt}L2.8 ${roof - 0.6}Q2.8 ${roof} 2.0 ${roof}L0 ${roof}Z`, RF.red) : "");
+  if (isRodalies(c)) return s + rect(0, y + 2.2, L, 0.22, "#5a1f45") + (cab ? path(`M0 ${skirt}L4.4 ${skirt}L4.4 ${roof - 0.6}Q4.4 ${roof} 3.6 ${roof}L0 ${roof}Z`, RF.rod) : "");
+  return s + rect(0, y + 0.95, L, 0.32, RF.red) + rect(0, y, L, 0.55, RF.purple) + (cab ? path(`M0 ${skirt}L2.8 ${skirt}L2.8 ${roof - 0.6}Q2.8 ${roof} 2.0 ${roof}L0 ${roof}Z`, RF.red) : "");
 };
-const cerEmblem = (c, x, y, h) => (isRodalies(c) ? rodMark(c, x, y, h) : cerMark(x, y, h / 2));
+// (Rodalies: on the 447's cab cars the "R Rodalies de Catalunya" lockup high
+// behind the cab, as on 447 112M at Mollet, 2024; the 450's R square; the
+// trailers' and mid-car marks aren't drawn.)
+const cerEmblem = (c, x, y, h, rod = null) => (isRodalies(c) ? (rod ? (rod[3] ? rodaliesLockup(c, rod[0], rod[1], rod[2]) : rodMark(c, ...rod)) : "") : cerMark(x, y, h / 2, c));
 const cerDoor = (c, x, w = 4.3) => ({ x, w, y0: 3.7, y1: 10.9, leaves: 2, glassY: 0.45, glassH: 0.42, ...(isRodalies(c) ? { fill: RF.rod } : { fill: "#e4e6e8" }) });
 
 // --- Civia (series 462-465; CAF, Alstom and Siemens, 2003-10): 248
@@ -443,11 +595,19 @@ const cerDoor = (c, x, w = 4.3) => ({ x, w, y0: 3.7, y1: 10.9, leaves: 2, glassY
 // along the roof, the traction gear in skirts under the floor.
 const CIVIA = { roof: 12.6, sill: 3.3, cornerR: 1.0, end: 0.6, trucks: { centers: 44, wb: 8.2, d: 30 }, diaphragm: [3.6, 11.6], badge: false };
 const civiaBand = (L, a, b) => rect(a, 6.55, L - a - b, 3.5, RF.band, 0, 'rx="0.4"');
+// The Civia's cab end (Cádiz 2025, Aranjuez): a red band rising from the
+// nose's foot over the cab front to the roof, another low on the side
+// sweeping back into the red line, the Cercanías mark in white on it, the
+// aubergine stripe rising to meet it; "renfe" big in aubergine on the white
+// between them, behind the cab's side window.
+const civiaSwoosh = (c) => path("M0 6.4L0 5.0L1.6 5.4L11.8 11.6L9.8 11.6Z", RF.red) + path("M1.0 5.2Q2.2 5.8 4.6 5.8L13.0 5.6L19.0 5.2L19.0 4.95L11.6 4.95L3.6 3.3L1.4 3.3Z", RF.red) +
+  path("M11.6 4.95L19.0 4.95L19.0 4.2L15.0 4.2L8.0 3.3L4.6 3.3Z", RF.purple) +
+  cercaniasMark(c, 8.6, 4.6, 0.8, { red: "#ffffff", white: RF.red }) + win(6.2, 8.6, 2.2, 2.2, 0.3) + renfeMark(c, 13.6, 8.4, 1.9);
 export const rfCiviaCab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...CIVIA,
   nose: [[1.0, 3.3], [0.7, 4.4], ["q", 0.6, 9.6, 1.6, 11.4], ["q", 2.4, 12.6, 4.4, 12.6]],
-  rows: [{ xs: [9.8, 28.6, 34.0, 52.6, 58.0, 63.4], y: 6.8, w: 4.6, h: 3.0, r: 0.4 }],
+  rows: [{ xs: [28.6, 34.0, 52.6, 58.0, 63.4], y: 6.8, w: 4.6, h: 3.0, r: 0.4 }],
   doors: [cerDoor(c, 20.0), cerDoor(c, 43.6)], cabLen: 6,
-  paint: (c, g) => cerPaint(c, g.L, { cab: true, roof: 11.6, skirt: 3.3, y: 4.2 }) + civiaBand(g.L, 9.4, 2.4) + cerEmblem(c, 7.8, 8.3, 1.3),
+  paint: (c, g) => cerPaint(c, g.L, { cab: true, roof: 11.6, skirt: 3.3, y: 4.2 }) + civiaBand(g.L, 25.0, 2.4) + (isRodalies(c) ? "" : civiaSwoosh(c)),
   cabArt: () => path(poly([[0.8, 7.2], [1.3, 11.0], [5.4, 11.0], [5.4, 7.2]]), C.glass) + sign(1.6, 11.05, 3.2),
   front: { lamp: [0.75, 5.2], coupler: [0, 2.8], skirt: [[1.0, 3.3], [1.2, 1.5], [5.0, 1.5], [5.4, 3.3]], horn: [5.4, 12.6], wiper: [1.2, 7.6, 2.2, 10.4] },
   ac: [[14, 9, 0.6], [44, 9, 0.6]], gear: [[17, 2.6, 0.8, "b"], [26, 7, 1.0, "g"], [34, 6, 0.9, "b"]],
@@ -457,7 +617,7 @@ export const rfCiviaCab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...CI
 export const rfCivia = (c) => unit({ ...c, cabL: false, cabR: false }, { ...CIVIA,
   rows: [{ xs: [2.4, 20.4, 25.8, 31.2, 49.8, 55.2], y: 6.8, w: 4.6, h: 3.0, r: 0.4 }],
   doors: [cerDoor(c, 11.6), cerDoor(c, 40.8)],
-  paint: (c, g) => cerPaint(c, g.L, { roof: 11.6, skirt: 3.3, y: 4.2 }) + civiaBand(g.L, 2.0, 2.0) + cerEmblem(c, 38.0, 6.0, 1.0),
+  paint: (c, g) => cerPaint(c, g.L, { roof: 11.6, skirt: 3.3, y: 4.2 }) + civiaBand(g.L, 2.0, 2.0) + cerEmblem(c, 16.6, 10.7, 0.8),
   ac: [[6, 9, 0.6], [36, 9, 0.6]], gear: [[17, 7, 1.0, "g"], [25, 6, 0.9, "b"], [32, 6, 0.8, "t"]],
   onRoof: (c, g) => cover(18, 12.6, 14, 0.45) + aerial(48, 12.6),
   more: (c, g) => fairing(14, 44, g.sill, 1.1, "#4a4f56") + sign(12.0, 11.0, 3.4),
@@ -476,7 +636,7 @@ export const rf447Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...S447
   nose: [[0.9, 3.7], [0.7, 9.8], ["q", 0.8, 12.0, 2.0, 12.8], ["q", 2.8, 13.2, 4.2, 13.2]],
   rows: [{ xs: [6.2, 21.2, 26.2, 45.0, 50.0, 69.2, 74.2], y: 7.3, w: 4.0, h: 2.7, r: 0.3 }],
   doors: [cerDoor(c, 11.8, 4.2), cerDoor(c, 35.6, 4.2), cerDoor(c, 59.4, 4.2)], cabLen: 4,
-  paint: (c, g) => cerPaint(c, g.L, { cab: true }) + cerEmblem(c, 32.0, 8.6, 1.4),
+  paint: (c, g) => cerPaint(c, g.L, { cab: true }) + cerEmblem(c, 32.0, 8.6, 1.4, [c.mirrored ? 8.4 : 6.6, 11.1, 1.6, true]) + (isRodalies(c) ? "" : renfeMark(c, 8.6, 11.0, 1.2)),
   cabArt: () => path(poly([[0.8, 7.8], [1.2, 11.6], [4.0, 11.6], [4.0, 7.8]]), C.glass) + sign(1.4, 11.75, 2.4),
   front: { lamp: [0.75, 5.6], coupler: [0, 2.9], skirt: [[0.9, 3.7], [1.1, 1.6], [5.0, 1.6], [5.4, 3.7]], horn: [4.4, 13.2], wiper: [1.2, 8.2, 2.2, 10.9] },
   ac: [[16, 10, 0.7]], gear: [[17, 8, 1.6, "g"], [26, 7, 1.3, "b"], [41, 8, 1.6, "g"], [50, 5, 1.0, "t"]],
@@ -500,7 +660,7 @@ const S450 = { roof: 14.6, sill: 3.9, cornerR: 1.0, end: 0.6, trucks: { centers:
   ends: { h: 13.6, len: 12, ramp: 3 } };
 const dd450 = (c, g, cab) => cerPaint(c, g.L, { cab, roof: 13.2, skirt: 3.9, y: 4.4 }) +
   (isRodalies(c) ? "" : rect(cab ? 3 : 0, 9.3, g.L, 4.0, RF.red)) + rect(cab ? 6 : 0, 10.0, g.L - (cab ? 6 : 0), 2.2, RF.band, 0, 'rx="0.4"') +
-  cerEmblem(c, cab ? 14.0 : g.L - 13.5, 6.2, 1.4);
+  cerEmblem(c, cab ? 14.0 : g.L - 13.5, 6.2, 1.4, cab ? [8.4, 7.4, 1.1] : null);
 const dd450Gear = [[20, 6, 0.4, "b"], [28, 8, 0.35], [56, 6, 0.4, "b"]];
 export const rf450Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...S450, drop: { a: 17.5, b: c.L - 17.5, y: 1.6 },
   nose: [[0.9, 3.9], [0.7, 10.0], ["q", 0.8, 12.6, 2.2, 13.3], ["q", 3.0, 13.6, 4.4, 13.6]],
@@ -566,7 +726,7 @@ export const rf438Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...M438
   nose: [[0.7, 3.2], [0.6, 10.2], ["q", 0.7, 11.4, 1.8, 11.6], [3.4, 11.6]],
   rows: [{ xs: [6.6, 10.6, 25.6, 30.0, 34.4, 45.4], y: 6.4, w: 3.8, h: 3.0, r: 0.2 }],
   doors: [metDoor(c, 20.6, 3.6), metDoor(c, 39.6, 3.6)].map((d) => ({ ...d, fill: "rgba(0,0,0,0.06)" })), cabLen: 5.5,
-  paint: (c, g) => fevePaint(g.L, true) + renfeWord(c, 3.0, 5.4, 0.55) + letters(c, 3.3, 4.9, 0.32, "feve", RF.magenta, { weight: 500 }),
+  paint: (c, g) => fevePaint(g.L, true) + lockup(c, "feve", 9.4, 5.6, 1.2),
   cabArt: () => path(poly([[0.7, 6.3], [0.75, 10.8], [5.2, 10.8], [5.2, 6.3]]), C.glass) + sign(1.4, 10.0, 2.6, 0.4) + rect(5.5, 3.6, 0.1, 7.4, "rgba(0,0,0,0.3)"),
   front: { ...metFront, horn: [3.6, 11.6], wiper: [1.4, 6.6, 2.6, 9.6] },
   ac: [[12, 8, 0.6]], gear: [[13, 6, 1.2, "g"], [20, 5, 1.0, "b"], [26, 5, 0.9, "t"], [32, 4, 1.0]],
@@ -579,15 +739,14 @@ export const rf438 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...M438,
 });
 // Series 435 (FEVE 3500; CAF, 1990s; Spanish Wikipedia: 15.24 m a car):
 // Asturias' three-car units, the same CAF family and layout as the 438 on
-// shorter cars, still in FEVE's white with a burgundy band low on the side
-// and a thin burgundy line over it (photograph of 3527 at Perlora, Commons).
-const m435Paint = (L, cab) => rect(0, 0, L, 17, RF.white) + rect(0, 11.0, L, 3, RF.roof) + rect(0, 0, L, 3.2, RF.skirt) + rect(0, 3.6, L, 1.1, "#8b1e3a") + rect(0, 5.0, L, 0.2, "#8b1e3a") +
-  rect(cab ? 6.0 : 0.8, 6.2, L - (cab ? 6.6 : 1.6), 3.4, RF.band, 0, 'rx="0.3"') + (cab ? path("M0 6.0L5.4 6.0L5.4 11.1L0 11.1Z", "#16181b") : "");
+// shorter cars, now in Renfe's "renfe feve" cream with the yellow line over the
+// aubergine stripe as on the 438 (3532 at Fonciello, 2024; the older white
+// and burgundy, photographed on 3527 at Perlora, is gone).
 export const rf435Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...M438, trucks: { centers: 32, wb: 6.6, d: 30 },
   nose: [[0.7, 3.2], [0.6, 10.2], ["q", 0.7, 11.4, 1.8, 11.6], [3.4, 11.6]],
   rows: [{ xs: [6.6, 10.6, 24.4, 28.6, 41.8], y: 6.4, w: 3.8, h: 3.0, r: 0.2 }],
   doors: [metDoor(c, 19.4, 3.6), metDoor(c, 36.2, 3.6)].map((d) => ({ ...d, fill: "rgba(0,0,0,0.06)" })), cabLen: 5.5,
-  paint: (c, g) => m435Paint(g.L, true) + letters(c, 30.5, 4.15, 0.6, "feve", "#ffffff", { weight: 600 }),
+  paint: (c, g) => fevePaint(g.L, true) + lockup(c, "feve", 9.4, 5.6, 1.2),
   cabArt: () => path(poly([[0.7, 6.3], [0.75, 10.8], [5.2, 10.8], [5.2, 6.3]]), C.glass) + sign(1.4, 10.0, 2.6, 0.4),
   front: { ...metFront, horn: [3.6, 11.6], wiper: [1.4, 6.6, 2.6, 9.6] },
   ac: [[12, 8, 0.6]], gear: [[12, 6, 1.2, "g"], [19, 5, 1.0, "b"], [25, 5, 0.9, "t"]],
@@ -596,17 +755,17 @@ export const rf435Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...M438
 export const rf435 = (c) => unit({ ...c, cabL: false, cabR: false }, { ...M438, trucks: { centers: 32, wb: 6.6, d: 30 },
   rows: [{ xs: [1.6, 5.8, 19.8, 24.0, 40.6, 44.8], y: 6.4, w: 3.8, h: 3.0, r: 0.2 }],
   doors: [metDoor(c, 14.4, 3.6), metDoor(c, 33.6, 3.6)].map((d) => ({ ...d, fill: "rgba(0,0,0,0.06)" })),
-  paint: (c, g) => m435Paint(g.L, false), ac: [[8, 8, 0.6], [30, 8, 0.6]], gear: [[12, 6, 1.0, "b"], [20, 5, 0.9, "t"]],
+  paint: (c, g) => fevePaint(g.L, false), ac: [[8, 8, 0.6], [30, 8, 0.6]], gear: [[12, 6, 1.0, "b"], [20, 5, 0.9, "t"]],
 });
 
 // Series 529 (FEVE 2900; Sunsundegui with Siemens, 2000s): single diesel
 // railcars with a cab at each end, 17.7 m; León-Guardo and the shuttles of
 // Ferrol and Cartagena (Wikipedia, Renfe's rolling stock tables). A raked
 // front; a crew door behind each cab, a double door off-center on each
-// side; big windows. FEVE's paint, kept by Renfe (photograph of 2911,
-// Commons): white, navy low on the side and across the front over a yellow
-// line, the windows set in navy, a broad yellow curve rising beside the
-// door, "renfe feve" lettered on the front.
+// side; big windows. Renfe's "renfe feve" paint (2911 at Los Nietos, 2021, the
+// latest photograph): cream, a yellow line over an aubergine one low on the
+// side and across the front, the windows in dark bands, Renfe's "renfe feve"
+// lockup on the front.
 const M529 = { ...MET, roof: 11.9, sill: 3.4, trucks: { centers: 37, wb: 6.6, d: 30 } };
 // A car with a shaped cab at each end: drawn with its cab at the left, the
 // last cut ft at the right replaced by the same drawing turned round.
@@ -619,15 +778,14 @@ const twoCabs = (draw, cut) => (c) => {
 const rf529One = (c) => unit({ ...c, cabL: true, cabR: false }, { ...M529,
   nose: [[0.9, 3.4], [0.7, 5.6], ["q", 0.7, 6.8, 1.4, 7.8], [2.8, 11.0], ["q", 3.4, 11.9, 4.8, 11.9]],
   rows: [{ xs: [9.4, 14.6, 19.8, 37.6, 42.8], y: 6.6, w: 4.6, h: 3.1, r: 0.25 }],
-  doors: [{ x: 6.0, w: 2.2, y0: 3.5, y1: 10.2, glassY: 0.55, glassH: 0.32, grabs: false, fill: "rgba(0,0,0,0.05)" }, { ...metDoor(c, 26.8, 4.4), y0: 3.5, y1: 10.2, fill: RF.feveBlue },
+  doors: [{ x: 6.0, w: 2.2, y0: 3.5, y1: 10.2, glassY: 0.55, glassH: 0.32, grabs: false, fill: "rgba(0,0,0,0.05)" }, { ...metDoor(c, 26.8, 4.4), y0: 3.5, y1: 10.2, fill: "rgba(0,0,0,0.06)" },
     { x: c.L - 8.2, w: 2.2, y0: 3.5, y1: 10.2, glassY: 0.55, glassH: 0.32, grabs: false, fill: "rgba(0,0,0,0.05)" }], cabLen: 5,
   paint: (c, g) => {
     const L = g.L;
-    return rect(0, 0, L, 17, RF.white) + rect(0, 11.2, L, 3, RF.roof) + rect(0, 0, L, 3.4, RF.skirt) + rect(0, 3.4, L, 0.45, RF.feveYellow) + rect(0, 3.85, L, 1.6, RF.feveBlue) +
-      rect(8.8, 6.3, 16.4, 3.7, RF.feveBlue, 0, 'rx="0.3"') + rect(37.0, 6.3, 11.4, 3.7, RF.feveBlue, 0, 'rx="0.3"') +
-      path("M32.4 3.9Q33.6 8.2 35.6 10.6L36.8 10.6Q35.2 7.8 34.6 3.9Z", RF.feveYellow) + path("M31.4 3.9Q32.8 8.6 34.6 10.6L35.6 10.6Q33.6 8.2 32.4 3.9Z", "#ffffff");
+    return rect(0, 0, L, 17, RF.cream) + rect(0, 11.2, L, 3, "#cfc8b6") + rect(0, 0, L, 3.4, RF.skirt) + rect(0, 3.7, L, 0.5, RF.magenta) + rect(0, 4.45, L, 0.32, RF.feveYellow) +
+      rect(8.8, 6.3, 16.4, 3.7, RF.band, 0, 'rx="0.3"') + rect(37.0, 6.3, 11.4, 3.7, RF.band, 0, 'rx="0.3"');
   },
-  cabArt: (c) => path(poly([[1.5, 7.9], [2.7, 10.7], [4.6, 11.1], [4.8, 7.9]]), C.glass) + renfeWord(c, 2.7, 6.3, 0.45) + letters(c, 3.0, 5.85, 0.3, "feve", RF.feveBlue, { weight: 500 }) +
+  cabArt: (c) => path(poly([[1.5, 7.9], [2.7, 10.7], [4.6, 11.1], [4.8, 7.9]]), C.glass) + lockup(c, "feve", 3.1, 6.2, 0.75) +
     sign(2.9, 11.15, 1.8, 0.36),
   front: { ...metFront, lamp: [0.8, 5.8], coupler: [0, 2.8], skirt: [[0.9, 3.4], [1.1, 1.5], [4.4, 1.5], [4.8, 3.4]], horn: [5.4, 11.9], wiper: [1.9, 8.1, 2.8, 10.5] },
   ac: [[16, 10, 0.6]], gear: [[13, 8, 1.6, "g"], [22, 6, 1.0, "t"], [30, 5, 1.2, "b"]],
@@ -644,8 +802,10 @@ export const rf529 = twoCabs(rf529One, 10);
 // roof. The refurbished Alvia paint (photograph at Madrid-Chamartín,
 // Commons): white, the two thin aubergine lines low on the side.
 export const rf730Gen = (c) => {
-  let s = talgoCoach(c, { roof: 11.0, rows: [[c.L - 9.6, 6.6, 2.2, 1.6]], paint: (c, L) => rfPaint(L, { y: 3.9, roof: 10.2, skirt: 2.6, lines: true }) });
-  for (const x of [6.2, 14.0, 21.8]) s += grille(x, 5.0, 6.2, 4.4, 0.35);
+  // (730 070, 2025: a small window high near the power car, "renfe" under
+  // it, a dark service door; no grilles show on the side.)
+  let s = talgoCoach(c, { roof: 11.0, rows: [[6.0, 8.0, 3.0, 1.4]], paint: (c, L) => rfPaint(L, { y: 3.9, roof: 10.2, skirt: 2.6, lines: true }),
+    mark: (c, L) => renfeMark(c, 9.0, 6.4, 1.0) + rect(26.0, 3.6, 3.2, 6.0, "#3a3f45", 0.4, 'rx="0.3"') });
   return s + rect(8, 11.0, 22, 0.9, "#a3aab2", 0.4, 'rx="0.3"') + slats(8.6, 11.1, 20.8, 0.7, 0.45, "rgba(0,0,0,0.35)") + exhaust(31, 11.0) + exhaust(33.4, 11.0);
 };
 
@@ -706,12 +866,11 @@ export const rf334 = (c) => rfLoco(c, { roof: 13.9, sill: 4.1, centers: 34.5, wb
 // "Renfe Class 252"): Bo'Bo', 5,600 kW, 220 km/h, 20.38 m, 1,250 mm wheels.
 // Hauls the last Talgo Intercitys north of Alicante. Paint (photograph at
 // Barcelona-França, Commons): white, the roof and upper edge pale gray, two
-// aubergine stripes low, "renfe" huge in aubergine over a gray swirl on the
-// side.
+// aubergine stripes low, "renfe" huge in aubergine on the side (no swirl
+// on 252 030 and 057, 2024-25).
 export const rf252 = (c) => rfLoco(c, { roof: 13.6, sill: 4.2, centers: 32.8, wb: 9.2, wheel: 49, nose: 1.0,
-  paint: (c, L) => rect(0, 0, L, 16, "#efede6") + rect(0, 11.6, L, 3, "#c9cdd1") + rect(0, 0, L, 4.6, "#9aa0a7") + talgoLines(L, 5.4) +
-    path(`M${L * 0.32} 6.4Q${L * 0.38} 9.6 ${L * 0.45} 6.6Q${L * 0.5} 9.0 ${L * 0.55} 6.4`, "none", 0, 'stroke="#9aa0a7" stroke-width="0.6"'),
-  grilles: [[10.4, 10.4, 6, 1.6], [L252 - 16.4, 10.4, 6, 1.6]], word: [L252 * 0.45, 9.0, 2.4],
+  paint: (c, L) => rect(0, 0, L, 16, "#efede6") + rect(0, 11.6, L, 3, "#c9cdd1") + rect(0, 0, L, 4.6, "#9aa0a7") + talgoLines(L, 5.4),
+  grilles: [[10.4, 10.4, 6, 1.6], [L252 - 16.4, 10.4, 6, 1.6]], word: [L252 * 0.6, 8.6, 2.6],
   onRoof: (c, L) => pantograph(L - 17, 13.6, { up: true, facing: -1 }) + pantograph(17, 13.6, { up: false }) + cover(22, 13.6, L - 44, 0.5) });
 const L252 = 66.9;
 
@@ -742,7 +901,7 @@ export const rf598Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { ...CAFM
   nose: [[1.6, 3.6], [0.8, 4.6], ["q", 0.6, 6.2, 2.0, 7.6], [7.0, 11.8], ["q", 9.0, 13.7, 12.6, 13.7]],
   rows: [{ xs: seq(21.0, 5.6, 9), y: 7.2, w: 4.6, h: 2.8, r: 0.4 }],
   doors: [s120Door(15.6), s120Door(c.L - 4.4)], cabLen: 13,
-  paint: (c, g) => rfPaint(g.L, { y: 5.0, nose: 12, roof: 12.6, skirt: 3.6, band: [20.4, 7.0, 3.2, 5.0] }) + renfeWord(c, 6.4, 6.0, 0.9),
+  paint: (c, g) => rfPaint(g.L, { y: 5.0, nose: 12, roof: 12.6, skirt: 3.6, band: [20.4, 7.0, 3.2, 5.0] }) + lockup(c, "md", 12.9, 7.3, 1.0),
   cabArt: () => path(poly([[3.4, 8.2], [6.6, 11.4], [9.8, 12.8], [10.6, 10.0], [6.6, 8.4]]), C.glass),
   front: { lamp: [1.6, 5.4], skirt: [[1.6, 3.6], [2.2, 1.4], [8.6, 1.4], [9.0, 3.6]], horn: [13.0, 13.7], wiper: [4.6, 8.6, 6.6, 10.6] },
   ac: [[16, 10, 0.6]], gear: [[22, 10, 1.8, "g"], [34, 6, 1.0, "t"], [42, 7, 1.6, "g"]],
@@ -769,7 +928,7 @@ export const rf453Cab = (c) => unit({ ...c, cabL: true, cabR: false }, { roof: 1
   rows: [{ xs: [14.2, 32.0, 37.0, 42.0, 57.0, 62.4, 67.2], y: 7.0, w: 4.4, h: 3.2, r: 0.4 }],
   doors: [cerDoor(c, 25.4, 4.6), cerDoor(c, 49.8, 4.6)].map((d) => ({ ...d, y0: 3.5, fill: RF.red })), cabLen: 10,
   paint: (c, g) => cerPaint(c, g.L, { roof: 12.6, skirt: 3.4, y: 4.4 }) + path("M0 2.6L14 2.6L22 12.6L22 14L0 14Z", RF.red) + path("M12.8 2.6L15.6 2.6L23.4 12.6L21.2 12.6Z", RF.white) +
-    circle(18.6, 8.2, 1.7, "#ffffff") + cerMark(18.6, 8.2, 1.5) + renfeWord(c, 19.0, 5.2, 0.8),
+    circle(18.6, 8.2, 1.7, "#ffffff") + cerMark(18.6, 8.2, 1.5, c) + renfeWord(c, 19.0, 5.2, 0.8),
   cabArt: () => path(poly([[2.6, 8.0], [5.2, 11.6], [8.0, 12.8], [9.0, 9.4], [5.4, 8.0]]), C.glass) + sign(5.4, 12.0, 3.0, 0.42),
   front: { lamp: [1.4, 5.4], coupler: [0, 2.8], skirt: [[1.6, 3.4], [2.0, 1.4], [7.4, 1.4], [7.8, 3.4]], horn: [10.4, 13.4], wiper: [3.4, 8.3, 5.0, 10.6] },
   ac: [[30, 12, 0.7]], gear: [[24, 7, 1.4, "g"], [33, 6, 1.2, "b"], [41, 6, 1.0, "t"]],
@@ -779,7 +938,7 @@ export const rf453 = (c) => unit({ ...c, cabL: false, cabR: false }, { roof: 14.
   diaphragm: [4.0, 12.6], badge: false, ends: { h: 13.4, len: 12, ramp: 3 }, drop: { a: 18.6, b: c.L - 18.6, y: 1.5 },
   rows: [{ xs: seq(28.6, 5.6, 6), y: 9.9, w: 4.6, h: 2.6, r: 0.4 }, { xs: seq(28.6, 5.6, 6), y: 4.4, w: 4.6, h: 2.8, r: 0.4 }, { xs: [6.4, c.L - 10.8], y: 7.4, w: 4.4, h: 2.8, r: 0.4 }],
   doors: [cerDoor(c, 21.2, 4.6), cerDoor(c, c.L - 25.8, 4.6)].map((d) => ({ ...d, y0: 1.7, y1: 9.4, fill: RF.red })),
-  paint: (c, g) => cerPaint(c, g.L, { roof: 13.4, skirt: 3.9, y: 4.0 }) + cerMark(g.L / 2, 13.1, 0.5),
+  paint: (c, g) => cerPaint(c, g.L, { roof: 13.4, skirt: 3.9, y: 4.0 }) + cerMark(g.L / 2, 13.1, 0.5, c),
   ac: [[3, 8, 0.6, 13.4], [c.L - 11, 8, 0.6, 13.4]], gear: [[3.4, 3, 1.0, "b"], [c.L - 6.4, 3, 1.0, "b"]],
 });
 
@@ -799,10 +958,10 @@ const S470 = { roof: 12.9, sill: 3.7, cornerR: 1.0, end: 0.6, trucks: { centers:
 const rf470Of = (rebuilt) => (c) => unit({ ...c, cabL: true, cabR: false }, { ...S470,
   nose: rebuilt ? [[0.9, 3.7], [0.7, 7.4], ["q", 0.9, 8.6, 1.8, 9.6], [3.0, 11.8], ["q", 3.6, 12.9, 5.2, 12.9]]
     : [[0.8, 3.7], [0.6, 10.6], ["q", 0.7, 12.2, 1.8, 12.7], ["q", 2.6, 12.9, 4.0, 12.9]],
-  rows: [{ xs: seq(10.6, 5.2, 11), y: 7.3, w: 4.2, h: 2.6, r: 0.35 }],
+  rows: [{ xs: seq(21.0, 5.2, 9), y: 7.3, w: 4.2, h: 2.6, r: 0.35 }],
   doors: [s120Door(6.2), s120Door(c.L - 4.4)], cabLen: 5,
-  paint: (c, g) => rfPaint(g.L, { y: 5.4, roof: 12.1, skirt: 3.7, band: [10.0, 7.1, 3.0, 5.0] }) +
-    (rebuilt ? path("M0.8 7.6Q1.6 9.2 3.0 11.8L4.6 12.4L4.6 7.6Z", "#16181b") : path("M0.6 7.4L0.6 11.9L4.6 11.9L4.6 7.4Z", "#16181b")) + renfeWord(c, 2.6, 6.2, 0.6),
+  paint: (c, g) => rfPaint(g.L, { y: 5.4, roof: 12.1, skirt: 3.7, band: [20.4, 7.1, 3.0, 5.0] }) +
+    (rebuilt ? path("M0.8 7.6Q1.6 9.2 3.0 11.8L4.6 12.4L4.6 7.6Z", "#16181b") : path("M0 5.2L5.6 5.2L5.6 12.9L0 12.9Z", "#2a2d31")) + renfeMark(c, 13.4, 8.6, 1.9),
   cabArt: () => (rebuilt ? path(poly([[1.4, 8.0], [2.8, 11.2], [4.4, 11.8], [4.4, 8.0]]), C.glass) : path(poly([[0.7, 8.2], [0.75, 11.0], [4.2, 11.0], [4.2, 8.2]]), C.glass)) +
     sign(1.4, 11.3, 2.4, 0.4),
   front: { lamp: [0.7, 5.6], coupler: [0, 2.9], skirt: [[0.8, 3.7], [1.0, 1.6], [4.8, 1.6], [5.2, 3.7]], horn: [5.0, 12.9], wiper: [1.2, 8.2, 2.0, 10.6] },
@@ -827,6 +986,8 @@ export const TYPES = {
   rf100: { name: "Series 100 trailer", kind: "coach", amenities: ["first", "cafe"] },
   rf130Power: { name: "Series 130 power car", kind: "electric", pan: true },
   rf130Coach: { name: "Series 130 Talgo coach", kind: "talgo", amenities: ["first", "cafe"] },
+  rf730Power: { name: "Series 730 power car", kind: "electric", pan: true },
+  rf730Coach: { name: "Series 730 Talgo coach", kind: "talgo", amenities: ["first", "cafe"] },
   rf120Cab: { name: "Series 120/121 end car", kind: "emu", pan: true },
   rf120: { name: "Series 120/121 car", kind: "emu" },
   rf104Cab: { name: "Series 104/114 end car", kind: "emu", pan: true },
@@ -868,11 +1029,11 @@ export const TYPES = {
 const paintVariant = (c) => (isAvlo(c) ? "avlo" : isRodalies(c) ? "rod" : "");
 const M = (draw, len, oneEnd = false) => ({ draw, len, oneEnd, variant: paintVariant });
 export const MODELS = {
-  rf103Cab: M(rf103Cab, 84.2, true), rf103: { ...M(rf103, 81.3), variant: (c) => paintVariant(c) + (v103Pan(c) ? "p" : "") },
+  rf103Cab: M(rf103Cab, 84.2, true), rf103: { ...M(rf103, 81.3), variant: (c) => paintVariant(c) + (v103Pan(c) ? "p" : "") + (v103Back(c) ? "b" : "") },
   rf112Power: M(rf112Power, 65.6, true), rf112Coach: M(rf112Coach, 43.1),
   rf106Power: M(rf106Power, 75, true), rf106Coach: M(rf106Coach, 42.65),
-  rf100Power: M(rf100Power, 72.6, true), rf100: M(rf100, 61.35),
-  rf130Power: M(rf130Power, 68.1, true), rf130Coach: M(rf130Coach, 43.1),
+  rf100Power: M(rf100Power, 72.6, true), rf100: { ...M(rf100, 61.35), variant: (c) => (r100Back(c) ? "b" : "") + (c.index === 1 || c.index === c.count - 2 ? "1" : "") },
+  rf130Power: M(rf130Power, 68.1, true), rf130Coach: M(rf130Coach, 43.1), rf730Power: M(rf730Power, 68.1, true), rf730Coach: M(rf730Coach, 43.1),
   rf120Cab: M(rf120Cab, 89.7, true), rf120: M(rf120, 84.6),
   rf104Cab: M(rf104Cab, 89.0, true), rf104: M(rf104, 86.6),
   rf449Cab: M(rf449Cab, 69.5, true), rf449: M(rf449, 61.8),
@@ -902,7 +1063,7 @@ const sets = {
   s106: set("Series 106 (Talgo Avril) trainset: two power cars and twelve coaches", ["rf106Power", 1], ["rf106Coach", 12], ["rf106Power", 1]),
   s100: set("Series 100 trainset: two power cars and eight trailers (some trains Series 102 or 112)", ["rf100Power", 1], ["rf100", 8], ["rf100Power", 1]),
   s130: set("Series 130 (Talgo 250) trainset: two power cars and eleven coaches", ["rf130Power", 1], ["rf130Coach", 11], ["rf130Power", 1]),
-  s730: set("Series 730 hybrid (Talgo 250): power car and generator car at each end, nine coaches", ["rf130Power", 1], ["rf730Gen", 1], ["rf130Coach", 9], ["rf730Gen", 1], ["rf130Power", 1]),
+  s730: set("Series 730 hybrid (Talgo 250): power car and generator car at each end, nine coaches", ["rf730Power", 1], ["rf730Gen", 1], ["rf730Coach", 9], ["rf730Gen", 1], ["rf730Power", 1]),
   s120a: set("Series 120 (CAF) four-car unit, sometimes two coupled", ["rf120Cab", 1], ["rf120", 2], ["rf120Cab", 1]),
   talgo334: set("Series 334 diesel locomotive with Talgo coaches (being replaced)", ["rf334", 1], ["rfTalgo", 10]),
   talgo252: set("Series 252 electric locomotive with Talgo coaches (being replaced)", ["rf252", 1], ["rfTalgo", 10]),
@@ -1020,6 +1181,11 @@ export const FACTS = {
   rf130Coach: { model: "Talgo 250 coach (Series 130)", type: "Articulated coach", builder: "Talgo", built: "2007–2010", fleet: "11 per set",
     topSpeedMph: kmh(250), seats: 299, lengthFt: 43.1,
     about: "Talgo Series 7 coaches with gauge-changing wheel pairs. Seats are for the whole set, 63 of them first class.", source: `${WP}Renfe_Class_130` },
+  rf730Power: { model: "Talgo 250 hybrid (Series 730)", type: "Dual-gauge power car", builder: "Talgo and Bombardier", built: "2007–2010, rebuilt 2012–2013",
+    fleet: "15 sets", topSpeedMph: kmh(250), powerHp: kw(4800), lengthFt: 68.1,
+    about: "A Series 130 power car of one of the 15 sets rebuilt as hybrids, with a diesel generator car behind each power car, for Alvias beyond the wires to Badajoz and Almería.", source: `${WP}Renfe_Class_730` },
+  rf730Coach: { model: "Talgo 250 coach (Series 730)", type: "Articulated coach", builder: "Talgo", built: "2007–2010", fleet: "9 per set",
+    topSpeedMph: kmh(250), lengthFt: 43.1, about: "Talgo Series 7 coaches with gauge-changing wheel pairs, nine between the generator cars of a hybrid Series 730.", source: `${WP}Renfe_Class_730` },
   rf120Cab: { model: "CAF Series 120 and 121", type: "Dual-gauge electric multiple unit", builder: "CAF, with Alstom", built: "2006–2009",
     fleet: "57 Series 120, 29 Series 121", topSpeedMph: kmh(250), powerHp: kw(4000), seats: 238, lengthFt: 89.7,
     about: "Four-car gauge-changing units: the 120s run Alvia services such as Madrid–Pamplona and Barcelona–Bilbao, the 121s Avant services in Catalonia and Galicia. Seats are for a Series 120 set.", source: `${WP}Renfe_Class_120` },
@@ -1075,7 +1241,7 @@ export const FACTS = {
   rf438: { model: "Series 438 (FEVE 3800) trailer", type: "Electric multiple unit (metre gauge)", builder: "CAF", built: "1992", fleet: "16 three-car units",
     about: "The middle car of a 438.", source: "https://ftp.funet.fi/pub/pics/railways/Spain/feve/index.html" },
   rf435Cab: { model: "Series 435 (FEVE 3500)", type: "Electric multiple unit (metre gauge)", builder: "CAF", lengthFt: 50,
-    about: "Asturias' three-car metre-gauge units, still in FEVE's white and burgundy.", source: `${WP}Renfe_class_435` },
+    about: "Asturias' three-car metre-gauge units, in Renfe's cream \"renfe feve\" paint.", source: `${WP}Renfe_class_435` },
   rf435: { model: "Series 435 (FEVE 3500) trailer", type: "Electric multiple unit (metre gauge)", builder: "CAF", lengthFt: 50,
     about: "The middle car of a 435.", source: `${WP}Renfe_class_435` },
   rf529: { model: "Series 529 (FEVE 2900)", type: "Diesel railcar (metre gauge)", builder: "Sunsundegui with Siemens", lengthFt: 58.1,
