@@ -546,7 +546,7 @@ const velWins = (a, n) => [{ xs: Array.from({ length: n }, (_, i) => a + i * 6.8
 // windows from just behind it (the Commons diagram's spacing). DB's ICE
 // logo, its caps 2.3 ft (2.7 times the stripe), their tops just over the
 // stripe's line.
-const iceEnd = (c) => unit(c, { ...VEL, nose: VEL_NOSE, rake: [[3.6, 7.3], [12.6, 11.4]], depth: 3.0, cabLen: 18, lampY: 5.0, surround: "#1d2126",
+const iceEnd = (c) => unit(c, { ...VEL, nose: VEL_NOSE, rake: [[3.6, 7.3], [12.6, 11.4]], depth: 3.0, cabLen: 18, lampY: 5.0, surround: "#1d2126", bare: true,
   rows: velWins(31.8, 7), doors: [vDoor(26.0)], trucks: [17.0, c.L - 8.0], wheel: 36, paint: iceEndPaint,
   extra: (cc, g) => { const cls = c.index === 0 ? "1" : "2";
     return iceLogo(cc, 15.85, 4.79, 2.3, "#8d949b") + dbLogo(cc, 3.2, 5.4, 0.7) + i3Db(cc, 53.0) + i3Num(cc, 30.4, cls) + i3Num(cc, g.L - 4.6, cls) +
@@ -581,7 +581,7 @@ const e320EndPaint = (c, g) => rect(-1, 0, g.L + 2, 20, ES.grey) + rect(-1, 12.0
   path("M2.0 5.3Q3.6 5.7 4.8 6.3L4.5 6.9Q3.2 6.4 1.9 6.0Z", "#1d2126");
 const e320MidPaint = (c, g) => rect(-1, 0, g.L + 2, 20, ES.grey) + rect(-1, 12.0, g.L + 2, 2, "#8f969d") + rect(-1, 0, g.L + 2, 2.9, "#5f656c") +
   rect(-1, 4.55, g.L + 2, 0.4, ES.yellow);
-const e320End = (c) => unit(c, { ...VEL, nose: VEL_NOSE, rake: [[4.6, 8.1], [12.6, 11.6]], depth: 1.4, cabLen: 18, lampY: 5.0, surround: "#1d2126",
+const e320End = (c) => unit(c, { ...VEL, nose: VEL_NOSE, rake: [[4.6, 8.1], [12.6, 11.6]], depth: 1.4, cabLen: 18, lampY: 5.0, surround: "#1d2126", bare: true,
   rows: velWins(25.6, 8), doors: [vDoor(21.0, ES.grey)], trucks: [17.0, c.L - 8.0], wheel: 36, paint: e320EndPaint,
   extra: (cc, g) => path("M15.9 9.3L17.4 9.3L17.4 10.9L16.7 10.9Z", C.glass, 0, `stroke="#15181b" stroke-width="0.6" ${NS}`) +
     starLines(18.0, 7.2, 3.0) + esWord(cc, 19.45, 10.0, 0.65) + letters(cc, 16.4, 6.0, 0.75, cc.setNo || "", "#ffffff", { weight: 600 }) + roofCover(g.L - 22, VEL.roof, 14, 0.35, "#8f969d", 3) });
