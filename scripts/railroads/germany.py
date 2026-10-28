@@ -47,7 +47,10 @@ trains by category, "ICE", "IC", "EC"):
              90, bwegt), Bayern (RE 1-RE 50, RB 6-RB 94, incl. DB Regio
              Franken, Allgäu-Schwaben, Oberbayern), DB RegioNetz
              Südostbayernbahn (RB 32-RB 59, RE 4), Westfrankenbahn (RB 56-
-             RB 88, RE 80), Kurhessenbahn (RB 4-RB 97, RE 39, RE 97)
+             RB 88, RE 80), Kurhessenbahn (RB 4-RB 97, RE 39, RE 97); and
+             DB Regio's lines named S that aren't an S-Bahn's: S 61
+             Radolfzell-Stockach, S 6 Garmisch-Partenkirchen-Mittenwald, S 7
+             Außerfernbahn (Pfronten-Steinach-Reutte-Ehrwald-Garmisch)
   deprivat   private regional railways, north, east and Nordrhein-Westfalen
              [deprivat]: metronom (RE 3, RE 4, RB 31, RB 41), erixx, enno,
              EVB (RB 33, MEX), NordWestBahn (RB 58-RB 85, RE 18), Nordbahn,
@@ -426,6 +429,20 @@ def line_name(kind, line, agency_name):
     return f"{cat} {num}".strip() if cat else line
 
 
+# DB Regio's lines named S that aren't an S-Bahn's, drawn with its regional
+# trains (dbregio2): the S 61 Radolfzell-Stockach (Seehäsle's neighbour),
+# and on the Werdenfels lines the S 6 Garmisch-Partenkirchen-Mittenwald and
+# the S 7 Außerfernbahn (Pfronten-Steinach-Reutte-Ehrwald-Garmisch). München's
+# S 6 and S 7, filed under the same railway, stay S-Bahn.
+REGIO_S_PLACES = {"Mittenwald", "Klais", "Garmisch-Partenkirchen", "Pfronten-Steinach", "Reutte in Tirol", "Lähn", "Ehrwald Zugspitzbahn",
+                  "Vils", "Griesen (Oberbay)", "Stockach"}
+
+
+def regio_s(line, stations):
+    cat, num = category(line)
+    return cat == "S" and (num == "61" or (num in ("6", "7") and bool(set(stations) & REGIO_S_PLACES)))
+
+
 def railroad(agency_name, line, kind, region):
     """The map's railroad for one part of a train, or None to leave it out.
     region: the state ("DE-NW") most of its German stations are in."""
@@ -720,6 +737,8 @@ def build(feeds, delfi=None, root=ROOT, today=None, log=print):
         ours = railroad(an, r["line"], r["kind"], (regs.most_common(1) or [("", 0)])[0][0])
         if not ours:
             continue
+        if ours == "sbahn" and DB_REGIO.search(an) and regio_s(r["line"], {k for k, *_ in st}):
+            ours = "dbregio2"
         out_trips.append({"tid": tid, "agency": ours, "agency_name": an, "line": r["line"], "kind": r["kind"],
                           "service": t["service"], "seq": st})
     log(f"  germany: {len(out_trips)} trips of {len(trips)} kept by railway")
