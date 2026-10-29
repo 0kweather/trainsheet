@@ -14,6 +14,8 @@ Checked:
     an RE by its category and line (and not the S-Bahn at the same minute),
     the forecast delay and changed platform from /fchg, a cancelled call;
     no train on that line at that minute is {"found": false};
+  - a station's S-Bahn part's board (germany_parts.js, the same pairs as
+    germany_stations.json) asked when the station's own has no such train;
   - caching and the limit, in both twins: two trains at one station in one
     hour ask /plan and /fchg once; /fchg again after 90 s, /plan not; no more
     than 50 requests upstream in a minute;
@@ -74,7 +76,11 @@ const t0 = Date.UTC(2026, 9, 28, 13, 20);
 await answer(env, i.queries[0], t0); await answer(env, i.queries[1], t0 + 5000); await answer(env, i.queries[1], t0 + 100000);
 const first = [...urls]; urls.length = 0; _reset();
 for (let k = 0; k < 60; k++) await answer(env, { ...i.queries[0], at: String(8000200 + k) }, t0 + k);
-console.log(JSON.stringify({ out, first, limited: urls.length }));
+const limited = urls.length; urls.length = 0; _reset();
+const { PARTS } = await import("./relay/feeds/germany_parts.js");
+globalThis.fetch = async (url) => { urls.push(url.replace(/^.*timetables\/v1/, "")); return new Response(url.includes("/plan/8089185/") ? i.plan.replace(/2610281430/g, "2610281530") : url.includes("/plan/") ? i.plan : i.fchg); };
+const part = await answer(env, { ...i.queries[0], at: "8010255", time: "2610281530" }, t0);
+console.log(JSON.stringify({ out, first, limited, parts: PARTS, part: [part.found, part.number, [...urls]] }));
 """
 
 
@@ -155,6 +161,16 @@ def main():
     want_first = ["/plan/8000105/261028/14", "/fchg/8000105", "/fchg/8000105"]
     assert first == want_first and js["first"] == want_first, (first, js["first"])
     assert limited == 50 and js["limited"] == 50, (limited, js["limited"])
+    # A station's S-Bahn part's board, asked when the station's has no such train (Berlin Ostbahnhof).
+    assert js["parts"] == germany.PARTS and germany.PARTS.get("8010255") == "8089185", "germany_parts.js and germany_stations.json differ"
+    assert js["part"] == [True, "1229", ["/plan/8010255/261028/15", "/fchg/8010255", "/plan/8089185/261028/15", "/fchg/8089185"]], js["part"]
+    urls = []
+    germany._plans.clear(), germany._changes.clear(), germany._asked.clear()
+    get = lambda url, env: (urls.append(url.split("timetables/v1")[1]),
+                            PLAN.replace("2610281430", "2610281530") if "/plan/8089185/" in url else PLAN if "/plan/" in url else FCHG)[1]
+    part = germany.dbtt_answer({"DB_CLIENT_ID": "x", "DB_API_KEY": "y"}, {**QUERIES[0], "at": "8010255", "time": "2610281530"}, 1793017200, get)
+    assert [part["found"], part["number"], urls] == js["part"], (part, urls)
+    print("a station's S-Bahn part asked when its own board has no such train: both twins")
     print("caching (plan once, changes every 90 s) and the limit (50 a minute): both twins")
 
     old = pathlib.Path(tempfile.mkdtemp())
