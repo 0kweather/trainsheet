@@ -186,15 +186,19 @@ function talgoCoach(c, { roof = 11.2, sill = 2.6, rows, doorX = 1.2, paint, band
   // ramp: [side, height] the roof rising at that end to the power car's.
   const d = ramp ? rampOutline(x0, x1, sill, roof, ramp) : bodyOutline(x0, x1, sill, roof, { endR: 1.2 });
   let s = "";
-  for (const x of [0, L]) {
-    s += rect(x - 1.3, 1.7, 2.6, 2.4, "currentColor", 0, 'opacity="0.85" rx="0.3"') + circle(x, 1.45, 1.45, "currentColor") +
-      circle(x, 1.45, 1.15, "none", 0, `stroke="${C.steelDark}" stroke-width="0.5"`) + circle(x, 1.45, 0.75, "none", 0, `stroke="${C.steelDark}" stroke-width="0.9"`) + circle(x, 1.45, 0.35, C.steelDark) +
-      rect(x - 1.7, 3.3, 3.4, 0.5, "currentColor", 0, 'opacity="0.7"');
-  }
   const avlo = isAvlo(c);
   const [bx0, bx1] = bandX || [3.2, L - 3.2];
   s += shell(d, avlo ? RF.avlo : RF.white, paint(c, L) + (band ? rect(bx0, band[0], bx1 - bx0, band[1], avlo ? "#3d0f38" : RF.band, 0, 'rx="0.4"') : "") + (windows ? windows(c, L) : ""));
   s += fairing(3.4, L - 3.4, sill, 0.8, avlo ? "#3a1030" : RF.fair);
+  // One single axle at each joint (n coaches ride on n + 1): each car draws
+  // the one at its back end, the car behind a locomotive or power car the
+  // one at its front too; drawn just inside the car, over its end, so its
+  // own picture shows the whole wheel as the joint does.
+  for (const x of [...(c.index <= 1 || ramp?.[0] === "L" ? [1.5] : []), L - 1.5]) {
+    s += rect(x - 1.3, 1.7, 2.6, 2.4, "currentColor", 0, 'opacity="0.85" rx="0.3"') + circle(x, 1.45, 1.45, "currentColor") +
+      circle(x, 1.45, 1.15, "none", 0, `stroke="${C.steelDark}" stroke-width="0.5"`) + circle(x, 1.45, 0.75, "none", 0, `stroke="${C.steelDark}" stroke-width="0.9"`) + circle(x, 1.45, 0.35, C.steelDark) +
+      rect(x - 1.7, 3.3, 3.4, 0.5, "currentColor", 0, 'opacity="0.7"');
+  }
   for (const [x, y, w, h] of rows) s += win(x, y, w, h, 0.4);
   const [dw, dy, dh, gy = 0.55] = dr;
   s += door(doorX, dy, dw, dh, { glassY: gy, glassH: 0.3, fill: avlo ? RF.orange : "rgba(0,0,0,0.08)" }) + rect(doorX + 0.15, dy - 0.2, dw - 0.3, 0.2, "currentColor", 0, 'opacity="0.7"') +
