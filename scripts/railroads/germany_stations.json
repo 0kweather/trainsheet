@@ -161,7 +161,8 @@
 ],
 "Ahrensfelde": [
 "8011003",
-"DE-BE"
+"DE-BE",
+"8089188"
 ],
 "Ahrensfelde Friedhof": [
 "8011004",
@@ -1480,7 +1481,7 @@
 "DE-SN"
 ],
 "Bad Schandau Nationalparkbahnhof": [
-"",
+"8010022",
 "DE-SN"
 ],
 "Bad Schlema": [
@@ -2132,7 +2133,7 @@
 "DE-TH"
 ],
 "Benneckenstein Benneckenstein": [
-"",
+"8017002",
 "DE-ST"
 ],
 "Benneckenstein Klb_Sh 001 P1": [
@@ -2301,39 +2302,47 @@
 ],
 "Berlin Gesundbrunnen": [
 "8011102",
-"DE-BE"
+"DE-BE",
+"8089015"
 ],
 "Berlin Hbf": [
 "8011160",
-"DE-BE"
+"DE-BE",
+"8098160"
 ],
 "Berlin Jungfernheide": [
-"8089100",
-"DE-BE"
+"8011167",
+"DE-BE",
+"8089100"
 ],
 "Berlin Ostbahnhof": [
 "8010255",
-"DE-BE"
+"DE-BE",
+"8089185"
 ],
 "Berlin Ostkreuz": [
 "8011162",
-"DE-BE"
+"DE-BE",
+"8089028"
 ],
 "Berlin Potsdamer Platz": [
-"8089032",
-"DE-BE"
+"8011118",
+"DE-BE",
+"8089032"
 ],
 "Berlin Südkreuz": [
 "8011113",
-"DE-BE"
+"DE-BE",
+"8089073"
 ],
 "Berlin-Charlottenburg": [
 "8010403",
 "DE-BE"
 ],
 "Berlin-Hohenschönhausen": [
-"8089117",
-"DE-BE"
+"8011901",
+"DE-BE",
+"8089117"
 ],
 "Berlin-Karow": [
 "8011046",
@@ -2345,23 +2354,28 @@
 ],
 "Berlin-Lichterfelde Ost": [
 "8011041",
-"DE-BE"
+"DE-BE",
+"8089113"
 ],
 "Berlin-Mahlsdorf": [
 "8011343",
-"DE-BE"
+"DE-BE",
+"8089072"
 ],
 "Berlin-Schöneweide": [
-"8089168",
-"DE-BE"
+"8010041",
+"DE-BE",
+"8089168"
 ],
 "Berlin-Spandau": [
-"8089083",
-"DE-BE"
+"8010404",
+"DE-BE",
+"8089083"
 ],
 "Berlin-Wannsee": [
 "8010405",
-"DE-BE"
+"DE-BE",
+"8089190"
 ],
 "Berlingen (CH)": [
 "8506135",
@@ -3012,7 +3026,7 @@
 "DE-NW"
 ],
 "Bochum-Hamme": [
-"",
+"8006710",
 "DE-NW"
 ],
 "Bochum-Langendreer": [
@@ -3105,7 +3119,8 @@
 ],
 "Bonn Hbf": [
 "8000044",
-"DE-NW"
+"DE-NW",
+"8098044"
 ],
 "Bonn Helmholtzstraße": [
 "8001081",
@@ -3640,7 +3655,7 @@
 "DE-RP"
 ],
 "Brohl (Brohltalbahn)": [
-"8070338",
+"8001186",
 "DE-RP"
 ],
 "Brokstedt": [
@@ -4297,7 +4312,8 @@
 ],
 "Calw": [
 "8000063",
-"DE-BW"
+"DE-BW",
+"8098063"
 ],
 "Calw-Heumaden": [
 "8001321",
@@ -4484,7 +4500,7 @@
 "DE-SN"
 ],
 "Chemnitz Rosenbergstr": [
-"",
+"8017480",
 "DE-SN"
 ],
 "Chemnitz Roter Turm": [
@@ -4960,7 +4976,7 @@
 "CZ"
 ],
 "Decin-Certova voda": [
-"",
+"5400786",
 "CZ"
 ],
 "Decin-Priper": [
@@ -5080,7 +5096,7 @@
 "CZ"
 ],
 "Dessau Adria": [
-"",
+"8011362",
 "DE-ST"
 ],
 "Dessau Hbf": [
@@ -5192,7 +5208,7 @@
 "DE-ST"
 ],
 "Diessenhofen": [
-"8503428",
+"8573334",
 "CH"
 ],
 "Dietersheim": [
@@ -5392,7 +5408,7 @@
 "CZ"
 ],
 "Dolni Zleb zast.": [
-"",
+"5400891",
 "CZ"
 ],
 "Dolni Zleb zastavka": [
@@ -5408,7 +5424,7 @@
 "CZ"
 ],
 "Dolní Žleb": [
-"",
+"5400890",
 "CZ"
 ],
 "Domazlice mesto": [
@@ -5972,7 +5988,7 @@
 "DE-BY"
 ],
 "Dörpen": [
-"",
+"8001486",
 "DE-NI"
 ],
 "Dörrberg": [
@@ -6320,7 +6336,7 @@
 "DE-BW"
 ],
 "Eggenstein Süd": [
-"",
+"8007173",
 "DE-BW"
 ],
 "Eggersdorf": [
@@ -6744,7 +6760,7 @@
 "DE-ST"
 ],
 "Elend Elend": [
-"",
+"8017008",
 "DE-ST"
 ],
 "Elgersburg": [
@@ -6928,7 +6944,7 @@
 "DE-BY"
 ],
 "Engstingen": [
-"",
+"8070456",
 "DE-BW"
 ],
 "Engstingen Schulzentrum": [
@@ -7076,8 +7092,9 @@
 "DE-BY"
 ],
 "Erkner": [
-"8089181",
-"DE-BB"
+"8013477",
+"DE-BB",
+"8089181"
 ],
 "Erkrath": [
 "8001841",
@@ -7244,7 +7261,7 @@
 "DE-NI"
 ],
 "Essen (Ruhr) West": [
-"",
+"8001898",
 "DE-NW"
 ],
 "Essen Hbf": [
@@ -7756,8 +7773,9 @@
 "DE-SN"
 ],
 "Flughafen BER": [
-"8089201",
-"DE-BB"
+"8011201",
+"DE-BB",
+"8089201"
 ],
 "Flughafen Wien": [
 "8100353",
@@ -7924,7 +7942,7 @@
 "DE-HE"
 ],
 "Frankfurt (Main) Flughafen Fernbahnhof": [
-"8000281",
+"8070003",
 "DE-HE"
 ],
 "Frankfurt (Main) Flughafen Regionalbahnhof": [
@@ -7932,8 +7950,9 @@
 "DE-HE"
 ],
 "Frankfurt (Main) Hbf": [
-"",
-"DE-HE"
+"8000105",
+"DE-HE",
+"8098105"
 ],
 "Frankfurt (Main) Messe": [
 "8079632",
@@ -8164,7 +8183,7 @@
 "DE-BY"
 ],
 "Freital Hp Coßmannsdorf": [
-"",
+"8011568",
 "DE-SN"
 ],
 "Freital-Coßmannsdorf": [
@@ -8440,7 +8459,7 @@
 "CZ"
 ],
 "Frydlant v Cechach predm.": [
-"",
+"5400968",
 "CZ"
 ],
 "Fröndenberg": [
@@ -10084,7 +10103,7 @@
 "DE-HE"
 ],
 "Hainersdorf Bf Amtshainersdorf": [
-"",
+"8011039",
 "DE-SN"
 ],
 "Hainewalde": [
@@ -10232,7 +10251,7 @@
 "DE-ST"
 ],
 "Haltepunkt Biosphärenreservat": [
-"",
+"8070260",
 "DE-ST"
 ],
 "Haltern am See": [
@@ -10292,11 +10311,12 @@
 "DE-HH"
 ],
 "Hamburg Hbf": [
-"8098549",
-"DE-HH"
+"8002549",
+"DE-HH",
+"8098549"
 ],
 "Hamburg Hbf (S-Bahn)": [
-"",
+"8098549",
 "DE-HH"
 ],
 "Hamburg Hochkamp": [
@@ -10365,7 +10385,8 @@
 ],
 "Hamburg-Altona": [
 "8002553",
-"DE-HH"
+"DE-HH",
+"8098553"
 ],
 "Hamburg-Bahrenfeld": [
 "8000780",
@@ -10401,7 +10422,8 @@
 ],
 "Hamburg-Harburg": [
 "8000147",
-"DE-HH"
+"DE-HH",
+"8098147"
 ],
 "Hamburg-Harburg Rathaus": [
 "8004267",
@@ -10597,7 +10619,8 @@
 ],
 "Hannover Hbf": [
 "8000152",
-"DE-NI"
+"DE-NI",
+"8089194"
 ],
 "Hannover Karl-Wiechert-Allee": [
 "8070086",
@@ -10644,7 +10667,7 @@
 "DE-SH"
 ],
 "Harburg (Schwab)": [
-"8002593",
+"",
 "DE-BY"
 ],
 "Hard-Fussach": [
@@ -11016,11 +11039,11 @@
 "DE-BW"
 ],
 "Heilbronn Harmonie": [
-"8071172",
+"8072172",
 "DE-BW"
 ],
 "Heilbronn Harmonie/Kunsthalle": [
-"",
+"8072172",
 "DE-BW"
 ],
 "Heilbronn Hbf": [
@@ -11240,8 +11263,9 @@
 "DE-SN"
 ],
 "Hennigsdorf (b Berlin)": [
-"8089207",
-"DE-BB"
+"8013483",
+"DE-BB",
+"8089207"
 ],
 "Henstedt-Ulzburg": [
 "8007053",
@@ -12116,7 +12140,7 @@
 "DE-SN"
 ],
 "Hp Waldersee": [
-"",
+"8070259",
 "DE-ST"
 ],
 "Hrabacov (Bahnhof)": [
@@ -12428,7 +12452,7 @@
 "DE-ST"
 ],
 "Ilfeld": [
-"",
+"8017014",
 "DE-TH"
 ],
 "Ilfeld Bad": [
@@ -12436,7 +12460,7 @@
 "DE-TH"
 ],
 "Ilfeld Eisfelder Talmühle": [
-"",
+"8017007",
 "DE-TH"
 ],
 "Ilfeld Etm_Nk 001 P1": [
@@ -12584,7 +12608,7 @@
 "DE-TH"
 ],
 "Ilfeld Tiefenbachmühle": [
-"",
+"8017030",
 "DE-TH"
 ],
 "Illertissen": [
@@ -12812,7 +12836,7 @@
 "CZ"
 ],
 "Jablonec n.Nisou": [
-"",
+"5400262",
 "CZ"
 ],
 "Jablonecke Paseky": [
@@ -13080,7 +13104,7 @@
 "DE-SH"
 ],
 "Jüchen": [
-"",
+"8003130",
 "DE-NW"
 ],
 "Jülich": [
@@ -13116,11 +13140,11 @@
 "DE-BB"
 ],
 "KA Durlacher Tor/KIT-Campus Süd": [
-"",
+"8079125",
 "DE-BW"
 ],
 "KA Durlacher Tor/KIT-Campus Süd (U)": [
-"",
+"8079125",
 "DE-BW"
 ],
 "KA Ettlinger Tor/Staatstheater": [
@@ -13440,7 +13464,7 @@
 "DE-BW"
 ],
 "Karlsruhe Marktplatz (Kaiserstraße U)": [
-"",
+"8079046",
 "DE-BW"
 ],
 "Karlsruhe Marktplatz (Pyramide U)": [
@@ -13452,7 +13476,7 @@
 "DE-BW"
 ],
 "Karlsruhe Mühlburg West": [
-"",
+"8003187",
 "DE-BW"
 ],
 "Karlsruhe Mühlburger Tor": [
@@ -13584,8 +13608,9 @@
 "DE-HE"
 ],
 "Kassel Hbf": [
-"8098193",
-"DE-HE"
+"8000193",
+"DE-HE",
+"8098193"
 ],
 "Kassel Hegelsbergstraße": [
 "",
@@ -14380,7 +14405,7 @@
 "DE-BW"
 ],
 "Kornwestheim Pbf": [
-"",
+"8003411",
 "DE-BW"
 ],
 "Korschenbroich": [
@@ -14620,7 +14645,7 @@
 "DE-TH"
 ],
 "Krimderode Nordhausen Ricarda-Huch-Straße": [
-"",
+"8070733",
 "DE-TH"
 ],
 "Krimmeri-Meinau": [
@@ -14909,7 +14934,8 @@
 ],
 "Köln Hbf": [
 "8000207",
-"DE-NW"
+"DE-NW",
+"8089322"
 ],
 "Köln Messe/Deutz": [
 "8003368",
@@ -15120,7 +15146,7 @@
 "DE-BB"
 ],
 "La Wantzenau": [
-"",
+"8701472",
 "FR"
 ],
 "Laaber": [
@@ -15212,7 +15238,7 @@
 "DE-RP"
 ],
 "Landau (Pfalz) Süd": [
-"",
+"8003507",
 "DE-RP"
 ],
 "Landau (Pfalz) West": [
@@ -15696,11 +15722,12 @@
 "DE-SN"
 ],
 "Leipzig Hbf": [
-"8098205",
-"DE-SN"
+"8010205",
+"DE-SN",
+"8098205"
 ],
 "Leipzig Hbf (tief)": [
-"",
+"8098205",
 "DE-SN"
 ],
 "Leipzig Karlsruher Str": [
@@ -17712,7 +17739,7 @@
 "DE-NW"
 ],
 "Merzig (Saar)": [
-"",
+"8003992",
 "DE-SL"
 ],
 "Merzig (Saar) Stadtmitte": [
@@ -17792,7 +17819,7 @@
 "DE-BY"
 ],
 "Michelau (Württ)": [
-"",
+"8007194",
 "DE-BW"
 ],
 "Michelbach (Unterfr)": [
@@ -18413,15 +18440,17 @@
 ],
 "München Hackerbrücke": [
 "8004129",
-"DE-BY"
+"DE-BY",
+"8089317"
 ],
 "München Harras": [
 "8004130",
 "DE-BY"
 ],
 "München Hbf": [
-"8098261",
-"DE-BY"
+"8000261",
+"DE-BY",
+"8098261"
 ],
 "München Hbf (tief)": [
 "8098263",
@@ -18980,7 +19009,7 @@
 "DE-BB"
 ],
 "Netzkater": [
-"",
+"8017016",
 "DE-TH"
 ],
 "Netzkater Netzkater": [
@@ -19672,7 +19701,7 @@
 "DE-TH"
 ],
 "Niedersachswerfen Niedersachswerfen Ilfelder Str.": [
-"",
+"8080991",
 "DE-TH"
 ],
 "Niedersachswerfen Niedersachswerfen Ost": [
@@ -19680,7 +19709,7 @@
 "DE-TH"
 ],
 "Niedersachswerfen Ost": [
-"",
+"8017017",
 "DE-TH"
 ],
 "Niederscheld (Dillkr) Süd": [
@@ -19904,7 +19933,7 @@
 "DE-TH"
 ],
 "Nordhausen Nordhausen Nord": [
-"",
+"8017020",
 "DE-TH"
 ],
 "Nordhausen Ricarda-Huch-Straße": [
@@ -19920,7 +19949,7 @@
 "DE-TH"
 ],
 "Nordhausen-Krimderode": [
-"",
+"8017019",
 "DE-TH"
 ],
 "Nordhausen-Salza": [
@@ -20092,7 +20121,7 @@
 "DE-BY"
 ],
 "Nürnberg Frankenstadion Sonderbahnsteig": [
-"",
+"8004493",
 "DE-BY"
 ],
 "Nürnberg Hbf": [
@@ -20116,7 +20145,7 @@
 "DE-BY"
 ],
 "Nürnberg-Dutzendteich": [
-"",
+"8004476",
 "DE-BY"
 ],
 "Nürnberg-Dürrenhof": [
@@ -20824,8 +20853,9 @@
 "DE-ST"
 ],
 "Oranienburg": [
-"8089197",
-"DE-BB"
+"8013487",
+"DE-BB",
+"8089197"
 ],
 "Orlamünde": [
 "8010264",
@@ -21144,7 +21174,7 @@
 "FR"
 ],
 "Paris Nord": [
-"8700014",
+"8798014",
 "FR"
 ],
 "Parkentin": [
@@ -21628,8 +21658,9 @@
 "DE-BB"
 ],
 "Potsdam Hbf": [
-"8089184",
-"DE-BB"
+"8012666",
+"DE-BB",
+"8089184"
 ],
 "Potsdam Medienstadt Babelsberg": [
 "8011430",
@@ -21676,7 +21707,7 @@
 "CZ"
 ],
 "Praha-Podbaba": [
-"5402489",
+"5457027",
 "CZ"
 ],
 "Praha-Smichov": [
@@ -23021,7 +23052,8 @@
 ],
 "Rostock Hbf": [
 "8010304",
-"DE-MV"
+"DE-MV",
+"8089489"
 ],
 "Rostock Holbeinplatz": [
 "8012805",
@@ -23200,7 +23232,7 @@
 "DE-BW"
 ],
 "Rudersberg-Oberndorf": [
-"",
+"8007625",
 "DE-BW"
 ],
 "Rudolstadt (Thür)": [
@@ -23944,7 +23976,7 @@
 "DE-BE"
 ],
 "S+U Friedrichstr. Bhf (Berlin)": [
-"8011306",
+"8089066",
 "DE-BE"
 ],
 "S+U Heidelberger Platz": [
@@ -24228,7 +24260,7 @@
 "DE-MV"
 ],
 "Sargans": [
-"8509411",
+"8574614",
 "CH"
 ],
 "Sarnow": [
@@ -24392,7 +24424,7 @@
 "DE-NI"
 ],
 "Schierke": [
-"",
+"8017022",
 "DE-ST"
 ],
 "Schierke Bobbahn": [
@@ -24564,11 +24596,11 @@
 "DE-SN"
 ],
 "Schmiedeberg Buschmühle": [
-"",
+"8011301",
 "DE-SN"
 ],
 "Schmiedeberg Naundorf Hp": [
-"",
+"8012885",
 "DE-SN"
 ],
 "Schmiedeberg-Naundorf": [
@@ -24576,7 +24608,7 @@
 "DE-SN"
 ],
 "Schmilka Hp Hirschmühle": [
-"",
+"8012888",
 "DE-SN"
 ],
 "Schmilka-Hirschmühle": [
@@ -25712,7 +25744,7 @@
 "DE-HE"
 ],
 "Sophienhof": [
-"",
+"8017040",
 "DE-TH"
 ],
 "Sophienhof Sh_Tf 001 P1": [
@@ -25736,7 +25768,7 @@
 "PL"
 ],
 "Sorge": [
-"",
+"8017024",
 "DE-ST"
 ],
 "Sorge So_Bek 001 P1": [
@@ -25816,7 +25848,7 @@
 "DE-SN"
 ],
 "Spechtritz Hp": [
-"",
+"8013015",
 "DE-SN"
 ],
 "Speele": [
@@ -26444,8 +26476,9 @@
 "DE-MV"
 ],
 "Strausberg": [
-"8089187",
-"DE-BB"
+"8010341",
+"DE-BB",
+"8089187"
 ],
 "Straußfurt": [
 "8010342",
@@ -26521,7 +26554,8 @@
 ],
 "Stuttgart Hbf": [
 "8000096",
-"DE-BW"
+"DE-BW",
+"8098096"
 ],
 "Stuttgart Hbf (tief)": [
 "8098096",
@@ -27096,8 +27130,8 @@
 "DE-SH"
 ],
 "Thionville": [
-"",
-""
+"8700059",
+"FR"
 ],
 "Thun": [
 "8507100",
@@ -28056,7 +28090,7 @@
 "BE"
 ],
 "Verviers-Palais": [
-"",
+"8800268",
 "BE"
 ],
 "Vesec u Liberce": [
@@ -28576,7 +28610,7 @@
 "DE-BB"
 ],
 "Warszawa Centralna": [
-"5104221",
+"5100246",
 "PL"
 ],
 "Warszawa Wschodnia": [
@@ -29104,7 +29138,7 @@
 "DE-BY"
 ],
 "Wernigerode": [
-"",
+"8010374",
 "DE-ST"
 ],
 "Wernigerode Bb_Eck 001 P1": [
@@ -29272,7 +29306,7 @@
 "DE-ST"
 ],
 "Wernigerode Hochschule Harz": [
-"",
+"8017033",
 "DE-ST"
 ],
 "Wernigerode Kn_Schr 001 P1": [
@@ -29360,7 +29394,7 @@
 "DE-ST"
 ],
 "Wernigerode Steinerne Renne": [
-"",
+"8017025",
 "DE-ST"
 ],
 "Wernigerode Wd_Wdt 001 P1": [
@@ -29472,11 +29506,11 @@
 "DE-ST"
 ],
 "Wernigerode Wernigerode Westerntor": [
-"",
+"8017034",
 "DE-ST"
 ],
 "Wernigerode Wernigerode-Hasserode": [
-"",
+"8017032",
 "DE-ST"
 ],
 "Wernigerode Westerntor": [

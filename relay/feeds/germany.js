@@ -12,9 +12,14 @@
 // the train calling then on that line, its stop id and its category and
 // number ("ICE", "1229"); the station's known changes (/fchg/{eva}, kept 90
 // seconds and shared by every train asked for there) give its forecast
-// time, platform and cancellation. Upstream requests are held to 50 a
+// time, platform and cancellation. A station whose S-Bahn or low level has
+// a board of its own (Berlin's S-Bahn, "Frankfurt (Main) Hbf (tief)") is
+// asked there too when its own board has no such train (germany_parts.js).
+// Upstream requests are held to 50 a
 // minute per copy of the relay, under the API's 60; past that a station's
 // last copy is used, or nothing.
+
+import { PARTS } from "./germany_parts.js";
 
 const API = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1";
 const PLAN_MS = 6 * 3600 * 1000, CHANGES_MS = 90 * 1000, PER_MINUTE = 50;
@@ -110,10 +115,15 @@ async function cached(store, key, maxAge, url, env, now) {
 export async function answer(env, query, now = Date.now()) {
   const { at, time } = query;
   if (!/^\d{7}$/.test(at || "") || !/^\d{10}$/.test(time || "")) return { found: false };
-  const plan = await cached(plans, `${at}|${time.slice(0, 8)}`, PLAN_MS, `${API}/plan/${at}/${time.slice(0, 6)}/${time.slice(6, 8)}`, env, now);
-  if (!plan) return { found: false };
-  const fchg = await cached(changes, at, CHANGES_MS, `${API}/fchg/${at}`, env, now);
-  return detail(plan, fchg || "", query);
+  let out = { found: false };
+  for (const eva of [at, ...(PARTS[at] ? [PARTS[at]] : [])]) { // the station's board, then its S-Bahn part's
+    const plan = await cached(plans, `${eva}|${time.slice(0, 8)}`, PLAN_MS, `${API}/plan/${eva}/${time.slice(0, 6)}/${time.slice(6, 8)}`, env, now);
+    if (!plan) continue;
+    const fchg = await cached(changes, eva, CHANGES_MS, `${API}/fchg/${eva}`, env, now);
+    out = detail(plan, fchg || "", query);
+    if (out.found) break;
+  }
+  return out;
 }
 
 // query: { train, date, from, at, time, line }, checked by the relay.

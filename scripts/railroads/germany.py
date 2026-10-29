@@ -250,9 +250,16 @@ def _slug(name):
 # Wikidata (CC0: each station's IBNR, its state and country; the state of a
 # station Wikidata gives none or two taken from its numbered neighbours, a
 # few put right by hand) and kept in the repository so a station's id never
-# depends on a download. {name: [eva or "", region]}: region "DE-SH"..
-# "DE-TH" for a German state, else the country ("AT", "CH", ...).
+# depends on a download. {name: [eva or "", region, (part)]}: region "DE-SH"..
+# "DE-TH" for a German state, else the country ("AT", "CH", ...); part: the
+# number of the station's S-Bahn or low-level part where that has a board of
+# its own (Berlin's S-Bahn stations' 80 89 xxx, "Frankfurt (Main) Hbf
+# (tief)"'s 8098105), which the detail source asks when the station's board
+# has no such train (relay/feeds/germany_parts.js holds the same pairs). A
+# station's own number goes to the station, an S-Bahn part's to the part
+# ("Hamburg Hbf" 8002549, "Hamburg Hbf (S-Bahn)" 8098549).
 STATIONS = json.loads((HERE / "germany_stations.json").read_text()) if (HERE / "germany_stations.json").exists() else {}
+PARTS = {v[0]: v[2] for v in STATIONS.values() if len(v) > 2 and v[0]}
 NORTH_EAST = {"DE-" + s for s in ("SH", "HH", "NI", "HB", "MV", "BB", "BE", "ST", "SN", "TH")}
 SOUTH_WEST = {"DE-" + s for s in ("NW", "HE", "RP", "SL", "BW", "BY")}
 
@@ -833,10 +840,14 @@ def write_gtfs(trips, stations, runs, calendar, dates, log=print):
         t["short"] = n + (f"~{k}" if k or not n else "") if n else f"~{k + 1}"
     used = {k for t in trips for k, *_ in t["seq"]}
     ids = {k: station_id(k) for k in used}
-    clash = Counter(ids.values())
-    for k in used:  # one number, two stations (a number of DB's kept for one): the second by its name
-        if clash[ids[k]] > 1 and STATIONS.get(k, [""])[0] and not k.startswith(stations[k][0]):
-            ids[k] = "de-" + _slug(k)
+    # One station filed under two names ("Essen West" and "Essen (Ruhr)
+    # West", the Harz narrow gauge's "Schierke" and DB's): germany_stations.json
+    # gives both its number, and it's one station, named and placed as the
+    # name its trains use most.
+    calls = Counter(k for t in trips for k, *_ in t["seq"])
+    named = {}
+    for k in sorted(used, key=lambda k: (-calls[k], k)):
+        named.setdefault(ids[k], k)
     routes = {}
     for t in trips:
         name = line_name(t["kind"], t["line"], t["agency_name"])
@@ -860,8 +871,8 @@ def write_gtfs(trips, stations, runs, calendar, dates, log=print):
         for i, (k, arr, dep, pick, drop) in enumerate(t["seq"]):
             st.write(f"{t['tid']},{arr},{dep},{ids[k]},{i},{pick if pick in ('1', '2', '3') else ''},{drop if drop in ('1', '2', '3') else ''}\n")
     agency = [{"agency_id": a, "agency_name": AGENCIES[a]["name"], "agency_url": "https://gtfs.de", "agency_timezone": TZ} for a in AGENCIES]
-    stop_rows = [{"stop_id": ids[k], "stop_name": stations[k][0], "stop_lat": stations[k][1], "stop_lon": stations[k][2]}
-                 for k in sorted(used, key=lambda k: ids[k])]
+    stop_rows = [{"stop_id": i, "stop_name": stations[k][0], "stop_lat": stations[k][1], "stop_lon": stations[k][2]}
+                 for i, k in sorted(named.items())]
     # direction_id: the station it sets out from, so that while the trains
     # are unnumbered each run is known by it and its first departure
     # ("8011160-0605", build_schedules.py's key for unnumbered runs).
@@ -911,7 +922,7 @@ EXTRAS = {"make": make, "tz": TZ, **({"number": lambda t: t.get("trip_short_name
 # lie in the main-line tunnel, a few metres from the S-Bahn's, which the
 # station's point is nearer; every railroad but the S-Bahn stops in the
 # main-line one.
-POSITIONS = {a: {"8089032": [52.50962, 13.37575]} for a in AGENCIES if a != "sbahn"}
+POSITIONS = {a: {station_id("Berlin Potsdamer Platz"): [52.50962, 13.37575]} for a in AGENCIES if a != "sbahn"}
 GTFS = {a: (TIMETABLE, lambda r, a=a: r["agency_id"] == a, lambda r: r["route_short_name"], {**EXTRAS, "positions": POSITIONS.get(a, {})})
         for a in AGENCIES}
 
@@ -1060,11 +1071,16 @@ def dbtt_answer(env, query, now=None, get=None):
     at, when = query.get("at") or "", query.get("time") or ""
     if not re.fullmatch(r"\d{7}", at) or not re.fullmatch(r"\d{10}", when):
         return {"found": False}
-    plan = _cached(_plans, f"{at}|{when[:8]}", PLAN_S, f"{DBTT}/plan/{at}/{when[:6]}/{when[6:8]}", env, now, get)
-    if not plan:
-        return {"found": False}
-    fchg = _cached(_changes, at, CHANGES_S, f"{DBTT}/fchg/{at}", env, now, get)
-    return detail(plan, fchg or "", query)
+    out = {"found": False}
+    for eva in [at] + ([PARTS[at]] if at in PARTS else []):  # the station's board, then its S-Bahn part's
+        plan = _cached(_plans, f"{eva}|{when[:8]}", PLAN_S, f"{DBTT}/plan/{eva}/{when[:6]}/{when[6:8]}", env, now, get)
+        if not plan:
+            continue
+        fchg = _cached(_changes, eva, CHANGES_S, f"{DBTT}/fchg/{eva}", env, now, get)
+        out = detail(plan, fchg or "", query)
+        if out["found"]:
+            break
+    return out
 
 
 def relay_fetch(env, source_id, query=None):
