@@ -464,7 +464,10 @@ const s130 = (hybrid) => (c) => powerCar(c, {
   paint: (c, L) => (hybrid ? rfPaint(L, { y: 4.6, nose: 10, lines: true }) : rfPaint(L, { y: 4.6, nose: 10, line: "#8d949b", lineW: 0.45 })) + alviaMask(),
   marks: (c, L) => renfeMark(c, L * 0.5, 8.0, 2.4) + renfeMark(c, 5.2, 6.4, 0.7) + grille(3.6, 7.2, 2.6, 0.9, 0.25) });
 export const rf130Power = s130(false), rf730Power = s130(true);
+// The coach next to each power car rises to its roof (Sevilla-Santa Justa,
+// as on the Talgo 350); on a 730 the generator car is there instead.
 const s130Coach = (hybrid) => (c) => talgoCoach(c, { roof: 11.0, rows: seq(5.4, 5.9, 6).map((x) => [x, 5.9, 4.0, 2.6]), band: [5.65, 3.1],
+  ramp: hybrid ? null : c.index === 1 ? ["L", 13.1] : c.index === c.count - 2 ? ["R", 13.1] : null,
   paint: (c, L) => (hybrid ? rfPaint(L, { y: 3.9, roof: 10.2, skirt: 2.6, lines: true }) : rfPaint(L, { y: 3.9, roof: 10.2, skirt: 2.6, line: "#8d949b", lineW: 0.45 })),
   mark: (c, L) => renfeMark(c, L - 5.0, 9.4, 0.8, "#2b2d31") + wifi(4.6, 9.7, 0.4) });
 export const rf130Coach = s130Coach(false), rf730Coach = s130Coach(true);
