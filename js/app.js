@@ -818,6 +818,7 @@ map.on("style.load", () => {
   map.setProjection({ type: "globe" });
   addLayers();
   applyFocus();
+  ovBase = {}; // the layers just added have their own filters again
   applyOverview();
 });
 
@@ -845,9 +846,11 @@ function visible(t) {
   if (state.railroad && t.agency !== state.railroad) return false;
   // The selected and tracked trains always show.
   if (t.id === state.selected || state.tracked.some((r) => r.id === t.id)) return true;
-  if (ovHidden) return false; // the overview's pins are up
-  // A country's page shows only its railroads' trains.
-  if (shownCountry && AGENCIES[t.agency]?.country !== shownCountry) return false;
+  // With the pins up, only a tracked train's country's trains show; on a
+  // country's page, only its railroads' (and a tracked train's country's).
+  const country = AGENCIES[t.agency]?.country;
+  if (ovHidden) return trackedCountries.has(country);
+  if (shownCountry && country !== shownCountry && !trackedCountries.has(country)) return false;
   if (state.onlyTracked && state.tracked.length) return false;
   return !(state.hideEstimated && t.estimated);
 }
@@ -1450,7 +1453,7 @@ function loadRail() {
     state.railGeo = { type: "FeatureCollection", features: r === NA_TRACK ? geojson.features.concat(had) : had.concat(geojson.features) };
     focusCache.key = null; // an open railroad's track may run on into this region
     for (const c of countriesOfRegion(r.region)) railIn.add(c);
-    map.getLayer("tt-rail-abroad") && map.setFilter("tt-rail-abroad", abroadFilter());
+    applyOverview(); // the track abroad's filter, with what it leaves out
     if (r !== NA_TRACK) loadAbroad(r.region);
     redrawRail();
     if (state.rail) state.rail.add(geojson);
@@ -1490,12 +1493,13 @@ const ovNeeded = (ours) => ours(state.railroad) || ours(state.trains.get(state.s
 // Whether a region the map shows may load now.
 function regionOpen(region) {
   const countries = countriesOfRegion(region);
-  if (!countries.length || countries.includes(ovFocus) || map.getZoom() >= OV_VIEW_ZOOM) return true;
+  if (!countries.length || countries.includes(ovFocus) || countries.some((c) => trackedCountries.has(c)) || map.getZoom() >= OV_VIEW_ZOOM) return true;
   return ovNeeded((a) => Boolean(a) && (region === NA_TRACK.region ? inNA(a) : regionOfAgency.get(a) === region));
 }
 // Whether a railroad's feed may be polled for the map: its country picked,
 // or (one polled by view) zoomed in where it runs.
-const railroadOpen = (id, scoped) => !AGENCIES[id]?.country || AGENCIES[id].country === ovFocus || (scoped && map.getZoom() >= OV_VIEW_ZOOM);
+const railroadOpen = (id, scoped) => !AGENCIES[id]?.country || AGENCIES[id].country === ovFocus ||
+  trackedCountries.has(AGENCIES[id].country) || (scoped && map.getZoom() >= OV_VIEW_ZOOM);
 function setFocus(country) {
   if (country === ovFocus) return;
   ovFocus = country;
@@ -1511,9 +1515,36 @@ function setFocus(country) {
 }
 // The map's track, stations and trains, put away while the pins are up
 // (the open and tracked trains stay).
-const OV_LAYERS = ["tt-rail-casing", "tt-rail-0", "tt-rail-1", "tt-rail-2", "tt-rail-abroad", "tt-stations-minor", "tt-stations-major", "tt-station-labels"];
+// With the pins up, a tracked train's country stays on the map: its track
+// and stations narrowed to its railroads ("a" on the track, "g" on the
+// stations, their first railroad), the rest put away.
+const OV_RAIL = ["tt-rail-casing", "tt-rail-0", "tt-rail-1", "tt-rail-2", "tt-rail-abroad"];
+const OV_STATIONS = ["tt-stations-minor", "tt-stations-major", "tt-station-labels"];
+let ovBase = {}; // layer -> its own filter, before the overview narrows it (reset when the style is)
 function applyOverview() {
-  for (const id of OV_LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", ovHidden ? "none" : "visible");
+  const keep = ovHidden && trackedCountries.size ? Object.keys(AGENCIES).filter((id) => trackedCountries.has(AGENCIES[id].country)) : null;
+  for (const id of [...OV_RAIL, ...OV_STATIONS]) {
+    if (!map.getLayer(id)) continue;
+    if (!(id in ovBase)) ovBase[id] = map.getFilter(id) ?? null;
+    const base = id === "tt-rail-abroad" ? abroadFilter() : ovBase[id];
+    const narrow = keep && ["in", ["get", OV_RAIL.includes(id) ? "a" : "g"], ["literal", keep]];
+    map.setLayoutProperty(id, "visibility", ovHidden && !keep ? "none" : "visible");
+    map.setFilter(id, narrow ? (base ? ["all", base, narrow] : narrow) : base);
+  }
+}
+// The countries of the trains being tracked: each loads and shows as if
+// picked (its track, stations and every railroad's trains), wherever the
+// map is and whichever country's page is open.
+let trackedCountries = new Set();
+function trackedChanged() {
+  const next = new Set(state.tracked.map((r) => AGENCIES[r.agency]?.country).filter(Boolean));
+  if (next.size === trackedCountries.size && [...next].every((c) => trackedCountries.has(c))) return;
+  trackedCountries = next;
+  trackWatch?.check();
+  regionData?.then((m) => m?.recheck());
+  wakeSources();
+  applyOverview();
+  redraw();
 }
 // After the map moves: which country is picked, and the pins or the way back.
 function overviewMoved() {
@@ -1963,6 +1994,7 @@ async function poll(src, attempt = 0, once = false) {
 }
 
 async function start() {
+  trackedChanged(); // the trains tracked on the last visit: their countries load with the map
   loadRail();
   dataRegions();
   for (const r of state.tracked) needData(r.agency), needTrack(r.agency); // a ride followed elsewhere
@@ -4847,6 +4879,7 @@ const PAGE_OPENED = Date.now(); // trips that ended while the page was closed ar
 const trainLabel = (rec) => `${AGENCIES[rec.agency]?.short || ""} ${rec.number || ""}`.trim();
 const saveTracked = () => {
   store.set("tt-tracked", state.tracked);
+  trackedChanged(); // a tracked train's country shows with it
   account?.trackedChanged(state.tracked); // to the rider's other devices, when signed in
 };
 
