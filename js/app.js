@@ -1563,6 +1563,10 @@ function overviewPanelChanged() {
 // stations, their first railroad), the rest put away.
 const OV_RAIL = ["tt-rail-casing", "tt-rail-0", "tt-rail-1", "tt-rail-2", "tt-rail-abroad"];
 const OV_STATIONS = ["tt-stations-minor", "tt-stations-major", "tt-station-labels"];
+// Where a railroad says no trains are running (the broken line, its gap and
+// its label): put away with the track they stand in for. They stayed on the
+// map over the pins and beside another country's, dashes with no line.
+const OV_DISRUPTIONS = ["tt-disruption-gap", "tt-disruption-line", "tt-disruption-label"];
 let ovBase = {}; // layer -> its own filter, before the overview narrows it (reset when the style is)
 // While a country is picked and the map is still out at its scale (short of
 // OV_VIEW_ZOOM), the map shows that country's alone: its track, its
@@ -1580,7 +1584,7 @@ function applyOverview() {
   ovApplied = `${ovHidden}|${ovNarrowed() ? ovFocus : ""}`;
   const agencies = narrowed ? Object.keys(AGENCIES).filter((id) => id === open || countries.has(AGENCIES[id].country)) : [];
   const cs = ["coalesce", ["get", "cs"], ""], is = (prop) => ["==", ["coalesce", ["get", prop], ""], open];
-  for (const id of [...OV_RAIL, ...OV_STATIONS]) {
+  for (const id of [...OV_RAIL, ...OV_STATIONS, ...OV_DISRUPTIONS]) {
     if (!map.getLayer(id)) continue;
     if (!(id in ovBase)) ovBase[id] = map.getFilter(id) ?? null;
     const abroad = id === "tt-rail-abroad";
@@ -1588,6 +1592,7 @@ function applyOverview() {
     const base = abroad ? abroadFilter(narrowed ? countries : null) : ovBase[id];
     const narrow = !narrowed ? null
       : abroad ? ["in", ["get", "a"], ["literal", agencies]]
+      : OV_DISRUPTIONS.includes(id) ? ["in", ["get", "agency"], ["literal", agencies]]
       : ["any", ...[...countries].map((c) => ["in", c, cs]), ...(open ? (OV_RAIL.includes(id) ? ["a", "b", "c"] : ["g"]).map(is) : [])];
     map.setLayoutProperty(id, "visibility", ovHidden && !narrowed ? "none" : "visible");
     map.setFilter(id, narrow ? (base ? ["all", base, narrow] : narrow) : base);
