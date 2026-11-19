@@ -2278,14 +2278,8 @@ function closeCountryPage() {
 function countryPageHtml(country) {
   const ids = railroadsOf(country), mine = new Set(ids), counts = agencyCounts();
   const running = countryRunning(country), est = ov?.runningNow(country);
-  const live = countryLive(country), name = countryName(country);
   const stations = [...state.stations.values()].filter((st) => st.agencies.some((a) => mine.has(a)));
-  // Its flag (two regional-indicator letters), as the railroad page shows its color.
-  const flag = /^[A-Z]{2}$/.test(country) ? String.fromCodePoint(...[...country].map((c) => 0x1f1a5 + c.charCodeAt(0))) : "";
-  const hero = `<div class="hero">
-      <div class="agency-name"><span class="dot" style="background:var(--${live ? "good" : "faint"})"></span>${esc(T(live ? "Live data" : "Timetables"))}</div>
-      <div class="hero-title">${flag ? `<span class="country-flag" aria-hidden="true">${flag}</span>` : ""}<h2>${esc(name)}</h2></div>
-    </div>`;
+  const hero = `<div class="hero"><h2>${esc(countryName(country))}</h2></div>`;
   const tiles = `<div class="rr-stats">
       ${statTile(running != null ? running.toLocaleString(lang) : est != null ? `~${est.toLocaleString(lang)}` : "—", T("running"))}
       ${statTile(ids.length, T("railroads"))}

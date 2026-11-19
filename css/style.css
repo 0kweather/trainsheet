@@ -1111,9 +1111,8 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .ov-pin.compact .ov-stripe { margin-top: 1px; height: 4px; }
 
 /* A country's page in the panel (app.js countryPageHtml), built as a
-   railroad's page is: its hero, stat tiles and plain sections. */
+   railroad's page is: its name, stat tiles and plain sections. */
 .country-page { padding: 0 var(--s4) var(--s6); display: flex; flex-direction: column; }
-.country-flag { font-size: 26px; line-height: 1; }
 .country-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; margin-top: 5px; }
 .country-swatch.round { border-radius: 50%; }
 .country-page .rr-line .served-name .sub { font-size: var(--fs-xs); }

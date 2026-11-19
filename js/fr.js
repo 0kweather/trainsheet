@@ -552,8 +552,6 @@ export default {
   "Not listed? Enter it yourself": "Introuvable? Saisissez-le vous-même",
   // ----- The countries' pins and pages (js/overview.js) -----
   "Others": "Autres",
-  "Live data": "Données en temps réel",
-  "Timetables": "Horaires",
   "running": "en service",
   "railroads": "réseaux",
   "About {n} running": "Environ {n} en service",
