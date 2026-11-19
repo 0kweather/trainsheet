@@ -1123,11 +1123,9 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .country-day .now { fill: var(--accent); stroke: var(--panel-solid); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .country-day .hours { display: flex; justify-content: space-between; margin-top: 4px; color: var(--faint); font-size: 11px; }
 
-/* While a country is picked: its pin docked at the top of the map, and the
-   countries around it as named dots. */
+/* While a country is picked: the countries around it as named dots. */
 .ov-near { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 .ov-near[hidden] { display: none; }
-.ov-dock { border: 1.5px solid var(--accent); }
 .ov-dot {
   position: absolute;
   left: 0;

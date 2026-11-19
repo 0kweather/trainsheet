@@ -3,12 +3,11 @@
 // per country instead: its name, the trains its railroads run this hour, a
 // dot when any of them is tracked live, and a stripe of its railroads in
 // their colors, sized by their trains. A pin picks its country (app.js loads
-// that one alone and opens its page). While a country is picked its pin
-// stays, docked at the top of the map, and brings its page back; the
+// that one alone and opens its page). While a country is picked, the
 // countries around it show as named dots, at their pins or (just off
-// screen) at the map's edge toward them, and pick theirs. Zooming out past
-// the country brings the pins back. Everything here comes from
-// data/overview.json (scripts/build_overview.py).
+// screen) at the map's edge toward them, and pick theirs; leaving it (its
+// page closed, or the map zoomed out past it) brings the pins back.
+// Everything here comes from data/overview.json (scripts/build_overview.py).
 
 const GAP = 6;          // px kept between pins
 const MIN_SHARE = 0.03; // railroads with less of the trains than this share the stripe's grey "others"
@@ -25,10 +24,8 @@ function weekHour(tz) {
 
 // opts: { map, agencies (AGENCIES), name(country) -> its name, live(country)
 // -> whether a railroad of it is tracked live, railroads(country) -> its
-// railroads, running(country) -> its trains on the map now once its feeds
-// are in (else null: this hour's from its timetables), pad() -> the map's
-// padding for the panel, T, lang, onPick(country), onDock(country): the
-// docked pin tapped }.
+// railroads, pad() -> the map's padding for the panel, T, lang,
+// onPick(country) }.
 export function overview(opts) {
   const { map, agencies, T } = opts;
   let data = null, cells = null, shown = false, focus = null, dotsOn = false;
@@ -42,16 +39,11 @@ export function overview(opts) {
   layer.append(leaders);
   map.getContainer().append(layer);
 
-  // The picked country's docked pin and its neighbors' dots.
+  // The picked country's neighbors' dots.
   const near = document.createElement("div");
   near.className = "ov-near";
   near.hidden = true;
   map.getContainer().append(near);
-  const dock = document.createElement("button");
-  dock.type = "button";
-  dock.className = "ov-pin ov-dock";
-  dock.addEventListener("click", () => focus && opts.onDock(focus));
-  near.append(dock);
   const dots = new Map(); // country -> { el, lon, lat, w, h }
 
   const ready = fetch("data/overview.json?v=dev")
@@ -67,7 +59,6 @@ export function overview(opts) {
         at += +n;
       }
       build();
-      dockPin();
       update();
       return d;
     })
@@ -111,10 +102,9 @@ export function overview(opts) {
     return { hours, now: weekHour(data.rr[rr[0]].tz)[1] };
   }
 
-  function pinHTML(country, docked = false) {
+  function pinHTML(country) {
     const rr = trainsNow(country);
     const total = rr.reduce((s, [, n]) => s + n, 0);
-    const now = docked ? opts.running(country) : null; // the docked pin: what the page says
     const parts = [];
     let others = 0;
     for (const [id, n] of rr) {
@@ -127,8 +117,7 @@ export function overview(opts) {
     if (!parts.length) for (const id of all) parts.push([agencies[id]?.color || OTHERS, 1, agencies[id]?.short || id]);
     const name = opts.name(country);
     const live = opts.live(country);
-    const count = now != null ? T("{n} running", { n: now.toLocaleString(opts.lang) })
-      : rr.length ? T("{n} running", { n: total.toLocaleString(opts.lang) }) : opts.railroadCount(all.length);
+    const count = rr.length ? T("{n} running", { n: total.toLocaleString(opts.lang) }) : opts.railroadCount(all.length);
     const names = all.map((id) => agencies[id]?.short || id).join(", ");
     return {
       full: `<span class="ov-name">${esc(name)}</span>
@@ -171,16 +160,7 @@ export function overview(opts) {
       p.el.setAttribute("aria-label", h.label);
       p.el.title = h.title;
     }
-    dockPin();
     place();
-  }
-  // The picked country's pin, as its overview pin reads, docked.
-  function dockPin() {
-    if (!focus || !data?.countries[focus]) return;
-    const h = pinHTML(focus, true);
-    dock.innerHTML = h.full;
-    dock.setAttribute("aria-label", `${h.label}. ${T("Open {country}'s page", { country: opts.name(focus) })}`);
-    dock.title = T("Open {country}'s page", { country: opts.name(focus) });
   }
 
   // Busiest first (over the week, so a big network keeps its place at
@@ -190,7 +170,7 @@ export function overview(opts) {
     if (!shown) return;
     // Inside what the panel leaves of the map.
     const W = layer.clientWidth, H = layer.clientHeight, pad = opts.pad();
-    const taken = [];
+    const taken = controls(layer); // clear of the map's own buttons
     const free = (x, y, w, h) => x >= pad.left + 4 && y >= pad.top + 4 && x + w <= W - pad.right - 4 && y + h <= H - pad.bottom - 4 &&
       taken.every((r) => x + w + GAP <= r[0] || r[0] + r[2] + GAP <= x || y + h + GAP <= r[1] || r[1] + r[3] + GAP <= y);
     const order = [...pins.entries()].sort((a, b) => weekly(b[0]) - weekly(a[0]));
@@ -218,6 +198,14 @@ export function overview(opts) {
     }
     move();
   }
+  // The map's own buttons (zoom, scale, credits) as [x, y, w, h] in el's frame.
+  function controls(el) {
+    const box = el.getBoundingClientRect();
+    return [...map.getContainer().querySelectorAll(".maplibregl-ctrl")].map((c) => {
+      const r = c.getBoundingClientRect();
+      return [r.left - box.left, r.top - box.top, r.width, r.height];
+    }).filter((r) => r[2] && r[3]);
+  }
   // On the globe's far side (or too near its edge to read): more than 75°
   // round the earth from the middle of the map.
   const rad = Math.PI / 180;
@@ -235,23 +223,14 @@ export function overview(opts) {
     return weeklies.get(country);
   };
 
-  // The docked pin at the top middle of what the panel leaves of the map;
-  // each country nearby as a dot at its pin, or at the edge toward it when
-  // it's off screen by less than one and a half screens; busiest first,
-  // never one over another (or over the docked pin).
+  // Each country near the picked one as a dot at its pin, or at the edge
+  // toward it when it's off screen by less than one and a half screens;
+  // busiest first, never one over another.
   function placeNear() {
     if (!focus || !data) return;
     const W = near.clientWidth, H = near.clientHeight, pad = opts.pad();
     const L = pad.left, T0 = pad.top, R = W - pad.right, B = H - pad.bottom;
-    const dw = dock.offsetWidth, dh = dock.offsetHeight;
-    const dx = Math.round(L + (R - L - dw) / 2), dy = T0 + 12;
-    dock.style.transform = `translate(${dx}px, ${dy}px)`;
-    // Clear of the docked pin and the map's own buttons (zoom, scale, credits).
-    const box = near.getBoundingClientRect();
-    const taken = [[dx, dy, dw, dh], ...[...map.getContainer().querySelectorAll(".maplibregl-ctrl")].map((el) => {
-      const r = el.getBoundingClientRect();
-      return [r.left - box.left, r.top - box.top, r.width, r.height];
-    }).filter((r) => r[2] && r[3])];
+    const taken = controls(near); // clear of the map's own buttons
     const free = (x, y, w, h) => x >= L + 4 && y >= T0 + 4 && x + w <= R - 4 && y + h <= B - 4 &&
       taken.every((r) => x + w + GAP <= r[0] || r[0] + r[2] + GAP <= x || y + h + GAP <= r[1] || r[1] + r[3] + GAP <= y);
     const cx = (L + R) / 2, cy = (T0 + B) / 2, hw = (R - L) / 2, hh = (B - T0) / 2, inset = 16;
@@ -298,15 +277,12 @@ export function overview(opts) {
   }
 
   // shown: the pins are wanted (nothing picked, zoomed out); focus: the
-  // country picked, its pin docked; dots: its neighbors' dots are wanted
-  // (zoomed out enough for them to be near).
+  // country picked; dots: its neighbors' dots are wanted (zoomed out enough
+  // for them to be near).
   function update(state = {}) {
     if ("shown" in state) shown = state.shown;
     if ("dots" in state) dotsOn = state.dots;
-    if ("focus" in state && state.focus !== focus) {
-      focus = state.focus;
-      dockPin();
-    }
+    if ("focus" in state) focus = state.focus;
     layer.hidden = !shown || !data;
     near.hidden = !focus || !data?.countries[focus];
     if (shown && data) place();
@@ -330,7 +306,7 @@ export function overview(opts) {
   });
 
   return {
-    ready, countryAt, update, refresh, day, runningNow, dockPin,
+    ready, countryAt, update, refresh, day, runningNow,
     has: (country) => Boolean(data?.countries[country]),
     bbox: (country) => data?.countries[country]?.bbox || null,
     pin: (country) => data?.countries[country]?.pin || null,

@@ -551,7 +551,6 @@ export default {
   "No trips planned. Tap + to add the trains you'll take: they're tracked for you on the day.": "Aucun voyage prévu. Touchez + pour ajouter les trains que vous prendrez : ils seront suivis pour vous le jour venu.",
   "Not listed? Enter it yourself": "Introuvable? Saisissez-le vous-même",
   // ----- The countries' pins and pages (js/overview.js) -----
-  "Open {country}'s page": "Ouvrir la page : {country}",
   "Others": "Autres",
   "About {n} running": "Environ {n} en service",
   "Trains through the day": "Les trains au fil de la journée",

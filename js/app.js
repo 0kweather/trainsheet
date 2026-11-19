@@ -1466,11 +1466,11 @@ function loadRail() {
 // instead (js/overview.js), its track, stations and trains put away. A
 // country loads once it's picked: its pin tapped (which opens its page, see
 // countryPageHtml), or the map centered on it from OV_PICK_ZOOM in; while
-// one is picked, centering on another (or tapping its dot) picks that one,
-// its docked pin brings its page back, and zooming out past it goes back
-// to the pins. From OV_VIEW_ZOOM in,
-// regions load as the map shows them, and a railroad's page or an open or
-// tracked train loads its own wherever the map is.
+// one is picked, centering on another (or tapping its dot) picks that one.
+// Leaving its page (a tap on the map, its back button) or zooming out past
+// it goes back to the pins as if it had never been picked. From
+// OV_VIEW_ZOOM in, regions load as the map shows them, and a railroad's
+// page or an open or tracked train loads its own wherever the map is.
 const OV_PICK_ZOOM = 6, OV_VIEW_ZOOM = 8, OV_OUT_ZOOM = 4;
 const countryOfRegion = new Map(DATA_REGIONS.map((r) => [r.region, AGENCIES[r.agencies[0]]?.country]));
 // North America's track and stations are the US's and Canada's both.
@@ -1537,17 +1537,9 @@ function startOverview() {
       map, agencies: AGENCIES, T, lang, pad: panelPadding,
       name: countryName,
       railroads: railroadsOf,
-      // Its trains on the map, as its page counts them, once a feed of it has answered.
-      running: (country) => {
-        const ids = new Set(railroadsOf(country));
-        if (!SOURCES.some((src) => src.agencies.some((a) => ids.has(a)) && state.sourceStatus[src.id]?.at)) return null;
-        const counts = agencyCounts();
-        return [...ids].reduce((n, id) => n + (counts[id] || 0), 0);
-      },
       railroadCount: (n) => Tn(n, "{n} railroad", "{n} railroads"),
       live: countryLive,
       onPick: (country) => pickCountry(country, { page: true }),
-      onDock: openCountryPage, // its page back, from its docked pin
     });
     return ov.ready.then(overviewMoved);
   }).catch((err) => console.warn("overview", err));
@@ -1556,7 +1548,9 @@ function startOverview() {
 const countryLive = (country) => SOURCES.some((src) => src.format !== "timetable" && src.agencies.some((a) => AGENCIES[a]?.country === country) &&
   sourceAvailability(src).ok && !sourceAvailability(src).timetable);
 // Picks a country: loads it, frames it, and (page) opens its page.
+let ovBefore = null; // the view the pins were in when a country was picked from them
 function pickCountry(country, { page = false } = {}) {
+  if (!ovFocus) ovBefore = { center: map.getCenter().toArray(), zoom: map.getZoom() };
   setFocus(country);
   ovHidden = false;
   applyOverview();
@@ -1579,6 +1573,24 @@ function pickCountry(country, { page = false } = {}) {
     overviewMoved();
   });
 }
+// Leaves the picked country as if it had never been picked: its page closes,
+// its track, stations and trains are put away, and the map goes back to the
+// pins as they were before it (away: the panel too, for a tap on the map).
+function leaveCountry({ away = false } = {}) {
+  const before = ovBefore || { center: ov?.pin(ovFocus) || map.getCenter().toArray(), zoom: OV_PICK_ZOOM - 2 };
+  ovBefore = null;
+  setFocus(null); // closes its page
+  if (away) putPanelAway(true);
+  ovHidden = true;
+  applyOverview();
+  redraw();
+  ov?.update({ shown: true, focus: null });
+  map.stop();
+  map.easeTo({ center: before.center, zoom: Math.min(before.zoom, OV_PICK_ZOOM - 1.5), duration: 900 });
+}
+// A country's page on screen: what a tap on the map, or its back button, leaves.
+const countryPageShown = () => Boolean(ovFocus && openCountry && openCountry !== "*" && !isAway() &&
+  !(state.selected || state.station || state.railroad) && (!accountsOn() || state.tab === "browse"));
 map.on("moveend", overviewMoved);
 map.once("load", overviewMoved); // the opening view
 
@@ -5345,7 +5357,6 @@ setInterval(() => {
 }, 30000);
 
 function renderAll() {
-  ov?.dockPin(); // its count, as the page's
   renderTracked();
   renderAgencies();
   renderResults();
@@ -5702,6 +5713,13 @@ map.on("click", (e) => {
   // A tap on the map itself puts the panel away, from whatever page is open
   // (unless it's closing Settings, which the same tap does).
   if (!$("settings-menu").hidden || document.querySelector(".acct-sheet, .keys-sheet")) return;
+  // In a country picked from its pin: a train's, station's or railroad's
+  // page steps back to the country's page, and the country's page, tapped
+  // out of, leaves the country.
+  if (ovFocus && openCountry && openCountry !== "*" && !isAway()) {
+    if (state.selected || state.station || state.railroad) return goHome();
+    if (countryPageShown()) return leaveCountry({ away: true });
+  }
   if (state.selected || state.station || state.railroad) goHome();
   putPanelAway(true);
 });
@@ -6122,7 +6140,8 @@ on("agencies", "click", (e) => {
   const country = e.target.closest("[data-country]");
   if (country) return pickCountry(country.dataset.country, { page: true });
   if (e.target.closest("[data-country-back]")) {
-    if (openCountry && openCountry !== "*") return closeCountryPage();
+    // Out of a picked country's page: out of the country.
+    if (openCountry && openCountry !== "*") return ovFocus ? leaveCountry() : closeCountryPage();
     openCountry = null;
     return renderAgencies();
   }
