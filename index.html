@@ -126,7 +126,7 @@
       <div class="detail-top">
         <button class="back" id="back-btn">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>
-          <span data-i18n>All trains</span>
+          <span data-i18n>Back</span>
         </button>
         <div class="detail-actions">
           <button class="icon-btn" id="share-btn" title="Copy a link to this train" aria-label="Copy a link to this train" data-i18n-title="Copy a link to this train" data-i18n-aria="Copy a link to this train">
@@ -180,34 +180,16 @@
       <span class="switch" aria-hidden="true"></span>
       <span class="toggle-text"><strong data-i18n>Show stations</strong><span data-i18n>Station markers and names on the map</span></span>
     </label>
-    <label class="toggle">
-      <input type="checkbox" id="heading-toggle">
-      <span class="switch" aria-hidden="true"></span>
-      <span class="toggle-text"><strong data-i18n>Infer direction</strong><span data-i18n>Point trains toward their next stop when their railroad doesn't report a heading; otherwise they show as dots</span></span>
-    </label>
-    <label class="toggle">
-      <input type="checkbox" id="estimated-toggle">
-      <span class="switch" aria-hidden="true"></span>
-      <span class="toggle-text"><strong data-i18n>Hide estimated trains</strong><span data-i18n>Show only trains located by GPS, not ones placed from their predicted times</span></span>
-    </label>
-    <label class="toggle">
-      <input type="checkbox" id="only-tracked-toggle">
-      <span class="switch" aria-hidden="true"></span>
-      <span class="toggle-text"><strong data-i18n>Only tracked trains</strong><span data-i18n>While you're tracking a train, hide all the others</span></span>
-    </label>
 
-    <div class="menu-title"><label for="tz-choice" data-i18n>Time zone</label></div>
-    <select id="tz-choice" class="menu-select"></select>
+    <div class="menu-title" data-i18n>Times</div>
+    <div class="segmented two" id="tz-choice">
+      <button data-tz="" data-i18n>My time</button>
+      <button data-tz="station" data-i18n>Station time</button>
+    </div>
     <label class="toggle">
       <input type="checkbox" id="clock-toggle">
       <span class="switch" aria-hidden="true"></span>
       <span class="toggle-text"><strong data-i18n>24-hour clock</strong><span data-i18n>Times like 18:05 instead of 6:05 PM</span></span>
-    </label>
-    <div class="menu-title" data-i18n>Delays</div>
-    <label class="toggle">
-      <input type="checkbox" id="infer-toggle">
-      <span class="switch" aria-hidden="true"></span>
-      <span class="toggle-text"><strong data-i18n>Catch unreported delays</strong><span data-i18n>Mark a train late when GPS shows it running behind what its railroad reports</span></span>
     </label>
     <div class="menu-title" data-i18n>Help</div>
     <button type="button" class="menu-link" id="install-btn" hidden><span data-i18n>Install as an app</span><span aria-hidden="true">›</span></button>
@@ -216,7 +198,7 @@
     <details class="menu-about">
       <summary data-i18n>About the data</summary>
       <p data-i18n-html="Positions come from each railroad's public real-time feed and refresh every 20–60 seconds. Trains marked <em>estimated</em> are placed between stations using predicted arrival times because their feed doesn't report GPS.">Positions come from each railroad's public real-time feed and refresh every 20–60 seconds. Trains marked <em>estimated</em> are placed between stations using predicted arrival times because their feed doesn't report GPS.</p>
-      <p data-i18n>Railroads often don't post a delay until well after it starts. Trainsheet watches GPS for trains still at a station after their posted departure, or too far out to make their next stop on time, and adds that delay itself. Those delays are underlined with dots. You can turn this off above.</p>
+      <p data-i18n>Railroads often don't post a delay until well after it starts. Trainsheet watches GPS for trains still at a station after their posted departure, or too far out to make their next stop on time, and adds that delay itself. Those delays are underlined with dots.</p>
       <p id="credits"></p>
       <p><a href="https://github.com/0kweather/trainsheet" data-i18n>Source on GitHub</a></p>
     </details>

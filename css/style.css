@@ -250,7 +250,7 @@ a { color: var(--accent); }
 }
 
 .track-card:hover, .track-card:focus-visible { border-color: var(--c); outline: none; }
-.track-card .bar { align-self: stretch; background: var(--c); border-radius: 0 3px 3px 0; }
+.track-card .bar { align-self: stretch; background: var(--c); border-radius: 0 var(--r-xs) var(--r-xs) 0; }
 .tc-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: var(--fs-xs); }
 .tc-title { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-sm); font-weight: 600; min-width: 0; padding: 2px 0 2px 2px; }
 .tc-title > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -305,7 +305,7 @@ a { color: var(--accent); }
   text-align: center;
   line-height: 16px;
 }
-.notices-toggle .chev { transition: transform 0.15s; }
+.notices-toggle .chev { transition: transform var(--t-fast); }
 .notices.collapsed .notices-toggle .chev { transform: rotate(-90deg); }
 
 .notice {
@@ -328,7 +328,7 @@ a { color: var(--accent); }
   border-radius: 50%;
   background: var(--warn);
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
   font-size: var(--fs-xs);
 }
 
@@ -366,18 +366,6 @@ a { color: var(--accent); }
 .menu .segmented { margin: var(--s2) var(--s2) var(--s1); }
 .segmented.two { grid-template-columns: repeat(2, 1fr); }
 .menu .toggle { margin: 2px 0; }
-.menu-select {
-  display: block;
-  width: calc(100% - 2 * var(--s2));
-  margin: var(--s2) var(--s2) var(--s1);
-  padding: 7px var(--s3);
-  border: 0;
-  border-radius: var(--r-md);
-  background: var(--hover);
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-}
 
 /* ---------- Toggle ---------- */
 
@@ -401,7 +389,7 @@ a { color: var(--accent); }
   height: 20px;
   border-radius: var(--r-pill);
   background: var(--faint);
-  transition: background 0.15s;
+  transition: background var(--t-fast);
 }
 
 .switch::after {
@@ -414,7 +402,7 @@ a { color: var(--accent); }
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s;
+  transition: transform var(--t-fast);
 }
 
 .toggle input:checked + .switch { background: var(--accent); }
@@ -497,7 +485,7 @@ a { color: var(--accent); }
 
 .agency-open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-.agency .name { font-weight: 550; line-height: 1.25; }
+.agency .name { font-weight: 500; line-height: 1.25; }
 .agency .sub { display: block; font-weight: 400; font-size: var(--fs-xs); color: var(--muted); }
 
 .agency .count {
@@ -688,7 +676,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
   color: var(--accent);
   padding: 6px var(--s2);
   border-radius: var(--r-sm);
-  font-weight: 550;
+  font-weight: 500;
 }
 
 .back:hover { background: var(--hover); }
@@ -729,8 +717,8 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 /* Tapping a car opens a card about its model; the card leads to its page. */
 /* The tapped car: the others fade back, and a bar in the accent color
    underlines it (its room is always kept, so nothing shifts). */
-.consist .car { cursor: pointer; border-radius: 4px; transition: opacity 0.15s; }
-.consist .car::after { content: ""; align-self: stretch; height: 3px; margin: 2px 1px 0; border-radius: 2px; background: transparent; }
+.consist .car { cursor: pointer; border-radius: var(--r-xs); transition: opacity var(--t-fast); }
+.consist .car::after { content: ""; align-self: stretch; height: 3px; margin: 2px 1px 0; border-radius: var(--r-xs); background: transparent; }
 .consist .car:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .consist-strip.has-open .car:not([aria-pressed="true"]) { opacity: 0.4; }
 .consist-strip.has-open .car:not([aria-pressed="true"]):hover { opacity: 0.75; }
@@ -783,7 +771,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
   background: var(--map-land);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--t-mid) ease;
 }
 .loading.shown { opacity: 1; }
 .loading.done { opacity: 0; transition-duration: 0.45s; }
@@ -830,7 +818,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .plate > span {
   padding: 2px var(--s2) 3px;
   font-size: var(--fs-xl);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -842,9 +830,9 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .plate.sm > span { font-size: var(--fs-lg); padding: 1px 6px 2px; }
 
 /* Smallest plate, inline with a line of text (tracked cards, map hover). */
-.plate.xs { min-width: 0; box-shadow: 0 0 0 1.25px #121417; border-radius: 4px; }
+.plate.xs { min-width: 0; box-shadow: 0 0 0 1.25px #121417; border-radius: var(--r-xs); }
 .plate.xs::before { height: 3px; }
-.plate.xs > span { font-size: var(--fs-sm); font-weight: 750; padding: 0 5px 1px; line-height: 1.2; }
+.plate.xs > span { font-size: var(--fs-sm); font-weight: 700; padding: 0 5px 1px; line-height: 1.2; }
 
 .pill {
   display: inline-block;
@@ -944,7 +932,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
   border-radius: 50%;
   background: var(--panel-solid);
   border: 2px solid var(--faint);
-  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  transition: transform var(--t-fast) ease, border-color var(--t-fast) ease, background var(--t-fast) ease, box-shadow var(--t-fast) ease;
 }
 
 
@@ -959,7 +947,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .stops li.link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .stops li.past { color: var(--faint); }
 .stops li.past .stop-dot::before { background: var(--faint); border-color: var(--faint); }
-.stops li.next { font-weight: 650; }
+.stops li.next { font-weight: 600; }
 .stops li.next .stop-dot::before { border-color: var(--line-color, var(--accent)); background: var(--line-color, var(--accent)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--line-color, var(--accent)) 25%, transparent); }
 .stops .time { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
 .stops .time .late { color: var(--warn); }
@@ -980,7 +968,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 /* Where the line is only half a row long already (first and last stops). */
 .stops li.ride-from:first-child::before, .stops li.dest:last-child::before { background: var(--line-color, var(--accent)); }
 .stops li.dest:first-child::before { left: 5px; width: 2px; background: var(--line); }
-.stops li.dest { font-weight: 650; }
+.stops li.dest { font-weight: 600; }
 .stops li.dest .stop-dot::before {
   transform: scale(1.4);
   border: 3px solid var(--line-color, var(--accent));
@@ -1049,9 +1037,9 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 }
 
 .maplibregl-popup-tip { display: none; }
-.hover-card .t { display: flex; align-items: center; gap: var(--s2); font-weight: 650; padding: 2px 0 2px 2px; }
+.hover-card .t { display: flex; align-items: center; gap: var(--s2); font-weight: 600; padding: 2px 0 2px 2px; }
 .rail-net { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-xs); line-height: 1.6; }
-.rail-net .dot { width: 14px; height: 4px; border-radius: 2px; }
+.rail-net .dot { width: 14px; height: 4px; border-radius: var(--r-xs); }
 .hover-card .s { color: var(--muted); font-size: var(--fs-xs); }
 
 .toast {
@@ -1099,21 +1087,30 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .ov-pin[hidden] { display: none; }
 .ov-pin:hover { border-color: var(--accent); }
 .ov-pin:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.ov-name { font-size: var(--fs-sm); font-weight: 650; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-name { font-size: var(--fs-sm); font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ov-count { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--muted); line-height: 1.3; white-space: nowrap; }
 .ov-live { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: none; }
 .ov-live.on { background: var(--good); }
-.ov-stripe { display: flex; gap: 1px; height: 5px; margin-top: 3px; border-radius: 3px; overflow: hidden; }
+.ov-stripe { display: flex; gap: 1px; height: 5px; margin-top: 3px; border-radius: var(--r-xs); overflow: hidden; }
 .ov-stripe span { min-width: 2px; }
 /* Where a full pin won't fit: its name and stripe only. */
+/* Sized by its trains (overview.js): the busiest countries larger, the
+   smallest a little smaller. */
+.ov-pin.lg { width: 132px; padding: 8px 10px 9px; }
+.ov-pin.lg .ov-name { font-size: var(--fs-md); }
+.ov-pin.lg .ov-count { font-size: var(--fs-sm); }
+.ov-pin.lg .ov-stripe { height: 6px; }
+.ov-pin.sm { width: 96px; padding: 5px 7px 6px; }
+.ov-pin.sm .ov-name { font-size: var(--fs-xs); }
 .ov-pin.compact { width: auto; max-width: 108px; padding: 4px 7px 5px; }
+.ov-pin.compact .ov-name { font-size: var(--fs-xs); }
 .ov-pin.compact .ov-count { display: none; }
 .ov-pin.compact .ov-stripe { margin-top: 1px; height: 4px; }
 
 /* A country's page in the panel (app.js countryPageHtml), built as a
    railroad's page is: its name, stat tiles and plain sections. */
 .country-page { padding: 0 var(--s4) var(--s6); display: flex; flex-direction: column; }
-.country-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; margin-top: 5px; }
+.country-swatch { width: 10px; height: 10px; border-radius: var(--r-xs); flex: none; margin-top: 5px; }
 .country-swatch.round { border-radius: 50%; }
 .country-page .rr-line .served-name .sub { font-size: var(--fs-xs); }
 .country-day { margin-top: var(--s2); }
@@ -1122,7 +1119,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .country-day .line { fill: none; stroke: var(--accent); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
 .country-day .now-line { stroke: var(--faint); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
 .country-day .now { fill: var(--accent); stroke: var(--panel-solid); stroke-width: 2; vector-effect: non-scaling-stroke; }
-.country-day .hours { display: flex; justify-content: space-between; margin-top: 4px; color: var(--faint); font-size: 11px; }
+.country-day .hours { display: flex; justify-content: space-between; margin-top: 4px; color: var(--faint); font-size: var(--fs-2xs); }
 
 /* While a country is picked: the countries around it as named dots. */
 .ov-near { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
@@ -1167,7 +1164,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
     border-radius: var(--r-lg) var(--r-lg) 0 0;
     border-bottom: 0;
     padding-bottom: env(safe-area-inset-bottom);
-    transition: height 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: height var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1);
   }
   .panel.dragging { transition: none; }
 
@@ -1192,7 +1189,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
     width: 40px;
     height: 4px;
     margin-left: -20px;
-    border-radius: 2px;
+    border-radius: var(--r-xs);
     background: var(--faint);
     opacity: 0.6;
   }
@@ -1234,7 +1231,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 
 /* Search results: a railroad's swatch, a line's stripe. */
 .rr-icon, .line-icon { width: 44px; display: grid; place-items: center; }
-.rr-icon::before { content: ""; width: 14px; height: 14px; border-radius: 4px; background: var(--c); }
+.rr-icon::before { content: ""; width: 14px; height: 14px; border-radius: var(--r-xs); background: var(--c); }
 .result .count { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* A line's stations on its page: dots on a line in its color. */
@@ -1259,7 +1256,7 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .sb-toggle .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; align-self: flex-start; margin-top: 5px; }
 .sb-toggle .sub { color: var(--muted); font-size: var(--fs-xs); }
 /* Like the section headings': pointing right when folded, down when open. */
-.sb-toggle .chev { flex: none; color: var(--muted); transform: rotate(-90deg); transition: transform 0.15s; }
+.sb-toggle .chev { flex: none; color: var(--muted); transform: rotate(-90deg); transition: transform var(--t-fast); }
 .sb.open .sb-toggle .chev { transform: none; }
 .sb-go { flex: none; color: var(--muted); font-size: var(--fs-md); }
 .sb-toggle:hover, .sb-toggle:focus-visible { background: var(--hover); outline: none; }
@@ -1268,10 +1265,10 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 
 /* A train page's railroad and title open the railroad's and the line's pages. */
 .hero-link { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; }
-.hero-link { transition: color 0.15s ease; }
+.hero-link { transition: color var(--t-fast) ease; }
 .hero-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
 /* On hover the title takes its line's color and its arrow slides along. */
 .hero-link:hover { color: var(--hc, inherit); }
 .agency-name.hero-link:hover { opacity: 0.8; }
-.hero-go { display: inline-block; margin-left: 3px; color: var(--faint); font-weight: 400; transition: transform 0.15s ease, color 0.15s ease; }
+.hero-go { display: inline-block; margin-left: 3px; color: var(--faint); font-weight: 400; transition: transform var(--t-fast) ease, color var(--t-fast) ease; }
 .hero-link:hover .hero-go { transform: translateX(3px); color: var(--hc, inherit); }

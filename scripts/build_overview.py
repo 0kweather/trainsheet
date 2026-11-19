@@ -54,9 +54,13 @@ def railroads():
 
 
 def hourly(tt):
-    """[[trains, ...] x 24] x 7, Monday first: the runs going at any time in
-    each hour of each weekday of the timetable's second week, counting
-    yesterday's still running past midnight."""
+    """[[trains, ...] x 24] x 7, Monday first: how many runs are going at a
+    moment in each hour of each weekday of the timetable's second week (the
+    minutes its runs spend in the hour, over sixty), counting yesterday's
+    still running past midnight. Not every run that touches the hour: a pin
+    says "running", as a country's page does of the trains on its map, and
+    counting each run going at any time in the hour said half as many again
+    (Italy: 1,626 on its pin, 1,053 on its page)."""
     start = datetime.date.fromisoformat(tt["start"])
     spans = [[] for _ in range(14)]  # bit -> [(first departure, last arrival)]
     for runs in tt["trips"].values():
@@ -75,8 +79,10 @@ def hourly(tt):
         day = [0] * 24
         for h in range(24):
             a, b = h * 60, h * 60 + 60
-            day[h] = sum(1 for lo, hi in spans[bit] if lo < b and hi >= a) + \
-                sum(1 for lo, hi in spans[bit - 1] if lo - 1440 < b and hi - 1440 >= a)
+            minutes = sum(max(0, min(hi, b) - max(lo, a)) for lo, hi in spans[bit]) + \
+                sum(max(0, min(hi - 1440, b) - max(lo - 1440, a)) for lo, hi in spans[bit - 1])
+            # A railroad with a train out for part of the hour still has one.
+            day[h] = round(minutes / 60) or (1 if minutes else 0)
         week[(start + datetime.timedelta(days=bit)).weekday()] = day
     return week
 

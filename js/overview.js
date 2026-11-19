@@ -10,6 +10,7 @@
 // Everything here comes from data/overview.json (scripts/build_overview.py).
 
 const GAP = 6;          // px kept between pins
+const NEAR_DEG = 32;    // a picked country's neighbors' dots: within this many degrees round the globe of the map's middle
 const MIN_SHARE = 0.03; // railroads with less of the trains than this share the stripe's grey "others"
 const OTHERS = "#9aa0a8";
 const LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -156,8 +157,13 @@ export function overview(opts) {
   // The pins' counts and live dots, again (the hour has turned, the relay answered).
   function refresh() {
     if (!data) return;
+    // Three sizes by how many trains a country runs in a week, against the
+    // busiest: Germany's pin isn't Luxembourg's.
+    const most = Math.max(1, ...[...pins.keys()].map(weekly));
     for (const [country, p] of pins) {
-      const h = pinHTML(country);
+      const h = pinHTML(country), share = weekly(country) / most;
+      p.el.classList.toggle("lg", share >= 0.3);
+      p.el.classList.toggle("sm", share < 0.03);
       p.el.innerHTML = h.full;
       p.el.setAttribute("aria-label", h.label);
       p.el.title = h.title;
@@ -212,10 +218,10 @@ export function overview(opts) {
   // On the globe's far side (or too near its edge to read): more than 75°
   // round the earth from the middle of the map.
   const rad = Math.PI / 180;
-  function behind(p) {
+  function behind(p, deg = 75) {
     const c = map.getCenter();
     const cos = Math.sin(c.lat * rad) * Math.sin(p.lat * rad) + Math.cos(c.lat * rad) * Math.cos(p.lat * rad) * Math.cos((p.lon - c.lng) * rad);
-    return cos < Math.cos(75 * rad);
+    return cos < Math.cos(deg * rad);
   }
   const weeklies = new Map();
   const weekly = (country) => {
@@ -239,7 +245,9 @@ export function overview(opts) {
     const cx = (L + R) / 2, cy = (T0 + B) / 2, hw = (R - L) / 2, hh = (B - T0) / 2, inset = 16;
     for (const [c, d] of [...dots.entries()].sort((a, b) => weekly(b[0]) - weekly(a[0]))) {
       d.el.hidden = true;
-      if (c === focus || !dotsOn || behind(d)) continue;
+      // Neighbors only: a country a third of the way round the globe (the
+      // United States from Italy) isn't the next one over.
+      if (c === focus || !dotsOn || behind(d, NEAR_DEG)) continue;
       let { x, y } = map.project([d.lon, d.lat]);
       const k = Math.max(Math.abs(x - cx) / hw, Math.abs(y - cy) / hh);
       if (k > 2.5) continue; // far off: no dot

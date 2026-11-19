@@ -6,7 +6,7 @@ import { watchRegions } from "./railregions.js?v=dev";
 import { NETWORKS, networkColor } from "./networks.js?v=dev";
 import { trainNotices, stationNotices } from "./notices.js?v=dev";
 import { loadDisruptions, aboutLine } from "./disruptions.js?v=dev";
-import { inferDelay, restoreFeed } from "./delays.js?v=dev";
+import { inferDelay } from "./delays.js?v=dev";
 import { consistOf, consistHtml, carSvg, modelIds, fleetSamples, onCars, loadCars, pluginFacts } from "./consist.js?v=dev";
 import { stationLifts } from "./lifts.js?v=dev";
 import { t as T, tn as Tn, lang, langPref, locale, dateFormat, translatePage } from "./i18n.js?v=dev";
@@ -60,18 +60,14 @@ const state = {
   line: null,            // ...and the line, on a line's page
   predictions: null,     // live MBTA predictions for the selected station
   showStations: store.get("tt-stations", true),
-  // Mark trains late when GPS shows a delay their railroad hasn't reported
-  // (js/delays.js).
-  inferDelays: store.get("tt-infer", true),
-  // Point trains whose feed has no heading toward their next stop.
-  inferHeading: store.get("tt-infer-heading", true),
+  // (Not settings any more, but how the map works: a train is marked late
+  // when GPS shows a delay its railroad hasn't reported (js/delays.js); one
+  // whose feed has no heading points toward its next stop; trains placed
+  // from timetables show with the rest; and while a train is tracked, the
+  // tracked ones show alone.)
   // What each train's plate on the map says: "number", "line" or "none"
   // (plates only on the selected and tracked trains).
   labels: store.get("tt-labels", "number"),
-  // Leave out trains placed from timetables rather than GPS.
-  hideEstimated: store.get("tt-hide-estimated", false),
-  // While tracking a train, show only the tracked ones (and the selected one).
-  onlyTracked: store.get("tt-only-tracked", true),
   // The car tapped in the selected train's drawing: { id (train), i (car),
   // page (its full model page instead of the train) }, or null.
   car: null,
@@ -82,9 +78,9 @@ const state = {
   stationExtras: null,
   // Times as 18:05 instead of 6:05 PM.
   clock24: store.get("tt-clock24", false),
-  // Times shown in: "" the viewer's own zone, "station" each stop's local
-  // time, or an IANA zone.
-  timeZone: store.get("tt-tz", ""),
+  // Times shown in: "" the viewer's own zone, or "station" each stop's local
+  // time. (A zone picked from the list this once was reads as the viewer's.)
+  timeZone: store.get("tt-tz", "") === "station" ? "station" : "",
   // Miles or kilometers. The default follows the browser's language: miles in
   // the few countries that still use them, kilometers everywhere else.
   units: store.get("tt-units", /-(US|GB|LR|MM)\b/i.test(navigator.language || "en-US") ? "mi" : "km"),
@@ -142,7 +138,11 @@ document.documentElement.toggleAttribute("data-colorblind", state.colorblind);
 
 // ---------- Map ----------
 
-const isPhone = matchMedia("(max-width: 720px)").matches;
+// Phone layout (the sheet, the tab bar at its foot) or computer layout (the
+// panel, the rail beside it): followed as the window is resized or a tablet
+// turned (the pages section, below), not read once at opening.
+const phoneQuery = matchMedia("(max-width: 720px)");
+let isPhone = phoneQuery.matches;
 const map = new maplibregl.Map({
   container: "map",
   style: STYLES[theme],
@@ -156,13 +156,16 @@ const map = new maplibregl.Map({
   pitchWithRotate: false,
 });
 map.touchZoomRotate.disableRotation();
-// The map's credits show in full at first, as MapLibre has them, then fold
-// to their ⓘ a few seconds in (MapLibre folds them at the first drag).
-map.once("idle", () => setTimeout(() => {
-  const el = document.querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show");
+// The map's credits are folded into their ⓘ from the start (MapLibre opens
+// them in full until the map has loaded, which on a phone is a banner across
+// the top of an empty map for as long as the map takes to arrive).
+const foldCredits = () => {
+  const el = document.querySelector(".maplibregl-ctrl-attrib");
+  el?.classList.add("maplibregl-compact"); // marked folded already, MapLibre doesn't open them when the map's sources name their credits
   el?.classList.remove("maplibregl-compact-show");
   el?.removeAttribute("open");
-}, 5000));
+};
+foldCredits();
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
 const geolocate = new maplibregl.GeolocateControl({ fitBoundsOptions: { maxZoom: 10 } });
 map.addControl(geolocate, "bottom-right");
@@ -170,6 +173,22 @@ geolocate.on("geolocate", () => watchRide()); // Which train am I on?
 // A scale bar in the chosen units, beside the panel (see design.css).
 const scaleBar = new maplibregl.ScaleControl({ maxWidth: 88, unit: state.units === "km" ? "metric" : "imperial" });
 map.addControl(scaleBar, "bottom-left");
+// It shows while the map is being zoomed and for a moment after, as in
+// Maps: the scale matters when it changes, and the rest of the time it was
+// a ruler in the corner of the map (on a phone, across the top of it, over
+// the trains' plates).
+{
+  let hide;
+  const el = () => map.getContainer().querySelector(".maplibregl-ctrl-scale");
+  map.on("zoomstart", () => {
+    clearTimeout(hide);
+    el()?.classList.add("on");
+  });
+  map.on("zoomend", () => {
+    clearTimeout(hide);
+    hide = setTimeout(() => el()?.classList.remove("on"), 1500);
+  });
+}
 
 // Marker images are drawn on a canvas once per agency color: an arrow for
 // trains heading a known way, and a dot for the rare train whose direction
@@ -181,8 +200,8 @@ function markerImage(color, withArrow) {
   g.scale(ratio, ratio);
   const cx = size / 2, cy = size / 2, r = 7.5;
   g.lineJoin = "round";
-  g.shadowColor = "rgba(0,0,0,0.3)";
-  g.shadowBlur = 3;
+  g.shadowColor = "rgba(0,0,0,0.42)"; // enough to lift the white rim off a light map
+  g.shadowBlur = 3.5;
   g.shadowOffsetY = 0.5;
   if (withArrow) {
     // Arrowhead centered on the train, pointing north; MapLibre rotates it.
@@ -307,7 +326,7 @@ function themeColors() {
     ? { text: "#eceef1", halo: "rgba(21,23,27,0.92)", rail: "#8d9ab0", railCommuter: "#66728a", railCasing: "rgba(0,0,0,0.5)",
         stationFill: "#1c1f24", stationText: "#b9bfc8", railOpacity: 0.85, footprintOpacity: 0.18, stateBorder: "rgba(160,170,185,0.35)" }
     : { text: "#1b1d21", halo: "rgba(255,255,255,0.95)", rail: "#5d6675", railCommuter: "#8d95a3", railCasing: "rgba(255,255,255,0.9)",
-        stationFill: "#ffffff", stationText: "#4a505a", railOpacity: 0.8, footprintOpacity: 0.1, stateBorder: "rgba(90,100,115,0.35)" };
+        stationFill: "#ffffff", stationText: "#363b43", railOpacity: 0.95, footprintOpacity: 0.1, stateBorder: "rgba(90,100,115,0.35)" };
 }
 
 // Train markers by zoom, the same for every railroad. The selected and tracked
@@ -322,9 +341,13 @@ const PING_PAINT = {
   "circle-radius": 12, "circle-color": ["get", "color"], "circle-opacity": 0,
   "circle-radius-transition": NO_EASING, "circle-opacity-transition": NO_EASING,
 };
+// (A notch larger zoomed out than they were, 0.5 and 0.68: on a railroad's
+// page its trains sit on its own track lit up in the same color, and at half
+// size they couldn't be told from it.)
+const MARKER_SCALE = [[2, 0.6], [5, 0.78], [8, 0.9], [12, 1]]; // [zoom, size]
 function trainIconSize(highlighted = false) {
   const sized = (v) => ["*", ["case", highlighted, SELECTED_SCALE, 1], v];
-  return ["interpolate", ["linear"], ["zoom"], 2, sized(0.5), 5, sized(0.68), 8, sized(0.85), 12, sized(1)];
+  return ["interpolate", ["linear"], ["zoom"], ...MARKER_SCALE.flatMap(([z, k]) => [z, sized(k)])];
 }
 const PLATE_OFFSET = ["left", [1.55, 0], "right", [-1.55, 0], "top", [0, 1.7], "bottom", [0, -1.45]];
 const PLATE_OFFSET_SELECTED = ["left", [1.95, 0], "right", [-1.95, 0], "top", [0, 2.1], "bottom", [0, -1.85]];
@@ -333,7 +356,7 @@ function plateOffset(highlighted = false) {
 }
 
 // A marker's radius by zoom, for the ping rings and the selected station's disc.
-const DISC_STOPS = [[2, 0.5], [5, 0.68], [8, 0.85], [12, 1]].map(([z, k]) => [z, 7.5 * k * 1.12 + 1.5]);
+const DISC_STOPS = MARKER_SCALE.map(([z, k]) => [z, 7.5 * k * 1.12 + 1.5]);
 function discRadius(extra = 0) {
   return ["interpolate", ["linear"], ["zoom"], ...DISC_STOPS.flatMap(([z, r]) => [z, r + extra])];
 }
@@ -465,6 +488,12 @@ function addLayers() {
       else if (l.type === "fill") map.setPaintProperty(l.id, "fill-opacity", 0.35);
     }
   }
+  // The light basemap is grey land beside grey water: a little blue in the
+  // water lets coasts and lakes read at a glance (the dark one's land and
+  // water are far enough apart as they come).
+  if (theme !== "dark") {
+    for (const l of baseLayers) if (l.type === "fill" && l["source-layer"] === "water") map.setPaintProperty(l.id, "fill-color", "#c6d6e6");
+  }
   map.addLayer({
     id: "tt-state-borders",
     type: "line",
@@ -537,7 +566,7 @@ function addLayers() {
     type: "line",
     source: "focus",
     layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": ["get", "color"], "line-width": byZoom((w) => w * 1.8) },
+    paint: { "line-color": ["get", "color"], "line-opacity": 0.72, "line-width": byZoom((w) => w * 1.8) }, // its trains, in the same color, are the solid marks on it
   }, firstSymbol);
   // Disruptions: where a railroad says no trains are running right now, the
   // track's colored strands give way to a thin broken line in the
@@ -822,18 +851,12 @@ map.on("style.load", () => {
   applyOverview();
 });
 
-// Start with the attribution folded into its ⓘ button.
-map.once("load", () => {
-  const attrib = document.querySelector(".maplibregl-ctrl-attrib");
-  attrib?.classList.remove("maplibregl-compact-show");
-  attrib?.removeAttribute("open");
-});
+map.once("load", foldCredits);
 
 // ---------- Train features ----------
 
 // Trains in lists (search, a station's trains): every train of the railroads
-// switched on. The map-only settings (only tracked trains, hiding estimated
-// ones) don't apply.
+// switched on, whichever of them the map is showing (visible(), below).
 const inLists = (t) => !state.hidden.has(t.agency);
 
 // Trains drawn on the map.
@@ -849,10 +872,10 @@ function visible(t) {
   // With the pins up, only a tracked train's country's trains show; on a
   // country's page, only its railroads' (and a tracked train's country's).
   const country = AGENCIES[t.agency]?.country;
-  if (ovHidden) return trackedCountries.has(country);
+  if (ovHidden) return trackedCountries.has(country) || t.agency === state.railroad;
   if (shownCountry && country !== shownCountry && !trackedCountries.has(country)) return false;
-  if (state.onlyTracked && state.tracked.length) return false;
-  return !(state.hideEstimated && t.estimated);
+  // While a train is tracked, the tracked ones show alone.
+  return !state.tracked.length;
 }
 
 // A train's line, shortened for its plate ("Northeast Corridor",
@@ -901,10 +924,10 @@ function importance(t, riders) {
 // until another comes well inside its room, so trains passing each other
 // don't blink. Worked out when the trains or which are shown change, from
 // where each is heading, not on every frame of their slide.
-const TRAIN_GAP = 22, TRAIN_ALL = 11, TRAIN_FLOOR = 2;
+const TRAIN_GAP = 26, TRAIN_ALL = 11, TRAIN_FLOOR = 2; // (26: the markers are a notch larger zoomed out than when this was 22)
 let trainZooms = new Map(), trainRanks = new Map(), trainZoomsOf = null, trainZoomsKey = "";
 function spreadTrains(shown) {
-  const key = [shown.length, state.selected, state.railroad, [...state.hidden].join(), state.tracked.map((r) => r.id).join(), state.onlyTracked, state.hideEstimated].join("|");
+  const key = [shown.length, state.selected, state.railroad, [...state.hidden].join(), state.tracked.map((r) => r.id).join()].join("|");
   if (trainZoomsOf === state.trains && trainZoomsKey === key) return trainZooms;
   for (const id of runScores.keys()) if (!state.trains.has(id)) runScores.delete(id);
   const riders = riderStopKeys(), pinned = new Set([state.selected, ...state.tracked.map((r) => r.id)]);
@@ -1401,7 +1424,7 @@ function targetOf(t) {
 // Snapping depends only on the reported position, so cache it per train.
 const snapCache = new Map(); // id -> { lat, lon, result }
 function snapped(t) {
-  const towards = state.inferHeading && t.bearing == null ? headingTarget(t) : null;
+  const towards = t.bearing == null ? headingTarget(t) : null;
   const c = snapCache.get(t.id);
   if (c && c.lat === t.lat && c.lon === t.lon && c.towards?.lat === towards?.lat && c.towards?.lon === towards?.lon) return c.result;
   const result = snapToTrack(t, state.rail, towards);
@@ -1513,6 +1536,19 @@ function setFocus(country) {
     renderAgencies();
   } else if (!country && openCountry && openCountry !== "*") closeCountryPage();
 }
+// The railroad the panel is about: the one whose page (or line) is open, or
+// the open train's. With the pins up, the map shows what the panel does: its
+// track, stations and trains stay on the map, and its country's pin (which
+// would sit on them) is left out, as a tracked train's country's is.
+const panelRailroad = () => state.railroad || state.trains.get(state.selected)?.agency || null;
+let ovPanelRailroad = null;
+function overviewPanelChanged() {
+  const open = panelRailroad();
+  if (open === ovPanelRailroad) return;
+  ovPanelRailroad = open;
+  ov?.update({});
+  applyOverview();
+}
 // The map's track, stations and trains, put away while the pins are up
 // (the open and tracked trains stay).
 // With the pins up, a tracked train's country stays on the map: its track
@@ -1522,7 +1558,8 @@ const OV_RAIL = ["tt-rail-casing", "tt-rail-0", "tt-rail-1", "tt-rail-2", "tt-ra
 const OV_STATIONS = ["tt-stations-minor", "tt-stations-major", "tt-station-labels"];
 let ovBase = {}; // layer -> its own filter, before the overview narrows it (reset when the style is)
 function applyOverview() {
-  const keep = ovHidden && trackedCountries.size ? Object.keys(AGENCIES).filter((id) => trackedCountries.has(AGENCIES[id].country)) : null;
+  const open = panelRailroad();
+  const keep = ovHidden && (trackedCountries.size || open) ? Object.keys(AGENCIES).filter((id) => id === open || trackedCountries.has(AGENCIES[id].country)) : null;
   for (const id of [...OV_RAIL, ...OV_STATIONS]) {
     if (!map.getLayer(id)) continue;
     if (!(id in ovBase)) ovBase[id] = map.getFilter(id) ?? null;
@@ -1573,7 +1610,7 @@ function startOverview() {
       name: countryName,
       railroads: railroadsOf,
       railroadCount: (n) => Tn(n, "{n} railroad", "{n} railroads"),
-      skip: (country) => trackedCountries.has(country), // its map shows under the pins instead
+      skip: (country) => trackedCountries.has(country) || AGENCIES[panelRailroad()]?.country === country, // its map shows under the pins instead
       live: countryLive,
       onPick: (country) => pickCountry(country, { page: true }),
     });
@@ -1845,7 +1882,7 @@ setTimeout(loadMtaConsists, 3000);
 
 // Delays the GPS proves but the railroad hasn't posted yet.
 function applyInference() {
-  for (const t of state.trains.values()) state.inferDelays ? inferDelay(t, state.stopPos) : restoreFeed(t);
+  for (const t of state.trains.values()) inferDelay(t, state.stopPos);
 }
 
 // ---------- One train's details, on request ----------
@@ -2219,7 +2256,7 @@ function agencyRows() {
     for (const id of src.agencies) {
       const a = AGENCIES[id], g = of(a.country);
       // A railroad waiting on its key says its trains are the timetable's.
-      const region = [regionOf(a), avail.timetable ? T("timetable") : ""].filter(Boolean).join(" · ");
+      const region = [regionOf(a), avail.timetable ? T("scheduled") : ""].filter(Boolean).join(" · ");
       g.agencies.push(id);
       const name = `<span class="name"${avail.timetable ? ` title="${esc(avail.reason)}"` : ""}>${esc(a.name)}${region ? ` <span class="rgn">${esc(region)}</span>` : ""}</span>`;
       if (!avail.ok) {
@@ -2332,7 +2369,12 @@ function countryPageHtml(country) {
       <span class="served-name"><span class="country-swatch" style="background:${a.color}"></span><span>${esc(a.name)}${region ? ` <span class="rgn">${esc(region)}</span>` : ""}</span></span>
       <span class="sub">${esc(status(id))} ›</span></button></li>`;
   }).join("");
-  const busiest = stations.sort((a, b) => b.rank - a.rank).slice(0, 6).map((st) => `<li><button type="button" class="rr-line" data-station="${esc(st.id)}">
+  // Busiest by the trains its railroads run there on a weekday, added up. (A
+  // station's rank is for the map's labels: how busy it is for its own
+  // railroad, so the hub of a one-line railway outranked Milano Centrale:
+  // Trento, on the Trento–Malè line, led Italy's.)
+  const weekday = (st) => st.members.reduce((n, m) => n + (mine.has(m.agency) ? m.daily || 0 : 0), 0);
+  const busiest = stations.sort((a, b) => weekday(b) - weekday(a) || b.rank - a.rank).slice(0, 6).map((st) => `<li><button type="button" class="rr-line" data-station="${esc(st.id)}">
       <span class="served-name"><span class="country-swatch round" style="background:${AGENCIES[st.agencies[0]].color}"></span><span>${esc(st.name)}<br><span class="sub">${esc(stationLinesText(st))}</span></span></span>
       <span class="sub">›</span></button></li>`).join("");
   // Its trains through today, by the hour, from its timetables.
@@ -2381,10 +2423,8 @@ function frameCountry(code) {
   }
   if (b.isEmpty()) for (const st of state.stations.values()) if (st.agencies.some((a) => ids.has(a))) b.extend([stationPos(st).lon, stationPos(st).lat]);
   if (b.isEmpty()) return;
-  const pad = panelPadding();
-  map.stop();
-  map.fitBounds(b, { padding: { top: Math.max(40, pad.top + 20), right: 40, bottom: Math.max(40, pad.bottom + 20), left: Math.max(40, pad.left + 30) }, maxZoom: 9, duration: 900 });
   if (isPhone) setSheet("");
+  frameBounds(b, 9);
 }
 
 // ---------- Home: your trips ----------
@@ -4362,9 +4402,10 @@ function openRailroad(id, { fly = true, line = null } = {}) {
   }
   remember(line ? { kind: "line", id: `${id}|${line}`, agency: id, name: line } : { kind: "railroad", id, agency: id, name: AGENCIES[id].name });
   clearInterval(predictionTimer);
-  Object.assign(state, { selected: null, station: null, predictions: null, car: null, returnTo: null, railroad: id, line });
+  leavePage({ railroad: id, line: line || null });
+  Object.assign(state, { selected: null, station: null, predictions: null, car: null, railroad: id, line });
   focusCache.key = null;
-  setBack(line ? AGENCIES[id].short : T("All trains"));
+  syncBack();
   setFollow(false);
   setUrlSelection();
   applySelectionFilter();
@@ -4610,13 +4651,21 @@ function frameFocus() {
   for (const st of stations) b.extend([stationPos(st).lon, stationPos(st).lat]);
   for (const t of focusTrains()) if (Number.isFinite(t.lat)) b.extend([t.lon, t.lat]);
   if (b.isEmpty()) return;
-  const pad = panelPadding();
-  let padding = { top: Math.max(60, pad.top + 20), right: 60, bottom: Math.max(60, pad.bottom + 20), left: Math.max(60, pad.left + 40) };
+  frameBounds(b, 11);
+}
+// Frames a box in the part of the map the panel (or a phone's sheet) leaves
+// free. The map's own padding is that part already (syncMapPadding), and
+// fitBounds adds its padding to the map's, so only a margin is passed here:
+// passing the panel's width again framed a railroad in what was left of
+// the right half of the window, zoomed far out and off to one side.
+function frameBounds(b, maxZoom) {
+  map.stop(); // whatever was moving the map gives way
+  syncMapPadding(); // the panel as it is now, should it have just opened
+  let padding = { top: 56, right: 48, bottom: 48, left: 48 };
   // Where the margins leave no room to fit it, use smaller ones (else the map
   // wouldn't move at all).
-  if (!map.cameraForBounds(b, { padding })) padding = { top: 20, right: 20, bottom: Math.min(padding.bottom, innerHeight / 3), left: Math.min(padding.left, innerWidth / 3) };
-  map.stop(); // whatever was moving the map gives way
-  map.fitBounds(b, { padding, maxZoom: 11, duration: 900 });
+  if (!map.cameraForBounds(b, { padding })) padding = { top: 12, right: 12, bottom: 12, left: 12 };
+  map.fitBounds(b, { padding, maxZoom, duration: 900 });
 }
 
 // A page section under a heading that folds it away (with its count, so a
@@ -4682,7 +4731,10 @@ function equipmentList(id, lineNames, trains, roster) {
 }
 
 const statTile = (n, label, cls = "") => `<div class="rr-stat ${cls}"><strong>${n}</strong><span>${label}</span></div>`;
-function trainStats(trains) {
+function trainStats(trains, loading = false) {
+  // Until the railroad's feed has answered, its numbers aren't known: the
+  // tiles shimmer rather than say "0 trains running".
+  if (loading) return `<div class="rr-stats" aria-busy="true">${[T("trains running"), T("on time"), T("over 5 min late")].map((l) => `<div class="rr-stat"><strong><span class="sk sk-stat" aria-label="${T("Loading")}"></span></strong><span>${l}</span></div>`).join("")}</div>`;
   const late = trains.filter((t) => t.delayMin > 5).length;
   const onTime = trains.filter((t) => t.delayMin != null && t.delayMin <= 5).length;
   // A feed that reports no delays (Metra's) can't say what's on time or late.
@@ -4697,9 +4749,21 @@ function trainStats(trains) {
 const skeletonRows = (n = 3) => Array.from({ length: n }, (_, i) =>
   `<div class="sk-row" aria-hidden="true"><span class="sk sk-plate"></span><span class="sk-lines"><span class="sk" style="width:${[62, 48, 70][i % 3]}%"></span><span class="sk sk-sub" style="width:${[38, 30, 44][i % 3]}%"></span></span><span class="sk sk-end"></span></div>`).join("");
 const isLoading = (agency) => state.sourceStatus[SOURCES.find((s) => s.agencies.includes(agency))?.id]?.status === "loading";
+// A railroad's feed asked for (or about to be, on a page opened from a link
+// before the feeds start) and not yet answered: nothing is known of its
+// trains, which isn't the same as none running.
+function awaitingFeed(agency) {
+  const src = SOURCES.find((s) => s.agencies.includes(agency));
+  if (!src) return false;
+  const st = state.sourceStatus[src.id];
+  // ("idle": not asked for while nothing of it was on screen; a page of its
+  // own asks for it at the next poll.)
+  return st ? (st.status === "loading" || st.status === "idle") && !st.at : sourceAvailability(src).ok;
+}
 
 // The trains running on a line now, for its page.
-function runningList(a, trains) {
+function runningList(a, trains, loading = false) {
+  if (loading) return `<div class="rr-trains" aria-busy="true">${skeletonRows()}</div>`;
   const running = [...trains].sort((x, y) => String(x.number).localeCompare(String(y.number), undefined, { numeric: true }));
   return `<div class="rr-trains">${running.length ? running.slice(0, 40).map((t) => `<button class="result" data-select="${esc(t.id)}">
         ${plate(t.number || a.short, a.color, "sm")}
@@ -4727,6 +4791,7 @@ function renderRailroad() {
   const avail = src ? sourceAvailability(src) : { ok: false };
   const status = state.sourceStatus[src?.id];
   const trains = focusTrains();
+  const loading = !trains.length && awaitingFeed(id);
   const estimated = trains.filter((t) => t.estimated).length;
   const stations = [...state.stations.values()].filter((st) => st.agencies.includes(id));
 
@@ -4756,7 +4821,7 @@ function renderRailroad() {
   const source = !avail.ok ? avail.reason || T("Not connected")
     : avail.timetable ? avail.reason
     : estimated && estimated === trains.length ? T("Positions estimated from predicted times")
-    : trains.length ? T("Live GPS positions") : T("No trains reporting right now");
+    : trains.length ? T("Live GPS positions") : loading ? T("Loading") : T("No trains reporting right now");
   const updated = status?.at ? ` · ${T("updated {ago}", { ago: fmtAgo(status.at) })}` : "";
 
   const hero = `<div class="hero">
@@ -4766,10 +4831,10 @@ function renderRailroad() {
     </div>`;
   renderParts(el, `railroad:${id}`, [hero,
     !trains.length && avail.ok && status?.status === "ok" ? quietCard(id) : "",
-    trainStats(trains),
+    trainStats(trains, loading),
     lineList.length > 1 ? plainSection(T("Lines"), lineList.length,
-      `<ul class="rr-lines">${lineList.map((l) => `<li><button type="button" class="rr-line" data-line="${esc(l.name)}"><span class="served-name">${lineMark(id, l.name)}<span>${esc(l.name)}</span></span><span class="sub">${l.running ? T("{n} running", { n: l.running }) : T("none running")} ›</span></button></li>`).join("")}</ul>`) : "",
-    fleet.count ? rrSection("fleet", T("Fleet"), fleet.count, `<p class="rr-hint">${T("Tap one to read about it.")}</p><div class="rr-cars">${fleet.html}</div>`) : "",
+      `<ul class="rr-lines">${lineList.map((l) => `<li><button type="button" class="rr-line" data-line="${esc(l.name)}"><span class="served-name">${lineMark(id, l.name)}<span>${esc(l.name)}</span></span><span class="sub">${l.running ? T("{n} running", { n: l.running }) : loading ? "" : T("none running")} ›</span></button></li>`).join("")}</ul>`) : "",
+    fleet.count ? rrSection("fleet", T("Fleet"), fleet.count, `<p class="rr-hint">${T("Choose one to read about it.")}</p><div class="rr-cars">${fleet.html}</div>`) : "",
     src ? `<p class="estimate-note">${T("Data:")} ${creditHtml(creditOf(src, avail.timetable))}</p>` : ""]);
 }
 
@@ -4828,7 +4893,12 @@ function renderLine() {
   const typical = fleetTrain(id, name);
   if (state.car?.page && state.car.id === typical.id) return renderModelPage(typical, el);
   const trains = focusTrains();
-  const stations = orderedLineStations(id, name);
+  // Before the feed answers, nothing is known of the line's trains, nor (for
+  // a railroad whose stations come from its trains' stops, like Amtrak) of
+  // where it runs: the page shimmers rather than say none are running or
+  // list the few stations it knows of so far.
+  const loading = !trains.length && awaitingFeed(id);
+  const stations = loading ? [] : orderedLineStations(id, name);
   // Keep the cars strip where it was scrolled across redraws.
   const strip = el.querySelector(".consist-strip");
   // (Not "data-line": that marks a tappable line row.)
@@ -4840,8 +4910,8 @@ function renderLine() {
       ${stations.length ? `<p class="station-facts"><span>${esc(T("{n} stations", { n: stations.length }))} · ${esc(stations[0].name)} – ${esc(stations[stations.length - 1].name)}</span></p>` : ""}
       ${consistSection(typical)}
     </div>`;
-  renderParts(el, `line:${id}|${name}`, [hero, trainStats(trains),
-    rrSection("running", T("Running now"), trains.length, runningList(a, trains)),
+  renderParts(el, `line:${id}|${name}`, [hero, trainStats(trains, loading),
+    rrSection("running", T("Running now"), loading ? null : trains.length, runningList(a, trains, loading)),
     stations.length ? rrSection("line-stations", T("Stations"), stations.length, lineDiagram(id, stations, lineColor(id, name))) : ""]);
   const shown = el.querySelector(".consist-strip");
   if (shown) shown.scrollLeft = keepStrip;
@@ -5192,8 +5262,10 @@ function renderTracked() {
       const next = !chosen && (t.stops?.find((s) => s.status === "next") || t.stops?.find((s) => s.status === "future"));
       const stop = chosen || next;
       if (stop) {
+        // How long until a chosen stop is the card's large countdown (below),
+        // so the line under it doesn't say it again.
         const time = Date.parse(stop.time);
-        where = `${chosen ? "" : `${T("Next:")} `}<strong>${esc(stop.name)}</strong>${time ? ` · ${fmtTime(stop.time, stop.tz)} · ${fmtIn(time) === T("now") ? T("now") : T("in {time}", { time: fmtIn(time) })}` : ""}`;
+        where = `${chosen ? "" : `${T("Next:")} `}<strong>${esc(stop.name)}</strong>${time ? ` · ${fmtTime(stop.time, stop.tz)}${chosen ? "" : ` · ${fmtIn(time) === T("now") ? T("now") : T("in {time}", { time: fmtIn(time) })}`}` : ""}`;
       } else if (t.nextStop) {
         where = `${T("Next:")} <strong>${esc(t.nextStop)}</strong>`;
       } else if (t.destination) {
@@ -5464,6 +5536,7 @@ function applySelectionFilter() {
     redrawStations();
   }
   ping(Boolean(ids.length || sid));
+  overviewPanelChanged(); // the pins make way for what the panel is about
   // Which trains show can depend on the selection and tracking (visible()).
   redraw();
 }
@@ -5554,11 +5627,11 @@ function select(id, { fly = true } = {}) {
   const opened = id && state.trains.get(id);
   if (opened) remember({ kind: "train", id, agency: opened.agency, name: trainTitle(opened), number: opened.number || "" });
   if (opened) needData(opened.agency); // its stops' stations, abroad
-  state.returnTo = null;
+  if (id) leavePage({ train: id });
   if (state.trackSheet?.id !== id) closeTrackSheet();
   state.railroad = null;
   state.line = null;
-  setBack(T("All trains"));
+  syncBack();
   if (state.selected !== id) state.car = null;
   state.selected = id;
   state.station = null;
@@ -5622,11 +5695,13 @@ function selectStation(id, { fly = true } = {}) {
   const st = state.stations.get(id);
   // A station abroad (a recent one) opens once its region is in.
   if (!st) return void needData(String(id).split(":")[0])?.then(() => state.stations.has(id) && selectStation(id, { fly }));
+  leavePage({ station: id });
   state.selected = null;
   state.railroad = null;
   state.line = null;
   state.station = id;
   state.predictions = null;
+  syncBack();
   setFollow(false);
   setUrlSelection();
   applySelectionFilter();
@@ -5646,6 +5721,50 @@ function selectStation(id, { fly = true } = {}) {
   if (isPhone) setSheet("");
 }
 
+// ---------- Back ----------
+// Back goes to the page the reader was on, and names it. A page opened from
+// another (a line from its railroad, a train from that line, a station from
+// that train, a train tapped on the map over any of them) puts the one it
+// was opened from on the trail; Back takes the last one off and reopens
+// it. With nothing on the trail it goes to the list the panel was showing
+// (every railroad, a country, search results, one of the pages), named
+// likewise. Not to the page's parent: a train opened from the Northeast
+// Regional's page goes back to the Northeast Regional, not to Amtrak, and
+// Amtrak opened from every railroad goes back to "All railroads".
+const trail = []; // { train } | { station } | { railroad, line }
+const pageOpen = () => (state.selected ? { train: state.selected } : state.station ? { station: state.station }
+  : state.railroad ? { railroad: state.railroad, line: state.line || null } : null);
+const samePage = (a, b) => Boolean(a && b) && a.train === b.train && a.station === b.station && a.railroad === b.railroad && (a.line || null) === (b.line || null);
+// Before a page opens: the one it's opened from goes on the trail.
+function leavePage(next) {
+  if (goingBack) return;
+  const from = pageOpen();
+  if (!from) return void (trail.length = 0); // opened from a list: nothing before it
+  if (samePage(from, next)) return;
+  // A page already on the trail is gone back to, not stacked again (a
+  // train and its station, opened from each other over and over).
+  const at = trail.findIndex((p) => samePage(p, next));
+  if (at >= 0) trail.length = at;
+  else trail.push(from);
+  if (trail.length > 30) trail.shift();
+}
+// What Back goes to, in a word: the last page on the trail, or the list.
+function backLabel() {
+  for (let i = trail.length - 1; i >= 0; i--) {
+    const p = trail[i], t = p.train && state.trains.get(p.train), st = p.station && state.stations.get(p.station);
+    if (t) return t.number ? T("Train {n}", { n: t.number }) : trainTitle(t);
+    if (st) return st.name;
+    if (p.railroad && AGENCIES[p.railroad]) return p.line || AGENCIES[p.railroad].short;
+  }
+  if (accountsOn() && state.tab === "trips") return T("My trips");
+  if (accountsOn() && state.tab === "history") return T("History");
+  if (state.query.trim()) return T("Search");
+  if (openCountry === "*") return T("All railroads");
+  if (openCountry) return countryName(openCountry);
+  return T(accountsOn() ? "Browse" : "Home");
+}
+const syncBack = () => setBack(backLabel());
+
 function closeDetail() {
   goingBack = true;
   try {
@@ -5657,20 +5776,12 @@ function closeDetail() {
 function closeDetailTo() {
   clearInterval(predictionTimer);
   closeTrackSheet();
-  const back = state.returnTo;
-  state.returnTo = null;
-  setBack(T("All trains"));
-  // Back to the station a train was opened from, or the train a station was,
-  // or the railroad page either was.
-  if (back?.railroad && !state.railroad) return openRailroad(back.railroad, { fly: false, line: back.line || null });
-  // Back to the train a line or railroad page was opened from.
-  if (state.railroad && back?.train && state.trains.has(back.train)) return select(back.train, { fly: false });
-  // Back from a line's page to its railroad's.
-  if (state.line) return openRailroad(state.railroad);
-  if (state.selected && typeof back === "string" && state.stations.has(back)) return selectStation(back, { fly: false });
-  if (state.station && back?.train && state.trains.has(back.train)) {
-    state.station = null;
-    return select(back.train, { fly: false });
+  // The last page on the trail that's still there (a train may have
+  // finished its run since).
+  for (let back; (back = trail.pop());) {
+    if (back.train && state.trains.has(back.train)) return select(back.train, { fly: false });
+    if (back.station && state.stations.has(back.station)) return selectStation(back.station, { fly: false });
+    if (back.railroad && AGENCIES[back.railroad]) return openRailroad(back.railroad, { fly: false, line: back.line || null });
   }
   state.station = null;
   state.railroad = null;
@@ -5792,7 +5903,8 @@ map.on("click", (e) => {
 });
 
 function goHome() {
-  Object.assign(state, { returnTo: null, station: null, railroad: null, line: null, car: null });
+  trail.length = 0; // home, not the page before
+  Object.assign(state, { station: null, railroad: null, line: null, car: null });
   setFollow(false);
   closeDetail();
 }
@@ -5895,10 +6007,7 @@ on("train-detail", "keydown", (e) => {
 });
 function openStop(li) {
   const t = state.trains.get(state.selected);
-  selectStation(li.dataset.stopStation);
-  if (!t) return;
-  state.returnTo = { train: t.id }; // "back" from this station goes to the train
-  setBack(t.number ? T("Train {n}", { n: t.number }) : T("Train"));
+  selectStation(li.dataset.stopStation); // Back from it goes to the train (the trail)
 }
 on("train-detail", "click", (e) => {
   if (e.target.closest("[data-fold-past]")) {
@@ -5941,14 +6050,8 @@ on("train-detail", "click", (e) => {
   }
   const openLineBtn = e.target.closest("[data-open-line]"), railroadBtn = e.target.closest("[data-railroad]");
   if (openLineBtn || railroadBtn) {
-    const fromTrain = state.selected && state.trains.get(state.selected);
     if (openLineBtn) openLine(openLineBtn.dataset.lineRailroad, openLineBtn.dataset.openLine);
     else openRailroad(railroadBtn.dataset.railroad);
-    // "back" from a line or railroad opened from a train goes to the train
-    if (fromTrain) {
-      state.returnTo = { train: fromTrain.id };
-      setBack(fromTrain.number ? T("Train {n}", { n: fromTrain.number }) : T("Train"));
-    }
     return;
   }
   const section = e.target.closest("[data-rr-section]");
@@ -5972,22 +6075,9 @@ on("train-detail", "click", (e) => {
   const stop = e.target.closest("[data-untrack]");
   if (stop) return untrack(stop.dataset.untrack);
   const b = e.target.closest("[data-select]");
-  if (b) {
-    const from = state.station, railroad = state.railroad, line = state.line;
-    select(b.dataset.select);
-    // "back" from this train goes to the station, railroad or line it was opened from
-    state.returnTo = railroad ? { railroad, line } : from;
-    setBack(railroad ? AGENCIES[railroad].short : from ? T("Station") : T("All trains"));
-  }
+  if (b) select(b.dataset.select); // Back from it goes to the page it was opened from (the trail)
   const st = e.target.closest("[data-station]");
-  if (st) {
-    const railroad = state.railroad, line = state.line;
-    selectStation(st.dataset.station);
-    if (railroad) {
-      state.returnTo = { railroad, line };
-      setBack(AGENCIES[railroad].short);
-    }
-  }
+  if (st) selectStation(st.dataset.station);
 });
 on("follow-btn", "click", () => {
   setFollow(!state.follow);
@@ -6284,18 +6374,6 @@ on("labels-choice", "click", (e) => {
   applySelectionFilter();
   redraw();
 });
-on("estimated-toggle", "change", (e) => {
-  state.hideEstimated = e.target.checked;
-  store.set("tt-hide-estimated", state.hideEstimated);
-  redraw();
-  renderAll();
-});
-on("only-tracked-toggle", "change", (e) => {
-  state.onlyTracked = e.target.checked;
-  store.set("tt-only-tracked", state.onlyTracked);
-  redraw();
-  renderAll();
-});
 on("colorblind-toggle", "change", (e) => {
   state.colorblind = e.target.checked;
   store.set("tt-colorblind", state.colorblind);
@@ -6318,59 +6396,22 @@ function setShowStations(on) {
 on("stations-toggle", "change", (e) => setShowStations(e.target.checked));
 
 
-on("heading-toggle", "change", (e) => {
-  state.inferHeading = e.target.checked;
-  store.set("tt-infer-heading", state.inferHeading);
-  computePositions();
-  animateTo();
-  renderAll();
-});
 
-// Time zones to show times in: the viewer's own (the default), each stop's
-// local time, or one of the zones the railroads run in.
-const TIME_ZONE_CHOICES = [
-  ["station", "Each station's local time"],
-  ["America/St_Johns", "Newfoundland"], ["America/Halifax", "Atlantic"], ["America/New_York", "Eastern"],
-  ["America/Chicago", "Central"], ["America/Denver", "Mountain"], ["America/Phoenix", "Arizona"],
-  ["America/Los_Angeles", "Pacific"], ["America/Anchorage", "Alaska"], ["Pacific/Honolulu", "Hawaii"], ["UTC", "UTC"],
-];
-// The listed zone that keeps the same clock as `zone` (America/Detroit ->
-// Eastern), judged by its offsets in winter and summer; or null.
-function listedZone(zone) {
-  const clock = (z, m) => new Date(Date.UTC(new Date().getUTCFullYear(), m, 15, 12)).toLocaleString("en-US", { timeZone: z, hour: "numeric", minute: "numeric", hourCycle: "h23" });
-  try {
-    return TIME_ZONE_CHOICES.find(([v]) => v === zone)?.[0] ||
-      TIME_ZONE_CHOICES.find(([v]) => v !== "station" && v !== "UTC" && clock(v, 0) === clock(zone, 0) && clock(v, 6) === clock(zone, 6))?.[0] || null;
-  } catch {
-    return null;
-  }
+// Times are shown in the viewer's own time (the default) or in each
+// station's. A list of zones to pick from this once was named North
+// America's only, on a map of four continents.
+function applyTimeZone() {
+  for (const b of $("tz-choice")?.children || []) b.setAttribute("aria-pressed", String(b.dataset.tz === state.timeZone));
 }
-// Until a zone is picked, times follow the device and the menu checks the
-// listed zone that matches it; a device zone that matches none of them gets
-// its own entry at the top.
-function initTimeZones() {
-  const select = $("tz-choice");
-  if (!select) return;
-  const own = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const match = own ? listedZone(own) : null;
-  const opts = match ? TIME_ZONE_CHOICES
-    : [["", own ? T("Your time zone ({zone})", { zone: own.split("/").pop().replace(/_/g, " ") }) : T("Your time zone")], ...TIME_ZONE_CHOICES];
-  select.innerHTML = opts.map(([v, label]) => `<option value="${v}">${esc(T(label))}</option>`).join("");
-  if (state.timeZone && !opts.some(([v]) => v === state.timeZone)) state.timeZone = "";
-  select.value = state.timeZone || match || "";
-}
-on("tz-choice", "change", (e) => {
-  state.timeZone = e.target.value;
+on("tz-choice", "click", (e) => {
+  const b = e.target.closest("[data-tz]");
+  if (!b) return;
+  state.timeZone = b.dataset.tz;
   store.set("tt-tz", state.timeZone);
+  applyTimeZone();
   renderAll();
 });
 
-on("infer-toggle", "change", (e) => {
-  state.inferDelays = e.target.checked;
-  store.set("tt-infer", state.inferDelays);
-  applyInference();
-  renderAll();
-});
 
 function toggleMenu(open = $("settings-menu").hidden) {
   const menu = $("settings-menu"), btn = $("settings-btn");
@@ -6385,16 +6426,19 @@ function toggleMenu(open = $("settings-menu").hidden) {
     menu.scrollTop = 0;
     return;
   }
-  // Beside the panel, level with its top, where the window has room for it
-  // (the panel stays in view, as a sidebar's popover leaves it);
+  // Beside the panel, where the window has room for it (the panel stays in
+  // view, as a sidebar's popover leaves it), its foot level with the panel's:
+  // the button that opens it is at the foot of the rail, and a popover
+  // opens by its button, not at the far end of the window from it;
   const r = btn.getBoundingClientRect();
   menu.style.maxHeight = "";
   const w = menu.offsetWidth, h = menu.offsetHeight;
   const side = (panelAway ? $("tabbar") : $("panel")).getBoundingClientRect(); // beside the rail while the panel's away
   if (innerWidth - side.right >= w + 24) {
+    const room = side.bottom - side.top;
     menu.style.left = `${side.right + 12}px`;
-    menu.style.top = `${side.top}px`;
-    menu.style.maxHeight = `${innerHeight - side.top - 12}px`;
+    menu.style.maxHeight = `${room}px`;
+    menu.style.top = `${Math.max(side.top, side.bottom - Math.min(h, room))}px`;
     return;
   }
   // else pinned under the gear (or over it, where there's more room), kept
@@ -6486,14 +6530,10 @@ map.on("movestart", () => toggleMenu(false));
 applyTheme();
 applyUnits();
 setChecked("stations-toggle", state.showStations);
-setChecked("estimated-toggle", state.hideEstimated);
 setChecked("clock-toggle", state.clock24);
 setChecked("colorblind-toggle", state.colorblind);
-setChecked("only-tracked-toggle", state.onlyTracked);
 applyLabels();
-setChecked("infer-toggle", state.inferDelays);
-setChecked("heading-toggle", state.inferHeading);
-initTimeZones();
+applyTimeZone();
 
 // ---------- Install as an app ----------
 // Installable (manifest.webmanifest, sw.js). Chrome and Edge offer their own
@@ -6838,6 +6878,31 @@ if (accountsOn() && $("tabbar")) {
   // unless a shared link opens a page in it.
   if (document.documentElement.classList.contains("panel-boot-away")) putPanelAway(true, { boot: true });
 }
+// The window crossing between the two layouts (resized, or a tablet turned):
+// the tab bar moves to the foot of the sheet or back beside the panel, and
+// the panel takes its place in the new layout, in view, from a clean state
+// (no detent or dragged height left on a panel, no put-away panel left
+// under a sheet).
+phoneQuery.addEventListener("change", (e) => {
+  isPhone = e.matches;
+  const panel = $("panel"), bar = $("tabbar");
+  if (bar && document.body.classList.contains("has-tabs")) {
+    if (isPhone) panel.append(bar);
+    else panel.before(bar);
+  }
+  toggleMenu(false);
+  panelAway = false;
+  document.body.classList.remove("panel-away");
+  panel.inert = false;
+  panel.style.height = "";
+  setSheet("");
+  renderTracked();
+  // The map takes its new size first (it would on its own a moment later),
+  // then the new layout's padding, set outright: holding the view through
+  // the change worked from the old size and threw the map across the globe.
+  map.resize();
+  syncMapPadding(false);
+});
 document.documentElement.classList.remove("panel-boot-away");
 $("view-list").dataset.tab = state.tab;
 if (ACCOUNTS.url && ACCOUNTS.key) {

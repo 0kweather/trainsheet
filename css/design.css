@@ -12,17 +12,32 @@
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
   --font-rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
 
+  /* The scales. Every corner, type size, weight (400, 500, 600, 700) and
+     transition in both stylesheets is one of these: there were 36 radii, 24
+     sizes, 9 weights and 15 timings, a pixel or a few hundredths of a second
+     apart. */
+  --r-xs: 4px;    /* plates, bars, small marks */
   --r-sm: 8px;
   --r-md: 12px;
-  --r-lg: 24px;
-  --r-card: 14px;
+  --r-card: 14px; /* an inset list's card */
+  --r-xl: 20px;   /* tiles, menus, sheets over the panel */
+  --r-lg: 24px;   /* the panel, the rail */
+  --r-pill: 999px;
 
+  --fs-2xs: 11px; /* captions, tab labels */
   --fs-xs: 12px;
   --fs-sm: 13px;
   --fs-base: 15px;
   --fs-md: 16px;
+  --fs-body: 17px; /* back, row titles */
   --fs-lg: 20px;
-  --fs-xl: 30px;
+  --fs-title: 24px;
+  --fs-xl: 30px;   /* a page's large title, a tile's number */
+  --fs-hero: 42px;
+
+  --t-fast: 0.15s; /* a press, a hover */
+  --t-mid: 0.25s;  /* something appearing */
+  --t-slow: 0.4s;  /* the panel, a sheet */
 
   /* System colors (light). */
   --bg: #f2f2f7;
@@ -86,29 +101,32 @@ html, body {
  * panel. */
 .maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 0 12px 8px 0; }
 .maplibregl-ctrl-bottom-right .maplibregl-ctrl:last-child { margin-bottom: 12px; }
-.maplibregl-ctrl-group { border-radius: 12px !important; overflow: hidden; border: 0.5px solid var(--glass-edge) !important; }
+.maplibregl-ctrl-group { border-radius: var(--r-md) !important; overflow: hidden; border: 0.5px solid var(--glass-edge) !important; }
 .maplibregl-ctrl-group button { width: 42px !important; height: 40px !important; }
 .maplibregl-ctrl-group button + button { border-top: 0.5px solid var(--line) !important; }
 .maplibregl-ctrl-group button:hover { background: var(--hover) !important; }
 .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon { transform: scale(0.9); }
 .maplibregl-ctrl-attrib.maplibregl-compact {
-  min-height: 30px; min-width: 30px; border-radius: 15px !important;
+  min-height: 30px; min-width: 30px; border-radius: var(--r-pill) !important;
   background: var(--panel) !important; border: 0.5px solid var(--glass-edge);
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow);
 }
 .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) { padding: 0 !important; width: 30px; margin-right: 18px; } /* centred under the zoom buttons */
 .maplibregl-ctrl-attrib.maplibregl-compact-show { padding: 7px 36px 7px 12px !important; }
-.maplibregl-ctrl-attrib-button { width: 30px; height: 30px; border-radius: 15px; top: 0 !important; right: 0 !important; background-color: transparent !important; background-repeat: no-repeat !important; background-position: center !important; }
+.maplibregl-ctrl-attrib-button { width: 30px; height: 30px; border-radius: var(--r-pill); top: 0 !important; right: 0 !important; background-color: transparent !important; background-repeat: no-repeat !important; background-position: center !important; }
 :root[data-theme="dark"] .maplibregl-ctrl-attrib-button { filter: invert(1); }
 .maplibregl-ctrl-bottom-left { left: calc(12px + 372px + 4px); bottom: 4px; }
 .maplibregl-ctrl-scale {
   position: relative; margin: 0 0 12px 12px !important;
   padding: 0 0 3px; background: none !important; border: 0 !important; border-bottom: 2px solid var(--text) !important;
-  font: 700 11px/1 var(--font); color: var(--text); text-align: right;
+  font: 700 var(--fs-2xs)/1 var(--font); color: var(--text); text-align: right;
   text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 2px var(--bg);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--bg) 80%, transparent);
 }
+/* Shown while the map is zoomed and a moment after (app.js). */
+.maplibregl-ctrl-scale { opacity: 0; pointer-events: none; transition: opacity var(--t-mid, var(--t-mid)); }
+.maplibregl-ctrl-scale.on { opacity: 1; }
 .maplibregl-ctrl-scale::before, .maplibregl-ctrl-scale::after { content: ""; position: absolute; bottom: -2px; width: 2px; height: 7px; background: var(--text); }
 .maplibregl-ctrl-scale::before { left: 0; }
 .maplibregl-ctrl-scale::after { right: 0; }
@@ -119,11 +137,11 @@ html, body {
 .search {
   height: 38px;
   border: 0;
-  border-radius: 11px;
+  border-radius: var(--r-md);
   background: var(--fill);
 }
 .search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
-.search input { font-size: 17px; letter-spacing: -0.02em; }
+.search input { font-size: var(--fs-body); letter-spacing: -0.02em; }
 .search input::placeholder { color: var(--muted); }
 
 .icon-btn {
@@ -141,10 +159,10 @@ html, body {
 
 .segmented {
   padding: 2px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   background: var(--fill);
 }
-.segmented button { border-radius: 7px; font-size: var(--fs-sm); font-weight: 500; color: var(--text); padding: 6px 0; }
+.segmented button { border-radius: var(--r-sm); font-size: var(--fs-sm); font-weight: 500; color: var(--text); padding: 6px 0; }
 .segmented button[aria-selected="true"],
 .segmented button[aria-pressed="true"] {
   background: var(--panel-solid);
@@ -258,20 +276,20 @@ html, body {
 .dep .status-t.bad { color: var(--bad); }
 .dep .status-t.inferred { text-decoration: underline dotted; text-underline-offset: 2px; }
 .trk {
-  min-width: 26px; height: 26px; padding: 0 5px; border-radius: 6px; box-sizing: border-box;
+  min-width: 26px; height: 26px; padding: 0 5px; border-radius: var(--r-sm); box-sizing: border-box;
   display: inline-flex; align-items: center; justify-content: center;
-  background: #121417; color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 0;
+  background: #121417; color: #fff; font-size: var(--fs-sm); font-weight: 700; letter-spacing: 0;
 }
 :root[data-theme="dark"] .trk { background: #f2f2f7; color: #121417; }
 /* A usual track, not yet posted: the same sign, dashed and empty. */
 :root .trk.likely { background: transparent; color: var(--muted); border: 1.5px dashed var(--faint); }
 .cd { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.cd strong { font-family: var(--font-rounded); font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
-.cd strong small { font-size: 11px; font-weight: 600; margin-left: 1px; color: var(--muted); }
-.cd > span { font-size: 11px; color: var(--muted); }
+.cd strong { font-family: var(--font-rounded); font-size: var(--fs-lg); font-weight: 700; letter-spacing: -0.02em; }
+.cd strong small { font-size: var(--fs-2xs); font-weight: 600; margin-left: 1px; color: var(--muted); }
+.cd > span { font-size: var(--fs-2xs); color: var(--muted); }
 .cd.warn strong { color: var(--warn); }
 .cd.bad strong { color: var(--bad); }
-.cd.far strong { font-size: 15px; }
+.cd.far strong { font-size: var(--fs-base); }
 .rr-cars { padding: 4px 0; }
 .rr-car { border-radius: 0; padding: 10px 12px; }
 
@@ -293,7 +311,12 @@ html, body {
 /* ---------- Pages ---------- */
 
 .detail-top { padding-top: 14px; }
-.back { font-size: 17px; letter-spacing: -0.02em; color: var(--accent); }
+.back { font-size: var(--fs-body); letter-spacing: -0.02em; color: var(--accent); }
+/* It names the page it goes back to (app.js, Back): a long station's name is
+   cut short rather than pushing the page's buttons off the row. */
+.back { min-width: 0; flex: 0 1 auto; }
+.back span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-actions { flex: none; }
 
 .hero { border-bottom: 0; padding-bottom: 6px; }
 .hero h2 {
@@ -304,18 +327,18 @@ html, body {
   line-height: 1.1;
 }
 .hero .agency-name { font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0; }
-.hero .od { font-size: 17px; letter-spacing: -0.02em; }
+.hero .od { font-size: var(--fs-body); letter-spacing: -0.02em; }
 .station-facts { color: var(--muted); }
 
 /* Big rounded numbers, like widgets. */
 .rr-stats { gap: 10px; margin-top: 16px; }
-.rr-stat { padding: 12px 14px 10px; border-radius: 18px; background: var(--group); }
-.rr-stat strong { font-family: var(--font-rounded); font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+.rr-stat { padding: 12px 14px 10px; border-radius: var(--r-xl); background: var(--group); }
+.rr-stat strong { font-family: var(--font-rounded); font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
 .rr-stat span { font-size: var(--fs-sm); font-weight: 500; }
 
 .pill { padding: 5px 12px; font-size: var(--fs-sm); }
-.model-card { border-radius: 18px; background: var(--group); border: 0; }
-.plate { border-radius: 7px; }
+.model-card { border-radius: var(--r-xl); background: var(--group); border: 0; }
+.plate { border-radius: var(--r-sm); }
 
 /* ---------- Live Activity tracked trains ---------- */
 
@@ -335,8 +358,8 @@ html, body {
   pointer-events: none;
 }
 .tracked .live { width: min(380px, 100%); pointer-events: auto; border-radius: 26px; padding: 14px 18px 16px; gap: 7px; }
-.tracked .live.enter { animation: island-in 0.55s cubic-bezier(0.32, 1.25, 0.5, 1) var(--enter-at, 0ms) both; }
-.tracked .live.enter > * { animation: island-content 0.55s ease var(--enter-at, 0ms) both; }
+.tracked .live.enter { animation: island-in var(--t-slow) cubic-bezier(0.32, 1.25, 0.5, 1) var(--enter-at, 0ms) both; }
+.tracked .live.enter > * { animation: island-content var(--t-slow) ease var(--enter-at, 0ms) both; }
 @keyframes island-in {
   0% { clip-path: inset(0 32% calc(100% - 34px) 32% round 17px); transform: translateY(-4px); }
   100% { clip-path: inset(0 0 0 0 round 26px); transform: none; }
@@ -350,7 +373,7 @@ html, body {
   display: grid;
   gap: 8px;
   padding: 12px 14px 14px;
-  border-radius: 22px;
+  border-radius: var(--r-xl);
   background: #0b0b0c;
   color: #fff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
@@ -361,9 +384,11 @@ html, body {
 .track-card.live:hover { border: 0; box-shadow: 0 12px 34px rgba(0, 0, 0, 0.34), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14); }
 .la-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .la-route { flex: 1; min-width: 0; font-size: var(--fs-sm); font-weight: 600; color: rgba(255, 255, 255, 0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.la-eta { font-family: var(--font-rounded); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; }
-.la-eta small { font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, 0.7); margin-left: 2px; }
-.la-where { font-size: var(--fs-sm); color: rgba(255, 255, 255, 0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-eta { font-family: var(--font-rounded); font-size: var(--fs-title); font-weight: 700; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; }
+.la-eta small { font-size: var(--fs-sm); font-weight: 600; color: rgba(255, 255, 255, 0.7); margin-left: 2px; }
+/* Two lines where the stop, its time and the delay don't fit on one, so the
+   delay is never the part cut off. */
+.la-where { font-size: var(--fs-sm); color: rgba(255, 255, 255, 0.72); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .la-where strong { color: #fff; }
 .la-where .status { font-weight: 700; }
 .la-where .status.good { color: #30d158; }
@@ -407,13 +432,13 @@ html, body {
 .panel.live-panel .switch { background: rgba(120, 120, 128, 0.32); }
 /* The island growing into the panel (growIsland). */
 .island-ghost { position: fixed; z-index: 20; margin: 0; box-sizing: border-box; overflow: hidden; pointer-events: none; }
-.live .tc-x { position: static; width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.8); font-size: 15px; line-height: 1; }
+.live .tc-x { position: static; width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.8); font-size: var(--fs-base); line-height: 1; }
 .live .tc-x:hover { background: rgba(255, 255, 255, 0.24); color: #fff; }
 .live .tc-share { display: inline-flex; align-items: center; justify-content: center; }
 
 /* ---------- Menu, toast, loading ---------- */
 
-.menu { border-radius: 20px; width: 320px; padding: 10px; }
+.menu { border-radius: var(--r-xl); width: 320px; padding: 10px; }
 .menu-title { margin: 14px 8px 6px; font-size: var(--fs-sm); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
 .menu .toggle { margin: 0; border-radius: 0; background: var(--group); position: relative; padding: 10px 12px; }
 .menu .menu-title + .toggle, .menu .segmented + .toggle { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
@@ -427,12 +452,6 @@ html, body {
 .menu-head { display: none; }
 .menu .toggle:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
 .menu .segmented { margin: 0 0 4px; }
-/* The time zone picker heads the card the 24-hour clock toggle finishes. */
-.menu-select {
-  width: 100%; margin: 0; padding: 12px 14px; border: 0; background: var(--group);
-  border-radius: var(--r-card) var(--r-card) 0 0; font-size: var(--fs-base);
-}
-.menu .menu-select + .toggle::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 0.5px; background: var(--line); }
 
 .toast {
   border-radius: var(--r-pill) !important;
@@ -451,11 +470,11 @@ html, body {
 /* ---------- Phones ---------- */
 
 @media (max-width: 720px) {
-  .panel { top: auto; left: 0; bottom: 0; width: auto; border-radius: 24px 24px 0 0; }
+  .panel { top: auto; left: 0; bottom: 0; width: auto; border-radius: var(--r-lg) var(--r-lg) 0 0; }
   /* In the sheet, at its top (moved there by app.js). */
   .panel .tracked { position: static; flex: none; padding: 4px 14px 6px; pointer-events: auto; }
   .panel .tracked .live { width: 100%; }
-  .sheet-handle::after { width: 36px; height: 5px; border-radius: 3px; top: 7px; }
+  .sheet-handle::after { width: 36px; height: 5px; border-radius: var(--r-xs); top: 7px; }
   /* Folded down on the home page, just the search field shows (a page keeps
    * its title in view). */
   .panel.collapsed:has(> #view-list:not([hidden])) { height: calc(96px + env(safe-area-inset-bottom, 0px) + var(--tracked-h, 0px)); }
@@ -489,7 +508,7 @@ html, body {
 .recents-row::-webkit-scrollbar { display: none; }
 .recent {
   flex: none; display: inline-flex; align-items: center; gap: 8px; max-width: 240px;
-  min-height: 36px; padding: 5px 15px 5px 11px; border: 0; border-radius: 18px;
+  min-height: 36px; padding: 5px 15px 5px 11px; border: 0; border-radius: var(--r-xl);
   background: var(--group); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap;
   box-shadow: 0 0 0 0.5px var(--line);
 }
@@ -503,17 +522,17 @@ html, body {
 
 .quiet { margin: 14px 0 4px; padding: 20px 16px 18px; border-radius: var(--r-card); background: var(--group); text-align: center; }
 .quiet-moon { color: #8e8cf0; }
-.quiet h3 { margin: 6px 0 4px; font-size: 17px; font-weight: 700; }
+.quiet h3 { margin: 6px 0 4px; font-size: var(--fs-body); font-weight: 700; }
 .quiet p { margin: 0 auto; max-width: 280px; font-size: var(--fs-sm); color: var(--muted); }
 .quiet-first {
   display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 5px 12px 5px 7px;
-  border-radius: 16px; background: var(--fill); font-size: var(--fs-sm); font-weight: 600;
+  border-radius: var(--r-xl); background: var(--fill); font-size: var(--fs-sm); font-weight: 600;
 }
 
 /* ---------- Hover card (a train on the map, on a computer) ---------- */
 
 .hover-card .maplibregl-popup-content {
-  min-width: 190px; max-width: 260px; padding: 10px 12px 9px; border-radius: 14px;
+  min-width: 190px; max-width: 260px; padding: 10px 12px 9px; border-radius: var(--r-card);
   background: var(--panel); border: 0.5px solid var(--glass-edge);
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
 }
@@ -525,7 +544,7 @@ html, body {
 .hc-strip .car { margin: 0; flex: none; }
 .hc-strip .car svg { display: block; height: 22px; width: auto; }
 .hc-strip figcaption { display: none; }
-.hover-card .s { font-size: 12px; color: var(--muted); }
+.hover-card .s { font-size: var(--fs-xs); color: var(--muted); }
 .hover-card .s strong { color: var(--text); font-weight: 600; }
 .hover-card .status-t { font-weight: 600; }
 .hover-card .status-t.good { color: var(--good); }
@@ -535,15 +554,16 @@ html, body {
 /* ---------- Skeleton loading ---------- */
 
 .sk {
-  display: block; height: 11px; border-radius: 6px;
+  display: block; height: 11px; border-radius: var(--r-sm);
   background: linear-gradient(90deg, var(--fill) 0%, color-mix(in srgb, var(--fill) 45%, transparent) 50%, var(--fill) 100%);
   background-size: 200% 100%; animation: sk-shimmer 1.3s ease-in-out infinite;
 }
 @keyframes sk-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
 .sk-count { display: inline-block; width: 64px; height: 12px; vertical-align: middle; }
+.sk-stat { display: inline-block; width: 46px; height: 26px; border-radius: var(--r-sm); vertical-align: middle; }
 .sk-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 12px; background: var(--group); }
-.sk-plate { width: 44px; height: 26px; border-radius: 6px; }
+.sk-plate { width: 44px; height: 26px; border-radius: var(--r-sm); }
 .sk-lines { display: grid; gap: 6px; }
 .sk-sub { height: 9px; opacity: 0.7; }
 .sk-end { width: 48px; height: 10px; }
@@ -559,20 +579,20 @@ html, body {
 @media (hover: hover) and (pointer: fine) { .menu .keys-link { display: flex; } }
 .keys-sheet { position: fixed; inset: 0; z-index: 1500; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.32); }
 .keys-card {
-  width: min(340px, 100%); padding: 18px 18px 10px; border-radius: 22px;
+  width: min(340px, 100%); padding: 18px 18px 10px; border-radius: var(--r-xl);
   background: var(--panel); border: 0.5px solid var(--glass-edge); box-shadow: var(--shadow);
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  animation: keys-in 0.25s cubic-bezier(0.32, 1.2, 0.5, 1);
+  animation: keys-in var(--t-mid) cubic-bezier(0.32, 1.2, 0.5, 1);
 }
-.keys-card h3 { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
+.keys-card h3 { margin: 0 0 10px; font-size: var(--fs-body); font-weight: 700; }
 .keys-card ul { margin: 0; padding: 0; list-style: none; }
 .keys-card kbd { min-width: 38px; }
 .keys-card li { display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: var(--fs-base); border-top: 0.5px solid var(--line); }
 .keys-card li:first-child { border-top: 0; }
 kbd {
-  display: inline-block; min-width: 26px; padding: 2px 7px; border-radius: 6px; box-sizing: border-box; text-align: center;
+  display: inline-block; min-width: 26px; padding: 2px 7px; border-radius: var(--r-sm); box-sizing: border-box; text-align: center;
   background: var(--panel-solid); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 0 0 0.5px var(--line);
-  font: 600 12px/1.4 var(--font); color: var(--text);
+  font: 600 var(--fs-xs)/1.4 var(--font); color: var(--text);
 }
 @keyframes keys-in { from { transform: scale(0.95); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .keys-card { animation: none; } }
@@ -581,17 +601,17 @@ kbd {
 
 .menu-link, .menu-about > summary {
   position: relative; display: flex; align-items: center; justify-content: space-between; width: 100%;
-  padding: 11px 14px; border: 0; background: var(--group); color: var(--accent);
+  padding: 11px 14px; border: 0; background: var(--group); color: var(--text); /* rows that open something, like the rest: not links in blue beside one in black */
   font: inherit; font-size: var(--fs-base); text-align: left; cursor: pointer;
 }
-.menu-link > span[aria-hidden] { color: var(--faint); font-size: 18px; line-height: 1; }
+.menu-link > span[aria-hidden] { color: var(--faint); font-size: var(--fs-body); line-height: 1; }
 .menu-link:hover, .menu-about > summary:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
 .menu-title + .menu-link { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
 .menu-link + .menu-link::before, .menu-link + .menu-about > summary::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 0.5px; background: var(--line); }
 .menu-about { margin-bottom: 4px; }
 .menu-about > summary { list-style: none; color: var(--text); border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
 .menu-about > summary::-webkit-details-marker { display: none; }
-.menu-about > summary::after { content: "›"; color: var(--faint); font-size: 18px; line-height: 1; transition: transform 0.2s; }
+.menu-about > summary::after { content: "›"; color: var(--faint); font-size: var(--fs-body); line-height: 1; transition: transform var(--t-mid); }
 .menu-about[open] > summary::after { transform: rotate(90deg); }
 .menu-about[open] > summary { border-radius: 0; }
 .menu-about p { margin: 0; padding: 8px 14px 0; background: var(--group); font-size: var(--fs-sm); color: var(--muted); }
@@ -607,7 +627,7 @@ kbd {
 .chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
 .chips li {
   display: flex; align-items: center; gap: 6px; min-width: 0; height: 32px; padding: 0 12px; box-sizing: border-box;
-  border-radius: 12px !important; background: var(--group); font-size: var(--fs-sm); color: var(--muted);
+  border-radius: var(--r-md) !important; background: var(--group); font-size: var(--fs-sm); color: var(--muted);
   white-space: nowrap; overflow: hidden;
 }
 .chips li > span { text-overflow: ellipsis; }
@@ -616,12 +636,12 @@ kbd {
 
 /* ---------- A train's facts as widget tiles ---------- */
 
-.ft { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 10px 12px; border-radius: 14px; background: var(--group); }
+.ft { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 10px 12px; border-radius: var(--r-card); background: var(--group); }
 .ft-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.ft-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
-.ft-value { font-family: var(--font-rounded); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ft-value small { margin-left: 3px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.ft-value .ft-name { font-family: var(--font); font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+.ft-label { font-size: var(--fs-2xs); font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
+.ft-value { font-family: var(--font-rounded); font-size: var(--fs-title); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ft-value small { margin-left: 3px; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
+.ft-value .ft-name { font-family: var(--font); font-size: var(--fs-body); font-weight: 600; letter-spacing: -0.01em; }
 .ft-value .inferred { text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-thickness: 1.5px; cursor: help; }
 .ft-sub { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The live card: the next stop and the speed as two tiles (the next stop
@@ -643,7 +663,7 @@ kbd {
 
 .st-address {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px;
-  padding: 12px 14px; border-radius: 14px; background: var(--group); color: var(--text); text-decoration: none; font-size: var(--fs-base);
+  padding: 12px 14px; border-radius: var(--r-card); background: var(--group); color: var(--text); text-decoration: none; font-size: var(--fs-base);
 }
 .st-address span:last-child { color: var(--accent); }
 .st-address:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
@@ -660,15 +680,15 @@ kbd {
 .crowd-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); align-self: center; flex: none; }
 .crowd-sub { font-size: var(--fs-sm); color: var(--muted); }
 .crowd-cars { display: flex; gap: 4px; height: 40px; margin-top: 10px; }
-.cc { position: relative; flex: 1; border-radius: 6px; background: var(--fill); overflow: hidden; display: flex; align-items: flex-end; }
-.cc-fill { width: 100%; border-radius: 0 0 6px 6px; opacity: 0.9; }
+.cc { position: relative; flex: 1; border-radius: var(--r-sm); background: var(--fill); overflow: hidden; display: flex; align-items: flex-end; }
+.cc-fill { width: 100%; border-radius: 0 0 var(--r-sm) var(--r-sm); opacity: 0.9; }
 .cc-icons { position: absolute; top: 3px; left: 0; right: 0; display: flex; justify-content: center; gap: 1px; color: var(--muted); line-height: 0; }
 .cc.none { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
 .crowd-ends { display: flex; justify-content: space-between; margin-top: 4px; font-size: var(--fs-xs); color: var(--muted); }
 
 /* ---------- A line's mark: a short stretch of line in its color ---------- */
 
-.line-mark { display: inline-block; flex: none; width: 18px; height: 5px; border-radius: 3px; background: var(--c); vertical-align: middle; }
+.line-mark { display: inline-block; flex: none; width: 18px; height: 5px; border-radius: var(--r-xs); background: var(--c); vertical-align: middle; }
 .served-name:has(> .line-mark) { align-items: center; }
 
 /* ---------- One rhythm for the detail pages ----------
@@ -698,7 +718,7 @@ kbd {
  * a size four digits fit in a third of the panel. */
 .country-page > .rr-stats { margin: 4px 0 12px; }
 .country-page .rr-stat { min-width: 0; }
-.country-page .rr-stat strong { font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.country-page .rr-stat strong { font-size: var(--fs-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .country-page > .rr-sec { margin: 0; padding: 12px 0; border-top: 0.5px solid var(--line); }
 .country-page > .rr-sec > .section-title { margin: 0 0 8px; }
 
@@ -747,7 +767,7 @@ kbd {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; border: 0; border-radius: var(--r-card);
   background: var(--group); color: var(--text); font: 500 var(--fs-base) var(--font); text-align: left; cursor: pointer;
 }
-.lifts-ok-toggle::after { content: "›"; margin-left: auto; color: var(--faint); transition: transform 0.15s; }
+.lifts-ok-toggle::after { content: "›"; margin-left: auto; color: var(--faint); transition: transform var(--t-fast); }
 .lifts-ok.open .lifts-ok-toggle::after { transform: rotate(90deg); }
 .lifts-ok.open .lifts-ok-toggle { border-radius: var(--r-card) var(--r-card) 0 0; }
 .lifts-ok.open > .lifts { border-radius: 0 0 var(--r-card) var(--r-card); border-top: 0.5px solid var(--line); }
@@ -758,11 +778,11 @@ kbd {
 .history-chart { display: block; width: 100%; height: auto; margin-top: 10px; overflow: visible; }
 .history-chart .hc-base { stroke: var(--line); stroke-width: 1; }
 .history-chart .hc-mark { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 3 3; }
-.history-chart .hc-label { fill: var(--muted); font: 600 10px var(--font); }
+.history-chart .hc-label { fill: var(--muted); font: 600 var(--fs-2xs) var(--font); }
 @media (prefers-reduced-motion: reduce) { .lifts-ok-toggle::after { transition: none; } }
 
 /* A disruption's card on the map: the railroad's notice, a few lines. */
-.hover-card .disruption-note { max-width: 260px; margin-top: 4px; font-size: 12px; line-height: 1.35; color: var(--text); }
+.hover-card .disruption-note { max-width: 260px; margin-top: 4px; font-size: var(--fs-xs); line-height: 1.35; color: var(--text); }
 
 /* ---------- Track ----------
  * One button under a train's name ("Track", or once tracked "Tracking to
@@ -775,19 +795,26 @@ kbd {
   padding: 0 14px; font-size: var(--fs-sm); font-weight: 600; line-height: 1; white-space: nowrap;
 }
 .tracking-btn { color: var(--good); }
+/* The status says something and Track does something: two capsules of one
+   height side by side read as two buttons. The status is words in its color
+   after a dot; only the button has a capsule. */
+.hero-actions > .pill { padding: 0 6px 0 2px; background: none; font-size: var(--fs-md); }
+:root:not([data-colorblind]) .hero-actions > .pill:is(.good, .warn, .bad)::before {
+  content: ""; flex: none; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: currentColor;
+}
 .track-sheet { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; justify-content: flex-end; border-radius: inherit; overflow: hidden; }
 /* Closed, it must take no room at all: it sits over the whole panel. */
 .track-sheet[hidden] { display: none; }
-.ts-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.28); animation: ts-fade 0.2s ease both; }
+.ts-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.28); animation: ts-fade var(--t-mid) ease both; }
 .ts-card {
   position: relative; max-height: 78%; display: flex; flex-direction: column; gap: 12px;
   padding: 16px 14px calc(14px + env(safe-area-inset-bottom, 0px));
-  border-radius: 22px 22px 0 0; background: var(--panel-solid); box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18);
-  animation: ts-up 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--panel-solid); box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18);
+  animation: ts-up var(--t-mid) cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 .ts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; }
-.ts-head h3 { margin: 0; font-family: var(--font-display); font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
-.ts-x { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--fill); color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.ts-head h3 { margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 700; letter-spacing: -0.02em; }
+.ts-x { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--fill); color: var(--muted); font-size: var(--fs-body); line-height: 1; cursor: pointer; }
 .ts-list { min-height: 0; overflow-y: auto; border-radius: var(--r-card); background: var(--group); }
 .ts-stop {
   display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; background: transparent;
@@ -826,15 +853,15 @@ kbd {
 .acct-card {
   display: flex; flex-direction: column; gap: 12px;
   width: min(440px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; box-sizing: border-box;
-  padding: 14px 18px 18px; border-radius: 22px;
+  padding: 14px 18px 18px; border-radius: var(--r-xl);
   background: var(--panel); border: 0.5px solid var(--glass-edge); box-shadow: var(--shadow);
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  animation: keys-in 0.25s cubic-bezier(0.32, 1.2, 0.5, 1);
+  animation: keys-in var(--t-mid) cubic-bezier(0.32, 1.2, 0.5, 1);
 }
 @media (prefers-reduced-motion: reduce) { .acct-card { animation: none; } }
 .acct-head { display: flex; align-items: center; gap: 4px; }
 .acct-head h3 { flex: 1; margin: 0; font-size: var(--fs-lg); font-weight: 700; }
-.acct-back { border: 0; background: none; color: var(--accent); font-size: 26px; line-height: 1; padding: 0 6px 2px 0; cursor: pointer; }
+.acct-back { border: 0; background: none; color: var(--accent); font-size: var(--fs-title); line-height: 1; padding: 0 6px 2px 0; cursor: pointer; }
 .acct-lede, .acct-stats { margin: 0; font-size: var(--fs-sm); color: var(--muted); }
 .acct-notice { margin: 0; padding: 9px 12px; border-radius: var(--r-md); background: var(--fill); font-size: var(--fs-sm); }
 .acct-providers { display: grid; gap: 8px; }
@@ -872,7 +899,7 @@ kbd {
 .acct-status { margin: 0; }
 .acct-status label { position: relative; display: block; }
 .acct-status input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.acct-status span { display: block; padding: 6px 0; border-radius: 7px; text-align: center; font-size: var(--fs-sm); font-weight: 500; }
+.acct-status span { display: block; padding: 6px 0; border-radius: var(--r-sm); text-align: center; font-size: var(--fs-sm); font-weight: 500; }
 .acct-status input:checked + span { background: var(--panel-solid); font-weight: 600; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
 :root[data-theme="dark"] .acct-status input:checked + span { background: #636366; }
 .acct-status input:focus-visible + span { outline: 2px solid var(--accent); }
@@ -914,7 +941,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .nt-leg { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 10px; margin-top: 4px; }
 .nt-end { display: flex; flex-direction: column; min-width: 0; }
 .nt-end.right { text-align: right; }
-.nt-end strong { font-family: var(--font-display); font-size: 24px; white-space: nowrap; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.nt-end strong { font-family: var(--font-display); font-size: var(--fs-title); white-space: nowrap; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .nt-end span { font-size: var(--fs-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nt-span { padding-bottom: 20px; font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
 .nt-notes { font-size: var(--fs-sm); color: var(--muted); }
@@ -959,19 +986,23 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .agency.compact .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .agency.compact .rgn { font-weight: 400; font-size: var(--fs-sm); letter-spacing: 0; color: var(--muted); }
 
-/* Search's filters: pills under the search field, each a menu. Shown while
-   searching, or while one is set. */
-.filters { display: none; gap: 6px; margin: 10px 16px 0; overflow-x: auto; scrollbar-width: none; }
+/* Search's filters: pills under the search field, each a menu. */
+.filters {
+  display: flex; gap: 6px; margin: 10px 16px 0; overflow-x: auto; scrollbar-width: none;
+  /* Always under the search field (they came and went with its focus, and
+     the page jumped each time); a longer choice scrolls them, the last of
+     the row fading out rather than being cut at the panel's edge. */
+  padding-right: 20px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+}
 .filters::-webkit-scrollbar { display: none; }
-.search-area:has(.search:focus-within, .filters:focus-within) .filters, .search-area.active .filters { display: flex; }
 .filter {
-  position: relative; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px 0 12px;
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: 3px; height: 30px; padding: 0 8px 0 11px;
   border-radius: var(--r-pill); background: var(--fill); font-size: var(--fs-sm); font-weight: 500; color: var(--text); white-space: nowrap; cursor: pointer;
 }
 .filter svg { color: var(--muted); }
 .filter.on { background: var(--accent); color: #fff; }
 .filter.on svg { color: currentColor; }
-.filter select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.filter select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: var(--fs-md); }
 .filter:has(select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .filter-clear { flex: none; margin: 0 4px; font-weight: 500; }
 
@@ -984,7 +1015,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .ts-from select {
   min-width: 0; max-width: 62%; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: var(--fs-md); text-align: right; cursor: pointer;
 }
-.ts-from select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.ts-from select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
 
 /* "Were you on it?": a ride that ended, asked about before it goes to the rider's trips. */
 .live .ask-actions { display: flex; align-items: center; gap: 10px; }
@@ -1010,7 +1041,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .plan-field { position: relative; }
 .plan-swap {
   width: 36px; height: 36px; margin-top: 56px; padding: 0;
-  border: 0; border-radius: 50%; background: var(--fill); color: var(--accent); font-size: 16px; cursor: pointer;
+  border: 0; border-radius: 50%; background: var(--fill); color: var(--accent); font-size: var(--fs-md); cursor: pointer;
 }
 .plan-swap:hover { background: color-mix(in srgb, var(--fill) 100%, var(--text) 6%); }
 /* Under the field, pushing the rest down (a floating list would be cut
@@ -1027,7 +1058,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .plan-option span { font-size: var(--fs-base); font-weight: 600; }
 .plan-option small { font-size: var(--fs-xs); color: var(--muted); }
 .plan-days { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; }
-.plan-date { position: relative; display: grid; place-items: center; border-radius: 7px; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+.plan-date { position: relative; display: grid; place-items: center; border-radius: var(--r-sm); font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
 .plan-date.on { background: var(--panel-solid); font-weight: 600; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
 :root[data-theme="dark"] .plan-date.on { background: #636366; }
 .plan-date input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
@@ -1049,6 +1080,16 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 /* ---------- Touch screens ---------- */
 @media (pointer: coarse) {
   .maplibregl-ctrl-group:has(.maplibregl-ctrl-zoom-in) { display: none; }
+  /* Under a finger, everything tappable answers over at least 44 points:
+     small buttons keep their size and take the touches around them, and
+     rows in a list are 44 tall. */
+  :is(.icon-btn:not(.sm), .back, .country-back, .hero-actions > .btn, .notices-toggle, .tc-x, .filter, .link-btn, .search-cancel, .menu-done) { position: relative; }
+  :is(.icon-btn:not(.sm), .back, .country-back, .hero-actions > .btn, .notices-toggle, .tc-x, .link-btn, .search-cancel, .menu-done)::after {
+    content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+  }
+  .filter { height: 34px; }
+  .stops li { min-height: 44px; box-sizing: border-box; align-items: center; }
+  .stops li.fold { min-height: 44px; }
 }
 
 /* ---------- Phones: search's Cancel, Settings as a sheet ---------- */
@@ -1058,7 +1099,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
   /* While searching, Cancel stands where the gear was. */
   .search-cancel {
     flex: none; padding: 0 2px 0 4px; border: 0; background: none; color: var(--accent);
-    font: inherit; font-size: 17px; letter-spacing: -0.02em; cursor: pointer;
+    font: inherit; font-size: var(--fs-body); letter-spacing: -0.02em; cursor: pointer;
   }
   .search-area:is(.active, :has(.search:focus-within, .filters:focus-within)) .search-cancel { display: block; }
   .search-area:is(.active, :has(.search:focus-within, .filters:focus-within)) #settings-btn { display: none; }
@@ -1066,25 +1107,25 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
   .menu {
     left: 0 !important; right: 0; bottom: 0; top: auto !important; width: auto; max-width: none;
     max-height: 90dvh !important; padding: 0 12px calc(16px + env(safe-area-inset-bottom, 0px));
-    border-radius: 24px 24px 0 0; border-bottom: 0; background: var(--bg);
-    animation: menu-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) both;
+    border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom: 0; background: var(--bg);
+    animation: menu-up var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1) both;
   }
   .menu-head {
     position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: center;
     min-height: 56px; margin: 0 -12px 4px; padding: 0 16px; background: var(--bg);
   }
-  .menu-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+  .menu-head h2 { margin: 0; font-size: var(--fs-body); font-weight: 600; letter-spacing: -0.02em; }
   .menu-done {
     position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
-    border: 0; background: none; padding: 6px 0; color: var(--accent); font: inherit; font-size: 17px; font-weight: 600; cursor: pointer;
+    border: 0; background: none; padding: 6px 0; color: var(--accent); font: inherit; font-size: var(--fs-body); font-weight: 600; cursor: pointer;
   }
-  body.menu-open::before { content: ""; position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.3); animation: ts-fade 0.25s ease both; }
+  body.menu-open::before { content: ""; position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.3); animation: ts-fade var(--t-mid) ease both; }
   @keyframes menu-up { from { transform: translateY(100%); } }
   @media (prefers-reduced-motion: reduce) { .menu, body.menu-open::before { animation: none; } }
 }
 
 /* ---------- Moving between pages ---------- */
-.page-in { animation: page-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.page-in { animation: page-in var(--t-mid) cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .page-in { animation: none; } }
 
@@ -1092,12 +1133,12 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .stops li.fold { color: var(--accent); font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
 .stops li.fold::before { top: 4px; bottom: 0; background: repeating-linear-gradient(to bottom, var(--faint) 0 2px, transparent 2px 5px); }
 .stops li.fold .stop-dot { display: none; }
-.stops li.fold .time { color: var(--faint); font-size: 17px; line-height: 1; }
+.stops li.fold .time { color: var(--faint); font-size: var(--fs-body); line-height: 1; }
 .stops li.fold:hover > span:nth-child(2), .stops li.fold:focus-visible > span:nth-child(2) { text-decoration: underline; text-underline-offset: 2px; }
 .stops li.fold:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: var(--r-sm); }
 
 /* ---------- All railroads: back, as on every page, under a large title ---------- */
-.agencies .country-back { margin: 12px 0 0 -6px; padding: 6px 8px 6px 2px; font-size: 17px; letter-spacing: -0.02em; }
+.agencies .country-back { margin: 12px 0 0 -6px; padding: 6px 8px 6px 2px; font-size: var(--fs-body); letter-spacing: -0.02em; }
 .agencies .country-back + .country-title { margin: 8px 4px 2px; font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: var(--text); }
 
 /* ---------- Scrolling lists: slim scrollbars on a clear track ---------- */
@@ -1105,7 +1146,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 /* Settings on a computer: a popover beside the panel, opening from its corner. */
 @media (min-width: 721px) {
-  .menu { transform-origin: top left; animation: menu-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .menu { transform-origin: top left; animation: menu-pop var(--t-mid) cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   @keyframes menu-pop { from { opacity: 0; transform: scale(0.97); } }
   @media (prefers-reduced-motion: reduce) { .menu { animation: none; } }
 }
@@ -1115,7 +1156,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
  * turning down like a split-flap board's leaf, one after another. */
 .plate .flap {
   display: inline-block; white-space: pre;
-  animation: flap 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: flap var(--t-slow) cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: calc(var(--c) * 60ms + 120ms);
 }
 @keyframes flap {
@@ -1132,11 +1173,11 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .tab {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0;
   padding: 7px 0 5px; border: 0; background: none; color: var(--muted);
-  font: inherit; font-size: 10.5px; font-weight: 500; letter-spacing: 0; cursor: pointer;
+  font: inherit; font-size: var(--fs-2xs); font-weight: 500; letter-spacing: 0; cursor: pointer;
 }
 .tab > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tab[aria-current="page"] { color: var(--accent); }
-.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 10px; }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--r-md); }
 .tab-settings { display: none; }
 
 #view-list:not([data-tab="browse"]) > :is(.search-area, #results, #recents) { display: none !important; }
@@ -1144,6 +1185,8 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 @media (max-width: 720px) {
   .panel .tabbar { flex: none; order: 99; padding: 0 8px; border-top: 0.5px solid var(--line); }
+  /* Folded down, the sheet is the search field alone: no filters cut off under it. */
+  .panel.collapsed .filters { display: none; }
   body.has-tabs .panel.collapsed { height: calc(132px + 52px + var(--tracked-h, 0px)); }
   body.has-tabs .panel.collapsed:has(> #view-list:not([hidden])) { height: calc(96px + 52px + env(safe-area-inset-bottom, 0px) + var(--tracked-h, 0px)); }
 }
@@ -1154,7 +1197,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
     border-radius: var(--r-lg); background: var(--panel); border: 0.5px solid var(--glass-edge); box-shadow: var(--shadow);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   }
-  body.has-tabs .tab { flex: none; width: 60px; padding: 8px 2px 6px; border-radius: 12px; font-size: 10px; }
+  body.has-tabs .tab { flex: none; width: 60px; padding: 8px 2px 6px; border-radius: var(--r-md); font-size: var(--fs-2xs); }
   /* Longer names ("Mes voyages") take two lines rather than being cut. */
   body.has-tabs .tab > span { white-space: normal; text-align: center; line-height: 1.15; }
   body.has-tabs .tab:hover { background: var(--hover); color: var(--text); }
@@ -1173,15 +1216,15 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .page-actions { display: flex; align-items: center; gap: 8px; }
 
 /* My trips: the next trip, large. */
-.trip-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 14px; border-radius: 20px; background: var(--group); }
+.trip-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 14px; border-radius: var(--r-xl); background: var(--group); }
 .tk-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tk-train { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-base); font-weight: 600; }
 .tk-train > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-label { margin-top: 8px; font-size: var(--fs-sm); color: var(--muted); }
 .tk-big { font-family: var(--font-rounded); line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.tk-big strong { font-size: 42px; font-weight: 700; }
-.tk-big small { margin: 0 8px 0 3px; font-size: 17px; font-weight: 600; color: var(--muted); }
-.tk-day { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+.tk-big strong { font-size: var(--fs-hero); font-weight: 700; }
+.tk-big small { margin: 0 8px 0 3px; font-size: var(--fs-body); font-weight: 600; color: var(--muted); }
+.tk-day { font-family: var(--font-display); font-size: var(--fs-title); font-weight: 700; }
 .tk-leg { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 10px; margin-top: 8px; }
 .tk-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .tk-actions .btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; font-size: var(--fs-sm); }
@@ -1199,8 +1242,8 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 /* History: the numbers, the train ridden most, favorites, every trip. */
 .hist-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }
-.rr-stat strong small { margin: 0 3px 0 2px; font-size: 15px; font-weight: 600; color: var(--muted); }
-.hist-most { margin-top: 10px; padding: 12px 14px 13px; border-radius: 18px; background: var(--group); }
+.rr-stat strong small { margin: 0 3px 0 2px; font-size: var(--fs-base); font-weight: 600; color: var(--muted); }
+.hist-most { margin-top: 10px; padding: 12px 14px 13px; border-radius: var(--r-xl); background: var(--group); }
 .hm-label { font-size: var(--fs-sm); color: var(--muted); }
 .hm-cars {
   display: flex; align-items: flex-end; margin: 10px 0 8px; overflow: hidden; pointer-events: none;
@@ -1215,9 +1258,9 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 /* Signed out: what an account gives, and the ways in. */
 .so-hero { padding: 14px 12px 2px; text-align: center; }
-.so-icon { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.so-icon { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: var(--r-xl); background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .so-icon svg { width: 34px; height: 34px; }
-.so-hero h2 { margin: 14px 0 6px; font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.so-hero h2 { margin: 14px 0 6px; font-family: var(--font-display); font-size: var(--fs-title); font-weight: 700; letter-spacing: -0.02em; }
 .so-hero p { max-width: 290px; margin: 0 auto; font-size: var(--fs-base); color: var(--muted); }
 .so-list { margin-top: 18px; overflow: hidden; border-radius: var(--r-card); background: var(--group); }
 .so-row { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
@@ -1265,20 +1308,20 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
   display: inline-grid; place-items: center; flex: none; overflow: hidden;
   width: 32px; height: 32px; border-radius: 50%;
   background: linear-gradient(180deg, #a6abb6, #858a94); color: #fff;
-  font-family: var(--font-rounded); font-size: 13px; font-weight: 600; letter-spacing: 0.01em; line-height: 1;
+  font-family: var(--font-rounded); font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0.01em; line-height: 1;
 }
 :root[data-theme="dark"] .avatar { background: linear-gradient(180deg, #8e8e93, #636366); }
 .avatar svg { display: block; width: 100%; height: 100%; color: rgba(255, 255, 255, 0.92); }
-.avatar.lg { width: 50px; height: 50px; font-size: 20px; }
+.avatar.lg { width: 50px; height: 50px; font-size: var(--fs-lg); }
 .icon-btn.avatar-btn, .tab.avatar-btn { background: none; padding: 0; }
-.icon-btn.avatar-btn .avatar { width: 34px; height: 34px; font-size: 14px; }
+.icon-btn.avatar-btn .avatar { width: 34px; height: 34px; font-size: var(--fs-sm); }
 .icon-btn.avatar-btn:hover { background: none; }
 .avatar-btn:hover .avatar, .avatar-btn[aria-expanded="true"] .avatar { filter: brightness(1.08); }
 .avatar-btn:focus-visible { outline: none; }
 .avatar-btn:focus-visible .avatar { box-shadow: 0 0 0 2px var(--panel-solid), 0 0 0 4px var(--accent); }
 @media (min-width: 721px) {
   body.has-tabs .tab-settings.avatar-btn { width: auto; padding: 8px 0 4px; background: none; }
-  body.has-tabs .tab-settings.avatar-btn .avatar { width: 34px; height: 34px; font-size: 14px; }
+  body.has-tabs .tab-settings.avatar-btn .avatar { width: 34px; height: 34px; font-size: var(--fs-sm); }
 }
 
 /* Settings opens on the account: its monogram, name and email. */
@@ -1290,23 +1333,23 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .menu-profile:hover { background: color-mix(in srgb, var(--group) 100%, var(--text) 4%); }
 .menu-profile:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .mp-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.mp-text strong { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-text strong { font-size: var(--fs-body); font-weight: 600; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mp-text span { font-size: var(--fs-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mp-text span:empty { display: none; }
-.mp-go { color: var(--faint); font-size: 20px; line-height: 1; }
+.mp-go { color: var(--faint); font-size: var(--fs-lg); line-height: 1; }
 
 /* ---------- The panel put away (computers) ----------
  * The page you're on chosen again, or a tap on the map itself, slides the
  * panel away under the rail, leaving the map and the rail (app.js). */
 @media (min-width: 721px) {
-  .panel { transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease, visibility 0s linear 0s; }
+  .panel { transition: transform var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--t-mid) ease, visibility 0s linear 0s; }
   body.panel-away .panel {
     transform: translateX(calc(-100% - 90px)); opacity: 0; visibility: hidden; pointer-events: none;
-    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease 0.1s, visibility 0s linear 0.4s;
+    transition: transform var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--t-mid) ease var(--t-fast), visibility 0s linear var(--t-slow);
   }
   body.panel-away.has-tabs .tracked { left: calc(86px + 12px); }
   body.panel-away.has-tabs .maplibregl-ctrl-bottom-left { left: calc(86px + 4px); }
-  .tracked, .maplibregl-ctrl-bottom-left { transition: left 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+  .tracked, .maplibregl-ctrl-bottom-left { transition: left var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1); }
   /* No page is open: none of the rail's pages stands out. */
   body.panel-away.has-tabs .tab[aria-current="page"] { background: none; color: var(--muted); }
   body.panel-away.has-tabs .tab[aria-current="page"]:hover { background: var(--hover); color: var(--text); }
@@ -1330,7 +1373,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
  * change between them marked on a dotted stretch. */
 .jl { position: relative; margin: 10px 0 0; padding: 0; list-style: none; }
 .jl-leg { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 0 6px 14px; }
-.jl-leg::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 4px; border-radius: 2px; background: var(--c); }
+.jl-leg::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 4px; border-radius: var(--r-xs); background: var(--c); }
 .jl-leg .plate { min-width: 46px; }
 .jl-leg.now .title { color: var(--accent); }
 .jl-text { display: flex; flex-direction: column; min-width: 0; }
@@ -1343,7 +1386,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .jl-change::before { content: ""; position: absolute; left: -3px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--panel-solid); box-shadow: 0 0 0 2px var(--faint); }
 
 /* Time on each train and waiting between them, end to end. */
-.jbar { display: flex; height: 5px; margin-top: 7px; overflow: hidden; border-radius: 3px; background: var(--fill); }
+.jbar { display: flex; height: 5px; margin-top: 7px; overflow: hidden; border-radius: var(--r-xs); background: var(--fill); }
 .jb-ride { background: var(--c); }
 .jb-ride + .jb-ride { box-shadow: inset 1.5px 0 0 var(--group); }
 .jb-wait { background: repeating-linear-gradient(90deg, var(--faint) 0 2px, transparent 2px 4px); opacity: 0.7; }
