@@ -873,6 +873,9 @@ function visible(t) {
   // country's page, only its railroads' (and a tracked train's country's).
   const country = AGENCIES[t.agency]?.country;
   if (ovHidden) return trackedCountries.has(country) || t.agency === state.railroad;
+  // A country picked and the map still out at its scale: its trains alone,
+  // not those of a neighbor picked before it, whose feed has stopped.
+  if (ovNarrowed() && country !== ovFocus && !trackedCountries.has(country)) return false;
   if (shownCountry && country !== shownCountry && !trackedCountries.has(country)) return false;
   // While a train is tracked, the tracked ones show alone.
   return !state.tracked.length;
@@ -1221,10 +1224,12 @@ function stationCollection() {
       z: dot > dotFloor({ major }) ? dot : 0, // 0: from its layer's own zoom
       lz: label > LABEL_FLOOR.top ? label : 0,
       g: shown[0], // fades in with its railroad (see setFaded)
+      cs: countriesOf(shown), // its railroads' countries (applyOverview)
     },
   }));
   return { type: "FeatureCollection", features };
 }
+const countriesOf = (ids) => [...new Set(ids.map((id) => AGENCIES[id]?.country).filter(Boolean))].join(",");
 
 function footprintCollection() {
   const features = [];
@@ -1257,7 +1262,9 @@ function railCollection() {
     const p = f.properties;
     const nets = [p.a, p.b, p.c].filter((n) => n && networkShown(n));
     if (!nets.length) continue;
-    const props = { n: nets.length, a: nets[0], b: nets[1], c: nets[2], g: nets[0] };
+    // cs: the countries of the railroads on it ("IT,CH"), for showing a
+    // picked country's alone (applyOverview).
+    const props = { n: nets.length, a: nets[0], b: nets[1], c: nets[2], g: nets[0], cs: countriesOf(nets) };
     if (p.h) props.h = 1;
     features.push({ type: "Feature", geometry: f.geometry, properties: props });
   }
@@ -1509,6 +1516,9 @@ const railroadsOf = (country) => Object.keys(AGENCIES).filter((id) => AGENCIES[i
 let ovFocus = null;         // the country picked ("DE")
 let ovFloor = OV_OUT_ZOOM;  // zooming out past this leaves it (lower for a country framed below it: the US on a phone)
 let ovHidden = false;       // the pins are up: track, stations and trains put away
+// The pins up, or a country picked with the map still out at its scale: only
+// what's picked, tracked or open shows (applyOverview, visible()).
+const ovNarrowed = () => ovHidden || Boolean(ovFocus && map.getZoom() < OV_VIEW_ZOOM);
 let ovPicking = false;      // a pick's framing is under way: the moves on the way don't pick or leave
 let ov = null, ovLoading = null;
 // A railroad's page, an open train or a tracked one of these railroads.
@@ -1557,15 +1567,32 @@ function overviewPanelChanged() {
 const OV_RAIL = ["tt-rail-casing", "tt-rail-0", "tt-rail-1", "tt-rail-2", "tt-rail-abroad"];
 const OV_STATIONS = ["tt-stations-minor", "tt-stations-major", "tt-station-labels"];
 let ovBase = {}; // layer -> its own filter, before the overview narrows it (reset when the style is)
+// While a country is picked and the map is still out at its scale (short of
+// OV_VIEW_ZOOM), the map shows that country's alone: its track, its
+// stations, its trains, and where its trains run on past its borders. A
+// country picked before it stays loaded, and without this stayed drawn:
+// picking Italy after passing over Germany and France showed all three
+// networks, two of them with no trains on them. Zoomed in, whatever the
+// map shows loads and draws, as before.
+let ovApplied = ""; // what the layers were last narrowed for (overviewMoved)
 function applyOverview() {
   const open = panelRailroad();
-  const keep = ovHidden && (trackedCountries.size || open) ? Object.keys(AGENCIES).filter((id) => id === open || trackedCountries.has(AGENCIES[id].country)) : null;
+  const countries = new Set(trackedCountries);
+  if (!ovHidden && ovFocus) countries.add(ovFocus);
+  const narrowed = ovNarrowed() && Boolean(countries.size || open);
+  ovApplied = `${ovHidden}|${ovNarrowed() ? ovFocus : ""}`;
+  const agencies = narrowed ? Object.keys(AGENCIES).filter((id) => id === open || countries.has(AGENCIES[id].country)) : [];
+  const cs = ["coalesce", ["get", "cs"], ""], is = (prop) => ["==", ["coalesce", ["get", prop], ""], open];
   for (const id of [...OV_RAIL, ...OV_STATIONS]) {
     if (!map.getLayer(id)) continue;
     if (!(id in ovBase)) ovBase[id] = map.getFilter(id) ?? null;
-    const base = id === "tt-rail-abroad" ? abroadFilter() : ovBase[id];
-    const narrow = keep && ["in", ["get", OV_RAIL.includes(id) ? "a" : "g"], ["literal", keep]];
-    map.setLayoutProperty(id, "visibility", ovHidden && !keep ? "none" : "visible");
+    const abroad = id === "tt-rail-abroad";
+    // Track abroad gives way to a country's own only where that's drawn.
+    const base = abroad ? abroadFilter(narrowed ? countries : null) : ovBase[id];
+    const narrow = !narrowed ? null
+      : abroad ? ["in", ["get", "a"], ["literal", agencies]]
+      : ["any", ...[...countries].map((c) => ["in", c, cs]), ...(open ? (OV_RAIL.includes(id) ? ["a", "b", "c"] : ["g"]).map(is) : [])];
+    map.setLayoutProperty(id, "visibility", ovHidden && !narrowed ? "none" : "visible");
     map.setFilter(id, narrow ? (base ? ["all", base, narrow] : narrow) : base);
   }
 }
@@ -1596,7 +1623,9 @@ function overviewMoved() {
   }
   if (!ovFocus) ovFloor = OV_OUT_ZOOM;
   const hide = !ovFocus && z < OV_VIEW_ZOOM;
-  if (hide !== ovHidden) {
+  // The pins up or down, another country picked, or the map zoomed across
+  // the scale at which a picked country shows alone.
+  if (hide !== ovHidden || ovApplied !== `${hide}|${hide || (ovFocus && z < OV_VIEW_ZOOM) ? ovFocus : ""}`) {
     ovHidden = hide;
     applyOverview();
     redraw();
@@ -1672,7 +1701,8 @@ map.once("load", overviewMoved); // the opening view
 // indexed, so its trains running abroad stay on track.
 let abroadGeo = { type: "FeatureCollection", features: [] };
 const railIn = new Set(); // countries whose own track is drawn
-const abroadFilter = () => ["!", ["in", ["coalesce", ["get", "in"], ""], ["literal", [...railIn]]]];
+// (only: the countries whose own track is showing, where the rest is put away.)
+const abroadFilter = (only = null) => ["!", ["in", ["coalesce", ["get", "in"], ""], ["literal", [...railIn].filter((c) => !only || only.has(c))]]];
 let abroadIndex = null;  // the regions with track abroad (data/rail/abroad/index.json)
 function loadAbroad(region) {
   (abroadIndex ??= fetch("data/rail/abroad/index.json?v=dev").then((r) => (r.ok ? r.json() : [])).catch(() => []))
