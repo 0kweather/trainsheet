@@ -119,8 +119,6 @@ const state = {
   routeDay: null,        // Browse's day for the trains from one station to another (YYYY-MM-DD; null for today)
 };
 const pastOpen = new Set(); // trains whose passed stops are unfolded
-const callouts = new Map(); // tracked train id -> its callout on the map (placeCallouts)
-let calloutLayer = null;
 let goingBack = false; // going back doesn't count as opening something (for Recents)
 // On phones the tracked trains sit at the top of the sheet, as they used to:
 // floating over the map, they'd cover the expanded sheet's top.
@@ -983,7 +981,6 @@ function featureCollection() {
 
 function redraw() {
   setFaded("trains", featureCollection());
-  moveCallouts(); // the tracked trains' callouts ride with them
 }
 
 // ---------- The selected train's route ----------
@@ -5330,10 +5327,9 @@ function renderTracked() {
   }).join("");
   // The panel (and a phone's folded sheet) makes room for it (design.css).
   document.documentElement.style.setProperty("--tracked-h", `${el.hidden ? 0 : el.offsetHeight}px`);
-  placeCallouts();
 }
 // How long until a tracked train reaches the stop it's tracked to (its last
-// stop otherwise), as the bar and its callout on the map show it, and how
+// stop otherwise), as the bar shows it, and how
 // much of the way there it is: from the rider's own stop's departure, or
 // from when tracking began.
 function trackedLeft(rec, t = trackedTrain(rec)) {
@@ -5466,106 +5462,6 @@ function answerRideGuess(id, answer) {
   openTrackSheet(t, { riding: true, confirmed: true }); // found by the rider's own location
 }
 
-// ---------- A tracked train's callout on the map ----------
-// Each tracked train that's reporting carries a small callout on the map:
-// its plate, how long until the stop it's tracked to, and its delay when
-// it has one. It rides with the train (moveCallouts, at every redraw and
-// every move of the map) and, when the train is off screen or behind the
-// panel, waits at the edge of the map toward it with an arrow. It stands in
-// for the train's plate, which the map leaves out (applySelectionFilter).
-// A click opens the train, which brings the map to it.
-function placeCallouts() {
-  if (!calloutLayer) {
-    calloutLayer = document.createElement("div");
-    calloutLayer.className = "tk-callouts";
-    calloutLayer.addEventListener("click", (e) => {
-      const c = e.target.closest("[data-callout]");
-      if (c) openTracked(c.dataset.callout);
-    });
-    map.getContainer().append(calloutLayer);
-  }
-  const live = new Set();
-  for (const rec of state.tracked) {
-    const t = trackedTrain(rec);
-    if (!t || !Number.isFinite(targetOf(t)?.lat)) continue;
-    live.add(rec.id);
-    let el = callouts.get(rec.id);
-    if (!el) {
-      el = document.createElement("button");
-      el.type = "button";
-      el.className = "tk-callout";
-      el.dataset.callout = rec.id;
-      calloutLayer.append(el);
-      callouts.set(rec.id, el);
-    }
-    const a = AGENCIES[rec.agency], left = trackedLeft(rec, t), late = lateText(t.delayMin);
-    const html = `<svg class="tk-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 6h7M6 2.5 9.5 6 6 9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      ${plate(rec.number || a.short, a.color, "xs")}${left.eta ? `<span class="tk-eta">${left.eta}</span>` : ""}
-      ${late.text && late.cls !== "good" ? `<span class="tk-late status ${late.cls}">${late.text}</span>` : ""}`;
-    if (el.dataset.html !== html) {
-      el.dataset.html = html;
-      el.innerHTML = html;
-      delete el.dataset.w; // measured again (moveCallouts)
-      delete el.dataset.we;
-      delete el.dataset.h;
-    }
-    el.setAttribute("aria-label", T("Open {train}", { train: trainLabel(rec) }));
-  }
-  for (const [id, el] of callouts) {
-    if (live.has(id)) continue;
-    el.remove();
-    callouts.delete(id);
-  }
-  moveCallouts();
-}
-function moveCallouts() {
-  if (!callouts.size) return;
-  const box = map.getContainer(), W = box.clientWidth, H = box.clientHeight, pad = panelPadding();
-  // The part of the map the panel (or a phone's sheet) leaves free.
-  const L = (pad.left || 0) + 10, T0 = (pad.top || 0) + 10, R = W - 10, B = H - (pad.bottom || 0) - 10;
-  const c = map.getCenter(), rad = Math.PI / 180;
-  for (const [id, el] of callouts) {
-    const t = state.trains.get(id), pos = t && (state.display.get(id) || targetOf(t));
-    // No room to show it in (a phone's sheet all the way up).
-    if (!pos || B - T0 < 90 || R - L < 120) { el.hidden = true; continue; }
-    el.hidden = false;
-    if (!el.dataset.h) el.dataset.h = el.offsetHeight;
-    const h = +el.dataset.h;
-    let { x, y } = map.project([pos.lon, pos.lat]);
-    // Round the back of the globe, a point projects anywhere: head for it
-    // the way the great circle to it leaves the middle of the map.
-    const dl = (pos.lon - c.lng) * rad, cos = Math.sin(c.lat * rad) * Math.sin(pos.lat * rad) + Math.cos(c.lat * rad) * Math.cos(pos.lat * rad) * Math.cos(dl);
-    if (cos < 0.2) {
-      const bx = Math.sin(dl) * Math.cos(pos.lat * rad), by = Math.cos(c.lat * rad) * Math.sin(pos.lat * rad) - Math.sin(c.lat * rad) * Math.cos(pos.lat * rad) * Math.cos(dl);
-      const k = (W + H) / (Math.hypot(bx, by) || 1);
-      x = (L + R) / 2 + bx * k;
-      y = (T0 + B) / 2 - by * k;
-    }
-    const on = x >= L && x <= R && y >= T0 + h + 14 && y <= B;
-    el.classList.toggle("edge", !on);
-    // (Its width with the arrow and without, each measured once.)
-    const key = on ? "w" : "we";
-    if (!el.dataset[key]) el.dataset[key] = el.offsetWidth;
-    const w = +el.dataset[key];
-    let left, top;
-    if (on) {
-      // Over the train, kept inside the map.
-      left = Math.min(R - w, Math.max(L, x - w / 2));
-      top = y - h - 16;
-      el.style.setProperty("--tip", `${Math.min(w - 12, Math.max(12, x - left))}px`);
-    } else {
-      // At the edge toward it, its arrow pointing the way.
-      const cx = (L + R) / 2, cy = (T0 + B) / 2;
-      left = Math.min(R - w, Math.max(L, x - w / 2));
-      top = Math.min(B - h, Math.max(T0, y - h / 2));
-      el.style.setProperty("--turn", `${Math.atan2(y - cy, x - cx)}rad`);
-    }
-    el.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
-  }
-}
-map.on("move", moveCallouts);
-map.on("resize", moveCallouts);
-
 // The bar's row opens its train's page (already open, it stays).
 function openTracked(id) {
   if (!state.trains.get(id)) return toast(T("That train isn't reporting right now."));
@@ -5611,9 +5507,7 @@ function applySelectionFilter() {
   redraw(); // the selected train alone while one is open (visible())
   redrawRoute();
   map.setLayoutProperty("tt-labels", "text-variable-anchor-offset", plateOffset(selected));
-  // (A tracked train's plate is in its callout: not drawn here as well.)
-  const called = ["!", ["in", ["get", "id"], ["literal", state.tracked.map((r) => r.id)]]];
-  map.setFilter("tt-labels", ["all", called, state.labels === "none" ? highlighted : ["any", highlighted, ["all", [">=", ["zoom"], 8], [">=", ["zoom"], ["get", "z"]]]]]);
+  map.setFilter("tt-labels", state.labels === "none" ? highlighted : ["any", highlighted, ["all", [">=", ["zoom"], 8], [">=", ["zoom"], ["get", "z"]]]]);
   map.setLayoutProperty("tt-labels", "symbol-sort-key", ["case", highlighted, -1, ["get", "labelOrder"]]);
   for (const l of ["tt-station-ping", "tt-station-shadow", "tt-station-selected", "tt-footprint-selected"]) {
     map.setFilter(l, ["==", ["get", "id"], sid]);
@@ -6034,7 +5928,6 @@ map.on("mousemove", "tt-trains", (e) => {
 // cars, and its next stop and whether it's on time.
 function hoverCard(t) {
   const a = AGENCIES[t.agency];
-  const c = consistOf(t);
   const next = t.stops?.find((s) => s.status === "next") || t.stops?.find((s) => s.status === "future");
   const status = statusSpan(t, "status-t");
   const where = next
@@ -6043,7 +5936,6 @@ function hoverCard(t) {
     : t.nextStop ? `<span class="hc-k">${T("Next")}</span> <strong>${esc(t.nextStop)}</strong>`
     : t.destination ? `${T("to")} <strong>${esc(t.destination)}</strong>` : "";
   return `<div class="t">${plate(t.number || a.short, a.color, "xs")}<span>${esc(trainTitle(t))}</span></div>
-    ${c ? `<div class="hc-strip" aria-hidden="true">${consistHtml(c, a.color).replaceAll(' role="button" tabindex="0"', "")}</div>` : ""}
     ${where || status ? `<div class="s">${[where, status].filter(Boolean).join(" · ")}</div>` : ""}`;
 }
 map.on("mouseleave", "tt-trains", () => {

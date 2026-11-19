@@ -398,30 +398,6 @@ html, body {
   }
 }
 
-/* ---------- A tracked train's callout on the map ----------
- * Riding with the train (app.js, placeCallouts): its plate, how long is
- * left, and its delay when it has one, on a card with a tip pointing down at
- * the train. Off screen, it waits at the map's edge with an arrow toward
- * the train instead of the tip. */
-.tk-callouts { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-.tk-callout {
-  position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px; padding: 5px 9px 5px 6px;
-  border: 0.5px solid var(--line); border-radius: var(--r-md); background: var(--panel-solid); color: var(--text);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16); font: inherit; white-space: nowrap; cursor: pointer; pointer-events: auto;
-}
-.tk-callout[hidden] { display: none; }
-.tk-callout:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.tk-callout::after {
-  content: ""; position: absolute; left: var(--tip, 50%); bottom: -5px; width: 9px; height: 9px; margin-left: -5px;
-  background: var(--panel-solid); border-right: 0.5px solid var(--line); border-bottom: 0.5px solid var(--line); transform: rotate(45deg);
-}
-.tk-callout.edge::after { display: none; }
-.tk-arrow { display: none; flex: none; color: var(--muted); transform: rotate(var(--turn, 0rad)); }
-.tk-callout.edge .tk-arrow { display: block; }
-.tk-eta { font-family: var(--font-rounded); font-size: var(--fs-base); font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.tk-eta small { margin-left: 1px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
-.tk-late { font-size: var(--fs-xs); }
-
 /* ---------- Menu, toast, loading ---------- */
 
 .menu { border-radius: var(--r-xl); width: 320px; padding: 10px; }
@@ -522,13 +498,6 @@ html, body {
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
 }
 .hover-card .t { font-weight: 700; }
-.hc-strip {
-  display: flex; align-items: flex-end; margin: 7px 0 6px; overflow: hidden; pointer-events: none;
-  -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent);
-}
-.hc-strip .car { margin: 0; flex: none; }
-.hc-strip .car svg { display: block; height: 22px; width: auto; }
-.hc-strip figcaption { display: none; }
 .hover-card .s { font-size: var(--fs-xs); color: var(--muted); }
 .hover-card .s strong { color: var(--text); font-weight: 600; }
 .hover-card .status-t { font-weight: 600; }
