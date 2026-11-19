@@ -554,7 +554,7 @@ export default {
   "Others": "Autres",
   "Live data": "Données en temps réel",
   "Timetables": "Horaires",
-  "running, by the timetable": "en service selon l’horaire",
+  "running": "en service",
   "railroads": "réseaux",
   "About {n} running": "Environ {n} en service",
   "Trains through the day": "Les trains au fil de la journée",

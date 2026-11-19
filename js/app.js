@@ -44,6 +44,7 @@ document.documentElement.classList.remove("i18n-wait"); // ...shown once it is (
 
 // ---------- State ----------
 
+let shownCountry = null; // the country whose page is open: only its trains show (setOpenCountry)
 const state = {
   bySource: {},          // source id -> train[]
   sourceStatus: {},      // source id -> { status, error, at }
@@ -845,6 +846,8 @@ function visible(t) {
   // The selected and tracked trains always show.
   if (t.id === state.selected || state.tracked.some((r) => r.id === t.id)) return true;
   if (ovHidden) return false; // the overview's pins are up
+  // A country's page shows only its railroads' trains.
+  if (shownCountry && AGENCIES[t.agency]?.country !== shownCountry) return false;
   if (state.onlyTracked && state.tracked.length) return false;
   return !(state.hideEstimated && t.estimated);
 }
@@ -1502,7 +1505,7 @@ function setFocus(country) {
   // An open country page follows the map to the country it's centered on,
   // and closes as the map zooms out past it to the pins.
   if (country && openCountry && openCountry !== "*" && openCountry !== country) {
-    openCountry = country;
+    setOpenCountry(country);
     renderAgencies();
   } else if (!country && openCountry && openCountry !== "*") closeCountryPage();
 }
@@ -2155,6 +2158,14 @@ function countryName(code) {
 // in. Then the trains near them, and every railroad. "All railroads" opens
 // them in one list, by country (alphabetical, as are the railroads in each).
 let openCountry = null; // "*" while the list shows every railroad, a country's code on its page, else null (home)
+// Set openCountry; a country's page also leaves only its trains on the map.
+function setOpenCountry(value) {
+  openCountry = value;
+  const country = value && value !== "*" ? value : null;
+  if (country === shownCountry) return;
+  shownCountry = country;
+  redraw();
+}
 let countryFrom = null; // where a country's page goes back to: "*" (every railroad) or null (home)
 
 // A railroad's region where it says more than its country ("New York", not
@@ -2251,16 +2262,18 @@ function openCountryPage(country) {
   if (accountsOn() && state.tab !== "browse") setTab("browse");
   else putPanelAway(false);
   if (openCountry !== country) countryFrom = openCountry === "*" ? "*" : countryFrom && openCountry ? countryFrom : null;
-  openCountry = country;
+  setOpenCountry(country);
   renderAgencies();
+  renderRecents();
   $("agencies").scrollTop = 0;
   pageIn($("agencies"));
   if (isPhone && sheetMode() === "collapsed") setSheet("");
 }
 function closeCountryPage() {
-  openCountry = countryFrom;
+  setOpenCountry(countryFrom);
   countryFrom = null;
   renderAgencies();
+  renderRecents();
 }
 function countryPageHtml(country) {
   const ids = railroadsOf(country), mine = new Set(ids), counts = agencyCounts();
@@ -2274,8 +2287,7 @@ function countryPageHtml(country) {
       <div class="hero-title">${flag ? `<span class="country-flag" aria-hidden="true">${flag}</span>` : ""}<h2>${esc(name)}</h2></div>
     </div>`;
   const tiles = `<div class="rr-stats">
-      ${running != null ? statTile(running.toLocaleString(lang), T("trains running"))
-        : statTile(est != null ? est.toLocaleString(lang) : "—", T("running, by the timetable"))}
+      ${statTile(running != null ? running.toLocaleString(lang) : est != null ? `~${est.toLocaleString(lang)}` : "—", T("running"))}
       ${statTile(ids.length, T("railroads"))}
       ${statTile(stations.length ? stations.length.toLocaleString(lang) : "—", T("stations"))}
     </div>`;
@@ -3001,8 +3013,9 @@ function renderRecents() {
   const el = $("recents");
   const shown = state.recents.filter((r) => AGENCIES[r.agency] && (r.kind !== "train" ? true : state.trains.has(r.id))
     && (r.kind !== "station" || state.stations.has(r.id))).slice(0, MAX_RECENTS);
-  el.hidden = !shown.length;
-  if (!shown.length) return;
+  // A country's page is a page of its own: no chips over it.
+  el.hidden = !shown.length || Boolean(openCountry && openCountry !== "*");
+  if (el.hidden) return;
   setPane(el, `<div class="recents-head"><span class="group-title">${T("Recent")}</span><button type="button" class="link-btn" data-recents-clear>${T("Clear")}</button></div>
     <div class="recents-row">${shown.map((r) => {
       const a = AGENCIES[r.agency];
@@ -6157,7 +6170,7 @@ on("agencies", "click", (e) => {
   const histStation = e.target.closest("[data-station]");
   if (histStation) return selectStation(histStation.dataset.station);
   if (e.target.closest("[data-all-railroads]")) {
-    openCountry = "*";
+    setOpenCountry("*");
     renderAgencies();
     $("agencies").scrollTop = 0;
     return $("agencies").querySelector(".country-back")?.scrollIntoView({ block: "nearest" });
@@ -6167,7 +6180,7 @@ on("agencies", "click", (e) => {
   if (e.target.closest("[data-country-back]")) {
     // Out of a picked country's page: out of the country.
     if (openCountry && openCountry !== "*") return ovFocus ? leaveCountry() : closeCountryPage();
-    openCountry = null;
+    setOpenCountry(null);
     return renderAgencies();
   }
   const toggle = e.target.closest("[data-toggle]");

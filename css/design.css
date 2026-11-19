@@ -693,6 +693,15 @@ kbd {
 .crowd-cars { min-width: 0; }
 .cc { min-width: 0; }
 
+/* A country's page (in the Browse list, app.js countryPageHtml) spaced as
+ * the detail pages are: its sections between thin lines, its stats' numbers
+ * a size four digits fit in a third of the panel. */
+.country-page > .rr-stats { margin: 4px 0 12px; }
+.country-page .rr-stat { min-width: 0; }
+.country-page .rr-stat strong { font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.country-page > .rr-sec { margin: 0; padding: 12px 0; border-top: 0.5px solid var(--line); }
+.country-page > .rr-sec > .section-title { margin: 0 0 8px; }
+
 /* ---------- Which train am I on? ----------
  * The guess sits with the tracked trains as one more island: a question,
  * how fast the rider is going, and a button to track it. */
