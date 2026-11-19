@@ -23,10 +23,13 @@ function contains(b, lon, lat) {
 }
 
 // Watch the map, and call add(geojson, region) once for each region's track
-// as it arrives; track(promise, region) is handed each fetch while it's out.
-// Gives { first: settles once the opening view's files are in (or failed),
-// load(region): fetch one now, wherever the map is }.
-export function watchRegions(map, regions, add, track = (p) => p) {
+// as it arrives; track(promise, region) is handed each fetch while it's out;
+// open(region) says whether a region the map shows may load now (Europe's
+// overview holds its countries back, see js/europe.js). Gives { first:
+// settles once the opening view's files are in (or failed), load(region):
+// fetch one now, wherever the map is, check(): look again (open's answers
+// have changed) }.
+export function watchRegions(map, regions, add, track = (p) => p, open = () => true) {
   const load = (r) => {
     if (asked.has(r.region)) return null;
     asked.add(r.region);
@@ -42,8 +45,8 @@ export function watchRegions(map, regions, add, track = (p) => p) {
     const bounds = map.getBounds(), center = map.getCenter();
     const view = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
     const near = map.getZoom() >= MIN_ZOOM;
-    return regions.filter((r) => !asked.has(r.region) && meets(r.bbox, view) && (near || contains(r.bbox, center.lng, center.lat))).map(load);
+    return regions.filter((r) => !asked.has(r.region) && meets(r.bbox, view) && (near || contains(r.bbox, center.lng, center.lat)) && open(r.region)).map(load);
   };
   map.on("moveend", check);
-  return { first: Promise.all(check()), load };
+  return { first: Promise.all(check()), load, check };
 }

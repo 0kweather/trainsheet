@@ -1069,6 +1069,69 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
   font-size: var(--fs-sm);
 }
 
+/* ---------- Europe's overview (js/europe.js) ---------- */
+
+/* A pin per country, over the map while it's zoomed out on Europe. */
+.eu-pins { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.eu-pins[hidden] { display: none; }
+.eu-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.eu-leaders line { stroke: var(--faint); stroke-width: 1; }
+.eu-leaders circle { fill: var(--faint); }
+.eu-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  gap: 2px;
+  width: 108px;
+  box-sizing: border-box;
+  padding: 6px 8px 7px;
+  background: var(--panel-solid);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.eu-pin[hidden] { display: none; }
+.eu-pin:hover { border-color: var(--accent); }
+.eu-pin:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.eu-name { font-size: var(--fs-sm); font-weight: 650; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eu-count { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--muted); line-height: 1.3; white-space: nowrap; }
+.eu-live { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: none; }
+.eu-live.on { background: var(--good); }
+.eu-stripe { display: flex; gap: 1px; height: 5px; margin-top: 3px; border-radius: 3px; overflow: hidden; }
+.eu-stripe span { min-width: 2px; }
+/* Where a full pin won't fit: its name and stripe only. */
+.eu-pin.compact { width: auto; max-width: 108px; padding: 4px 7px 5px; }
+.eu-pin.compact .eu-count { display: none; }
+.eu-pin.compact .eu-stripe { margin-top: 1px; height: 4px; }
+
+/* Back to the overview, while a country is picked. */
+.eu-back {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px 6px 8px;
+  background: var(--panel-solid);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.eu-back[hidden] { display: none; }
+.eu-back:hover { border-color: var(--accent); }
+.eu-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ---------- Phone: bottom sheet ---------- */
 
 @media (max-width: 720px) {

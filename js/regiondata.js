@@ -76,9 +76,12 @@ export function loadRegion(r) {
 export const loadAll = () => Promise.all(DATA_REGIONS.map(loadRegion));
 export const loadFor = (agency) => loadRegion(regionOf(agency));
 
-// Watch the map, and load each region's data the first time it shows;
+// Watch the map, and load each region's data the first time it shows (and
+// open(region) lets it: Europe's overview holds its countries back);
 // tracking(promise) is handed each file's fetch while it's out.
-export function watchData(map, onRegion, tracking) {
+let checkView = () => {};
+export const recheck = () => checkView();
+export function watchData(map, onRegion, tracking, open = () => true) {
   add = onRegion;
   if (tracking) track = tracking;
   const check = () => {
@@ -86,10 +89,11 @@ export function watchData(map, onRegion, tracking) {
     const view = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
     const near = map.getZoom() >= MIN_ZOOM;
     for (const r of DATA_REGIONS) {
-      if (loaded.has(r.region) || !meets(r.bbox, view) || !(near || contains(r.bbox, center.lng, center.lat))) continue;
+      if (loaded.has(r.region) || !meets(r.bbox, view) || !(near || contains(r.bbox, center.lng, center.lat)) || !open(r.region)) continue;
       loadRegion(r);
     }
   };
+  checkView = check;
   map.on("moveend", check);
   check();
 }

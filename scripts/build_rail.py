@@ -1779,15 +1779,16 @@ def build_regions(only=None):
             write_region(region, features)
 
 
-only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
-if not only and not OFFLINE:
-    segments = north_america()
-    print("railroads' route shapes")
-    apply_shapes(segments)
-    print("filling gaps from OpenStreetMap")
-    fill_gaps(segments)
-    features = finish(segments)
-    path = ROOT / "data" / "rail.geojson"
-    path.write_text(json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":")))
-    print(f"wrote {path} ({path.stat().st_size // 1024} KB, {len(features)} lines from {len(segments)} segments)")
-build_regions(only)
+if __name__ == "__main__":  # scripts/build_abroad.py borrows the router
+    only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
+    if not only and not OFFLINE:
+        segments = north_america()
+        print("railroads' route shapes")
+        apply_shapes(segments)
+        print("filling gaps from OpenStreetMap")
+        fill_gaps(segments)
+        features = finish(segments)
+        path = ROOT / "data" / "rail.geojson"
+        path.write_text(json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":")))
+        print(f"wrote {path} ({path.stat().st_size // 1024} KB, {len(features)} lines from {len(segments)} segments)")
+    build_regions(only)

@@ -550,4 +550,8 @@ export default {
   "Add a train": "Ajouter un train",
   "No trips planned. Tap + to add the trains you'll take: they're tracked for you on the day.": "Aucun voyage prévu. Touchez + pour ajouter les trains que vous prendrez : ils seront suivis pour vous le jour venu.",
   "Not listed? Enter it yourself": "Introuvable? Saisissez-le vous-même",
+  // ----- Europe's overview (js/europe.js) -----
+  "Europe": "Europe",
+  "Back to all of Europe": "Revenir à toute l’Europe",
+  "Others": "Autres",
 };
