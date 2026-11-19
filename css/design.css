@@ -350,8 +350,8 @@ html, body {
  * material: its plate, the stop it's tracked to, its delay, how long is
  * left, and a line of how far along it is. The same place on every page,
  * like Music's Now Playing bar: above the tab bar in a phone's sheet (which
- * shows it folded down too), over the panel's foot on a computer, where it
- * stays, as a card of its own, when the panel is put away. A row opens its
+ * shows it folded down too), a card of its own under the panel on a
+ * computer, where it stays when the panel is put away. A row opens its
  * train's page, which looks like any other train's.
  * (Tracked trains were black cards after the iPhone's Dynamic Island: over
  * the top of the map on a computer, at the top of the sheet on a phone,
@@ -384,19 +384,22 @@ html, body {
 .tb-ask-top .tb-main { flex: 1; }
 .tb-ask-actions { display: flex; gap: 8px; }
 @media (min-width: 721px) {
+  /* On a computer the bar is a card of its own under the panel, always:
+     one shape whether the panel is there or put away. (It was a flat row
+     across the panel's foot that turned, at once, into a rounded card the
+     moment the panel began to slide away.) The panel ends a gap above it
+     (app.js sets --tracked-room while anything is tracked). */
   .tracked {
     position: fixed; z-index: 3; left: 12px; bottom: 12px; width: 372px; box-sizing: border-box; overflow: hidden;
-    border-top: 0.5px solid var(--line); border-radius: 0 0 var(--r-lg) var(--r-lg);
-  }
-  body.has-tabs .tracked { left: 86px; }
-  /* The panel's pages end above it. */
-  .panel { padding-bottom: var(--tracked-h, 0px); }
-  /* The panel put away: the bar stays where it was, a card of its own. */
-  body.panel-away .tracked {
     border: 0.5px solid var(--glass-edge); border-radius: var(--r-lg); background: var(--panel); box-shadow: var(--shadow);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    animation: tracked-in var(--t-mid) ease both;
   }
+  body.has-tabs .tracked { left: 86px; }
+  .panel { bottom: calc(12px + var(--tracked-room, 0px)); }
 }
+@keyframes tracked-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .tracked { animation: none; } }
 
 /* ---------- Menu, toast, loading ---------- */
 
@@ -1287,7 +1290,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
  * The page you're on chosen again, or a tap on the map itself, slides the
  * panel away under the rail, leaving the map and the rail (app.js). */
 @media (min-width: 721px) {
-  .panel { transition: transform var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--t-mid) ease, visibility 0s linear 0s; }
+  .panel { transition: transform var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--t-mid) ease, visibility 0s linear 0s, bottom var(--t-mid) ease; } /* (bottom: making room for the tracking bar) */
   body.panel-away .panel {
     transform: translateX(calc(-100% - 90px)); opacity: 0; visibility: hidden; pointer-events: none;
     transition: transform var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--t-mid) ease var(--t-fast), visibility 0s linear var(--t-slow);

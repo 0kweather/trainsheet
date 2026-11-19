@@ -123,8 +123,8 @@ let goingBack = false; // going back doesn't count as opening something (for Rec
 // On phones the tracked trains sit at the top of the sheet, as they used to:
 // floating over the map, they'd cover the expanded sheet's top.
 // The tracking bar sits at the panel's foot: in the sheet on a phone (above
-// the tab bar, by its order in the stylesheet), over the panel's foot on a
-// computer, where it stays when the panel is put away.
+// the tab bar, by its order in the stylesheet), a card of its own under the
+// panel on a computer, where it stays when the panel is put away.
 if (matchMedia("(max-width: 720px)").matches) document.getElementById("panel")?.append(document.getElementById("tracked"));
 
 // ---------- Theme ----------
@@ -5326,7 +5326,10 @@ function renderTracked() {
     </div>`;
   }).join("");
   // The panel (and a phone's folded sheet) makes room for it (design.css).
-  document.documentElement.style.setProperty("--tracked-h", `${el.hidden ? 0 : el.offsetHeight}px`);
+  const h = el.hidden ? 0 : el.offsetHeight;
+  document.documentElement.style.setProperty("--tracked-h", `${h}px`);
+  // (On a computer the bar is a card under the panel: its height and the gap between them.)
+  document.documentElement.style.setProperty("--tracked-room", `${h ? h + 8 : 0}px`);
 }
 // How long until a tracked train reaches the stop it's tracked to (its last
 // stop otherwise), as the bar shows it, and how
@@ -6881,7 +6884,7 @@ phoneQuery.addEventListener("change", (e) => {
     if (isPhone) panel.append(bar);
     else panel.before(bar);
   }
-  if (isPhone) panel.append($("tracked")); // the tracking bar: in the sheet, or over the panel's foot
+  if (isPhone) panel.append($("tracked")); // the tracking bar: in the sheet, or a card under the panel
   else panel.before($("tracked"));
   toggleMenu(false);
   panelAway = false;
