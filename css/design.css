@@ -370,6 +370,43 @@ html, body {
 .la-where .status.warn { color: #ff9f0a; }
 .la-where .status.bad { color: #ff453a; }
 .la-where .stale { color: #ff9f0a; font-weight: 600; }
+
+/* The panel showing a tracked train's page is its island grown to fill it
+ * (syncLivePanel): the island's black, in the dark theme's colors whatever
+ * the theme. */
+.panel.live-panel {
+  --panel: #0b0b0c;
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --panel-solid: #1c1c1e;
+  --group: #1c1c1e;
+  --fill: rgba(118, 118, 128, 0.24);
+  --text: #ffffff;
+  --muted: rgba(235, 235, 245, 0.6);
+  --faint: rgba(235, 235, 245, 0.3);
+  --line: rgba(255, 255, 255, 0.11);
+  --hover: rgba(120, 120, 128, 0.2);
+  --accent: #0a84ff;
+  --good: #30d158;
+  --warn: #ff9f0a;
+  --bad: #ff453a;
+  --switch-on: #30d158;
+  --car-neutral-dim: 12%;
+  --car-shade-low: 0.16;
+  --car-shade-high: 0.06;
+  --car-shade-roof: 0.08;
+  --car-logo-dim: 0.9;
+  color-scheme: dark;
+  background: #0b0b0c;
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+}
+:root[data-colorblind] .panel.live-panel { --good: #33bbee; --warn: #ee7733; --bad: #ee3377; }
+.panel.live-panel .trk { background: #f2f2f7; color: #121417; }
+.panel.live-panel .trk.likely { background: transparent; color: var(--muted); }
+.panel.live-panel :is(.segmented button[aria-selected="true"], .segmented button[aria-pressed="true"]) { background: #636366; }
+.panel.live-panel .switch { background: rgba(120, 120, 128, 0.32); }
+/* The island growing into the panel (growIsland). */
+.island-ghost { position: fixed; z-index: 20; margin: 0; box-sizing: border-box; overflow: hidden; pointer-events: none; }
 .live .tc-x { position: static; width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.8); font-size: 15px; line-height: 1; }
 .live .tc-x:hover { background: rgba(255, 255, 255, 0.24); color: #fff; }
 .live .tc-share { display: inline-flex; align-items: center; justify-content: center; }

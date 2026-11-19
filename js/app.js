@@ -124,6 +124,7 @@ const state = {
 const pastOpen = new Set(); // trains whose passed stops are unfolded
 let goingBack = false; // going back doesn't count as opening something (for Recents)
 let islandsShown = new Map(); // tracked train id -> when its island first showed
+let liveOpen = null;           // tracked train whose page fills the panel (syncLivePanel)
 // On phones the tracked trains sit at the top of the sheet, as they used to:
 // floating over the map, they'd cover the expanded sheet's top.
 if (matchMedia("(max-width: 720px)").matches) document.getElementById("panel")?.insertBefore(document.getElementById("tracked"), document.getElementById("view-list"));
@@ -570,7 +571,7 @@ function addLayers() {
     id: "tt-route-behind",
     type: "line",
     source: "route",
-    filter: ["==", ["get", "part"], "behind"],
+    filter: ["in", ["get", "part"], ["literal", ["behind", "beyond"]]],
     layout: { "line-join": "round", "line-cap": "round" },
     paint: { "line-color": ["get", "color"], "line-opacity": 0.35, "line-width": byZoom((w) => w * 1.6 + 1) },
   }, firstSymbol);
@@ -1020,9 +1021,23 @@ function redrawRoute() {
   });
   const color = t.routeColor || AGENCIES[t.agency].color;
   const line = (part, cs) => ({ type: "Feature", geometry: { type: "LineString", coordinates: cs }, properties: { part, color } });
+  // A tracked train is drawn solid only as far as the stop it's tracked to;
+  // the rest of its run, past where the rider gets off, is faded like the
+  // part behind it.
+  const rec = state.tracked.find((r) => r.id === t.id);
+  const off = rec?.stopKey && state.stopPos.get(rec.stopKey);
+  let end = coords.length - 1;
+  if (off?.lat != null) {
+    let bestEnd = Infinity;
+    for (let i = at; i < coords.length; i++) {
+      const d = (coords[i][0] - off.lon) ** 2 + (coords[i][1] - off.lat) ** 2;
+      if (d < bestEnd) { bestEnd = d; end = i; }
+    }
+  }
   const parts = [];
   if (at > 0) parts.push(line("behind", [...coords.slice(0, at + 1), [here.lon, here.lat]]));
-  if (at < coords.length - 1) parts.push(line("ahead", [[here.lon, here.lat], ...coords.slice(at + 1)]));
+  if (at < end) parts.push(line("ahead", [[here.lon, here.lat], ...coords.slice(at + 1, end + 1)]));
+  if (end < coords.length - 1) parts.push(line("beyond", at < end ? coords.slice(end) : [[here.lon, here.lat], ...coords.slice(at + 1)]));
   src.setData({ type: "FeatureCollection", features: parts });
 }
 
@@ -2143,6 +2158,7 @@ function putPanelAway(away = true, { boot = false } = {}) {
   document.body.classList.toggle("panel-away", away);
   $("panel").inert = away;
   if (away) toggleMenu(false);
+  syncLivePanel();
   syncMapPadding(!boot);
 }
 // The map's padding (the part of it the panel leaves free, where zooming
@@ -3331,6 +3347,7 @@ for (const type of ["pointerup", "pointercancel"]) {
 
 function renderDetail() {
   if (pressing) { redrawAfterPress = true; return; }
+  syncLivePanel(); // a train tracked or let go while its page is open
   if (state.railroad) return renderRailroad();
   if (state.station) return renderStation();
   const t = state.trains.get(state.selected);
@@ -4861,8 +4878,10 @@ function renderTracked() {
   const el = $("tracked");
   if (!el) return;
   const guess = rideGuessCard() + rideAskCards();
-  el.hidden = !state.tracked.length && !guess;
-  el.innerHTML = guess + state.tracked.map((rec) => {
+  // The train whose page fills the panel has no island meanwhile (syncLivePanel).
+  const shown = state.tracked.filter((rec) => rec.id !== liveOpen);
+  el.hidden = !shown.length && !guess;
+  el.innerHTML = guess + shown.map((rec) => {
     const t = trackedTrain(rec);
     const a = AGENCIES[rec.agency] || { color: "#888", short: "" };
     let where = "", status = "", warn = "";
@@ -5041,10 +5060,58 @@ function answerRideGuess(id, answer) {
   openTrackSheet(t, { riding: true, confirmed: true }); // found by the rider's own location
 }
 
+// A tracked train's island opens its page: the island grows to fill the
+// panel, which takes the island's black while it shows that train.
 function openTracked(id) {
   const t = state.trains.get(id);
   if (!t) return toast(T("That train isn't reporting right now."));
+  const card = $("tracked")?.querySelector(`[data-track-open="${CSS.escape(id)}"]`);
+  const from = card?.getBoundingClientRect();
   select(id);
+  if (from && liveOpen === id) growIsland(card, from);
+}
+
+// The panel shows a tracked train's page (and is out): it's that train's
+// island grown to fill it, so the panel turns the island's color and the
+// island steps aside until the page closes, when it comes back.
+function syncLivePanel() {
+  const panel = $("panel"), view = $("view-train");
+  if (!panel || !view) return;
+  const id = !view.hidden && !panelAway && state.selected && !state.railroad && !state.station
+    && state.tracked.some((r) => r.id === state.selected) ? state.selected : null;
+  panel.classList.toggle("live-panel", !!id);
+  if (id !== liveOpen) {
+    liveOpen = id;
+    renderTracked();
+  }
+}
+
+// The island, drawn again over itself, grows into the panel's place and
+// fades away there, uncovering the panel. Measured without transforms, so a
+// panel still sliding in (or a sheet still rising) is met where it ends up.
+function growIsland(card, from) {
+  const panel = $("panel");
+  if (!panel || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const to = { left: panel.offsetLeft, top: panel.offsetTop, width: panel.offsetWidth, height: panel.offsetHeight };
+  if (!to.width || !to.height) return;
+  const ghost = card.cloneNode(true);
+  ghost.removeAttribute("data-track-open");
+  ghost.removeAttribute("role");
+  ghost.removeAttribute("tabindex");
+  ghost.setAttribute("aria-hidden", "true");
+  ghost.inert = true;
+  ghost.classList.remove("enter");
+  ghost.classList.add("island-ghost");
+  Object.assign(ghost.style, { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px` });
+  document.body.append(ghost);
+  const radius = getComputedStyle(panel).borderTopLeftRadius;
+  const grow = ghost.animate([
+    { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, borderRadius: "26px" },
+    { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px`, borderRadius: radius },
+  ], { duration: 420, easing: "cubic-bezier(0.32, 0.72, 0, 1)", fill: "forwards" });
+  for (const child of ghost.children) child.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: "forwards" });
+  grow.finished.then(() => ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished)
+    .finally(() => ghost.remove());
 }
 
 setInterval(() => {
@@ -5178,6 +5245,7 @@ function showDetailView(open) {
   $("share-btn").hidden = !state.selected;
   delete $("train-detail").dataset.scrollTop;
   $("train-detail").scrollTop = 0;
+  syncLivePanel();
 }
 
 function select(id, { fly = true } = {}) {
