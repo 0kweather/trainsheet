@@ -552,22 +552,18 @@ function addLayers() {
     layout: { "line-join": "round", "line-cap": "round" },
     paint: { "line-color": networkColor("a"), "line-opacity": colors.railOpacity, "line-width": byZoom((w) => w) },
   }, "tt-rail-casing");
-  // A railroad's or a line's track, lit up while its page is open
-  // (applyFocus): a soft glow under the strands, a solid line over them.
+  // A railroad's or a line's track while its page is open (applyFocus): the
+  // same thick solid line a train's route ahead is drawn with (below), in
+  // its color, over the strands. (It was a thinner, part-transparent line
+  // inside a wide soft glow, which read as a smear along every branch.)
+  const boldLine = byZoom((w) => w * 2.2 + 1.5);
   map.addSource("focus", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  map.addLayer({
-    id: "tt-focus-glow",
-    type: "line",
-    source: "focus",
-    layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": ["get", "color"], "line-opacity": 0.22, "line-width": byZoom((w) => w * 6) },
-  }, "tt-rail-casing");
   map.addLayer({
     id: "tt-focus-line",
     type: "line",
     source: "focus",
     layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": ["get", "color"], "line-opacity": 0.72, "line-width": byZoom((w) => w * 1.8) }, // its trains, in the same color, are the solid marks on it
+    paint: { "line-color": ["get", "color"], "line-width": boldLine },
   }, firstSymbol);
   // Disruptions: where a railroad says no trains are running right now, the
   // track's colored strands give way to a thin broken line in the
@@ -624,7 +620,7 @@ function addLayers() {
     source: "route",
     filter: ["==", ["get", "part"], "ahead"],
     layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": ["get", "color"], "line-width": byZoom((w) => w * 2.2 + 1.5) },
+    paint: { "line-color": ["get", "color"], "line-width": boldLine },
   }, firstSymbol);
   // Other main-line track (freight) from the basemap, faintly, when zoomed in.
   // Yards, sidings and spurs are left out; they turn terminals into a tangle.
