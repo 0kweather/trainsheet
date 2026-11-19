@@ -1540,6 +1540,7 @@ function trackedChanged() {
   const next = new Set(state.tracked.map((r) => AGENCIES[r.agency]?.country).filter(Boolean));
   if (next.size === trackedCountries.size && [...next].every((c) => trackedCountries.has(c))) return;
   trackedCountries = next;
+  ov?.update({}); // its pin out (or back)
   trackWatch?.check();
   regionData?.then((m) => m?.recheck());
   wakeSources();
@@ -1572,6 +1573,7 @@ function startOverview() {
       name: countryName,
       railroads: railroadsOf,
       railroadCount: (n) => Tn(n, "{n} railroad", "{n} railroads"),
+      skip: (country) => trackedCountries.has(country), // its map shows under the pins instead
       live: countryLive,
       onPick: (country) => pickCountry(country, { page: true }),
     });

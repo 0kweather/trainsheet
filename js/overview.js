@@ -24,7 +24,9 @@ function weekHour(tz) {
 
 // opts: { map, agencies (AGENCIES), name(country) -> its name, live(country)
 // -> whether a railroad of it is tracked live, railroads(country) -> its
-// railroads, pad() -> the map's padding for the panel, T, lang,
+// railroads, skip(country) -> whether to leave its pin out (a tracked
+// train's country, whose own map shows), pad() -> the map's padding for the
+// panel, T, lang,
 // onPick(country) }.
 export function overview(opts) {
   const { map, agencies, T } = opts;
@@ -174,9 +176,10 @@ export function overview(opts) {
     const free = (x, y, w, h) => x >= pad.left + 4 && y >= pad.top + 4 && x + w <= W - pad.right - 4 && y + h <= H - pad.bottom - 4 &&
       taken.every((r) => x + w + GAP <= r[0] || r[0] + r[2] + GAP <= x || y + h + GAP <= r[1] || r[1] + r[3] + GAP <= y);
     const order = [...pins.entries()].sort((a, b) => weekly(b[0]) - weekly(a[0]));
-    for (const [, p] of order) {
+    for (const [country, p] of order) {
       const at = map.project([p.lon, p.lat]);
       p.off = true;
+      if (opts.skip?.(country)) continue; // its own map is up (a tracked train's country)
       if (behind(p) || at.x < -40 || at.y < -40 || at.x > W + 40 || at.y > H + 40) continue;
       p.el.hidden = false; // to be measured
       for (const compact of [false, true]) {
