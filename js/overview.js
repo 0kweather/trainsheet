@@ -167,7 +167,7 @@ export function overview(opts) {
     for (const [, p] of order) {
       const at = map.project([p.lon, p.lat]);
       p.off = true;
-      if (at.x < -40 || at.y < -40 || at.x > W + 40 || at.y > H + 40) continue;
+      if (behind(p) || at.x < -40 || at.y < -40 || at.x > W + 40 || at.y > H + 40) continue;
       p.el.hidden = false; // to be measured
       for (const compact of [false, true]) {
         p.el.classList.toggle("compact", compact);
@@ -187,6 +187,14 @@ export function overview(opts) {
       }
     }
     move();
+  }
+  // On the globe's far side (or too near its edge to read): more than 75°
+  // round the earth from the middle of the map.
+  const rad = Math.PI / 180;
+  function behind(p) {
+    const c = map.getCenter();
+    const cos = Math.sin(c.lat * rad) * Math.sin(p.lat * rad) + Math.cos(c.lat * rad) * Math.cos(p.lat * rad) * Math.cos((p.lon - c.lng) * rad);
+    return cos < Math.cos(75 * rad);
   }
   const weeklies = new Map();
   const weekly = (country) => {
@@ -232,6 +240,9 @@ export function overview(opts) {
   map.on("move", () => shown && data && move());
   map.on("moveend", () => shown && data && place());
   map.on("resize", () => shown && data && place());
+  // Once the map has drawn: the globe may not have been set up when the pins
+  // were first placed.
+  map.once("idle", () => shown && data && place());
 
   return {
     ready, countryAt, update, refresh, day, runningNow,

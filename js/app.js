@@ -813,6 +813,8 @@ function addLayers() {
 }
 
 map.on("style.load", () => {
+  // Zoomed out, the map is a globe; MapLibre flattens it as it zooms in.
+  map.setProjection({ type: "globe" });
   addLayers();
   applyFocus();
   applyOverview();
