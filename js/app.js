@@ -2263,20 +2263,46 @@ function closeCountryPage() {
   renderAgencies();
 }
 function countryPageHtml(country) {
-  const g = agencyRows().get(country) || { rows: [], running: 0, idle: true };
-  const est = ov?.runningNow(country);
-  const running = !g.idle ? T("{n} running", { n: g.running.toLocaleString(lang) })
-    : est != null ? T("About {n} running", { n: est.toLocaleString(lang) }) : "";
-  const live = countryLive(country);
-  const sub = [running, Tn(g.rows.length, "{n} railroad", "{n} railroads")].filter(Boolean).join(" · ");
+  const ids = railroadsOf(country), mine = new Set(ids), counts = agencyCounts();
+  const running = countryRunning(country), est = ov?.runningNow(country);
+  const live = countryLive(country), name = countryName(country);
+  const stations = [...state.stations.values()].filter((st) => st.agencies.some((a) => mine.has(a)));
+  // Its flag (two regional-indicator letters), as the railroad page shows its color.
+  const flag = /^[A-Z]{2}$/.test(country) ? String.fromCodePoint(...[...country].map((c) => 0x1f1a5 + c.charCodeAt(0))) : "";
+  const hero = `<div class="hero">
+      <div class="agency-name"><span class="dot" style="background:var(--${live ? "good" : "faint"})"></span>${esc(T(live ? "Live data" : "Timetables"))}</div>
+      <div class="hero-title">${flag ? `<span class="country-flag" aria-hidden="true">${flag}</span>` : ""}<h2>${esc(name)}</h2></div>
+    </div>`;
+  const tiles = `<div class="rr-stats">
+      ${running != null ? statTile(running.toLocaleString(lang), T("trains running"))
+        : statTile(est != null ? est.toLocaleString(lang) : "—", T("running, by the timetable"))}
+      ${statTile(ids.length, T("railroads"))}
+      ${statTile(stations.length ? stations.length.toLocaleString(lang) : "—", T("stations"))}
+    </div>`;
+  // Its railroads, busiest first, each opening its page.
+  const status = (id) => {
+    const src = SOURCES.find((x) => x.agencies.includes(id)), avail = src ? sourceAvailability(src) : { ok: false };
+    if (!avail.ok) return T("Not connected");
+    if (state.sourceStatus[src.id]?.status === "loading") return T("Loading");
+    return running == null ? "" : T("{n} running", { n: (counts[id] || 0).toLocaleString(lang) });
+  };
+  const rows = ids.sort((x, y) => (counts[y] || 0) - (counts[x] || 0) || byName(AGENCIES[x].name, AGENCIES[y].name)).map((id) => {
+    const a = AGENCIES[id], region = regionOf(a);
+    return `<li><button type="button" class="rr-line" data-railroad="${id}" aria-label="${esc(T("{name}: its lines and fleet", { name: a.name }))}">
+      <span class="served-name"><span class="country-swatch" style="background:${a.color}"></span><span>${esc(a.name)}${region ? ` <span class="rgn">${esc(region)}</span>` : ""}</span></span>
+      <span class="sub">${esc(status(id))} ›</span></button></li>`;
+  }).join("");
+  const busiest = stations.sort((a, b) => b.rank - a.rank).slice(0, 6).map((st) => `<li><button type="button" class="rr-line" data-station="${esc(st.id)}">
+      <span class="served-name"><span class="country-swatch round" style="background:${AGENCIES[st.agencies[0]].color}"></span><span>${esc(st.name)}<br><span class="sub">${esc(stationLinesText(st))}</span></span></span>
+      <span class="sub">›</span></button></li>`).join("");
+  // Its trains through today, by the hour, from its timetables.
   const day = ov?.day(country);
   let chart = "";
   if (day) {
     const W = 300, H = 56, max = Math.max(1, ...day.hours);
     const x = (h) => ((h + 0.5) * W) / 24, y = (n) => H - 4 - (n / max) * (H - 10);
     const line = day.hours.map((n, h) => `${x(h).toFixed(1)},${y(n).toFixed(1)}`).join(" ");
-    chart = `<div class="country-day"><div class="sub">${esc(T("Trains through the day"))}</div>
-      <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    chart = `<div class="country-day"><svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
         <polyline points="${x(0)},${H} ${line} ${x(23)},${H}" class="area"/>
         <polyline points="${line}" class="line"/>
         <line x1="${x(day.now)}" x2="${x(day.now)}" y1="0" y2="${H}" class="now-line"/>
@@ -2284,22 +2310,21 @@ function countryPageHtml(country) {
       </svg>
       <div class="hours"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>`;
   }
-  const ids = new Set(railroadsOf(country));
-  const stations = [...state.stations.values()].filter((st) => st.agencies.some((a) => ids.has(a)))
-    .sort((a, b) => b.rank - a.rank).slice(0, 6);
-  const stationRows = stations.map((st) => `<button class="result" data-station="${esc(st.id)}">
-      <span class="station-icon" style="--c:${AGENCIES[st.agencies[0]].color}"></span>
-      <span><span class="title">${esc(st.name)}</span><br><span class="sub">${esc([st.place, stationLinesText(st)].filter(Boolean).join(" · "))}</span></span>
-      <span></span>
-    </button>`).join("");
   const back = countryFrom === "*" ? T("All railroads") : T(accountsOn() ? "Browse" : "Home");
   return `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${esc(back)}</button>
-    <div class="country-page-head"><h2>${esc(countryName(country))}</h2>
-      <div class="sub"><span class="ov-live${live ? " on" : ""}"></span>${esc(sub)}</div></div>
-    ${chart}
-    <div class="group-title">${T("Railroads")}</div>
-    ${g.rows.sort((x, y) => byName(x.name, y.name)).map((r) => r.html).join("")}
-    ${stationRows ? `<div class="group-title">${T("Busiest stations")}</div>${stationRows}` : ""}`;
+    <div class="country-page">${hero}${tiles}
+      ${plainSection(T("Railroads"), ids.length, `<ul class="rr-lines">${rows}</ul>`)}
+      ${busiest ? plainSection(T("Busiest stations"), null, `<ul class="rr-lines">${busiest}</ul>`) : ""}
+      ${chart ? plainSection(T("Trains through the day"), null, chart) : ""}
+    </div>`;
+}
+// A country's trains on the map now, once any of its feeds has answered
+// (until it's picked none has: null).
+function countryRunning(country) {
+  const ids = railroadsOf(country);
+  if (!SOURCES.some((src) => state.sourceStatus[src.id]?.at && src.agencies.some((a) => ids.includes(a)))) return null;
+  const counts = agencyCounts();
+  return ids.reduce((n, id) => n + (counts[id] || 0), 0);
 }
 
 // Frames a country's railroads on the map: its regional track where it has

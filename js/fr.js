@@ -552,6 +552,10 @@ export default {
   "Not listed? Enter it yourself": "Introuvable? Saisissez-le vous-même",
   // ----- The countries' pins and pages (js/overview.js) -----
   "Others": "Autres",
+  "Live data": "Données en temps réel",
+  "Timetables": "Horaires",
+  "running, by the timetable": "en service selon l’horaire",
+  "railroads": "réseaux",
   "About {n} running": "Environ {n} en service",
   "Trains through the day": "Les trains au fil de la journée",
   "Busiest stations": "Gares les plus fréquentées",
