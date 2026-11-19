@@ -448,13 +448,13 @@ function addLayers() {
   let lastShape = -1;
   baseLayers.forEach((l, i) => { if (l.type !== "symbol") lastShape = i; });
   const firstSymbol = baseLayers[lastShape + 1]?.id; // undefined = top of the stack
-  // Keep the basemap quiet: of its labels only country and state names stay
-  // (station names are the rest of the text); none of its rail layers (ours
+  // Keep the basemap quiet: of its labels only state names stay (countries
+  // have their pins, station names are the rest of the text); none of its rail layers (ours
   // replace them; its own draw every yard and siding up close); and its
   // sub-national borders give way to our state borders below (the light
   // style mixes in county lines and only starts at zoom 8).
   for (const l of map.getStyle().layers) {
-    const keepLabel = l.type === "symbol" && /^(label|place)_(country|state)/.test(l.id);
+    const keepLabel = l.type === "symbol" && /^(label|place)_state/.test(l.id);
     if ((l.type === "symbol" && !keepLabel) || /^railway/.test(l.id) || /^boundary_(3|state)$/.test(l.id)) {
       map.setLayoutProperty(l.id, "visibility", "none");
     } else if (MUTED_LAYERS.test(l["source-layer"] || "")) {
