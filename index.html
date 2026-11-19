@@ -43,9 +43,10 @@
        app.js, then its ten imports, then the car drawings) and the two data
        files everything starts with, so they come in while the modules are
        still being read; and the map's tile server is connected to early.
-       North America's track only when the map opens on it (the usual view,
-       or a shared one centered there; js/app.js's NA_TRACK has the same
-       extent): elsewhere it isn't wanted, and would hold up the track there. -->
+       North America's track only when the map opens zoomed in on it (a
+       shared view centered there from zoom 6, js/app.js's OV_PICK_ZOOM, in
+       NA_TRACK's extent): zoomed out, the map opens on the countries' pins
+       and loads no track until one is picked. -->
   <link rel="preconnect" href="https://tiles.openfreemap.org">
   <link rel="modulepreload" href="js/app.js?v=dev">
   <link rel="modulepreload" href="js/sources.js?v=dev">
@@ -66,8 +67,9 @@
   <link rel="modulepreload" href="js/emblems.js?v=dev">
   <script>
     (function () {
-      var v = /(?:^#|&)map=[\d.]+\/(-?[\d.]+)\/(-?[\d.]+)/.exec(location.hash);
-      var lat = v ? +v[1] : 38.6, lon = v ? ((+v[2] + 540) % 360) - 180 : -96.5;
+      var v = /(?:^#|&)map=([\d.]+)\/(-?[\d.]+)\/(-?[\d.]+)/.exec(location.hash);
+      if (!v || +v[1] < 6) return;
+      var lat = +v[2], lon = ((+v[3] + 540) % 360) - 180;
       if (lon < -150.2 || lon > -63.2 || lat < 25.7 || lat > 65) return;
       var l = document.createElement("link");
       l.rel = "preload"; l.as = "fetch"; l.crossOrigin = "anonymous"; l.href = "data/rail.geojson?v=dev";

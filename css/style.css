@@ -1069,15 +1069,15 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
   font-size: var(--fs-sm);
 }
 
-/* ---------- Europe's overview (js/europe.js) ---------- */
+/* ---------- The overview: a pin per country (js/overview.js) ---------- */
 
-/* A pin per country, over the map while it's zoomed out on Europe. */
-.eu-pins { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-.eu-pins[hidden] { display: none; }
-.eu-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.eu-leaders line { stroke: var(--faint); stroke-width: 1; }
-.eu-leaders circle { fill: var(--faint); }
-.eu-pin {
+/* A pin per country, over the map while it's zoomed out. */
+.ov-pins { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.ov-pins[hidden] { display: none; }
+.ov-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ov-leaders line { stroke: var(--faint); stroke-width: 1; }
+.ov-leaders circle { fill: var(--faint); }
+.ov-pin {
   position: absolute;
   left: 0;
   top: 0;
@@ -1096,22 +1096,35 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
   cursor: pointer;
   pointer-events: auto;
 }
-.eu-pin[hidden] { display: none; }
-.eu-pin:hover { border-color: var(--accent); }
-.eu-pin:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.eu-name { font-size: var(--fs-sm); font-weight: 650; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.eu-count { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--muted); line-height: 1.3; white-space: nowrap; }
-.eu-live { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: none; }
-.eu-live.on { background: var(--good); }
-.eu-stripe { display: flex; gap: 1px; height: 5px; margin-top: 3px; border-radius: 3px; overflow: hidden; }
-.eu-stripe span { min-width: 2px; }
+.ov-pin[hidden] { display: none; }
+.ov-pin:hover { border-color: var(--accent); }
+.ov-pin:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov-name { font-size: var(--fs-sm); font-weight: 650; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-count { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--muted); line-height: 1.3; white-space: nowrap; }
+.ov-live { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: none; }
+.ov-live.on { background: var(--good); }
+.ov-stripe { display: flex; gap: 1px; height: 5px; margin-top: 3px; border-radius: 3px; overflow: hidden; }
+.ov-stripe span { min-width: 2px; }
 /* Where a full pin won't fit: its name and stripe only. */
-.eu-pin.compact { width: auto; max-width: 108px; padding: 4px 7px 5px; }
-.eu-pin.compact .eu-count { display: none; }
-.eu-pin.compact .eu-stripe { margin-top: 1px; height: 4px; }
+.ov-pin.compact { width: auto; max-width: 108px; padding: 4px 7px 5px; }
+.ov-pin.compact .ov-count { display: none; }
+.ov-pin.compact .ov-stripe { margin-top: 1px; height: 4px; }
+
+/* A country's page in the panel (app.js countryPageHtml). */
+.country-page-head { padding: var(--s2) var(--s3) var(--s3); }
+.country-page-head h2 { margin: 0 0 2px; font-size: var(--fs-xl); font-weight: 650; line-height: 1.2; }
+.country-page-head .sub { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: var(--fs-sm); }
+.country-day { margin: 0 var(--s3) var(--s3); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-md); }
+.country-day .sub { color: var(--muted); font-size: var(--fs-xs); margin-bottom: var(--s2); }
+.country-day svg { display: block; width: 100%; height: auto; overflow: visible; }
+.country-day .area { fill: var(--accent); opacity: 0.12; stroke: none; }
+.country-day .line { fill: none; stroke: var(--accent); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.country-day .now-line { stroke: var(--faint); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.country-day .now { fill: var(--accent); stroke: var(--panel-solid); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.country-day .hours { display: flex; justify-content: space-between; margin-top: 4px; color: var(--faint); font-size: 11px; }
 
 /* Back to the overview, while a country is picked. */
-.eu-back {
+.ov-back {
   position: absolute;
   z-index: 2;
   display: inline-flex;
@@ -1128,9 +1141,9 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
   font-weight: 600;
   cursor: pointer;
 }
-.eu-back[hidden] { display: none; }
-.eu-back:hover { border-color: var(--accent); }
-.eu-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov-back[hidden] { display: none; }
+.ov-back:hover { border-color: var(--accent); }
+.ov-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- Phone: bottom sheet ---------- */
 

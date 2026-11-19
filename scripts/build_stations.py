@@ -19,8 +19,9 @@ Output: {agency: [[id, name, lat, lon, [lines...], place, code, busy, daily, acc
     python3 scripts/build_stations.py vre sounder   # just these, into the existing file
     python3 scripts/build_stations.py --only trirail   # a plug-in's railroads (scripts/railroads/)
 
-A feed that fails keeps that railroad's stations from the last build (Amtrak,
-VIA and Brightline as one set), so the file never loses a railroad. A
+A feed that fails, or gives no stations, keeps that railroad's stations from
+the last build (Amtrak, VIA and Brightline as one set), so the file never
+loses a railroad. A
 railroad outside the US and Canada goes to data/regions/<region>/stations.json
 instead (feeds.REGION), the same shape.
 """
@@ -244,6 +245,10 @@ for agency, (url, keep, line_name, *group) in GTFS.items():
     positions = {**POSITION_FIX, **{(agency, sid): tuple(p) for sid, p in extras.get("positions", {}).items()}}
     try:
         result[agency] = gtfs_stations(url, keep, line_name, *(group or [None]), trip_line=TRIP_LINE.get(agency), extras=extras)
+        # A feed that answers with none (OVapi's for NS and the Dutch regional
+        # railways, 2026-11-17) has failed too.
+        if not result[agency]:
+            raise ValueError("no stations in the feed")
         for row in result[agency]:  # "Belen Rail Runner Station" -> "Belen"
             row[1] = suffix.sub("", row[1]) if suffix else row[1]
             row[1] = names.get(row[1].strip(), row[1].strip())

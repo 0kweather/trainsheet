@@ -550,8 +550,11 @@ export default {
   "Add a train": "Ajouter un train",
   "No trips planned. Tap + to add the trains you'll take: they're tracked for you on the day.": "Aucun voyage prévu. Touchez + pour ajouter les trains que vous prendrez : ils seront suivis pour vous le jour venu.",
   "Not listed? Enter it yourself": "Introuvable? Saisissez-le vous-même",
-  // ----- Europe's overview (js/europe.js) -----
-  "Europe": "Europe",
-  "Back to all of Europe": "Revenir à toute l’Europe",
+  // ----- The countries' pins and pages (js/overview.js) -----
+  "Countries": "Pays",
+  "Back to all countries": "Revenir à tous les pays",
   "Others": "Autres",
+  "About {n} running": "Environ {n} en service",
+  "Trains through the day": "Les trains au fil de la journée",
+  "Busiest stations": "Gares les plus fréquentées",
 };

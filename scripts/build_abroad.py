@@ -14,11 +14,11 @@ regions' drawn track (data/rail/<region>.geojson) and OpenStreetMap's, from
 the route tiles already fetched (scripts/.osm-cache; with OSM_ROUTE_FETCH=1,
 the missing ones are fetched). What a route runs on outside the region's own
 track is written to data/rail/abroad/<region>.geojson, each line with its
-railroads (n, a, b, c as the region files have them) and "in": the region
+railroads (n, a, b, c as the region files have them) and "in": the country
 it lies in (none where no railroad is on the map), so the page can leave out
-what that region's own track draws once it's loaded.
+what that country's own track draws once it's loaded.
 """
-import json, math, os, pathlib, sys
+import json, math, os, pathlib, re, sys
 from collections import defaultdict
 
 sys.argv = [sys.argv[0], "--offline", *sys.argv[1:]]  # build_rail: no Overpass unless OSM_ROUTE_FETCH=1
@@ -28,7 +28,7 @@ import build_rail as br  # noqa: E402
 ROOT = br.ROOT
 RAIL = ROOT / "data" / "rail"
 OUT = RAIL / "abroad"
-EUROPE = (-25, 34, 45, 72)  # as build_europe.py's
+EUROPE = (-25, 34, 45, 72)  # [west, south, east, north]: a region whose box's middle is here
 OFF_M = 2000                # a stop farther than this from the region's own track is off it
 SIMPLIFY = br.REGION_TOLERANCE
 
@@ -82,22 +82,22 @@ def pairs_of(agencies):
     return out
 
 
-def region_grid():
-    """The region under a point, from data/europe.json's grid (built first if
-    it isn't there)."""
-    path = ROOT / "data" / "europe.json"
+def country_grid():
+    """The country under a point, from data/overview.json's grid (built first
+    if it isn't there)."""
+    import build_overview
+    path = build_overview.OUT
     if not path.exists():
-        import build_europe
-        build_europe.main()
+        build_overview.main()
     e = json.loads(path.read_text())
-    w, s, step, cols, rows, cells = e["grid"]
-    letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    w, s, step, cols, rows, runs = e["grid"]
+    cells = "".join(ch * int(n) for n, ch in re.findall(r"(\d+)(\D)", runs))
 
     def at(p):
         x, y = int((p[0] - w) // step), int((p[1] - s) // step)
         if not (0 <= x < cols and 0 <= y < rows) or cells[y * cols + x] == ".":
             return None
-        return e["order"][letters.index(cells[y * cols + x])]
+        return e["order"][build_overview.LETTERS.index(cells[y * cols + x])]
     return at
 
 
@@ -157,7 +157,7 @@ def build(region, agencies, others, where):
             line = walk(s, o, key)
             nets, inside = key
             props = {"n": len(nets), **dict(zip("abc", nets))}
-            if inside:
+            if inside and inside != region.upper():  # its own country's: drawn with it, never left out
                 props["in"] = inside
             coords = br.simplify([list(p) for p in line], SIMPLIFY)
             features.append({"type": "Feature", "properties": props, "geometry": {"type": "LineString", "coordinates": coords}})
@@ -176,7 +176,7 @@ def main(only):
     for m in mods:
         if m.RAIL["region"] in regions:
             agencies[m.RAIL["region"]] += list(m.AGENCIES)
-    where = region_grid()
+    where = country_grid()
     OUT.mkdir(exist_ok=True)
     for region in sorted(regions):
         if only and region not in only:
@@ -188,6 +188,9 @@ def main(only):
             print(f"  wrote {path.relative_to(ROOT)} ({path.stat().st_size // 1024} KB)")
         elif path.exists():
             path.unlink()
+    # The regions that have some, so the page asks only for those.
+    have = sorted(p.stem for p in OUT.glob("*.geojson"))
+    (OUT / "index.json").write_text(json.dumps(have) + "\n")
 
 
 if __name__ == "__main__":

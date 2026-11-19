@@ -815,6 +815,7 @@ function addLayers() {
 map.on("style.load", () => {
   addLayers();
   applyFocus();
+  applyOverview();
 });
 
 // Start with the attribution folded into its ⓘ button.
@@ -841,6 +842,7 @@ function visible(t) {
   if (state.railroad && t.agency !== state.railroad) return false;
   // The selected and tracked trains always show.
   if (t.id === state.selected || state.tracked.some((r) => r.id === t.id)) return true;
+  if (ovHidden) return false; // the overview's pins are up
   if (state.onlyTracked && state.tracked.length) return false;
   return !(state.hideEstimated && t.estimated);
 }
@@ -1442,11 +1444,9 @@ function loadRail() {
     const had = state.railGeo?.features || [];
     state.railGeo = { type: "FeatureCollection", features: r === NA_TRACK ? geojson.features.concat(had) : had.concat(geojson.features) };
     focusCache.key = null; // an open railroad's track may run on into this region
-    if (r !== NA_TRACK) {
-      railIn.add(r.region);
-      map.getLayer("tt-rail-abroad") && map.setFilter("tt-rail-abroad", abroadFilter());
-      if (EU_REGIONS.has(r.region)) loadAbroad(r.region);
-    }
+    for (const c of countriesOfRegion(r.region)) railIn.add(c);
+    map.getLayer("tt-rail-abroad") && map.setFilter("tt-rail-abroad", abroadFilter());
+    if (r !== NA_TRACK) loadAbroad(r.region);
     redrawRail();
     if (state.rail) state.rail.add(geojson);
     else state.rail = new RailIndex(geojson);
@@ -1458,103 +1458,142 @@ function loadRail() {
   }, (p, r) => (r === NA_TRACK ? p : arrival(p)), regionOpen); // the fades wait for track abroad only, as before
   trackWatch.first.then(() => (railSettled = true));
 }
-// ---------- Europe's overview ----------
-// Zoomed out over Europe, the map loads none of its countries' track,
-// stations or timetables (all of them at once froze the page for seconds)
-// and shows a pin per country instead (js/europe.js). A country loads once
-// it's picked: its pin tapped, or the map centered on it from EU_PICK_ZOOM
-// in; while one is picked, centering on another picks that one. From
-// EU_VIEW_ZOOM in, Europe's regions load as the map shows them, as
-// everywhere else, and a railroad's page or an open or tracked train loads
-// its own wherever the map is.
-const EU_BOX = [-25, 34, 45, 72]; // [west, south, east, north], as scripts/build_europe.py's EUROPE
-const EU_PICK_ZOOM = 6, EU_VIEW_ZOOM = 8, EU_OUT_ZOOM = 4;
-const midInEurope = (b) => {
-  const lon = (b[0] + b[2]) / 2, lat = (b[1] + b[3]) / 2;
-  return lon >= EU_BOX[0] && lon <= EU_BOX[2] && lat >= EU_BOX[1] && lat <= EU_BOX[3];
-};
-const EU_REGIONS = new Set(DATA_REGIONS.filter((r) => midInEurope(r.bbox)).map((r) => r.region));
+// ---------- The overview: a pin per country ----------
+// Zoomed out, the map loads no country's track, stations or feeds (all of
+// Europe's at once froze the page for seconds) and shows a pin per country
+// instead (js/overview.js), its track, stations and trains put away. A
+// country loads once it's picked: its pin tapped (which opens its page, see
+// countryPageHtml), or the map centered on it from OV_PICK_ZOOM in; while
+// one is picked, centering on another picks that one. From OV_VIEW_ZOOM in,
+// regions load as the map shows them, and a railroad's page or an open or
+// tracked train loads its own wherever the map is.
+const OV_PICK_ZOOM = 6, OV_VIEW_ZOOM = 8, OV_OUT_ZOOM = 4;
+const countryOfRegion = new Map(DATA_REGIONS.map((r) => [r.region, AGENCIES[r.agencies[0]]?.country]));
+// North America's track and stations are the US's and Canada's both.
+const countriesOfRegion = (region) => (region === NA_TRACK.region ? ["US", "CA"] : [countryOfRegion.get(region)].filter(Boolean));
 const regionOfAgency = new Map(DATA_REGIONS.flatMap((r) => r.agencies.map((a) => [a, r.region])));
-let euFocus = null;  // the European region picked
-let europe = null;   // js/europe.js's overview, once the map has been over Europe
-let europeLoading = null;
-// Whether a region the map shows may load now: anywhere but Europe, always.
+const railroadsOf = (country) => Object.keys(AGENCIES).filter((id) => AGENCIES[id].country === country);
+let ovFocus = null;         // the country picked ("DE")
+let ovFloor = OV_OUT_ZOOM;  // zooming out past this leaves it (lower for a country framed below it: the US on a phone)
+let ovHidden = false;       // the pins are up: track, stations and trains put away
+let ovPicking = false;      // a pick's framing is under way: the moves on the way don't pick or leave
+let ov = null, ovLoading = null;
+// A railroad's page, an open train or a tracked one of these railroads.
+const ovNeeded = (ours) => ours(state.railroad) || ours(state.trains.get(state.selected)?.agency) || state.tracked.some((r) => ours(r.agency));
+// Whether a region the map shows may load now.
 function regionOpen(region) {
-  if (!EU_REGIONS.has(region) || region === euFocus || map.getZoom() >= EU_VIEW_ZOOM) return true;
-  const ours = (agency) => regionOfAgency.get(agency) === region;
-  return ours(state.railroad) || ours(state.trains.get(state.selected)?.agency) || state.tracked.some((r) => ours(r.agency));
+  const countries = countriesOfRegion(region);
+  if (!countries.length || countries.includes(ovFocus) || map.getZoom() >= OV_VIEW_ZOOM) return true;
+  return ovNeeded((a) => Boolean(a) && (region === NA_TRACK.region ? inNA(a) : regionOfAgency.get(a) === region));
 }
-const europeInView = () => {
-  const b = map.getBounds();
-  return b.getSouth() <= EU_BOX[3] && b.getNorth() >= EU_BOX[1] && b.getWest() <= EU_BOX[2] && b.getEast() >= EU_BOX[0];
-};
-function setEuFocus(region) {
-  if (region === euFocus) return;
-  euFocus = region;
+// Whether a railroad's feed may be polled for the map: its country picked,
+// or (one polled by view) zoomed in where it runs.
+const railroadOpen = (id, scoped) => !AGENCIES[id]?.country || AGENCIES[id].country === ovFocus || (scoped && map.getZoom() >= OV_VIEW_ZOOM);
+function setFocus(country) {
+  if (country === ovFocus) return;
+  ovFocus = country;
   trackWatch?.check();
   regionData?.then((m) => m?.recheck());
   wakeSources();
+  // An open country page follows the map to the country it's centered on.
+  if (country && openCountry && openCountry !== "*" && openCountry !== country) {
+    openCountry = country;
+    renderAgencies();
+  }
+}
+// The map's track, stations and trains, put away while the pins are up
+// (the open and tracked trains stay).
+const OV_LAYERS = ["tt-rail-casing", "tt-rail-0", "tt-rail-1", "tt-rail-2", "tt-rail-abroad", "tt-stations-minor", "tt-stations-major", "tt-station-labels"];
+function applyOverview() {
+  for (const id of OV_LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", ovHidden ? "none" : "visible");
 }
 // After the map moves: which country is picked, and the pins or the way back.
-function europeMoved() {
-  if (!europe) {
-    if (EU_REGIONS.size && europeInView()) startEurope();
-    return;
-  }
+function overviewMoved() {
+  if (!ov) return startOverview();
   const z = map.getZoom(), c = map.getCenter();
-  if (z < EU_OUT_ZOOM || c.lng < EU_BOX[0] || c.lng > EU_BOX[2] || c.lat < EU_BOX[1] || c.lat > EU_BOX[3]) setEuFocus(null);
-  else {
-    const under = europe.regionAt(c.lng, c.lat);
-    if (under && (euFocus || z >= EU_PICK_ZOOM)) setEuFocus(under);
+  // (While a pick is framed, its own moves neither pick nor leave.)
+  if (!ovPicking && z < ovFloor) setFocus(null);
+  else if (!ovPicking) {
+    const under = ov.countryAt(c.lng, c.lat);
+    if (under && (ovFocus || z >= OV_PICK_ZOOM)) setFocus(under);
   }
-  europe.update({ shown: !euFocus && z < EU_VIEW_ZOOM, focus: euFocus });
+  if (!ovFocus) ovFloor = OV_OUT_ZOOM;
+  const hide = !ovFocus && z < OV_VIEW_ZOOM;
+  if (hide !== ovHidden) {
+    ovHidden = hide;
+    applyOverview();
+    redraw();
+  }
+  ov.update({ shown: hide, focus: ovFocus });
 }
-function startEurope() {
-  europeLoading ??= import("./europe.js?v=dev").then(({ europeOverview }) => {
-    europe = europeOverview({
+function startOverview() {
+  ovLoading ??= import("./overview.js?v=dev").then(({ overview }) => {
+    ov = overview({
       map, agencies: AGENCIES, T, lang, pad: panelPadding,
-      name: (region) => countryName(region.toUpperCase()),
-      // Any of its railroads tracked live rather than placed from its timetable.
-      live: (region) => SOURCES.some((src) => src.format !== "timetable" && src.agencies.some((a) => regionOfAgency.get(a) === region) &&
-        sourceAvailability(src).ok && !sourceAvailability(src).timetable),
-      onPick: pickRegion,
-      onBack: leaveRegion,
+      name: countryName,
+      railroads: railroadsOf,
+      railroadCount: (n) => Tn(n, "{n} railroad", "{n} railroads"),
+      live: countryLive,
+      onPick: (country) => pickCountry(country, { page: true }),
+      onBack: leaveCountry,
     });
-    return europe.ready.then(europeMoved);
-  }).catch((err) => console.warn("europe", err));
+    return ov.ready.then(overviewMoved);
+  }).catch((err) => console.warn("overview", err));
 }
-function pickRegion(region) {
-  setEuFocus(region);
-  europe.update({ shown: false, focus: region });
-  const r = DATA_REGIONS.find((x) => x.region === region);
-  const pad = panelPadding();
+// Any of a country's railroads tracked live rather than placed from its timetable.
+const countryLive = (country) => SOURCES.some((src) => src.format !== "timetable" && src.agencies.some((a) => AGENCIES[a]?.country === country) &&
+  sourceAvailability(src).ok && !sourceAvailability(src).timetable);
+// Picks a country: loads it, frames it, and (page) opens its page.
+function pickCountry(country, { page = false } = {}) {
+  setFocus(country);
+  ovHidden = false;
+  applyOverview();
+  redraw();
+  ov?.update({ shown: false, focus: country });
+  ovPicking = true; // the panel opening shifts the map: not a move of the reader's
+  if (page) openCountryPage(country); // the panel first: the map's padding follows it
+  const b = ov?.bbox(country);
+  if (!b) {
+    ovPicking = false;
+    return frameCountry(country);
+  }
+  // The map's own padding already leaves the panel out.
+  const frame = { padding: { top: 56, right: 40, bottom: 40, left: 40 }, maxZoom: 9 };
+  ovFloor = Math.min(OV_OUT_ZOOM, (map.cameraForBounds([[b[0], b[1]], [b[2], b[3]]], frame)?.zoom ?? OV_OUT_ZOOM) - 1.5);
   map.stop();
-  map.fitBounds([[r.bbox[0], r.bbox[1]], [r.bbox[2], r.bbox[3]]], {
-    padding: { top: Math.max(40, pad.top + 40), right: 40, bottom: Math.max(40, pad.bottom + 20), left: Math.max(40, pad.left + 30) },
-    maxZoom: 9, duration: 900,
+  map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { ...frame, duration: 900 });
+  map.once("moveend", () => {
+    ovPicking = false;
+    overviewMoved();
   });
 }
-function leaveRegion() {
-  setEuFocus(null);
-  const pad = panelPadding();
+// Back to the pins: those near the country left, framed.
+function leaveCountry() {
+  const from = ovFocus && ov?.pin(ovFocus);
+  setFocus(null);
+  if (openCountry && openCountry !== "*") closeCountryPage();
+  if (!from) return;
+  const b = new maplibregl.LngLatBounds(from, from);
+  for (const c of ov.countries()) {
+    const p = ov.pin(c);
+    if (meters({ lon: from[0], lat: from[1] }, { lon: p[0], lat: p[1] }) < 3500e3) b.extend(p);
+  }
   map.stop();
-  map.fitBounds([[-11, 36], [30, 63]], {
-    padding: { top: Math.max(20, pad.top + 10), right: 20, bottom: Math.max(20, pad.bottom + 10), left: Math.max(20, pad.left + 10) },
-    maxZoom: EU_PICK_ZOOM - 1.5, duration: 900,
-  });
+  map.fitBounds(b, { padding: { top: 80, right: 80, bottom: 60, left: 80 }, maxZoom: OV_PICK_ZOOM - 1.5, duration: 900 });
 }
-map.on("moveend", europeMoved);
-map.once("load", europeMoved); // the opening view (a link may open on Europe)
+map.on("moveend", overviewMoved);
+map.once("load", overviewMoved); // the opening view
 
 // A European region's track past its border (scripts/build_abroad.py), once
-// its own is in: drawn where no loaded region's own track is, and
+// its own is in: drawn where no loaded country's own track is, and
 // indexed, so its trains running abroad stay on track.
 let abroadGeo = { type: "FeatureCollection", features: [] };
-const railIn = new Set(); // regions whose own track is drawn
+const railIn = new Set(); // countries whose own track is drawn
 const abroadFilter = () => ["!", ["in", ["coalesce", ["get", "in"], ""], ["literal", [...railIn]]]];
+let abroadIndex = null;  // the regions with track abroad (data/rail/abroad/index.json)
 function loadAbroad(region) {
-  fetch(`data/rail/abroad/${region}.geojson?v=dev`)
-    .then((res) => (res.ok ? res.json() : null))
+  (abroadIndex ??= fetch("data/rail/abroad/index.json?v=dev").then((r) => (r.ok ? r.json() : [])).catch(() => []))
+    .then((have) => (have.includes(region) ? fetch(`data/rail/abroad/${region}.geojson?v=dev`).then((res) => (res.ok ? res.json() : null)) : null))
     .then((geojson) => {
       if (!geojson?.features.length) return;
       abroadGeo = { type: "FeatureCollection", features: abroadGeo.features.concat(geojson.features) };
@@ -1562,7 +1601,7 @@ function loadAbroad(region) {
       state.rail.add(geojson);
       resnap();
     })
-    .catch(() => {}); // a region without any: its trains stay home
+    .catch(() => {}); // its trains stay home
 }
 // Whether a railroad's track can be used; North America's is asked for if it isn't in yet.
 const inNA = (agency) => !DATA_REGIONS.some((r) => r.agencies.includes(agency));
@@ -1834,10 +1873,11 @@ function sourceAvailability(src) {
 // A source's trains, from its feed or (waiting on its key) its timetables.
 const fetchTrains = (src) => fetchSource(src, RELAY, Boolean(sourceAvailability(src).timetable));
 
-// A plug-in source scoped to the view (scope "view") is polled only while
-// one of its railroads is wanted: its stations' area (padded by a quarter)
-// meets the map, or one of its trains is open or tracked, its page is open,
-// or "Near you" is looking where it runs. Every other source always is.
+// A source is polled only while one of its railroads is wanted: its
+// country picked on the map (see the overview) and, for a plug-in source
+// scoped to the view (scope "view"), its stations' area (padded by a
+// quarter) meeting the map; or one of its trains is open or tracked, its
+// page is open, or "Near you" is looking where it runs.
 const viewScoped = (src) => src.scope === "view";
 function meetsView(bbox, bounds) {
   if (!bbox) return true; // nowhere to place it: as if always
@@ -1847,10 +1887,10 @@ function meetsView(bbox, bounds) {
     [-360, 0, 360].some((k) => w - px + k <= bounds.getEast() && e + px + k >= bounds.getWest());
 }
 function sourceWanted(src) {
-  if (!viewScoped(src)) return true;
-  const bounds = map.getBounds();
+  const bounds = map.getBounds(), scoped = viewScoped(src);
   const ours = (agency) => src.agencies.includes(agency);
-  return src.agencies.some((id) => meetsView(AGENCIES[id].bbox, bounds) && regionOpen(regionOfAgency.get(id))) ||
+  // Its country picked (see the overview), and where it runs in view if it's polled by view.
+  return src.agencies.some((id) => railroadOpen(id, scoped) && (!scoped || meetsView(AGENCIES[id].bbox, bounds))) ||
     ours(state.trains.get(state.selected)?.agency) || ours(state.railroad) || state.tracked.some((r) => ours(r.agency)) ||
     Boolean(nearFix && src.agencies.some((id) => {
       const b = AGENCIES[id].bbox;
@@ -1866,7 +1906,7 @@ const backoff = {}; // source id -> when a failed source may be tried again
 // a shared link to a train, may be for any railroad).
 function wakeSources(all = false) {
   for (const src of SOURCES) {
-    if (!viewScoped(src) || polling.has(src.id) || Date.now() < (backoff[src.id] || 0) || !sourceAvailability(src).ok || !(all || sourceWanted(src))) continue;
+    if (polling.has(src.id) || Date.now() < (backoff[src.id] || 0) || !sourceAvailability(src).ok || !(all || sourceWanted(src))) continue;
     const at = state.sourceStatus[src.id]?.at;
     if (!at || Date.now() - at > src.interval * 1000) poll(src, 0, all);
   }
@@ -2104,7 +2144,8 @@ function countryName(code) {
 // ones planned after it, and what they've ridden; signed out, a card to sign
 // in. Then the trains near them, and every railroad. "All railroads" opens
 // them in one list, by country (alphabetical, as are the railroads in each).
-let openCountry = null; // "*" while the list shows every railroad, else null (home)
+let openCountry = null; // "*" while the list shows every railroad, a country's code on its page, else null (home)
+let countryFrom = null; // where a country's page goes back to: "*" (every railroad) or null (home)
 
 // A railroad's region where it says more than its country ("New York", not
 // "United States").
@@ -2162,6 +2203,7 @@ function renderAgencies() {
   const el = $("agencies");
   if (state.tab === "trips") return setPane(el, myTripsHtml());
   if (state.tab === "history") return setPane(el, historyHtml());
+  if (openCountry && openCountry !== "*") return setPane(el, countryPageHtml(openCountry));
   if (openCountry) return setPane(el, allRailroadsHtml());
   setPane(el, nearbyHtml() + `<div class="group-title">${T("Railroads")}</div>
     <button type="button" class="home-row" data-all-railroads>
@@ -2188,6 +2230,66 @@ function allRailroadsHtml() {
         g.rows.sort((x, y) => byName(x.name, y.name)).map((r) => r.html).join("");
     }).join("") +
     (anyOff ? `<p class="note">${T(RELAY ? "Railroads marked Not connected publish live data, but it has to be fetched through a small relay server or with a free developer key. See the README to switch them on." : "Railroads marked Not connected publish live data, but it has to be fetched through a small relay server. See the README to switch them on.")}</p>` : "");
+}
+
+// A country's page (opened from its pin or its heading in every railroad's
+// list): how many of its trains are running, its trains through the day
+// (from its timetables, data/overview.json), its railroads, and its
+// busiest stations.
+function openCountryPage(country) {
+  if (state.selected || state.station || state.railroad) goHome();
+  if (accountsOn() && state.tab !== "browse") setTab("browse");
+  else putPanelAway(false);
+  if (openCountry !== country) countryFrom = openCountry === "*" ? "*" : countryFrom && openCountry ? countryFrom : null;
+  openCountry = country;
+  renderAgencies();
+  $("agencies").scrollTop = 0;
+  pageIn($("agencies"));
+  if (isPhone && sheetMode() === "collapsed") setSheet("");
+}
+function closeCountryPage() {
+  openCountry = countryFrom;
+  countryFrom = null;
+  renderAgencies();
+}
+function countryPageHtml(country) {
+  const g = agencyRows().get(country) || { rows: [], running: 0, idle: true };
+  const est = ov?.runningNow(country);
+  const running = !g.idle ? T("{n} running", { n: g.running.toLocaleString(lang) })
+    : est != null ? T("About {n} running", { n: est.toLocaleString(lang) }) : "";
+  const live = countryLive(country);
+  const sub = [running, Tn(g.rows.length, "{n} railroad", "{n} railroads")].filter(Boolean).join(" · ");
+  const day = ov?.day(country);
+  let chart = "";
+  if (day) {
+    const W = 300, H = 56, max = Math.max(1, ...day.hours);
+    const x = (h) => ((h + 0.5) * W) / 24, y = (n) => H - 4 - (n / max) * (H - 10);
+    const line = day.hours.map((n, h) => `${x(h).toFixed(1)},${y(n).toFixed(1)}`).join(" ");
+    chart = `<div class="country-day"><div class="sub">${esc(T("Trains through the day"))}</div>
+      <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <polyline points="${x(0)},${H} ${line} ${x(23)},${H}" class="area"/>
+        <polyline points="${line}" class="line"/>
+        <line x1="${x(day.now)}" x2="${x(day.now)}" y1="0" y2="${H}" class="now-line"/>
+        <circle cx="${x(day.now)}" cy="${y(day.hours[day.now])}" r="3.5" class="now"/>
+      </svg>
+      <div class="hours"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>`;
+  }
+  const ids = new Set(railroadsOf(country));
+  const stations = [...state.stations.values()].filter((st) => st.agencies.some((a) => ids.has(a)))
+    .sort((a, b) => b.rank - a.rank).slice(0, 6);
+  const stationRows = stations.map((st) => `<button class="result" data-station="${esc(st.id)}">
+      <span class="station-icon" style="--c:${AGENCIES[st.agencies[0]].color}"></span>
+      <span><span class="title">${esc(st.name)}</span><br><span class="sub">${esc([st.place, stationLinesText(st)].filter(Boolean).join(" · "))}</span></span>
+      <span></span>
+    </button>`).join("");
+  const back = countryFrom === "*" ? T("All railroads") : T(accountsOn() ? "Browse" : "Home");
+  return `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${esc(back)}</button>
+    <div class="country-page-head"><h2>${esc(countryName(country))}</h2>
+      <div class="sub"><span class="ov-live${live ? " on" : ""}"></span>${esc(sub)}</div></div>
+    ${chart}
+    <div class="group-title">${T("Railroads")}</div>
+    ${g.rows.sort((x, y) => byName(x.name, y.name)).map((r) => r.html).join("")}
+    ${stationRows ? `<div class="group-title">${T("Busiest stations")}</div>${stationRows}` : ""}`;
 }
 
 // Frames a country's railroads on the map: its regional track where it has
@@ -6019,8 +6121,9 @@ on("agencies", "click", (e) => {
     return $("agencies").querySelector(".country-back")?.scrollIntoView({ block: "nearest" });
   }
   const country = e.target.closest("[data-country]");
-  if (country) return frameCountry(country.dataset.country);
+  if (country) return pickCountry(country.dataset.country, { page: true });
   if (e.target.closest("[data-country-back]")) {
+    if (openCountry && openCountry !== "*") return closeCountryPage();
     openCountry = null;
     return renderAgencies();
   }

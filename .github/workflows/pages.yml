@@ -25,9 +25,9 @@ jobs:
       # The timetables of railroads placed from them, cut by the hour, so a
       # viewer fetches only the runs going now (data/schedules/now/).
       - run: python3 scripts/slice_schedules.py
-      # Each European country's pin on the zoomed-out map: its railroads and
-      # their trains by the hour (data/europe.json).
-      - run: python3 scripts/build_europe.py
+      # Each country's pin on the zoomed-out map and its page: its railroads
+      # and their trains by the hour (data/overview.json).
+      - run: python3 scripts/build_overview.py
       # Version every file reference with this commit so browsers can't mix
       # cached files from an older deploy with new ones.
       - run: python3 scripts/stamp.py "${GITHUB_SHA::8}"

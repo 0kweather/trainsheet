@@ -1,15 +1,16 @@
-// Europe's overview: zoomed out over Europe, the map loads none of its
-// countries' track, stations or timetables (together they froze the page for
-// seconds) and shows a pin per country instead: its name, the trains its
-// railroads run this hour, a dot when any of them is tracked live, and a
-// stripe of its railroads in their colors, sized by their trains. A pin
-// picks its country (app.js loads that one alone); a button at the top of
-// the map goes back to the overview. Everything here comes from
-// data/europe.json (scripts/build_europe.py).
+// The overview: zoomed out, the map loads no country's track, stations or
+// feeds (all of Europe's at once froze the page for seconds) and shows a pin
+// per country instead: its name, the trains its railroads run this hour, a
+// dot when any of them is tracked live, and a stripe of its railroads in
+// their colors, sized by their trains. A pin picks its country (app.js loads
+// that one alone and opens its page); a button at the top of the map goes
+// back to the pins. Everything here comes from data/overview.json
+// (scripts/build_overview.py).
 
 const GAP = 6;          // px kept between pins
 const MIN_SHARE = 0.03; // railroads with less of the trains than this share the stripe's grey "others"
 const OTHERS = "#9aa0a8";
+const LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 const clocks = {};
 // [weekday (Monday 0), hour] now where a railroad is.
@@ -19,64 +20,89 @@ function weekHour(tz) {
   return [["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(p.weekday), +p.hour % 24];
 }
 
-// opts: { map, agencies (AGENCIES), name(region) -> its country's name,
-// live(region) -> whether a railroad of it is tracked live, pad() -> the
-// map's padding for the panel, T, lang, onPick(region), onBack() }.
-export function europeOverview(opts) {
+// opts: { map, agencies (AGENCIES), name(country) -> its name, live(country)
+// -> whether a railroad of it is tracked live, railroads(country) -> its
+// railroads, pad() -> the map's padding for the panel, T, lang,
+// onPick(country), onBack() }.
+export function overview(opts) {
   const { map, agencies, T } = opts;
-  let data = null, shown = false, focus = null;
-  const pins = new Map(); // region -> { el, lon, lat, w, h, dx, dy, compact }
+  let data = null, cells = null, shown = false, focus = null;
+  const pins = new Map(); // country -> { el, lon, lat, w, h, dx, dy, compact, off }
 
   const layer = document.createElement("div");
-  layer.className = "eu-pins";
+  layer.className = "ov-pins";
   const leaders = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  leaders.setAttribute("class", "eu-leaders");
+  leaders.setAttribute("class", "ov-leaders");
   leaders.setAttribute("aria-hidden", "true");
   layer.append(leaders);
   map.getContainer().append(layer);
 
   const back = document.createElement("button");
   back.type = "button";
-  back.className = "eu-back";
+  back.className = "ov-back";
   back.hidden = true;
   back.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>`;
   back.addEventListener("click", () => opts.onBack());
   map.getContainer().append(back);
 
-  const ready = fetch("data/europe.json?v=dev")
+  const ready = fetch("data/overview.json?v=dev")
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
     .then((d) => {
       data = d;
+      // The grid's runs ("523.12a") as one letter a cell.
+      const [, , , cols, rows, runs] = d.grid;
+      cells = new Uint8Array(cols * rows); // 0: none, else the country's place in order, plus one
+      let at = 0;
+      for (const [, n, ch] of runs.matchAll(/(\d+)(\D)/g)) {
+        if (ch !== ".") cells.fill(LETTERS.indexOf(ch) + 1, at, at + +n);
+        at += +n;
+      }
       build();
       update();
       return d;
     })
     .catch((err) => {
-      console.warn("europe", err);
+      console.warn("overview", err);
       return null;
     });
 
-  // The region under a point ("de"), or null where none is near.
-  function regionAt(lon, lat) {
-    if (!data) return null;
-    const [w, s, step, cols, rows, cells] = data.grid;
+  // The country under a point ("DE"), or null where none is near.
+  function countryAt(lon, lat) {
+    if (!cells) return null;
+    const [w, s, step, cols, rows] = data.grid;
+    lon = ((lon + 540) % 360) - 180;
     const x = Math.floor((lon - w) / step), y = Math.floor((lat - s) / step);
     if (x < 0 || y < 0 || x >= cols || y >= rows) return null;
     const c = cells[y * cols + x];
-    return c === "." ? null : data.order["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".indexOf(c)] || null;
+    return c ? data.order[c - 1] : null;
   }
 
   // Each railroad's trains this hour where it is.
-  function trainsNow(region) {
-    return data.regions[region].rr.map((id) => {
+  function trainsNow(country) {
+    return data.countries[country].rr.map((id) => {
       const { tz, w } = data.rr[id];
       const [d, h] = weekHour(tz);
       return [id, w[d]?.[h] || 0];
     });
   }
+  const runningNow = (country) => (data?.countries[country]?.rr.length ? trainsNow(country).reduce((s, [, n]) => s + n, 0) : null);
 
-  function pinHTML(region) {
-    const rr = trainsNow(region);
+  // Today's trains by the hour where its railroads are, and this hour: null
+  // for a country without timetables.
+  function day(country) {
+    const rr = data?.countries[country]?.rr;
+    if (!rr?.length) return null;
+    const hours = new Array(24).fill(0);
+    for (const id of rr) {
+      const { tz, w } = data.rr[id];
+      const [d] = weekHour(tz);
+      (w[d] || []).forEach((n, h) => (hours[h] += n));
+    }
+    return { hours, now: weekHour(data.rr[rr[0]].tz)[1] };
+  }
+
+  function pinHTML(country) {
+    const rr = trainsNow(country);
     const total = rr.reduce((s, [, n]) => s + n, 0);
     const parts = [];
     let others = 0;
@@ -85,36 +111,41 @@ export function europeOverview(opts) {
       else if (n) parts.push([agencies[id]?.color || OTHERS, n, agencies[id]?.short || agencies[id]?.name || id]);
     }
     if (others) parts.push([OTHERS, others, T("Others")]);
-    const name = opts.name(region);
-    const live = opts.live(region);
-    const count = T("{n} running", { n: total.toLocaleString(opts.lang) });
-    const names = rr.map(([id]) => agencies[id]?.short || id).join(", ");
+    // No timetable to count from (Argentina's): its railroads, side by side.
+    const all = opts.railroads(country);
+    if (!parts.length) for (const id of all) parts.push([agencies[id]?.color || OTHERS, 1, agencies[id]?.short || id]);
+    const name = opts.name(country);
+    const live = opts.live(country);
+    const count = rr.length ? T("{n} running", { n: total.toLocaleString(opts.lang) }) : opts.railroadCount(all.length);
+    const names = all.map((id) => agencies[id]?.short || id).join(", ");
     return {
-      full: `<span class="eu-name">${esc(name)}</span>
-        <span class="eu-count"><span class="eu-live${live ? " on" : ""}"></span>${esc(count)}</span>
-        <span class="eu-stripe">${parts.map(([c, n, label]) => `<span style="flex:${n};background:${c}" title="${esc(label)}"></span>`).join("")}</span>`,
+      full: `<span class="ov-name">${esc(name)}</span>
+        <span class="ov-count"><span class="ov-live${live ? " on" : ""}"></span>${esc(count)}</span>
+        <span class="ov-stripe">${parts.map(([c, n, label]) => `<span style="flex:${n};background:${c}" title="${esc(label)}"></span>`).join("")}</span>`,
       label: `${name}: ${count}. ${names}`,
       title: T("Show {country} on the map", { country: name }),
     };
   }
 
   function build() {
-    for (const region of Object.keys(data.regions)) {
+    for (const country of Object.keys(data.countries)) {
       const el = document.createElement("button");
       el.type = "button";
-      el.className = "eu-pin";
-      el.addEventListener("click", () => opts.onPick(region));
+      el.className = "ov-pin";
+      el.addEventListener("click", () => opts.onPick(country));
       layer.append(el);
-      const [lon, lat] = data.regions[region].pin;
-      pins.set(region, { el, lon, lat, dx: 0, dy: 0, compact: false, off: true });
+      const [lon, lat] = data.countries[country].pin;
+      pins.set(country, { el, lon, lat, dx: 0, dy: 0, compact: false, off: true });
     }
-    refreshPins();
-    setInterval(() => shown && refreshPins(), 5 * 60 * 1000);
+    refresh();
+    setInterval(() => shown && refresh(), 5 * 60 * 1000);
   }
 
-  function refreshPins() {
-    for (const [region, p] of pins) {
-      const h = pinHTML(region);
+  // The pins' counts and live dots, again (the hour has turned, the relay answered).
+  function refresh() {
+    if (!data) return;
+    for (const [country, p] of pins) {
+      const h = pinHTML(country);
       p.el.innerHTML = h.full;
       p.el.setAttribute("aria-label", h.label);
       p.el.title = h.title;
@@ -158,9 +189,12 @@ export function europeOverview(opts) {
     move();
   }
   const weeklies = new Map();
-  const weekly = (region) => {
-    if (!weeklies.has(region)) weeklies.set(region, data.regions[region].rr.reduce((s, id) => s + data.rr[id].w.flat().reduce((a, b) => a + b, 0), 0));
-    return weeklies.get(region);
+  const weekly = (country) => {
+    if (!weeklies.has(country)) {
+      const rr = data.countries[country].rr;
+      weeklies.set(country, rr.length ? rr.reduce((s, id) => s + data.rr[id].w.flat().reduce((a, b) => a + b, 0), 0) : opts.railroads(country).length);
+    }
+    return weeklies.get(country);
   };
 
   // Follows the map between placings.
@@ -179,15 +213,15 @@ export function europeOverview(opts) {
   }
 
   // shown: the pins are wanted (nothing picked, zoomed out); focus: the
-  // region picked, which the back button leaves.
+  // country picked, which the back button leaves.
   function update(state = {}) {
     if ("shown" in state) shown = state.shown;
     if ("focus" in state) focus = state.focus;
     layer.hidden = !shown || !data;
     back.hidden = !focus;
     if (focus) {
-      back.querySelector("span").textContent = T("Europe");
-      back.setAttribute("aria-label", T("Back to all of Europe"));
+      back.querySelector("span").textContent = T("Countries");
+      back.setAttribute("aria-label", T("Back to all countries"));
       const pad = opts.pad();
       back.style.left = `${pad.left + 12}px`;
       back.style.top = `${pad.top + 12}px`;
@@ -199,7 +233,13 @@ export function europeOverview(opts) {
   map.on("moveend", () => shown && data && place());
   map.on("resize", () => shown && data && place());
 
-  return { ready, regionAt, update, has: (region) => Boolean(data?.regions[region]) };
+  return {
+    ready, countryAt, update, refresh, day, runningNow,
+    has: (country) => Boolean(data?.countries[country]),
+    bbox: (country) => data?.countries[country]?.bbox || null,
+    pin: (country) => data?.countries[country]?.pin || null,
+    countries: () => (data ? Object.keys(data.countries) : []),
+  };
 }
 
 function esc(s) {
