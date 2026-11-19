@@ -1,7 +1,7 @@
 /* Trainsheet's look, after Apple's system design: San Francisco type with
  * large bold titles, the system colors, materials (frosted glass) over the
  * map, inset grouped lists on rounded cards, iOS controls, widget-style
- * stats, and tracked trains as Live Activity-style cards with a countdown
+ * stats, and tracked trains as a bar at the panel's foot with a countdown
  * and a progress bar.
  *
  * Loaded after style.css; it redefines the tokens and restyles components.
@@ -345,101 +345,82 @@ html, body {
 .model-card { border-radius: var(--r-xl); background: var(--group); border: 0; }
 .plate { border-radius: var(--r-sm); }
 
-/* ---------- Live Activity tracked trains ---------- */
+/* ---------- Tracking: a bar at the panel's foot ----------
+ * A tracked train is one row at the foot of the panel, in the panel's own
+ * material: its plate, the stop it's tracked to, its delay, how long is
+ * left, and a line of how far along it is. The same place on every page,
+ * like Music's Now Playing bar: above the tab bar in a phone's sheet (which
+ * shows it folded down too), over the panel's foot on a computer, where it
+ * stays, as a card of its own, when the panel is put away. A row opens its
+ * train's page, which looks like any other train's.
+ * (Tracked trains were black cards after the iPhone's Dynamic Island: over
+ * the top of the map on a computer, at the top of the sheet on a phone,
+ * gone while their train's page was open, when the whole panel turned
+ * black instead.) */
+.tracked { display: grid; }
+.tracked[hidden] { display: none; }
+.tb-row {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; column-gap: 10px;
+  min-height: 56px; box-sizing: border-box; padding: 8px 10px 12px 16px; cursor: pointer;
+}
+.tracked > * + * { border-top: 0.5px solid var(--line); }
+.tb-row:hover { background: var(--hover); }
+.tb-row[aria-current] { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.tb-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tb-main { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.tb-where { font-size: var(--fs-base); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-sub { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-sub .stale { color: var(--warn); font-weight: 600; }
+.tb-eta { font-family: var(--font-rounded); font-size: var(--fs-lg); font-weight: 700; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tb-eta small { margin-left: 2px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.tracked .tc-x { width: 28px; height: 28px; border-radius: 50%; background: var(--fill); color: var(--muted); font-size: var(--fs-md); line-height: 1; }
+.tracked .tc-x:hover { background: var(--hover); color: var(--text); }
+.tb-progress { position: absolute; left: 16px; right: 16px; bottom: 5px; height: 3px; border-radius: var(--r-xs); background: var(--fill); overflow: hidden; }
+.tb-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--c); transition: width var(--t-slow) ease; }
+/* A question in the bar ("Are you on this train?", "Were you on it?"): the
+   same row, with its answers under it. */
+.tb-ask { display: grid; gap: 8px; padding: 10px 10px 12px 16px; }
+.tb-ask-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tb-ask-top .tb-main { flex: 1; }
+.tb-ask-actions { display: flex; gap: 8px; }
+@media (min-width: 721px) {
+  .tracked {
+    position: fixed; z-index: 3; left: 12px; bottom: 12px; width: 372px; box-sizing: border-box; overflow: hidden;
+    border-top: 0.5px solid var(--line); border-radius: 0 0 var(--r-lg) var(--r-lg);
+  }
+  body.has-tabs .tracked { left: 86px; }
+  /* The panel's pages end above it. */
+  .panel { padding-bottom: var(--tracked-h, 0px); }
+  /* The panel put away: the bar stays where it was, a card of its own. */
+  body.panel-away .tracked {
+    border: 0.5px solid var(--glass-edge); border-radius: var(--r-lg); background: var(--panel); box-shadow: var(--shadow);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  }
+}
 
-/* Floating over the top of the map, centred in the space beside the panel
- * (on phones, across the top of the screen), like the Dynamic Island. */
-.tracked {
-  position: fixed;
-  z-index: 3;
-  top: 12px;
-  left: calc(12px + 372px + 12px);
-  right: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  pointer-events: none;
+/* ---------- A tracked train's callout on the map ----------
+ * Riding with the train (app.js, placeCallouts): its plate, how long is
+ * left, and its delay when it has one, on a card with a tip pointing down at
+ * the train. Off screen, it waits at the map's edge with an arrow toward
+ * the train instead of the tip. */
+.tk-callouts { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.tk-callout {
+  position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px; padding: 5px 9px 5px 6px;
+  border: 0.5px solid var(--line); border-radius: var(--r-md); background: var(--panel-solid); color: var(--text);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16); font: inherit; white-space: nowrap; cursor: pointer; pointer-events: auto;
 }
-.tracked .live { width: min(380px, 100%); pointer-events: auto; border-radius: 26px; padding: 14px 18px 16px; gap: 7px; }
-.tracked .live.enter { animation: island-in var(--t-slow) cubic-bezier(0.32, 1.25, 0.5, 1) var(--enter-at, 0ms) both; }
-.tracked .live.enter > * { animation: island-content var(--t-slow) ease var(--enter-at, 0ms) both; }
-@keyframes island-in {
-  0% { clip-path: inset(0 32% calc(100% - 34px) 32% round 17px); transform: translateY(-4px); }
-  100% { clip-path: inset(0 0 0 0 round 26px); transform: none; }
+.tk-callout[hidden] { display: none; }
+.tk-callout:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tk-callout::after {
+  content: ""; position: absolute; left: var(--tip, 50%); bottom: -5px; width: 9px; height: 9px; margin-left: -5px;
+  background: var(--panel-solid); border-right: 0.5px solid var(--line); border-bottom: 0.5px solid var(--line); transform: rotate(45deg);
 }
-@keyframes island-content { 0%, 35% { opacity: 0; } 100% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) {
-  .tracked .live.enter, .tracked .live.enter > * { animation: none; }
-}
-.live {
-  position: relative;
-  display: grid;
-  gap: 8px;
-  padding: 12px 14px 14px;
-  border-radius: var(--r-xl);
-  background: #0b0b0c;
-  color: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
-  cursor: pointer;
-}
-.live:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.track-card.live { grid-template-columns: minmax(0, 1fr); border: 0; overflow: visible; }
-.track-card.live:hover { border: 0; box-shadow: 0 12px 34px rgba(0, 0, 0, 0.34), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14); }
-.la-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.la-route { flex: 1; min-width: 0; font-size: var(--fs-sm); font-weight: 600; color: rgba(255, 255, 255, 0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.la-eta { font-family: var(--font-rounded); font-size: var(--fs-title); font-weight: 700; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; }
-.la-eta small { font-size: var(--fs-sm); font-weight: 600; color: rgba(255, 255, 255, 0.7); margin-left: 2px; }
-/* Two lines where the stop, its time and the delay don't fit on one, so the
-   delay is never the part cut off. */
-.la-where { font-size: var(--fs-sm); color: rgba(255, 255, 255, 0.72); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.la-where strong { color: #fff; }
-.la-where .status { font-weight: 700; }
-.la-where .status.good { color: #30d158; }
-.la-where .status.warn { color: #ff9f0a; }
-.la-where .status.bad { color: #ff453a; }
-.la-where .stale { color: #ff9f0a; font-weight: 600; }
-
-/* The panel showing a tracked train's page is its island grown to fill it
- * (syncLivePanel): the island's black, in the dark theme's colors whatever
- * the theme. */
-.panel.live-panel {
-  --panel: #0b0b0c;
-  --glass-edge: rgba(255, 255, 255, 0.1);
-  --panel-solid: #1c1c1e;
-  --group: #1c1c1e;
-  --fill: rgba(118, 118, 128, 0.24);
-  --text: #ffffff;
-  --muted: rgba(235, 235, 245, 0.6);
-  --faint: rgba(235, 235, 245, 0.3);
-  --line: rgba(255, 255, 255, 0.11);
-  --hover: rgba(120, 120, 128, 0.2);
-  --accent: #0a84ff;
-  --good: #30d158;
-  --warn: #ff9f0a;
-  --bad: #ff453a;
-  --switch-on: #30d158;
-  --car-neutral-dim: 12%;
-  --car-shade-low: 0.16;
-  --car-shade-high: 0.06;
-  --car-shade-roof: 0.08;
-  --car-logo-dim: 0.9;
-  color-scheme: dark;
-  background: #0b0b0c;
-  color: var(--text);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
-}
-:root[data-colorblind] .panel.live-panel { --good: #33bbee; --warn: #ee7733; --bad: #ee3377; }
-.panel.live-panel .trk { background: #f2f2f7; color: #121417; }
-.panel.live-panel .trk.likely { background: transparent; color: var(--muted); }
-.panel.live-panel :is(.segmented button[aria-selected="true"], .segmented button[aria-pressed="true"]) { background: #636366; }
-.panel.live-panel .switch { background: rgba(120, 120, 128, 0.32); }
-/* The island growing into the panel (growIsland). */
-.island-ghost { position: fixed; z-index: 20; margin: 0; box-sizing: border-box; overflow: hidden; pointer-events: none; }
-.live .tc-x { position: static; width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.8); font-size: var(--fs-base); line-height: 1; }
-.live .tc-x:hover { background: rgba(255, 255, 255, 0.24); color: #fff; }
-.live .tc-share { display: inline-flex; align-items: center; justify-content: center; }
+.tk-callout.edge::after { display: none; }
+.tk-arrow { display: none; flex: none; color: var(--muted); transform: rotate(var(--turn, 0rad)); }
+.tk-callout.edge .tk-arrow { display: block; }
+.tk-eta { font-family: var(--font-rounded); font-size: var(--fs-base); font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tk-eta small { margin-left: 1px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.tk-late { font-size: var(--fs-xs); }
 
 /* ---------- Menu, toast, loading ---------- */
 
@@ -476,9 +457,8 @@ html, body {
 
 @media (max-width: 720px) {
   .panel { top: auto; left: 0; bottom: 0; width: auto; border-radius: var(--r-lg) var(--r-lg) 0 0; }
-  /* In the sheet, at its top (moved there by app.js). */
-  .panel .tracked { position: static; flex: none; padding: 4px 14px 6px; pointer-events: auto; }
-  .panel .tracked .live { width: 100%; }
+  /* The tracking bar: in the sheet, above the tab bar (moved there by app.js). */
+  .panel .tracked { flex: none; order: 98; border-top: 0.5px solid var(--line); }
   .sheet-handle::after { width: 36px; height: 5px; border-radius: var(--r-xs); top: 7px; }
   /* Folded down on the home page, just the search field shows (a page keeps
    * its title in view). */
@@ -726,17 +706,6 @@ kbd {
 .country-page > .rr-sec { margin: 0; padding: 12px 0; border-top: 0.5px solid var(--line); }
 .country-page > .rr-sec > .section-title { margin: 0 0 8px; }
 
-/* ---------- Which train am I on? ----------
- * The guess sits with the tracked trains as one more island: a question,
- * how fast the rider is going, and a button to track it. */
-.tracked .live.guess { cursor: default; }
-.live .guess-go {
-  justify-self: start; margin-top: 2px; padding: 7px 14px; border: 0; border-radius: var(--r-pill, 999px);
-  background: #fff; color: #000; font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer;
-}
-.live .guess-go:hover { background: rgba(255, 255, 255, 0.86); }
-.live .guess-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
 /* ---------- Colorblind-friendly ----------
  * Settings, Appearance. Green, orange and red are hard to tell apart with
  * red-green colorblindness, so statuses take blue, orange and magenta
@@ -752,9 +721,6 @@ kbd {
 :root[data-colorblind] :is(.status, .pill, .status-t).warn::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 0.7em; }
 :root[data-colorblind] :is(.status, .pill, .status-t).bad::before { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); width: 0.72em; height: 0.72em; vertical-align: -0.02em; }
 /* The tracked cards are always dark, with their own status colors. */
-:root[data-colorblind] .la-where .status.good { color: #33bbee; }
-:root[data-colorblind] .la-where .status.warn { color: #ee7733; }
-:root[data-colorblind] .la-where .status.bad { color: #ee3377; }
 /* ---------- Elevators, track record ----------
  * Lists drawn like the station's amenities: an icon, then the text. */
 
@@ -1021,10 +987,6 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 }
 .ts-from select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
 
-/* "Were you on it?": a ride that ended, asked about before it goes to the rider's trips. */
-.live .ask-actions { display: flex; align-items: center; gap: 10px; }
-.live .ask-no { padding: 7px 12px; border: 0; border-radius: var(--r-pill, 999px); background: rgba(255, 255, 255, 0.16); color: inherit; font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
-.live .ask-no:hover { background: rgba(255, 255, 255, 0.26); }
 
 /* Likely delays: on the live card, under each stop ahead, and on the next trip. */
 .likely-note { margin: 8px 2px 0; font-size: var(--fs-sm); color: var(--muted); }
@@ -1220,7 +1182,6 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
   body.has-tabs .tab-settings { display: flex; margin-top: auto; padding: 10px 2px; }
   body.has-tabs .tab-settings[aria-expanded="true"] { background: var(--hover); color: var(--text); }
   body.has-tabs .panel { left: 86px; }
-  body.has-tabs .tracked { left: calc(86px + 372px + 12px); }
   body.has-tabs .maplibregl-ctrl-bottom-left { left: calc(86px + 372px + 4px); }
   body.has-tabs .search-row #settings-btn, body.has-tabs .page-gear { display: none; }
 }
@@ -1362,9 +1323,8 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
     transform: translateX(calc(-100% - 90px)); opacity: 0; visibility: hidden; pointer-events: none;
     transition: transform var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--t-mid) ease var(--t-fast), visibility 0s linear var(--t-slow);
   }
-  body.panel-away.has-tabs .tracked { left: calc(86px + 12px); }
   body.panel-away.has-tabs .maplibregl-ctrl-bottom-left { left: calc(86px + 4px); }
-  .tracked, .maplibregl-ctrl-bottom-left { transition: left var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1); }
+  .maplibregl-ctrl-bottom-left { transition: left var(--t-slow) cubic-bezier(0.32, 0.72, 0, 1); }
   /* No page is open: none of the rail's pages stands out. */
   body.panel-away.has-tabs .tab[aria-current="page"] { background: none; color: var(--muted); }
   body.panel-away.has-tabs .tab[aria-current="page"]:hover { background: var(--hover); color: var(--text); }

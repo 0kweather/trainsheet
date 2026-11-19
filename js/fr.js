@@ -244,6 +244,7 @@ export default {
   "Tracking": "Suivi en cours",
   "Tracking to {to}": "Suivi jusqu’à {to}",
   "Share this ride": "Partager ce trajet",
+  "Open {train}": "Ouvrir {train}",
   "I'm on {train}, arriving at {place} at {time}.": "Je suis dans le {train}, arrivée à {place} à {time}.",
   "I'm on {train}.": "Je suis dans le {train}.",
   "Following a shared ride to {place}.": "Suivi d’un trajet partagé jusqu’à {place}.",

@@ -119,12 +119,15 @@ const state = {
   routeDay: null,        // Browse's day for the trains from one station to another (YYYY-MM-DD; null for today)
 };
 const pastOpen = new Set(); // trains whose passed stops are unfolded
+const callouts = new Map(); // tracked train id -> its callout on the map (placeCallouts)
+let calloutLayer = null;
 let goingBack = false; // going back doesn't count as opening something (for Recents)
-let islandsShown = new Map(); // tracked train id -> when its island first showed
-let liveOpen = null;           // tracked train whose page fills the panel (syncLivePanel)
 // On phones the tracked trains sit at the top of the sheet, as they used to:
 // floating over the map, they'd cover the expanded sheet's top.
-if (matchMedia("(max-width: 720px)").matches) document.getElementById("panel")?.insertBefore(document.getElementById("tracked"), document.getElementById("view-list"));
+// The tracking bar sits at the panel's foot: in the sheet on a phone (above
+// the tab bar, by its order in the stylesheet), over the panel's foot on a
+// computer, where it stays when the panel is put away.
+if (matchMedia("(max-width: 720px)").matches) document.getElementById("panel")?.append(document.getElementById("tracked"));
 
 // ---------- Theme ----------
 
@@ -980,6 +983,7 @@ function featureCollection() {
 
 function redraw() {
   setFaded("trains", featureCollection());
+  moveCallouts(); // the tracked trains' callouts ride with them
 }
 
 // ---------- The selected train's route ----------
@@ -5062,7 +5066,7 @@ function startTracking(t, stopKey, { fromKey = null, riding = false, confirmed =
   state.tracked.push({
     id: t.id, agency: t.agency, number: t.number, route: t.route,
     stopKey: stop?.key || null, stopName: stop?.name || null,
-    eta: stop ? Date.parse(stop.time) : null, lastSeen: Date.now(),
+    eta: stop ? Date.parse(stop.time) : null, lastSeen: Date.now(), since: Date.now(),
     riding, confirmed,
     ...rideFrom(from && from !== stop ? from : null),
   });
@@ -5085,7 +5089,7 @@ const plannedTrip = (t) => account?.upcoming?.()?.find((r) => r.service_date ===
 const stopOfTrip = (t, key, name) => t.stops?.find((s) => s.key && ((key && s.key === key) || (name && fold(s.name) === fold(name)))) || null;
 
 // A ride reached its stop. Its location matched the train along the way:
-// it goes to the rider's trips. Otherwise they're asked (an island) first.
+// it goes to the rider's trips. Otherwise they're asked (in the tracking bar) first.
 // Trains only watched never do.
 function finishRide(rec, arrivedAt) {
   if (rec.riding === false || !account?.user) return;
@@ -5102,10 +5106,9 @@ function rideAskCards() {
   return state.rideAsks.map(({ rec }) => {
     const a = AGENCIES[rec.agency] || { color: "#888", short: "" };
     const leg = [rec.fromName, rec.stopName].filter(Boolean).join(" → ");
-    return `<div class="track-card live guess ask" style="--c:${a.color}" data-ride-ask="${esc(rec.id)}">
-      <div class="la-top">${plate(rec.number || a.short, a.color, "xs")}<span class="la-route">${esc(T("Were you on {train}?", { train: rec.route || trainLabel(rec) }))}</span></div>
-      ${leg ? `<div class="la-where">${esc(leg)}</div>` : ""}
-      <div class="ask-actions"><button type="button" class="guess-go" data-ask-yes>${T("Yes, add it to my trips")}</button><button type="button" class="ask-no" data-ask-no>${T("No")}</button></div>
+    return `<div class="tb-ask" style="--c:${a.color}" data-ride-ask="${esc(rec.id)}">
+      <div class="tb-ask-top">${plate(rec.number || a.short, a.color, "xs")}<span class="tb-main"><span class="tb-where">${esc(T("Were you on {train}?", { train: rec.route || trainLabel(rec) }))}</span>${leg ? `<span class="tb-sub">${esc(leg)}</span>` : ""}</span></div>
+      <div class="tb-ask-actions"><button type="button" class="btn primary small" data-ask-yes>${T("Yes, add it to my trips")}</button><button type="button" class="btn small" data-ask-no>${T("No")}</button></div>
     </div>`;
   }).join("");
 }
@@ -5228,7 +5231,7 @@ function renderTrackSheet() {
       ${ride}
       <div class="ts-list" role="radiogroup" aria-labelledby="ts-title">${rows}</div>
       <div class="ts-actions">
-        ${rec ? `<button type="button" class="btn small" data-sheet-untrack>${T("Stop tracking")}</button>` : ""}
+        ${rec ? `<button type="button" class="btn small" data-sheet-untrack>${T("Stop tracking")}</button><button type="button" class="btn small" data-sheet-share>${T("Share this ride")}</button>` : ""}
         <button type="button" class="btn primary" data-sheet-start>${T(rec ? "Done" : "Start tracking")}</button>
       </div>
     </div>`;
@@ -5267,6 +5270,7 @@ on("track-sheet", "click", (e) => {
     return renderTrackSheet();
   }
   if (e.target.closest("[data-sheet-start]")) return startFromSheet();
+  if (e.target.closest("[data-sheet-share]")) return shareRide(state.tracked.find((r) => r.id === state.trackSheet?.id));
   if (e.target.closest("[data-sheet-untrack]")) {
     const id = state.trackSheet?.id;
     closeTrackSheet();
@@ -5291,10 +5295,9 @@ function renderTracked() {
   const el = $("tracked");
   if (!el) return;
   const guess = rideGuessCard() + rideAskCards();
-  // The train whose page fills the panel has no island meanwhile (syncLivePanel).
-  const shown = state.tracked.filter((rec) => rec.id !== liveOpen);
-  el.hidden = !shown.length && !guess;
-  el.innerHTML = guess + shown.map((rec) => {
+  const open = !$("view-train").hidden && !isAway() ? state.selected : null;
+  el.hidden = !state.tracked.length && !guess;
+  el.innerHTML = guess + state.tracked.map((rec) => {
     const t = trackedTrain(rec);
     const a = AGENCIES[rec.agency] || { color: "#888", short: "" };
     let where = "", status = "", warn = "";
@@ -5302,61 +5305,49 @@ function renderTracked() {
       const chosen = rec.stopKey && t.stops?.find((s) => s.key === rec.stopKey);
       const next = !chosen && (t.stops?.find((s) => s.status === "next") || t.stops?.find((s) => s.status === "future"));
       const stop = chosen || next;
-      if (stop) {
-        // How long until a chosen stop is the card's large countdown (below),
-        // so the line under it doesn't say it again.
-        const time = Date.parse(stop.time);
-        where = `${chosen ? "" : `${T("Next:")} `}<strong>${esc(stop.name)}</strong>${time ? ` · ${fmtTime(stop.time, stop.tz)}${chosen ? "" : ` · ${fmtIn(time) === T("now") ? T("now") : T("in {time}", { time: fmtIn(time) })}`}` : ""}`;
-      } else if (t.nextStop) {
-        where = `${T("Next:")} <strong>${esc(t.nextStop)}</strong>`;
-      } else if (t.destination) {
-        where = `${T("to")} <strong>${esc(t.destination)}</strong>`;
-      }
+      if (stop) where = `${chosen ? "" : `${T("Next:")} `}${esc(stop.name)}`;
+      else if (t.nextStop) where = `${T("Next:")} ${esc(t.nextStop)}`;
+      else if (t.destination) where = `${T("to")} ${esc(t.destination)}`;
       const late = lateText(t.delayMin);
       if (late.text) status = `<span class="status ${late.cls}${t.inferred ? " inferred" : ""}"${t.inferred ? ` title="${INFERRED_TITLE}"` : ""}>${late.text}</span>`;
-      const end = (rec.stopKey && t.stops?.find((s) => s.key === rec.stopKey)) || t.stops?.[t.stops.length - 1];
-      const guess = end && likelyDelays(t)?.get(end.key);
-      if (guess && !guess.usual) status += `${status ? " · " : ""}<span class="status ${lateText(guess.min).cls}">${esc(likelyText(guess.min))}</span>`;
-      if (Date.now() - t.updated > STALE_MS && !t.estimated) warn = `<span class="stale">⚠ ${T("Position {ago}", { ago: fmtAgo(t.updated) })}</span>`;
+      const end = endStop(t, rec);
+      const likely = end && likelyDelays(t)?.get(end.key);
+      if (likely && !likely.usual) status += `${status ? " · " : ""}<span class="status ${lateText(likely.min).cls}">${esc(likelyText(likely.min))}</span>`;
+      if (Date.now() - t.updated > STALE_MS && !t.estimated) warn = `<span class="stale">${T("Position {ago}", { ago: fmtAgo(t.updated) })}</span>`;
     } else {
-      where = rec.stopName ? `${T("to")} <strong>${esc(rec.stopName)}</strong>` : "";
+      where = rec.stopName ? `${T("to")} ${esc(rec.stopName)}` : esc(rec.route || "");
       warn = `<span class="stale">${T("Not reporting · last seen {ago}", { ago: fmtAgo(rec.lastSeen) })}</span>`;
     }
-    // Live Activity: a countdown to the stop it's tracked to.
-    let eta = "";
-    if (t?.stops?.length) {
-      const dest = (rec.stopKey && t.stops.find((s) => s.key === rec.stopKey)) || t.stops[t.stops.length - 1];
-      const end = Date.parse(dest.time);
-      const min = end ? Math.round((end - Date.now()) / 60000) : null;
-      if (min != null) eta = min <= 0 ? T("Now") : min < 60 ? `${min}<small>min</small>` : `${Math.floor(min / 60)}<small>h</small> ${min % 60}<small>m</small>`;
-    }
-    const color = t?.routeColor || a.color;
-    return `<div class="track-card live" style="--c:${color}" role="button" tabindex="0" data-track-open="${esc(rec.id)}">
-      <div class="la-top">${plate(rec.number || a.short, a.color, "xs")}<span class="la-route">${esc(rec.route || AGENCIES[rec.agency]?.name || "")}</span>${eta ? `<span class="la-eta">${eta}</span>` : ""}
-        <button class="tc-x tc-share" data-share-ride="${esc(rec.id)}" aria-label="${T("Share this ride")}" title="${T("Share this ride")}">${SHARE_ICON}</button>
-        <button class="tc-x" data-untrack="${esc(rec.id)}" aria-label="${esc(T("Stop tracking {train}", { train: trainLabel(rec) }))}" title="${T("Stop tracking")}">×</button></div>
-      ${where || status || warn ? `<div class="la-where">${[where, status, warn].filter(Boolean).join(" · ")}</div>` : ""}
+    const left = trackedLeft(rec, t);
+    const sub = [status, warn].filter(Boolean).join(" · ") || esc(rec.route || AGENCIES[rec.agency]?.name || "");
+    return `<div class="tb-row" style="--c:${t?.routeColor || a.color}" role="button" tabindex="0" data-track-open="${esc(rec.id)}"${rec.id === open ? ' aria-current="true"' : ""}>
+      ${plate(rec.number || a.short, a.color, "xs")}
+      <span class="tb-main"><span class="tb-where">${where || esc(trainLabel(rec))}</span><span class="tb-sub">${sub}</span></span>
+      ${left.eta ? `<span class="tb-eta">${left.eta}</span>` : ""}
+      <button type="button" class="tc-x" data-untrack="${esc(rec.id)}" aria-label="${esc(T("Stop tracking {train}", { train: trainLabel(rec) }))}" title="${T("Stop tracking")}">×</button>
+      ${left.done == null ? "" : `<span class="tb-progress" aria-hidden="true"><span style="width:${(left.done * 100).toFixed(1)}%"></span></span>`}
     </div>`;
   }).join("");
-  // A train just tracked grows out of a pill, like the Dynamic Island. A
-  // redraw midway picks the animation up where it was.
-  const now = Date.now();
-  const keyOf = (card) => card.dataset.trackOpen || (card.dataset.rideAsk ? `ask:${card.dataset.rideAsk}` : `guess:${card.dataset.rideGuess}`);
-  for (const card of el.children) {
-    const since = now - (islandsShown.get(keyOf(card)) ?? now);
-    if (since < 600) {
-      card.classList.add("enter");
-      card.style.setProperty("--enter-at", `${-since}ms`);
-    }
-  }
-  islandsShown = new Map([...el.children].map((card) => [keyOf(card), islandsShown.get(keyOf(card)) ?? now]));
-  // On phones, keep the cards visible when the sheet is collapsed.
-  document.documentElement.style.setProperty("--tracked-h", `${el.hidden || !isPhone ? 0 : el.offsetHeight}px`);
+  // The panel (and a phone's folded sheet) makes room for it (design.css).
+  document.documentElement.style.setProperty("--tracked-h", `${el.hidden ? 0 : el.offsetHeight}px`);
+  placeCallouts();
+}
+// How long until a tracked train reaches the stop it's tracked to (its last
+// stop otherwise), as the bar and its callout on the map show it, and how
+// much of the way there it is: from the rider's own stop's departure, or
+// from when tracking began.
+function trackedLeft(rec, t = trackedTrain(rec)) {
+  const end = t && endStop(t, rec), at = end ? Date.parse(end.time) : NaN;
+  if (!Number.isFinite(at)) return { eta: "", min: null, done: null };
+  const min = Math.round((at - Date.now()) / 60000);
+  const eta = min <= 0 ? T("Now") : min < 60 ? `${min}<small>min</small>` : `${Math.floor(min / 60)}<small>h</small> ${min % 60}<small>m</small>`;
+  const from = rec.departAt || rec.since;
+  const done = from && at > from ? Math.max(0.03, Math.min(1, (Date.now() - from) / (at - from))) : null;
+  return { eta, min, done };
 }
 
 // Share a tracked ride: a link that, opened, tracks the same train to the
 // same stop (from the same one), with a line saying where it's going.
-const SHARE_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 3.5v11M8 7.5l4-4 4 4M7 11H6a1.5 1.5 0 0 0-1.5 1.5v6A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 18 11h-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 async function shareRide(rec) {
   if (!rec) return;
   const q = new URLSearchParams({ train: rec.id, ride: "1" });
@@ -5445,7 +5436,7 @@ function trainHere(fix, speed, heading) {
   }
   return best?.t || null;
 }
-// The guess, as an island over the tracked trains: track it, or say no.
+// The guess, as a row of the tracking bar over the tracked trains: track it, or say no.
 function rideGuessCard() {
   const g = state.rideGuess, t = g && state.trains.get(g.id);
   if (!t || Date.now() - g.at > RIDE_GUESS_MS || state.tracked.some((r) => r.id === t.id)) {
@@ -5455,11 +5446,11 @@ function rideGuessCard() {
   const a = AGENCIES[t.agency], km = unitsOf(t.agency) === "km";
   const speed = `${Math.round(km ? g.mph * KM_PER_MI : g.mph)} ${km ? "km/h" : T("mph")}`;
   const next = t.stops?.find((s) => s.status === "next")?.name || t.nextStop;
-  return `<div class="track-card live guess" style="--c:${t.routeColor || a.color}" data-ride-guess="${esc(t.id)}">
-      <div class="la-top">${plate(t.number || a.short, a.color, "xs")}<span class="la-route">${esc(T("Are you on this train?"))}</span>
+  return `<div class="tb-ask" style="--c:${t.routeColor || a.color}" data-ride-guess="${esc(t.id)}">
+      <div class="tb-ask-top">${plate(t.number || a.short, a.color, "xs")}<span class="tb-main"><span class="tb-where">${esc(T("Are you on this train?"))}</span>
+        <span class="tb-sub">${esc(T("Moving with you at {speed}", { speed }))}${next ? ` · ${T("Next:")} ${esc(next)}` : ""}</span></span>
         <button class="tc-x" data-ride-no aria-label="${T("Not this train")}" title="${T("Not this train")}">×</button></div>
-      <div class="la-where">${esc(T("Moving with you at {speed}", { speed }))}${next ? ` · ${T("Next:")} <strong>${esc(next)}</strong>` : ""}</div>
-      <button type="button" class="guess-go" data-ride-yes>${T("Track this ride")}</button>
+      <div class="tb-ask-actions"><button type="button" class="btn primary small" data-ride-yes>${T("Track this ride")}</button></div>
     </div>`;
 }
 function answerRideGuess(id, answer) {
@@ -5475,58 +5466,115 @@ function answerRideGuess(id, answer) {
   openTrackSheet(t, { riding: true, confirmed: true }); // found by the rider's own location
 }
 
-// A tracked train's island opens its page: the island grows to fill the
-// panel, which takes the island's black while it shows that train.
-function openTracked(id) {
-  const t = state.trains.get(id);
-  if (!t) return toast(T("That train isn't reporting right now."));
-  const card = $("tracked")?.querySelector(`[data-track-open="${CSS.escape(id)}"]`);
-  const from = card?.getBoundingClientRect();
-  select(id);
-  if (from && liveOpen === id) growIsland(card, from);
+// ---------- A tracked train's callout on the map ----------
+// Each tracked train that's reporting carries a small callout on the map:
+// its plate, how long until the stop it's tracked to, and its delay when
+// it has one. It rides with the train (moveCallouts, at every redraw and
+// every move of the map) and, when the train is off screen or behind the
+// panel, waits at the edge of the map toward it with an arrow. It stands in
+// for the train's plate, which the map leaves out (applySelectionFilter).
+// A click opens the train, which brings the map to it.
+function placeCallouts() {
+  if (!calloutLayer) {
+    calloutLayer = document.createElement("div");
+    calloutLayer.className = "tk-callouts";
+    calloutLayer.addEventListener("click", (e) => {
+      const c = e.target.closest("[data-callout]");
+      if (c) openTracked(c.dataset.callout);
+    });
+    map.getContainer().append(calloutLayer);
+  }
+  const live = new Set();
+  for (const rec of state.tracked) {
+    const t = trackedTrain(rec);
+    if (!t || !Number.isFinite(targetOf(t)?.lat)) continue;
+    live.add(rec.id);
+    let el = callouts.get(rec.id);
+    if (!el) {
+      el = document.createElement("button");
+      el.type = "button";
+      el.className = "tk-callout";
+      el.dataset.callout = rec.id;
+      calloutLayer.append(el);
+      callouts.set(rec.id, el);
+    }
+    const a = AGENCIES[rec.agency], left = trackedLeft(rec, t), late = lateText(t.delayMin);
+    const html = `<svg class="tk-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 6h7M6 2.5 9.5 6 6 9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ${plate(rec.number || a.short, a.color, "xs")}${left.eta ? `<span class="tk-eta">${left.eta}</span>` : ""}
+      ${late.text && late.cls !== "good" ? `<span class="tk-late status ${late.cls}">${late.text}</span>` : ""}`;
+    if (el.dataset.html !== html) {
+      el.dataset.html = html;
+      el.innerHTML = html;
+      delete el.dataset.w; // measured again (moveCallouts)
+      delete el.dataset.we;
+      delete el.dataset.h;
+    }
+    el.setAttribute("aria-label", T("Open {train}", { train: trainLabel(rec) }));
+  }
+  for (const [id, el] of callouts) {
+    if (live.has(id)) continue;
+    el.remove();
+    callouts.delete(id);
+  }
+  moveCallouts();
 }
-
-// The panel shows a tracked train's page (and is out): it's that train's
-// island grown to fill it, so the panel turns the island's color and the
-// island steps aside until the page closes, when it comes back.
-function syncLivePanel() {
-  const panel = $("panel"), view = $("view-train");
-  if (!panel || !view) return;
-  const id = !view.hidden && !panelAway && state.selected && !state.railroad && !state.station
-    && state.tracked.some((r) => r.id === state.selected) ? state.selected : null;
-  panel.classList.toggle("live-panel", !!id);
-  if (id !== liveOpen) {
-    liveOpen = id;
-    renderTracked();
+function moveCallouts() {
+  if (!callouts.size) return;
+  const box = map.getContainer(), W = box.clientWidth, H = box.clientHeight, pad = panelPadding();
+  // The part of the map the panel (or a phone's sheet) leaves free.
+  const L = (pad.left || 0) + 10, T0 = (pad.top || 0) + 10, R = W - 10, B = H - (pad.bottom || 0) - 10;
+  const c = map.getCenter(), rad = Math.PI / 180;
+  for (const [id, el] of callouts) {
+    const t = state.trains.get(id), pos = t && (state.display.get(id) || targetOf(t));
+    // No room to show it in (a phone's sheet all the way up).
+    if (!pos || B - T0 < 90 || R - L < 120) { el.hidden = true; continue; }
+    el.hidden = false;
+    if (!el.dataset.h) el.dataset.h = el.offsetHeight;
+    const h = +el.dataset.h;
+    let { x, y } = map.project([pos.lon, pos.lat]);
+    // Round the back of the globe, a point projects anywhere: head for it
+    // the way the great circle to it leaves the middle of the map.
+    const dl = (pos.lon - c.lng) * rad, cos = Math.sin(c.lat * rad) * Math.sin(pos.lat * rad) + Math.cos(c.lat * rad) * Math.cos(pos.lat * rad) * Math.cos(dl);
+    if (cos < 0.2) {
+      const bx = Math.sin(dl) * Math.cos(pos.lat * rad), by = Math.cos(c.lat * rad) * Math.sin(pos.lat * rad) - Math.sin(c.lat * rad) * Math.cos(pos.lat * rad) * Math.cos(dl);
+      const k = (W + H) / (Math.hypot(bx, by) || 1);
+      x = (L + R) / 2 + bx * k;
+      y = (T0 + B) / 2 - by * k;
+    }
+    const on = x >= L && x <= R && y >= T0 + h + 14 && y <= B;
+    el.classList.toggle("edge", !on);
+    // (Its width with the arrow and without, each measured once.)
+    const key = on ? "w" : "we";
+    if (!el.dataset[key]) el.dataset[key] = el.offsetWidth;
+    const w = +el.dataset[key];
+    let left, top;
+    if (on) {
+      // Over the train, kept inside the map.
+      left = Math.min(R - w, Math.max(L, x - w / 2));
+      top = y - h - 16;
+      el.style.setProperty("--tip", `${Math.min(w - 12, Math.max(12, x - left))}px`);
+    } else {
+      // At the edge toward it, its arrow pointing the way.
+      const cx = (L + R) / 2, cy = (T0 + B) / 2;
+      left = Math.min(R - w, Math.max(L, x - w / 2));
+      top = Math.min(B - h, Math.max(T0, y - h / 2));
+      el.style.setProperty("--turn", `${Math.atan2(y - cy, x - cx)}rad`);
+    }
+    el.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
   }
 }
+map.on("move", moveCallouts);
+map.on("resize", moveCallouts);
 
-// The island, drawn again over itself, grows into the panel's place and
-// fades away there, uncovering the panel. Measured without transforms, so a
-// panel still sliding in (or a sheet still rising) is met where it ends up.
-function growIsland(card, from) {
-  const panel = $("panel");
-  if (!panel || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const to = { left: panel.offsetLeft, top: panel.offsetTop, width: panel.offsetWidth, height: panel.offsetHeight };
-  if (!to.width || !to.height) return;
-  const ghost = card.cloneNode(true);
-  ghost.removeAttribute("data-track-open");
-  ghost.removeAttribute("role");
-  ghost.removeAttribute("tabindex");
-  ghost.setAttribute("aria-hidden", "true");
-  ghost.inert = true;
-  ghost.classList.remove("enter");
-  ghost.classList.add("island-ghost");
-  Object.assign(ghost.style, { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px` });
-  document.body.append(ghost);
-  const radius = getComputedStyle(panel).borderTopLeftRadius;
-  const grow = ghost.animate([
-    { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, borderRadius: "26px" },
-    { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px`, borderRadius: radius },
-  ], { duration: 420, easing: "cubic-bezier(0.32, 0.72, 0, 1)", fill: "forwards" });
-  for (const child of ghost.children) child.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: "forwards" });
-  grow.finished.then(() => ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished)
-    .finally(() => ghost.remove());
+// The bar's row opens its train's page (already open, it stays).
+function openTracked(id) {
+  if (!state.trains.get(id)) return toast(T("That train isn't reporting right now."));
+  if (state.selected !== id || isAway()) select(id);
+}
+// The bar marks the train whose page is open; the page itself looks like
+// any other train's. (It once turned black, as the card it grew from was.)
+function syncLivePanel() {
+  renderTracked();
 }
 
 setInterval(() => {
@@ -5563,7 +5611,9 @@ function applySelectionFilter() {
   redraw(); // the selected train alone while one is open (visible())
   redrawRoute();
   map.setLayoutProperty("tt-labels", "text-variable-anchor-offset", plateOffset(selected));
-  map.setFilter("tt-labels", state.labels === "none" ? highlighted : ["any", highlighted, ["all", [">=", ["zoom"], 8], [">=", ["zoom"], ["get", "z"]]]]);
+  // (A tracked train's plate is in its callout: not drawn here as well.)
+  const called = ["!", ["in", ["get", "id"], ["literal", state.tracked.map((r) => r.id)]]];
+  map.setFilter("tt-labels", ["all", called, state.labels === "none" ? highlighted : ["any", highlighted, ["all", [">=", ["zoom"], 8], [">=", ["zoom"], ["get", "z"]]]]]);
   map.setLayoutProperty("tt-labels", "symbol-sort-key", ["case", highlighted, -1, ["get", "labelOrder"]]);
   for (const l of ["tt-station-ping", "tt-station-shadow", "tt-station-selected", "tt-footprint-selected"]) {
     map.setFilter(l, ["==", ["get", "id"], sid]);
@@ -5834,8 +5884,7 @@ function closeDetailTo() {
 }
 
 function panelPadding() {
-  // Clear of the tracked trains' islands across the top of the map, too.
-  const islands = $("tracked"), top = islands && !islands.hidden && !isPhone ? islands.getBoundingClientRect().bottom : 0;
+  const top = 0;
   if (isPhone) {
     // Clear of the sheet, at the detent it's at (or headed for).
     return { bottom: sheetHeights()[sheetMode()], top: 0, left: 0, right: 0 };
@@ -6015,8 +6064,6 @@ on("tracked", "click", (e) => {
   }
   const guess = e.target.closest("[data-ride-guess]");
   if (guess) return answerRideGuess(guess.dataset.rideGuess, e.target.closest("[data-ride-no]") ? "no" : e.target.closest("[data-ride-yes]") ? "yes" : "open");
-  const share = e.target.closest("[data-share-ride]");
-  if (share) return shareRide(state.tracked.find((r) => r.id === share.dataset.shareRide));
   const x = e.target.closest("[data-untrack]");
   if (x) return untrack(x.dataset.untrack);
   const card = e.target.closest("[data-track-open]");
@@ -6942,6 +6989,8 @@ phoneQuery.addEventListener("change", (e) => {
     if (isPhone) panel.append(bar);
     else panel.before(bar);
   }
+  if (isPhone) panel.append($("tracked")); // the tracking bar: in the sheet, or over the panel's foot
+  else panel.before($("tracked"));
   toggleMenu(false);
   panelAway = false;
   document.body.classList.remove("panel-away");

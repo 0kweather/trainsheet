@@ -225,39 +225,6 @@ a { color: var(--accent); }
 
 /* ---------- Tracked trains ---------- */
 
-.tracked {
-  flex: none;
-  display: grid;
-  gap: var(--s2);
-  padding: var(--s3) var(--s3) var(--s1);
-}
-
-.tracked[hidden] { display: none; }
-
-.track-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: 4px 1fr auto;
-  gap: var(--s3);
-  align-items: center;
-  padding: var(--s2) var(--s1) var(--s2) 0;
-  border-radius: var(--r-md);
-  background: var(--panel-solid);
-  border: 1px solid var(--line);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.track-card:hover, .track-card:focus-visible { border-color: var(--c); outline: none; }
-.track-card .bar { align-self: stretch; background: var(--c); border-radius: 0 var(--r-xs) var(--r-xs) 0; }
-.tc-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: var(--fs-xs); }
-.tc-title { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-sm); font-weight: 600; min-width: 0; padding: 2px 0 2px 2px; }
-.tc-title > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tc-where { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tc-status { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; }
-.tc-status .stale { color: var(--warn); font-weight: 600; }
-
 .tc-x {
   border: 0;
   background: transparent;
