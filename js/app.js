@@ -2263,10 +2263,18 @@ let openCountry = null; // "*" while the list shows every railroad, a country's 
 function setOpenCountry(value) {
   openCountry = value;
   const country = value && value !== "*" ? value : null;
+  // A country's page is a page like a railroad's: no search field over it
+  // (design.css).
+  $("view-list").toggleAttribute("data-country-page", Boolean(country));
+  renderRecents(); // the recents are the home list's alone
   if (country === shownCountry) return;
   shownCountry = country;
   redraw();
 }
+// A list page's Back (every railroad, a country): the same button in the
+// same place as a detail page's (index.html's #back-btn), in a row a phone's
+// sheet can be dragged by.
+const listBack = (label) => `<div class="page-top"><button type="button" class="back" data-country-back><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg><span>${esc(label)}</span></button></div>`;
 let countryFrom = null; // where a country's page goes back to: "*" (every railroad) or null (home)
 
 // A railroad's region where it says more than its country ("New York", not
@@ -2342,7 +2350,7 @@ function allRailroadsHtml() {
   const home = ((navigator.language || "").match(/-([a-z]{2})\b/i)?.[1] || "US").toUpperCase();
   const order = [...countries.keys()].sort((x, y) => (y === home) - (x === home) || byName(countryName(x), countryName(y)));
   const anyOff = order.some((c) => countries.get(c).off);
-  return `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${T(accountsOn() ? "Browse" : "Home")}</button>` +
+  return `${listBack(T(accountsOn() ? "Browse" : "Home"))}` +
     `<div class="group-title country-title">${T("All railroads")}</div>` +
     order.map((c) => {
       const g = countries.get(c);
@@ -2363,6 +2371,14 @@ function openCountryPage(country) {
   if (accountsOn() && state.tab !== "browse") setTab("browse");
   else putPanelAway(false);
   if (openCountry !== country) countryFrom = openCountry === "*" ? "*" : countryFrom && openCountry ? countryFrom : null;
+  // Its page has no search field: a search under way ends here (its results
+  // would otherwise stay in the page's place, with nothing to clear them).
+  if (state.query || filtersOn()) {
+    $("search").value = "";
+    state.query = "";
+    state.filters = { kind: "", country: "", region: "", agency: "" };
+    renderResults();
+  }
   setOpenCountry(country);
   renderAgencies();
   renderRecents();
@@ -2382,7 +2398,7 @@ function countryPageHtml(country) {
   const stations = [...state.stations.values()].filter((st) => st.agencies.some((a) => mine.has(a)));
   const hero = `<div class="hero"><h2>${esc(countryName(country))}</h2></div>`;
   const tiles = `<div class="rr-stats">
-      ${statTile(running != null ? running.toLocaleString(lang) : est != null ? `~${est.toLocaleString(lang)}` : "—", T("running"))}
+      ${statTile(running != null ? running.toLocaleString(lang) : est != null ? `~${est.toLocaleString(lang)}` : "—", T("trains running"))}
       ${statTile(ids.length, T("railroads"))}
       ${statTile(stations.length ? stations.length.toLocaleString(lang) : "—", T("stations"))}
     </div>`;
@@ -2423,11 +2439,11 @@ function countryPageHtml(country) {
       <div class="hours"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>`;
   }
   const back = countryFrom === "*" ? T("All railroads") : T(accountsOn() ? "Browse" : "Home");
-  return `<button type="button" class="country-back" data-country-back><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m14.7 5.3 1.4 1.4L10.8 12l5.3 5.3-1.4 1.4L8 12z"/></svg>${esc(back)}</button>
+  return `${listBack(back)}
     <div class="country-page">${hero}${tiles}
-      ${plainSection(T("Railroads"), ids.length, `<ul class="rr-lines">${rows}</ul>`)}
-      ${busiest ? plainSection(T("Busiest stations"), null, `<ul class="rr-lines">${busiest}</ul>`) : ""}
-      ${chart ? plainSection(T("Trains through the day"), null, chart) : ""}
+      ${rrSection("country-railroads", T("Railroads"), ids.length, `<ul class="rr-lines">${rows}</ul>`)}
+      ${busiest ? rrSection("country-stations", T("Busiest stations"), null, `<ul class="rr-lines">${busiest}</ul>`) : ""}
+      ${chart ? rrSection("country-day", T("Trains through the day"), null, chart) : ""}
     </div>`;
 }
 // A country's trains on the map now, once any of its feeds has answered
@@ -3111,8 +3127,9 @@ function renderRecents() {
   const el = $("recents");
   const shown = state.recents.filter((r) => AGENCIES[r.agency] && (r.kind !== "train" ? true : state.trains.has(r.id))
     && (r.kind !== "station" || state.stations.has(r.id))).slice(0, MAX_RECENTS);
-  // A country's page is a page of its own: no chips over it.
-  el.hidden = !shown.length || Boolean(openCountry && openCountry !== "*");
+  // A country's page, or every railroad's, is a page of its own: no chips
+  // over it (they sat between the search field and its Back).
+  el.hidden = !shown.length || Boolean(openCountry);
   if (el.hidden) return;
   setPane(el, `<div class="recents-head"><span class="group-title">${T("Recent")}</span><button type="button" class="link-btn" data-recents-clear>${T("Clear")}</button></div>
     <div class="recents-row">${shown.map((r) => {
@@ -4235,7 +4252,7 @@ function renderStation() {
     const open = state.servedOpen.has(m.agency);
     const sub = [m.daily ? Tn(m.daily, "{n} train a weekday", "{n} trains a weekday") : a.kind === "intercity" ? T("Intercity trains") : "",
       lines.length ? Tn(lines.length, "{n} line", "{n} lines") : ""].filter(Boolean).join(" · ");
-    const name = `<span class="dot" style="background:${a.color}"></span><span><strong>${esc(a.name)}</strong>${sub || out ? `<br><span class="sub">${out ? `<span class="sb-out">${T("No trains right now")}</span>${sub ? " · " : ""}` : ""}${esc(sub)}</span>` : ""}</span>`;
+    const name = `<span class="country-swatch" style="background:${a.color}"></span><span><strong>${esc(a.name)}</strong>${sub || out ? `<br><span class="sub">${out ? `<span class="sb-out">${T("No trains right now")}</span>${sub ? " · " : ""}` : ""}${esc(sub)}</span>` : ""}</span>`;
     return `<li class="sb${open ? " open" : ""}">
       <div class="sb-row">
         ${lines.length
@@ -4712,12 +4729,6 @@ function rrSection(key, title, count, body) {
 }
 
 // A section that always stays open: its heading and count, then its body.
-function plainSection(title, count, body) {
-  return `<section class="rr-sec">
-    <h3 class="section-title">${esc(title)}${count == null ? "" : ` <span class="rr-count">${count}</span>`}</h3>
-    ${body}
-  </section>`;
-}
 
 // A stand-in train for a line's typical consist (or, given one car's number,
 // the consist that car runs in), so its cars draw and open model pages like
@@ -4862,7 +4873,7 @@ function renderRailroad() {
   renderParts(el, `railroad:${id}`, [hero,
     !trains.length && avail.ok && status?.status === "ok" ? quietCard(id) : "",
     trainStats(trains, loading),
-    lineList.length > 1 ? plainSection(T("Lines"), lineList.length,
+    lineList.length > 1 ? rrSection("lines", T("Lines"), lineList.length,
       `<ul class="rr-lines">${lineList.map((l) => `<li><button type="button" class="rr-line" data-line="${esc(l.name)}"><span class="served-name">${lineMark(id, l.name)}<span>${esc(l.name)}</span></span><span class="sub">${l.running ? T("{n} running", { n: l.running }) : loading ? "" : T("none running")} ›</span></button></li>`).join("")}</ul>`) : "",
     fleet.count ? rrSection("fleet", T("Fleet"), fleet.count, `<p class="rr-hint">${T("Choose one to read about it.")}</p><div class="rr-cars">${fleet.html}</div>`) : "",
     src ? `<p class="estimate-note">${T("Data:")} ${creditHtml(creditOf(src, avail.timetable))}</p>` : ""]);
@@ -5784,7 +5795,9 @@ function backLabel() {
     const p = trail[i], t = p.train && state.trains.get(p.train), st = p.station && state.stations.get(p.station);
     if (t) return t.number ? T("Train {n}", { n: t.number }) : trainTitle(t);
     if (st) return st.name;
-    if (p.railroad && AGENCIES[p.railroad]) return p.line || AGENCIES[p.railroad].short;
+    // (Its name in full, cut short if long: Trenitalia Regionale's short
+    // name is "Regionale", which is also its busiest line's.)
+    if (p.railroad && AGENCIES[p.railroad]) return p.line || AGENCIES[p.railroad].name;
   }
   if (accountsOn() && state.tab === "trips") return T("My trips");
   if (accountsOn() && state.tab === "history") return T("History");
@@ -6322,10 +6335,18 @@ on("agencies", "click", (e) => {
     setOpenCountry("*");
     renderAgencies();
     $("agencies").scrollTop = 0;
-    return $("agencies").querySelector(".country-back")?.scrollIntoView({ block: "nearest" });
+    return $("agencies").querySelector(".page-top")?.scrollIntoView({ block: "nearest" });
   }
   const country = e.target.closest("[data-country]");
   if (country) return pickCountry(country.dataset.country, { page: true });
+  // A country page's sections fold as a railroad's do.
+  const section = e.target.closest("[data-rr-section]");
+  if (section) {
+    const key = section.dataset.rrSection;
+    state.rrCollapsed.has(key) ? state.rrCollapsed.delete(key) : state.rrCollapsed.add(key);
+    store.set("tt-rr-collapsed", [...state.rrCollapsed]);
+    return renderAgencies();
+  }
   if (e.target.closest("[data-country-back]")) {
     // Out of a picked country's page: out of the country.
     if (openCountry && openCountry !== "*") return ovFocus ? leaveCountry() : closeCountryPage();
@@ -6533,6 +6554,7 @@ document.addEventListener("keydown", (e) => {
     case "/":
       e.preventDefault();
       if (state.selected || state.station || state.railroad) goHome();
+      if (openCountry && openCountry !== "*") closeCountryPage(); // its page has no search field
       putPanelAway(false);
       if (state.tab !== "browse") setTab("browse");
       if (isPhone) setSheet("expanded");
@@ -6634,7 +6656,7 @@ let sheetDragged = false;
   const panel = $("panel");
   let drag = null;
   panel?.addEventListener("pointerdown", (e) => {
-    if (!isPhone || e.button > 0 || !e.target.closest(".sheet-handle, .search-row, .detail-top, .page-head")) return;
+    if (!isPhone || e.button > 0 || !e.target.closest(".sheet-handle, .search-row, .detail-top, .page-head, .page-top")) return;
     if (e.target.closest("input, select, textarea")) return;
     drag = { y: e.clientY, id: e.pointerId, h: panel.getBoundingClientRect().height, moving: false, samples: [] };
     sheetDragged = false;
