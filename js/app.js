@@ -1466,7 +1466,9 @@ function loadRail() {
 // instead (js/overview.js), its track, stations and trains put away. A
 // country loads once it's picked: its pin tapped (which opens its page, see
 // countryPageHtml), or the map centered on it from OV_PICK_ZOOM in; while
-// one is picked, centering on another picks that one. From OV_VIEW_ZOOM in,
+// one is picked, centering on another (or tapping its dot) picks that one,
+// its docked pin brings its page back, and zooming out past it goes back
+// to the pins. From OV_VIEW_ZOOM in,
 // regions load as the map shows them, and a railroad's page or an open or
 // tracked train loads its own wherever the map is.
 const OV_PICK_ZOOM = 6, OV_VIEW_ZOOM = 8, OV_OUT_ZOOM = 4;
@@ -1497,11 +1499,12 @@ function setFocus(country) {
   trackWatch?.check();
   regionData?.then((m) => m?.recheck());
   wakeSources();
-  // An open country page follows the map to the country it's centered on.
+  // An open country page follows the map to the country it's centered on,
+  // and closes as the map zooms out past it to the pins.
   if (country && openCountry && openCountry !== "*" && openCountry !== country) {
     openCountry = country;
     renderAgencies();
-  }
+  } else if (!country && openCountry && openCountry !== "*") closeCountryPage();
 }
 // The map's track, stations and trains, put away while the pins are up
 // (the open and tracked trains stay).
@@ -1526,7 +1529,7 @@ function overviewMoved() {
     applyOverview();
     redraw();
   }
-  ov.update({ shown: hide, focus: ovFocus });
+  ov.update({ shown: hide, focus: ovFocus, dots: z < OV_VIEW_ZOOM });
 }
 function startOverview() {
   ovLoading ??= import("./overview.js?v=dev").then(({ overview }) => {
@@ -1534,10 +1537,17 @@ function startOverview() {
       map, agencies: AGENCIES, T, lang, pad: panelPadding,
       name: countryName,
       railroads: railroadsOf,
+      // Its trains on the map, as its page counts them, once a feed of it has answered.
+      running: (country) => {
+        const ids = new Set(railroadsOf(country));
+        if (!SOURCES.some((src) => src.agencies.some((a) => ids.has(a)) && state.sourceStatus[src.id]?.at)) return null;
+        const counts = agencyCounts();
+        return [...ids].reduce((n, id) => n + (counts[id] || 0), 0);
+      },
       railroadCount: (n) => Tn(n, "{n} railroad", "{n} railroads"),
       live: countryLive,
       onPick: (country) => pickCountry(country, { page: true }),
-      onBack: leaveCountry,
+      onDock: openCountryPage, // its page back, from its docked pin
     });
     return ov.ready.then(overviewMoved);
   }).catch((err) => console.warn("overview", err));
@@ -1568,20 +1578,6 @@ function pickCountry(country, { page = false } = {}) {
     ovPicking = false;
     overviewMoved();
   });
-}
-// Back to the pins: those near the country left, framed.
-function leaveCountry() {
-  const from = ovFocus && ov?.pin(ovFocus);
-  setFocus(null);
-  if (openCountry && openCountry !== "*") closeCountryPage();
-  if (!from) return;
-  const b = new maplibregl.LngLatBounds(from, from);
-  for (const c of ov.countries()) {
-    const p = ov.pin(c);
-    if (meters({ lon: from[0], lat: from[1] }, { lon: p[0], lat: p[1] }) < 3500e3) b.extend(p);
-  }
-  map.stop();
-  map.fitBounds(b, { padding: { top: 80, right: 80, bottom: 60, left: 80 }, maxZoom: OV_PICK_ZOOM - 1.5, duration: 900 });
 }
 map.on("moveend", overviewMoved);
 map.once("load", overviewMoved); // the opening view
@@ -5349,6 +5345,7 @@ setInterval(() => {
 }, 30000);
 
 function renderAll() {
+  ov?.dockPin(); // its count, as the page's
   renderTracked();
   renderAgencies();
   renderResults();

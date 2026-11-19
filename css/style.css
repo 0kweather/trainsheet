@@ -1123,27 +1123,37 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .country-day .now { fill: var(--accent); stroke: var(--panel-solid); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .country-day .hours { display: flex; justify-content: space-between; margin-top: 4px; color: var(--faint); font-size: 11px; }
 
-/* Back to the overview, while a country is picked. */
-.ov-back {
+/* While a country is picked: its pin docked at the top of the map, and the
+   countries around it as named dots. */
+.ov-near { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.ov-near[hidden] { display: none; }
+.ov-dock { border: 1.5px solid var(--accent); }
+.ov-dot {
   position: absolute;
-  z-index: 2;
-  display: inline-flex;
+  left: 0;
+  top: 0;
+  display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px 6px 8px;
-  background: var(--panel-solid);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  box-shadow: var(--shadow);
+  padding: 0;
+  background: none;
+  border: 0;
   font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  color: var(--text);
+  white-space: nowrap;
   cursor: pointer;
+  pointer-events: auto;
 }
-.ov-back[hidden] { display: none; }
-.ov-back:hover { border-color: var(--accent); }
-.ov-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov-dot[hidden] { display: none; }
+.ov-dot.flip { flex-direction: row-reverse; }
+.ov-dot-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--panel-solid); border: 2px solid var(--muted); box-shadow: var(--shadow); flex: none; }
+.ov-dot.edge .ov-dot-mark { border-style: dotted; }
+.ov-dot-name { padding: 2px 7px; border-radius: var(--r-pill); background: var(--panel-solid); border: 1px solid var(--line); box-shadow: var(--shadow); font-weight: 600; }
+.ov-dot:hover .ov-dot-mark, .ov-dot:focus-visible .ov-dot-mark { border-color: var(--accent); }
+.ov-dot:hover .ov-dot-name { border-color: var(--accent); }
+.ov-dot:focus-visible { outline: none; }
+.ov-dot:focus-visible .ov-dot-name { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---------- Phone: bottom sheet ---------- */
 
