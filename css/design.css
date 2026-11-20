@@ -773,6 +773,8 @@ kbd {
 .ts-time { color: var(--muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ts-actions { display: flex; gap: 8px; align-items: center; }
 .ts-actions .btn.primary { flex: 1; padding: 13px; font-size: var(--fs-md); font-weight: 600; }
+/* The first step's pair — Just watching and Continue — are the same size. */
+.ts-actions .btn[data-sheet-watching] { flex: 1; padding: 13px; font-size: var(--fs-md); }
 @keyframes ts-up { from { transform: translateY(100%); } }
 @keyframes ts-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ts-card, .ts-scrim { animation: none; } }
