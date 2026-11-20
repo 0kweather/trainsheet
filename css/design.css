@@ -1134,8 +1134,10 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 @media (max-width: 720px) {
   .panel .tabbar { flex: none; order: 99; padding: 0 8px; border-top: 0.5px solid var(--line); }
-  /* Folded down, the sheet is the search field alone: no filters cut off under it. */
-  .panel.collapsed .filters { display: none; }
+  /* Search's filters stay on computers: on a phone, typing a place or a
+     name narrows the results as quickly, and the row they took (cut off at
+     the sheet's edge) goes to the results. */
+  .filters { display: none !important; }
   body.has-tabs .panel.collapsed { height: calc(132px + 52px + var(--tracked-h, 0px)); }
   body.has-tabs .panel.collapsed:has(> #view-list:not([hidden])) { height: calc(96px + 52px + env(safe-area-inset-bottom, 0px) + var(--tracked-h, 0px)); }
 }
