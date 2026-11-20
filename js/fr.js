@@ -252,6 +252,7 @@ export default {
   "car {n} of {of} from the front": "voiture {n} sur {of} depuis l’avant",
   "Stop tracking": "Arrêter le suivi",
   "Track": "Suivre",
+  "Where did you get on?": "Où êtes-vous monté?",
   "Where are you getting off?": "Où descendez-vous?",
   "Start tracking": "Commencer le suivi",
   "Done": "Terminé",

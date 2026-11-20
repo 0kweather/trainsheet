@@ -948,16 +948,11 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .filter:has(select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .filter-clear { flex: none; margin: 0 4px; font-weight: 500; }
 
-/* The track sheet: riding it or just watching, and where the rider got on. */
-.ts-mode { margin: 0; flex: none; }
-.ts-from {
-  flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; box-sizing: border-box;
-  padding: 0 14px; border-radius: var(--r-card); background: var(--group); font-size: var(--fs-md);
-}
-.ts-from select {
-  min-width: 0; max-width: 62%; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: var(--fs-md); text-align: right; cursor: pointer;
-}
-.ts-from select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+/* The track sheet's second step: Back, and where the rider got on. */
+.ts-got { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 4px; color: var(--muted); font-size: var(--fs-sm); }
+.ts-got span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-got b { color: var(--text); font-weight: 600; }
+.ts-actions .btn:disabled { opacity: 0.5; cursor: default; }
 
 
 /* Likely delays: on the live card, under each stop ahead, and on the next trip. */

@@ -55,7 +55,7 @@ const state = {
   stations: new Map(),   // merged station id -> station
   station: null,         // selected station id
   railroad: null,        // railroad whose page is open
-  trackSheet: null,      // { id, key, from, riding }: the track sheet, open for a train: the stop to get off (or track to), where the rider got on, and whether they're riding it
+  trackSheet: null,      // { id, step, key, from, riding, confirmed }: the track sheet, open for a train: the step showing ("board": where the rider got on, then "off": where they get off), the stop to get off (or track to), where the rider got on, whether they're riding it, and whether their location already said so
   rideAsks: store.get("tt-ride-asks", []), // rides that ended without the rider's location matching the train: "Were you on it?"
   line: null,            // ...and the line, on a line's page
   predictions: null,     // live MBTA predictions for the selected station
@@ -5157,9 +5157,10 @@ function untrack(id, message) {
 }
 
 // Under the train's name: one button. Not tracked: "Track", which opens
-// the sheet asking where you're getting off (a train with no stops ahead
-// listed is tracked to the end at once). Tracked: "Tracking to Manassas",
-// which opens the same sheet to change the stop or stop tracking.
+// the sheet asking first where you got on, then where you're getting off
+// (a train with no stops ahead listed is tracked to the end at once).
+// Tracked: "Tracking to Manassas", which opens the same sheet to change
+// either stop or stop tracking.
 const BELL_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3.5a5 5 0 0 0-5 5v3.2l-1.6 2.9A1 1 0 0 0 6.3 16h11.4a1 1 0 0 0 .9-1.4L17 11.7V8.5a5 5 0 0 0-5-5ZM9.8 18.5a2.3 2.3 0 0 0 4.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function trackButton(t) {
   const rec = state.tracked.find((r) => r.id === t.id);
@@ -5173,6 +5174,25 @@ function trackButton(t) {
 // and every one after.
 const stopsAhead = (t) => (t.stops || []).filter((s) => s.status !== "past" && s.key);
 
+// Where a rider can have got on: every stop a stop still ahead follows, the
+// ones already behind the train included (they may have boarded hours ago).
+function boardStops(t) {
+  const stops = t.stops || [], left = stopsAhead(t);
+  const end = stops.indexOf(left[left.length - 1]);
+  return stops.filter((s, i) => s.key && i < end);
+}
+// Where they can get off: the stops ahead that come after the one they got
+// on at (all of them when no boarding stop is named).
+function offStops(t, fromKey) {
+  const stops = t.stops || [];
+  const at = fromKey ? stops.findIndex((s) => s.key === fromKey) : -1;
+  return stopsAhead(t).filter((s) => stops.indexOf(s) > at);
+}
+
+// The sheet opens on its first step, where the rider got on, every time:
+// for a train already tracked too, so both stops can be changed. Signed in
+// or not, everyone is asked; only a signed-in rider's ride goes to their
+// trips (finishRide).
 function openTrackSheet(t, { riding = null, confirmed = false } = {}) {
   const left = stopsAhead(t);
   const rec = state.tracked.find((r) => r.id === t.id);
@@ -5185,20 +5205,38 @@ function openTrackSheet(t, { riding = null, confirmed = false } = {}) {
   const planned = trip && stopOfTrip(t, trip.to_key, trip.to_name);
   const chosen = rec?.stopKey && left.some((s) => s.key === rec.stopKey) ? rec.stopKey
     : planned && left.includes(planned) ? planned.key : left[left.length - 1].key;
-  const from = rec?.fromKey || (trip && stopOfTrip(t, trip.from_key, trip.from_name)?.key) || boardingGuess(t)?.key || null;
-  state.trackSheet = { id: t.id, key: chosen, from, riding: canRide() && (rec ? rec.riding !== false : riding ?? true), confirmed };
+  const isRiding = rec ? rec.riding !== false : riding ?? true;
+  const board = boardStops(t);
+  const guess = rec?.fromKey || (trip && stopOfTrip(t, trip.from_key, trip.from_name)?.key) || boardingGuess(t)?.key || null;
+  // (A train sitting at its last stop but one has the guess at the end of the list.)
+  const from = !isRiding ? null : board.some((s) => s.key === guess) ? guess : board[board.length - 1]?.key || null;
+  // A train with nowhere to have got on (one stop listed) has only the second step.
+  state.trackSheet = { id: t.id, step: board.length ? "board" : "off", key: chosen, from, riding: isRiding, confirmed };
   renderTrackSheet();
 }
-// Rides go to the rider's trips: offered only when they're signed in.
-const canRide = () => Boolean(account?.user);
 function closeTrackSheet() {
   if (!state.trackSheet) return;
   state.trackSheet = null;
   renderTrackSheet();
 }
-// "Where are you getting off?": the stops ahead, the train's last one
-// chosen to begin with; Start tracking (or, once tracked, Done and Stop
-// tracking). Drawn over the train's page.
+// From the first step to the second. A stop to get off that the boarding
+// stop now chosen rules out gives way to the last one after it.
+function sheetStep(step) {
+  const sh = state.trackSheet, t = sh && state.trains.get(sh.id);
+  if (!t) return;
+  sh.step = step;
+  if (step === "off") {
+    const offs = offStops(t, sh.from);
+    if (!offs.some((s) => s.key === sh.key)) sh.key = offs[offs.length - 1]?.key || null;
+  }
+  renderTrackSheet();
+}
+// Two steps, drawn over the train's page. First "Where did you get on?":
+// every stop but the last, the likely one chosen to begin with, then
+// Continue, or "Just watching" for someone not on the train. Then "Where
+// are you getting off?" ("Track it until" for a train only watched): the
+// stops ahead after that one, with Back to the first step and Start
+// tracking (or, once tracked, Done, Stop tracking and Share this ride).
 function renderTrackSheet() {
   const el = $("track-sheet");
   if (!el) return;
@@ -5210,31 +5248,41 @@ function renderTrackSheet() {
     return;
   }
   const rec = state.tracked.find((r) => r.id === t.id);
-  const offAt = (t.stops || []).findIndex((s) => s.key === sh.key);
-  const boardable = (t.stops || []).filter((s, i) => s.key && (offAt < 0 || i < offAt));
-  const ride = canRide() ? `<div class="segmented two ts-mode" role="radiogroup">
-      <button type="button" data-sheet-riding="1" aria-pressed="${sh.riding}">${T("I'm riding it")}</button>
-      <button type="button" data-sheet-riding="0" aria-pressed="${!sh.riding}">${T("Just watching")}</button></div>` +
-    (sh.riding ? `<label class="ts-from"><span>${T("Got on at")}</span><select data-sheet-from>${boardable.map((s) =>
-      `<option value="${esc(s.key)}"${s.key === sh.from ? " selected" : ""}>${esc(s.name)}${s.time ? ` · ${esc(fmtTime(s.dep || s.time, s.tz))}` : ""}</option>`).join("")}</select></label>` : "") : "";
-  const rows = stopsAhead(t).map((s) => {
-    const on = s.key === sh.key;
-    return `<button type="button" class="ts-stop${on ? " on" : ""}" role="radio" aria-checked="${on}" data-sheet-stop="${esc(s.key)}">
-      <span class="ts-check" aria-hidden="true"></span><span class="ts-name">${esc(s.name)}</span><span class="ts-time">${s.time ? esc(fmtTime(s.time, s.tz)) : ""}</span></button>`;
-  }).join("");
+  const boarding = sh.step === "board";
+  const row = (s, on, attr, time) => `<button type="button" class="ts-stop${on ? " on" : ""}" role="radio" aria-checked="${on}" ${attr}="${esc(s.key)}">
+      <span class="ts-check" aria-hidden="true"></span><span class="ts-name">${esc(s.name)}</span><span class="ts-time">${time ? esc(fmtTime(time, s.tz)) : ""}</span></button>`;
+  let title, above = "", rows, actions;
+  if (boarding) {
+    title = "Where did you get on?";
+    rows = boardStops(t).map((s) => row(s, sh.riding && s.key === sh.from, "data-sheet-board", s.dep || s.time)).join("");
+    actions = `<button type="button" class="btn" data-sheet-watching>${T("Just watching")}</button>
+        <button type="button" class="btn primary" data-sheet-next${sh.riding && sh.from ? "" : " disabled"}>${T("Continue")}</button>`;
+  } else {
+    title = sh.riding ? "Where are you getting off?" : "Track it until";
+    // (The feed can move the train past the stop chosen while the sheet is open.)
+    const offs = offStops(t, sh.from);
+    if (!offs.some((s) => s.key === sh.key)) sh.key = offs[offs.length - 1]?.key || null;
+    const from = sh.riding && (t.stops || []).find((s) => s.key === sh.from);
+    const back = boardStops(t).length ? `<button type="button" class="btn small" data-sheet-back>‹ ${T("Back")}</button>` : "";
+    const got = from ? `${T("Got on at")} <b>${esc(from.name)}</b>` : sh.riding ? "" : T("Just watching");
+    if (back || got) above = `<div class="ts-got">${back}<span>${got}</span></div>`;
+    rows = offs.map((s) => row(s, s.key === sh.key, "data-sheet-stop", s.time)).join("");
+    actions = `${rec ? `<button type="button" class="btn small" data-sheet-untrack>${T("Stop tracking")}</button><button type="button" class="btn small" data-sheet-share>${T("Share this ride")}</button>` : ""}
+        <button type="button" class="btn primary" data-sheet-start>${T(rec ? "Done" : "Start tracking")}</button>`;
+  }
   el.hidden = false;
   el.innerHTML = `<div class="ts-scrim" data-sheet-close></div>
     <div class="ts-card" role="dialog" aria-modal="true" aria-labelledby="ts-title">
-      <div class="ts-head"><h3 id="ts-title">${T(sh.riding || !canRide() ? "Where are you getting off?" : "Track it until")}</h3><button type="button" class="tc-x ts-x" data-sheet-close aria-label="${T("Close")}">×</button></div>
-      ${ride}
+      <div class="ts-head"><h3 id="ts-title">${T(title)}</h3><button type="button" class="tc-x ts-x" data-sheet-close aria-label="${T("Close")}">×</button></div>
+      ${above}
       <div class="ts-list" role="radiogroup" aria-labelledby="ts-title">${rows}</div>
       <div class="ts-actions">
-        ${rec ? `<button type="button" class="btn small" data-sheet-untrack>${T("Stop tracking")}</button><button type="button" class="btn small" data-sheet-share>${T("Share this ride")}</button>` : ""}
-        <button type="button" class="btn primary" data-sheet-start>${T(rec ? "Done" : "Start tracking")}</button>
+        ${actions}
       </div>
     </div>`;
   el.querySelector(".ts-stop.on")?.scrollIntoView({ block: "nearest" });
-  el.querySelector(".ts-stop.on")?.focus({ preventScroll: true });
+  // (No stop chosen yet, on the first step of a train only watched: the keys still need somewhere to land.)
+  (el.querySelector(".ts-stop.on") || el.querySelector(".ts-stop"))?.focus({ preventScroll: true });
 }
 function startFromSheet() {
   const sh = state.trackSheet, t = sh && state.trains.get(sh.id);
@@ -5245,28 +5293,34 @@ function startFromSheet() {
   if (!rec) return startTracking(t, sh.key, { fromKey: sh.from, riding: sh.riding, confirmed: sh.confirmed });
   const stop = t.stops?.find((s) => s.key === sh.key);
   const from = sh.riding ? t.stops?.find((s) => s.key === sh.from) || boardingGuess(t) : null;
-  Object.assign(rec, { stopKey: stop?.key || null, stopName: stop?.name || null, eta: stop ? Date.parse(stop.time) : null, riding: sh.riding, ...rideFrom(from) });
+  Object.assign(rec, { stopKey: stop?.key || null, stopName: stop?.name || null, eta: stop ? Date.parse(stop.time) : null, riding: sh.riding, ...rideFrom(from && from !== stop ? from : null) });
   saveTracked();
   checkTracked();
   renderAll();
 }
 on("track-sheet", "click", (e) => {
   if (e.target.closest("[data-sheet-close]")) return closeTrackSheet();
-  const row = e.target.closest("[data-sheet-stop]");
-  if (row && state.trackSheet) {
-    state.trackSheet.key = row.dataset.sheetStop;
+  const sh = state.trackSheet;
+  // A stop in whichever list is showing: where they got on, or where they get off.
+  const row = e.target.closest("[data-sheet-board], [data-sheet-stop]");
+  if (row && sh) {
+    if (row.dataset.sheetBoard) Object.assign(sh, { from: row.dataset.sheetBoard, riding: true });
+    else sh.key = row.dataset.sheetStop;
     for (const b of document.querySelectorAll("#track-sheet .ts-stop")) {
       const on = b === row;
       b.classList.toggle("on", on);
       b.setAttribute("aria-checked", String(on));
     }
+    const next = document.querySelector("#track-sheet [data-sheet-next]");
+    if (next) next.disabled = false;
     return;
   }
-  const mode = e.target.closest("[data-sheet-riding]");
-  if (mode && state.trackSheet) {
-    state.trackSheet.riding = mode.dataset.sheetRiding === "1";
-    return renderTrackSheet();
+  if (e.target.closest("[data-sheet-watching]") && sh) {
+    Object.assign(sh, { riding: false, from: null });
+    return sheetStep("off");
   }
+  if (e.target.closest("[data-sheet-next]")) return sheetStep("off");
+  if (e.target.closest("[data-sheet-back]")) return sheetStep("board");
   if (e.target.closest("[data-sheet-start]")) return startFromSheet();
   if (e.target.closest("[data-sheet-share]")) return shareRide(state.tracked.find((r) => r.id === state.trackSheet?.id));
   if (e.target.closest("[data-sheet-untrack]")) {
@@ -5274,9 +5328,6 @@ on("track-sheet", "click", (e) => {
     closeTrackSheet();
     if (id) untrack(id);
   }
-});
-on("track-sheet", "change", (e) => {
-  if (e.target.matches("[data-sheet-from]") && state.trackSheet) state.trackSheet.from = e.target.value;
 });
 on("track-sheet", "keydown", (e) => {
   if (e.key === "Escape") { e.stopPropagation(); return closeTrackSheet(); }
