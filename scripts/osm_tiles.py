@@ -12,10 +12,13 @@ border holds both countries' track. Needs osmium (brew install osmium-tool).
     python3 scripts/osm_tiles.py
     python3 scripts/build_rail.py --offline
 
+    python3 scripts/osm_tiles.py europe/great-britain   # just these, into the tiles already written
+
 The cut-down extracts stay in scripts/.osm-extracts, so a rerun downloads
 only what's missing; delete it to refresh.
 """
 import json, math, pathlib, re, shutil, subprocess, sys
+from array import array
 from collections import defaultdict
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -46,8 +49,12 @@ EXTRACTS = [
     "europe/france/poitou-charentes", "europe/monaco", "europe/belgium", "europe/luxembourg",
     "europe/germany/saarland", "europe/germany/rheinland-pfalz", "europe/germany/hessen",
     "europe/germany/nordrhein-westfalen", "europe/netherlands",
-    "europe/united-kingdom/england/kent", "europe/united-kingdom/england/essex",
-    "europe/united-kingdom/england/greater-london",
+    # Great Britain whole (England, Scotland and Wales; Northern Ireland is
+    # in ireland-and-northern-ireland): its railroads' region, and London's
+    # end of the Eurostar. Geofabrik now redirects a three-level name
+    # (europe/united-kingdom/england/kent, as this list had) to a page that
+    # isn't there (404, November 2026); this one resolves.
+    "europe/great-britain",
     "europe/germany/niedersachsen",
     "europe/germany/schleswig-holstein", "europe/germany/hamburg", "europe/germany/bremen",
     "europe/germany/mecklenburg-vorpommern", "europe/germany/berlin", "europe/germany/brandenburg",
@@ -90,9 +97,16 @@ def rail_of(extract):
     return lines
 
 
-def main():
-    tiles = defaultdict(dict)  # (x, y) -> way id -> element
-    for extract in EXTRACTS:
+def main(only=()):
+    """only: some of EXTRACTS, their ways added to the tiles already written
+    (a tile at their border keeps the other countries' track)."""
+    for extract in only:
+        if extract not in EXTRACTS:
+            sys.exit(f"{extract}: not in EXTRACTS")
+    # (x, y) -> way id -> (array of lon, lat, lon, lat, ..., highspeed): a
+    # whole country's track as Overpass' dicts doesn't fit in memory.
+    tiles = defaultdict(dict)
+    for extract in only or EXTRACTS:
         kept = 0
         for row in open(rail_of(extract)):
             f = json.loads(row.lstrip("\x1e"))
@@ -103,18 +117,22 @@ def main():
                 continue
             coords = f["geometry"]["coordinates"]
             wid = int(str(p["@id"]).lstrip("w"))
-            way = {"type": "way", "id": wid, "geometry": [{"lat": y, "lon": x} for x, y in coords]}
-            if p.get("highspeed") == "yes":  # build_rail.py's FAST_TRACK
-                way["tags"] = {"highspeed": "yes"}
+            way = (array("d", (v for xy in coords for v in xy)), p.get("highspeed") == "yes")
             for t in {(math.floor(x / TILE), math.floor(y / TILE)) for x, y in coords}:
                 tiles[t][wid] = way
             kept += 1
         print(f"{extract}: {kept} ways of track", flush=True)
     CACHE.mkdir(exist_ok=True)
     for (x, y), ways in sorted(tiles.items()):
-        (CACHE / f"route-tile-{x}-{y}.json").write_text(json.dumps(list(ways.values())))
+        path = CACHE / f"route-tile-{x}-{y}.json"
+        out = {w["id"]: w for w in json.loads(path.read_text())} if only and path.exists() else {}
+        for wid, (flat, fast) in ways.items():
+            out[wid] = {"type": "way", "id": wid, "geometry": [{"lat": flat[i + 1], "lon": flat[i]} for i in range(0, len(flat), 2)]}
+            if fast:  # build_rail.py's FAST_TRACK
+                out[wid]["tags"] = {"highspeed": "yes"}
+        path.write_text(json.dumps(list(out.values())))
     print(f"wrote {len(tiles)} route tiles to {CACHE}")
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
