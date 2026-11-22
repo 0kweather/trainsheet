@@ -61,7 +61,7 @@ EXTRACTS = [
     "europe/germany/sachsen-anhalt", "europe/germany/thueringen", "europe/germany/bayern/mittelfranken",
     "europe/germany/bayern/oberbayern", "europe/germany/bayern/schwaben", "europe/germany/bayern/unterfranken",
     "europe/denmark", "europe/poland/zachodniopomorskie", "europe/poland/lubuskie",
-    "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine",
+    "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine", "asia/china",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
 # Light rail stays only where it's third-rail: OpenStreetMap files Berlin's
