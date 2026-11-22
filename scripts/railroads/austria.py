@@ -1,8 +1,7 @@
 """Austria: ÖBB Personenverkehr's trains (Railjet, Nightjet, EC/IC, REX, CJX,
-R, the S-Bahns), the Montafonerbahn (Bludenz–Schruns) and the City Airport
-Train (Wien Mitte–Flughafen Wien), from ÖBB's own timetable (GTFS,
-"Soll-Fahrplan GTFS", data.oebb.at: official, published by ÖBB-Infrastruktur
-for the trains on its network, no key). No live feed is read: the trains are
+R, the S-Bahns) and the Montafonerbahn (Bludenz–Schruns), from ÖBB's own
+timetable (GTFS, "Soll-Fahrplan GTFS", data.oebb.at: official, published by
+ÖBB-Infrastruktur for the trains on its network, no key). No live feed is read: the trains are
 placed from the timetable (a "timetable" source, no parser file), marked
 estimated. The feed is downloaded fresh at each build; this edition
 (GTFS_Fahrplan_2026.zip, 173 MB) runs 2025-12-14 → 2026-12-12, the
@@ -15,10 +14,15 @@ the Mobilitätsverbünde's API needs an account; neither is used.
 
 The zip keeps every file under a GTFS_Fahrplan_2026/ folder ("convert",
 below, finds it). Its agencies, as the railroads here: obb (agency 01,
-"OEBB Personenverkehr AG Kundenservice": 256 rail routes), montafonerbahn
-(10, Montafonerbahn AG: 2) and cat (08, City Air Terminal: 1). Left out:
-ÖBB's 14 bus routes (route type 3, its rail-replacement "SV" buses). WESTbahn
-and the private regional lines are not in the feed.
+"OEBB Personenverkehr AG Kundenservice": 256 rail routes) and
+montafonerbahn (10, Montafonerbahn AG: 2). Left out: ÖBB's 14 bus routes
+(route type 3, its rail-replacement "SV" buses), and the City Airport
+Train (agency 08, 1 route, 72 trips): its only service (TA+b7) has every
+date from 2026-09-07 removed in calendar_dates (97 consecutive removal
+exceptions), so the feed carries no CAT trains after 2026-09-06 and none
+in the build window — CAT is left out rather than shipped as an empty
+railroad, and should be re-checked (and re-added) when the 2027 edition
+posts. WESTbahn and the private regional lines are not in the feed.
 
 Cross-border trains — Railjets and ECs to München, Zürich, Venezia, Praha,
 Budapest and Bratislava, the Nightjets and EuroNights to Bruxelles, Hamburg,
@@ -35,9 +39,8 @@ labels most of the west's routes, Salzburg S-Bahns among them — so a line
 is the corridor's two named ends, hub-first ("Wien – Lindau"), in Croatia's
 manner; where the long name is empty ("A-1"), cut short ("Wien - ... -
 Tarvis (I) - ...") or garbled ("?????? - ??????") it is the route's short
-name. The Montafonerbahn's and the CAT's routes carry the same borrowed
-corridor label, so theirs are their own runs (Bludenz – Schruns, Wien Mitte
-– Flughafen Wien).
+name. The Montafonerbahn's routes carry the same borrowed
+corridor label, so theirs is its own run (Bludenz – Schruns).
 
 Stations: the feed has parent stations (location type 1) with platforms
 named apart from them ("Graz Hbf 4" in "Graz Hauptbahnhof") and a few
@@ -75,14 +78,12 @@ AGENCIES = {
     "obb": {"name": "ÖBB", "short": "ÖBB", "color": "#e2001a", "kind": "intercity", "cars": "obb", **COMMON},
     "montafonerbahn": {"name": "Montafonerbahn", "short": "MBS", "color": "#b5121b", "kind": "commuter",
                        "after": "obb", "cars": "montafonerbahn", **COMMON},
-    "cat": {"name": "City Airport Train", "short": "CAT", "color": "#8dc63f", "kind": "commuter",
-            "after": "montafonerbahn", "cars": "cat", **COMMON},
 }
 SOURCES = [{"id": "austria", "agencies": list(AGENCIES), "format": "timetable", "interval": 60, "scope": "view"}]
 
 # The feed's agency ids, and their rail routes alone (route type 2; ÖBB's
 # type-3 routes are its rail-replacement buses).
-OPERATORS = {"obb": "01", "montafonerbahn": "10", "cat": "08"}
+OPERATORS = {"obb": "01", "montafonerbahn": "10"}
 TRAIN_TYPES = {"2"}
 
 
@@ -91,10 +92,10 @@ def keep(agency):
 
 
 HUB = "Wien"
-# The corridors' ends as signed ("Breclav": Břeclav), and the two small
-# railroads' own runs in place of the corridor label they borrow.
+# The corridors' ends as signed ("Breclav": Břeclav), and the
+# Montafonerbahn's own run in place of the corridor label it borrows.
 ENDS = {"Breclav": "Břeclav"}
-OWN_LINES = {"10": "Bludenz – Schruns", "08": "Wien Mitte – Flughafen Wien"}
+OWN_LINES = {"10": "Bludenz – Schruns"}
 
 
 def _end(e):
