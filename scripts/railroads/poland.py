@@ -19,7 +19,9 @@ each) — and build_schedules.py reads that file with optional=True, so
 the missing calendar is fine. Its 47 bus routes (route type 3, the
 operators' rail-replacement "ZKA" buses, incl. KM's Modlin airport
 shuttles) are left out, as are the 85 MB shapes (convert drops them).
-28,107 rail trips run in the feed (29,771 total).
+28,107 rail trips run in the feed (29,771 total), less 18
+rail-replacement buses filed as trips on rail routes (category
+"BUS/R"), which "convert" drops.
 
 Cross-border trains — Intercity to Berlin, München, Wien, Budapest,
 Praha and Kyiv/Kharkiv, RegioJet and Leo Express to Praha, the
@@ -207,7 +209,7 @@ def _write(rows):
 def convert(data):
     """mkuran.pl's file as a GTFS of the thirteen railroads' trains alone
     (feeds.py's "convert", run once a build): the rail routes, their
-    trips, stop times (less the three stations a train only passes),
+    trips (less the rail-replacement buses filed on them), stop times (less the three stations a train only passes),
     the stops those call at — each named as its parent station, so
     stations fold by name — and their services' calendars; the bus
     routes, shapes (85 MB), transfers, attributions and feed_info left
@@ -223,7 +225,11 @@ def convert(data):
     route_ids = {r[rc.index("route_id")] for r in kept_routes[1:]}
     trips = _read(zf, "trips.txt")
     tc = trips[0]
-    kept_trips = [trips[0]] + [t for t in trips[1:] if t[tc.index("route_id")] in route_ids]
+    kept_trips = [trips[0]] + [t for t in trips[1:] if t[tc.index("route_id")] in route_ids
+                               and not (t[tc.index("plk_category_code")] or "").startswith("BUS")]
+    # The feed files a few rail-replacement buses as trips on rail routes
+    # (plk_category_code "BUS/R", e.g. Ostrowiec–Skarżysko, Rzeszów–Jasło):
+    # they are buses, so they are left out with the bus routes.
     trip_ids = {t[tc.index("trip_id")] for t in kept_trips[1:]}
     services = {t[tc.index("service_id")] for t in kept_trips[1:]}
     times, used = [], set()
