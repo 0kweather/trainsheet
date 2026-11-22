@@ -1536,6 +1536,7 @@ let ovHidden = false;       // the pins are up: track, stations and trains put a
 // what's picked, tracked or open shows (applyOverview, visible()).
 const ovNarrowed = () => ovHidden || Boolean(ovFocus && map.getZoom() < OV_VIEW_ZOOM);
 let ovPicking = false;      // a pick's framing is under way: the moves on the way don't pick or leave
+let ovHeld = false;         // a picked country holds, wherever its framing ends, until the map moves again
 let ov = null, ovLoading = null;
 // A railroad's page, an open train or a tracked one of these railroads.
 const ovNeeded = (ours) => ours(state.railroad) || ours(state.trains.get(state.selected)?.agency) || state.tracked.some((r) => ours(r.agency));
@@ -1638,7 +1639,7 @@ function overviewMoved() {
   const z = map.getZoom(), c = map.getCenter();
   // (While a pick is framed, its own moves neither pick nor leave.)
   if (!ovPicking && z < ovFloor) setFocus(null);
-  else if (!ovPicking) {
+  else if (!ovPicking && !ovHeld) {
     const under = ov.countryAt(c.lng, c.lat);
     if (under && (ovFocus || z >= OV_PICK_ZOOM)) setFocus(under);
   }
@@ -1693,6 +1694,7 @@ function pickCountry(country, { page = false } = {}) {
   map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { ...frame, duration: 900 });
   map.once("moveend", () => {
     ovPicking = false;
+    ovHeld = true;
     overviewMoved();
   });
 }
@@ -1702,6 +1704,7 @@ function pickCountry(country, { page = false } = {}) {
 function leaveCountry({ away = false } = {}) {
   const before = ovBefore || { center: ov?.pin(ovFocus) || map.getCenter().toArray(), zoom: OV_PICK_ZOOM - 2 };
   ovBefore = null;
+  ovHeld = false;
   setFocus(null); // closes its page
   if (away) putPanelAway(true);
   ovHidden = true;
@@ -1715,6 +1718,7 @@ function leaveCountry({ away = false } = {}) {
 const countryPageShown = () => Boolean(ovFocus && openCountry && openCountry !== "*" && !isAway() &&
   !(state.selected || state.station || state.railroad) && (!accountsOn() || state.tab === "browse"));
 map.on("moveend", overviewMoved);
+map.on("movestart", (e) => { if (!e.padding) ovHeld = false; }); // any move but the panel's: the country under the middle is picked again
 map.once("load", overviewMoved); // the opening view
 
 // A European region's track past its border (scripts/build_abroad.py), once
@@ -2581,7 +2585,7 @@ function syncMapPadding(keepView = true) {
   if (map.isMoving()) return map.once("moveend", () => syncMapPadding());
   const { clientWidth: w, clientHeight: h } = map.getContainer();
   const center = map.unproject([pad.left + (w - pad.left - pad.right) / 2, pad.top + (h - pad.top - pad.bottom) / 2]);
-  map.jumpTo({ center, padding: pad });
+  map.jumpTo({ center, padding: pad }, { padding: true }); // (the same view: a picked country holds)
 }
 
 function setTab(tab) {

@@ -37,7 +37,16 @@ STEP = 0.25                   # degrees, the grid's cells
 FILL = 4                      # cells a station's country spreads to where no station is
 GAP = 6                       # cells apart a country's cells still count as one cluster (its pick's frame)
 MASS = 0.03                   # the share of its stations a cluster needs to be framed
+OUTLIER = 2.5                 # a stop this many times its country's usual distance from its middle counts for half
+WEAK = 0.5                    # a cell whose stations count for less than this goes to whoever usually runs there
+SPREAD_MIN = 0.3              # degrees: the usual distance of a country whose trains run in one city
 LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+def far(a, b):
+    """Degrees between two [lon, lat] points, a degree of longitude shrunk by its latitude."""
+    k = math.cos(math.radians((a[1] + b[1]) / 2))
+    return math.hypot((a[0] - b[0]) * k, a[1] - b[1])
 
 
 def railroads():
@@ -105,18 +114,59 @@ def main():
     out = {"countries": {}, "rr": {}, "order": order}
     w0, s0 = WORLD[0], WORLD[1]
     cols, rows = round((WORLD[2] - w0) / STEP), round((WORLD[3] - s0) / STEP)
-    counts = {}  # cell -> {country index: stations}
+    # A stop far out from where its country's railroads mostly run (PKP
+    # Intercity's in Kyiv and Kharkiv, ÖBB's in Kyiv, DSB's in Prague)
+    # counts for less, and less the farther out: where another country's
+    # railroads stop too, the cell is theirs, however sparse their own list
+    # of stations; and of two countries with a stop each, the one it's
+    # nearer the middle of.
+    pts_of = {}  # country index -> [(lon, lat), ...]
     for rid, pts in by_station.items():
-        c = country_of.get(rid)
-        if c is None:
-            continue
-        i = order.index(c)
+        if country_of.get(rid) is not None:
+            pts_of.setdefault(order.index(country_of[rid]), []).extend(pts)
+    usual = {}   # country index -> (middle, usual distance from it)
+    for i, pts in pts_of.items():
+        mid = (statistics.median(p[0] for p in pts), statistics.median(p[1] for p in pts))
+        usual[i] = (mid, max(statistics.median(far(p, mid) for p in pts), SPREAD_MIN))
+    counts = {}  # cell -> {country index: stations, the far-off ones counting less}
+    tally = {}   # cell -> {country index: stations}
+    for i, pts in pts_of.items():
+        mid, spread = usual[i]
         for lon, lat in pts:
             x, y = int((lon - w0) // STEP), int((lat - s0) // STEP)
             if 0 <= x < cols and 0 <= y < rows:
+                z = far((lon, lat), mid) / spread
                 counts.setdefault((x, y), {}).setdefault(i, 0)
-                counts[(x, y)][i] += 1
-    grid = {k: max(by, key=by.get) for k, by in counts.items()}
+                counts[(x, y)][i] += 1 / (1 + (z / OUTLIER) ** 4)
+                tally.setdefault((x, y), {}).setdefault(i, 0)
+                tally[(x, y)][i] += 1
+    # A cell is the country whose stations there count most. A cell only
+    # far-off stops hold (PKP Intercity's Vinnytsia) goes to a country with
+    # stations of its own close by, where its railroads usually run
+    # (Ukraine); else it's theirs.
+    held = {k: max(by, key=by.get) for k, by in counts.items() if max(by.values()) >= WEAK}
+
+    def holder(k, by):
+        best = max(by, key=by.get)
+        if k in held:
+            return best
+        at = (w0 + (k[0] + 0.5) * STEP, s0 + (k[1] + 0.5) * STEP)
+        home = {i for i, (mid, spread) in usual.items() if far(at, mid) <= OUTLIER * spread}
+        close = [(abs(dx) + abs(dy), held[(k[0] + dx, k[1] + dy)])
+                 for dx in range(-FILL, FILL + 1) for dy in range(-FILL, FILL + 1)
+                 if abs(dx) + abs(dy) <= FILL and held.get((k[0] + dx, k[1] + dy)) in home]
+        return min(close)[1] if close else best
+
+    grid = {k: holder(k, by) for k, by in counts.items()}
+    # Out from the stations, a ring of cells at a time.
+    for _ in range(FILL):
+        add = {}
+        for (x, y), i in grid.items():
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                k = (x + dx, y + dy)
+                if k not in grid and 0 <= k[0] < cols and 0 <= k[1] < rows:
+                    add.setdefault(k, i)
+        grid.update(add)
     for i, c in enumerate(order):
         rr = []
         for rid in sorted(r for r, cc in country_of.items() if cc == c):
@@ -129,7 +179,7 @@ def main():
             out["rr"][rid] = {"tz": tt.get("tz") or "America/New_York", "w": hourly(tt)}
             rr.append(rid)
         rr.sort(key=lambda r: -sum(map(sum, out["rr"][r]["w"])))
-        own = [k for k, v in grid.items() if v == i]
+        own = [k for k in counts if grid[k] == i]  # the cells its stations hold
         own_set = set(own)
         if not own:
             continue
@@ -161,7 +211,7 @@ def main():
                 cluster[m] = start
         mass = {}
         for k in own:
-            mass[cluster[k]] = mass.get(cluster[k], 0) + counts[k][i]
+            mass[cluster[k]] = mass.get(cluster[k], 0) + tally[k].get(i, 0)
         total = sum(mass.values())
         near = [(w0 + (x + 0.5) * STEP, s0 + (y + 0.5) * STEP) for x, y in own if mass[cluster[(x, y)]] >= MASS * total]
         out["countries"][c] = {
@@ -170,15 +220,6 @@ def main():
                      round(max(x for x, _ in near), 2), round(max(y for _, y in near), 2)],
             "rr": rr,
         }
-    # Out from the stations, a ring of cells at a time.
-    for _ in range(FILL):
-        add = {}
-        for (x, y), i in grid.items():
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                k = (x + dx, y + dy)
-                if k not in grid and 0 <= k[0] < cols and 0 <= k[1] < rows:
-                    add.setdefault(k, i)
-        grid.update(add)
     runs, last, n = [], None, 0
     for y in range(rows):
         for x in range(cols):
