@@ -3571,6 +3571,40 @@ function futureTrains(terms, q) {
       out.push({ id, key, number, line, origin, dest, at, dep, idx, start, tz: d.tz, exact, dayIso, dayLabel });
     }
   }
+  // Past the departures window, from each railroad's own calendar (tt.ahead),
+  // so a train that starts with a timetable change shows too. The whole
+  // timetable is loaded for it; until it arrives (it re-renders), or if it
+  // fails, the railroad is left out. One candidate per run, its earliest day.
+  const last = addDaysIso(tomorrow, 13);
+  const seen = new Set(out.map((u) => `${u.id}|${u.key}|${u.line}|${u.dep}`));
+  for (const [id, d] of Object.entries(all)) {
+    const a = AGENCIES[id];
+    if (!a || !agencyShown(id) || !agencyFiltered(id) || !d.runs) continue;
+    const windowEnd = addDaysIso(d.start, 13);
+    if (windowEnd >= last) continue;
+    const tt = scheduleOf(id);
+    if (tt.loading || tt.failed || !tt.ahead || !tt.stops) continue;
+    const until = tt.ahead.until < last ? tt.ahead.until : last;
+    let day = windowEnd >= tomorrow ? addDaysIso(windowEnd, 1) : tomorrow;
+    for (; day <= until; day = addDaysIso(day, 1)) {
+      const day_ = timetableDay(tt, day);
+      if (!day_.exact) continue;
+      for (const [key, line, stops] of day_.all()) {
+        if (!stops?.length) continue;
+        const dep = stops[0][2] ?? stops[0][1], k = `${id}|${key}|${line}|${dep}`;
+        if (seen.has(k)) continue;
+        const number = tt.unnumbered ? null : key;
+        const origin = tt.stops[stops[0][0]]?.[0] || "", dest = tt.stops[stops[stops.length - 1][0]]?.[0] || "";
+        const hay = fold(`${a.name} ${a.short} ${a.region} ${number || ""} ${line} ${origin} ${dest}`);
+        if (!terms.every((w) => hay.includes(w))) continue;
+        seen.add(k);
+        const exact = Boolean(number) && (String(number).toLowerCase() === q || terms.includes(String(number).toLowerCase()));
+        const at = day_.base + dep * 60000;
+        const dayLabel = localDay(at) === tomorrow ? T("Tomorrow") : tripDate(day);
+        out.push({ id, key, number, line, origin, dest, at, dep, idx: -1, start: day_.base, tz: tt.tz, exact, dayIso: day, dayLabel });
+      }
+    }
+  }
   return out.sort((x, y) => Number(y.exact) - Number(x.exact) || x.at - y.at);
 }
 
@@ -3619,7 +3653,12 @@ function stationFor(agency, sid) {
 function upcomingStops(u) {
   const tt = scheduleOf(u.id), a = AGENCIES[u.id];
   if (tt.loading) return `<p class="upcoming-note">${esc(T("Loading its stops…"))}</p>`;
-  const run = (tt.trips?.[u.key] || []).find(([days, , stops]) => days & (1 << u.idx) && stops[0]?.[2] === u.dep);
+  let run = (tt.trips?.[u.key] || []).find(([days, , stops]) => days & (1 << u.idx) && stops[0]?.[2] === u.dep);
+  // A run from the railroad's calendar past the two weeks (futureTrains' ahead pass).
+  if (!run && tt.trips && tt.start) {
+    run = timetableDay(tt, u.dayIso || localDay(u.start, u.tz)).runs(u.key)
+      .find(([, , stops]) => (stops[0]?.[2] ?? stops[0]?.[1]) === u.dep);
+  }
   if (!run) return `<p class="upcoming-note">${esc(T("Its stops aren't available."))}</p>`;
   const stops = run[2];
   return `<ol class="stops line-stops upcoming-stops" style="--line-color:${lineColorOf(u.id, run[1]) || a.color}">${stops.map(([sid, arr, dep], i) => {
