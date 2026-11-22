@@ -3754,10 +3754,10 @@ for (const type of ["pointerup", "pointercancel"]) {
   });
 }
 
-// The top of a railroad's, a line's or a train's page takes a soft wash of
-// its colour (design.css, #view-train::before), the way an album's page
-// takes its cover's: every page looks like its subject. A station's page,
-// which several railroads share, has none.
+// A railroad's, a line's or a train's page takes its colour: the whole panel
+// is tinted with it, evenly and faintly (design.css, .panel::before), so
+// every page looks like its subject. A station's page, which several
+// railroads share, has none, nor do the lists.
 function pageWash() {
   if (state.railroad) return (state.line ? lineColor(state.railroad, state.line) : null) || AGENCIES[state.railroad]?.color || null;
   if (state.station) return null;
@@ -3765,9 +3765,9 @@ function pageWash() {
   return t ? t.routeColor || AGENCIES[t.agency]?.color || null : null;
 }
 function applyWash() {
-  const view = $("view-train"), color = pageWash();
-  view.toggleAttribute("data-wash", Boolean(color));
-  if (color) view.style.setProperty("--wash", color); // (kept when there's none, so it fades out in its colour)
+  const panel = $("panel"), color = $("view-train").hidden ? null : pageWash();
+  panel.toggleAttribute("data-wash", Boolean(color));
+  if (color) panel.style.setProperty("--wash", color); // (kept when there's none, so it fades out in its colour)
 }
 function renderDetail() {
   if (pressing) { redrawAfterPress = true; return; }
@@ -4998,7 +4998,6 @@ function renderLine() {
   const hero = `<div class="hero">
       <div class="agency-name" style="color:${a.color}"><span class="dot" style="background:${a.color}"></span>${esc(a.name)}</div>
       <h2>${escTitle(name)}</h2>
-      ${stations.length ? `<p class="station-facts"><span>${esc(T("{n} stations", { n: stations.length }))} · ${esc(stations[0].name)} – ${esc(stations[stations.length - 1].name)}</span></p>` : ""}
       ${consistSection(typical)}
     </div>`;
   renderParts(el, `line:${id}|${name}`, [hero, trainStats(trains, loading),
@@ -5709,6 +5708,7 @@ function showDetailView(open) {
   delete $("train-detail").dataset.scrollTop;
   $("train-detail").scrollTop = 0;
   syncLivePanel();
+  applyWash(); // back at a list: the tint goes
 }
 
 function select(id, { fly = true } = {}) {

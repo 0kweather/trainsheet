@@ -1411,22 +1411,29 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 .results .result > :is(.rr-icon, .station-icon, .line-icon) { width: 58px; }
 
 /* ---------- A page takes its railroad's colour ----------
- * The top of a railroad's, a line's or a train's page is washed in its
- * colour (app.js, applyWash), strongest at the panel's top edge and gone
- * by the first card, behind everything on the page: Back, the title and the
- * drawing sit in it. One colour with a fading mask, so going from one
- * railroad's page to another's turns the colour and doesn't cut. */
-#view-train { isolation: isolate; }
-#view-train::before {
-  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 250px; z-index: -1; pointer-events: none;
+ * The whole panel is tinted, evenly and faintly, with the colour of the
+ * railroad, line or train whose page it shows (app.js, applyWash): under
+ * everything on the page, with no start and no end to see. One colour whose
+ * strength eases in, so going from one railroad's page to another's turns
+ * the colour and doesn't cut. (It was a band across the top of the page
+ * fading downward, a gradient with an edge of its own.) */
+.panel::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background-color: var(--wash, transparent); opacity: 0;
-  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.45) 50%, transparent);
-  mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.45) 50%, transparent);
   transition: opacity var(--t-mid) ease, background-color var(--t-slow) ease;
 }
-#view-train[data-wash]::before { opacity: 0.24; }
-:root[data-theme="dark"] #view-train[data-wash]::before { opacity: 0.34; }
-@media (prefers-reduced-motion: reduce) { #view-train::before { transition: none; } }
+.panel[data-wash]::before { opacity: 0.1; }
+:root[data-theme="dark"] .panel[data-wash]::before { opacity: 0.16; }
+@media (prefers-reduced-motion: reduce) { .panel::before { transition: none; } }
+
+/* ---------- Lists fade under what's above them ----------
+ * A list scrolled under the search field and its filters (or under a page's
+ * Back) fades out over its last few pixels, as a train's page does, in
+ * place of a card cut off square at the scroller's edge. */
+.agencies, .results {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 24px), transparent 100%);
+}
 
 /* ---------- Figures in one voice ----------
  * A time or a count is in the rounded figures the tiles and countdowns
