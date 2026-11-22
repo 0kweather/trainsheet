@@ -426,7 +426,7 @@ html, body {
 
 /* Loading: a train passing across the map's place, on the map's own land
  * color, so it hands over to the map without a change of color. */
-:root { --map-land: rgb(242, 243, 240); }
+:root { --map-land: #eef1f5; } /* the light map's land (app.js, DAYLIGHT) */
 :root[data-theme="dark"] { --map-land: rgb(12, 12, 12); }
 .loading .loading-track::after { height: 1.5px; }
 /* French: the panel's text waits for its translation (index.html). */
@@ -1409,3 +1409,27 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
  * (a train's started 14px to the right of the rest), and the rule between
  * two results starts there too. */
 .results .result > :is(.rr-icon, .station-icon, .line-icon) { width: 58px; }
+
+/* ---------- A page takes its railroad's colour ----------
+ * The top of a railroad's, a line's or a train's page is washed in its
+ * colour (app.js, applyWash), strongest at the panel's top edge and gone
+ * by the first card, behind everything on the page: Back, the title and the
+ * drawing sit in it. One colour with a fading mask, so going from one
+ * railroad's page to another's turns the colour and doesn't cut. */
+#view-train { isolation: isolate; }
+#view-train::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 250px; z-index: -1; pointer-events: none;
+  background-color: var(--wash, transparent); opacity: 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.45) 50%, transparent);
+  mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.45) 50%, transparent);
+  transition: opacity var(--t-mid) ease, background-color var(--t-slow) ease;
+}
+#view-train[data-wash]::before { opacity: 0.24; }
+:root[data-theme="dark"] #view-train[data-wash]::before { opacity: 0.34; }
+@media (prefers-reduced-motion: reduce) { #view-train::before { transition: none; } }
+
+/* ---------- Figures in one voice ----------
+ * A time or a count is in the rounded figures the tiles and countdowns
+ * already use, each digit the same width, wherever it stands alone: a
+ * stop's time, a departure's, a section's count. */
+.stops:not(.line-stops) .time, .cd, .rr-count, .notices-count, .tb-eta { font-family: var(--font-rounded); font-variant-numeric: tabular-nums; }

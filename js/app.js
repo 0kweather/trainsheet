@@ -460,6 +460,18 @@ const shownAt = (f) => !(f.properties.z > map.getZoom() + 0.5);
 const SHOWN_FROM_Z = [">=", ["zoom"], ["-", ["get", "z"], 1]];
 
 const MUTED_LAYERS = /^(transportation|building|landuse|landcover|park|aeroway)$/;
+// The light map's colours, by the basemap's layer (addLayers), and the zoom
+// its roads show from.
+const DAYLIGHT = {
+  background: "#eef1f5", road_area_pier: "#eef1f5", road_pier: "#eef1f5",
+  water: "#c9d9ea", waterway: "#c9d9ea",
+  park: "#dfe9e4", landcover_wood: "#dce7e1", landuse_residential: "#e7ebf1", building: "#e2e7ee",
+  highway_path: "#dde2e9", highway_minor: "#dde2e9", highway_major_casing: "#d2d8e1", highway_motorway_casing: "#d2d8e1",
+  tunnel_motorway_casing: "#d2d8e1", highway_motorway_bridge_casing: "#d2d8e1",
+  highway_major_subtle: "rgba(200, 208, 219, 0.7)", highway_motorway_subtle: "rgba(200, 208, 219, 0.55)",
+  boundary_2: "#aeb8c6", boundary_disputed: "#aeb8c6",
+};
+const DAYLIGHT_FROM = { highway_motorway_subtle: 5, highway_major_subtle: 9, highway_minor: 13, highway_path: 14 };
 function addLayers() {
   drawnGroups = {};
   fadeWaiting = new Map();
@@ -489,11 +501,18 @@ function addLayers() {
       else if (l.type === "fill") map.setPaintProperty(l.id, "fill-opacity", 0.35);
     }
   }
-  // The light basemap is grey land beside grey water: a little blue in the
-  // water lets coasts and lakes read at a glance (the dark one's land and
-  // water are far enough apart as they come).
+  // The light map is Trainsheet's own ("Daylight"): cool mist-grey land and
+  // steel-blue water in place of the basemap's grey on grey, its roads in
+  // the same cool greys, and fewer of them: the web of main roads that lay
+  // over every state zoomed out waits for city scale, side streets for
+  // street scale. The railroads' colours are the only colour on it.
   if (theme !== "dark") {
-    for (const l of baseLayers) if (l.type === "fill" && l["source-layer"] === "water") map.setPaintProperty(l.id, "fill-color", "#c6d6e6");
+    for (const l of baseLayers) {
+      const color = DAYLIGHT[l.id];
+      if (color) map.setPaintProperty(l.id, l.type === "background" ? "background-color" : l.type === "fill" ? "fill-color" : "line-color", color);
+      const from = DAYLIGHT_FROM[l.id];
+      if (from) map.setLayerZoomRange(l.id, Math.max(from, l.minzoom ?? 0), l.maxzoom ?? 24);
+    }
   }
   map.addLayer({
     id: "tt-state-borders",
@@ -571,7 +590,7 @@ function addLayers() {
   // strip in the map's own background color covers the strands first, so
   // nothing shows between the dashes; from city zoom a label says what's
   // happening ("Buses replace trains").
-  const land = baseLayers.find((l) => l.type === "background")?.paint?.["background-color"] || (theme === "dark" ? "#0c0c0c" : "#f2f3f0");
+  const land = theme === "dark" ? baseLayers.find((l) => l.type === "background")?.paint?.["background-color"] || "#0c0c0c" : DAYLIGHT.background;
   map.addSource("disruptions", { type: "geojson", data: { type: "FeatureCollection", features: disruptionFeatures() } });
   map.addLayer({
     id: "tt-disruption-gap",
@@ -3735,9 +3754,25 @@ for (const type of ["pointerup", "pointercancel"]) {
   });
 }
 
+// The top of a railroad's, a line's or a train's page takes a soft wash of
+// its colour (design.css, #view-train::before), the way an album's page
+// takes its cover's: every page looks like its subject. A station's page,
+// which several railroads share, has none.
+function pageWash() {
+  if (state.railroad) return (state.line ? lineColor(state.railroad, state.line) : null) || AGENCIES[state.railroad]?.color || null;
+  if (state.station) return null;
+  const t = state.trains.get(state.selected);
+  return t ? t.routeColor || AGENCIES[t.agency]?.color || null : null;
+}
+function applyWash() {
+  const view = $("view-train"), color = pageWash();
+  view.toggleAttribute("data-wash", Boolean(color));
+  if (color) view.style.setProperty("--wash", color); // (kept when there's none, so it fades out in its colour)
+}
 function renderDetail() {
   if (pressing) { redrawAfterPress = true; return; }
   syncLivePanel(); // a train tracked or let go while its page is open
+  applyWash();
   if (state.railroad) return renderRailroad();
   if (state.station) return renderStation();
   const t = state.trains.get(state.selected);
