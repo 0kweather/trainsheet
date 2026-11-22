@@ -157,6 +157,7 @@ export const AGENCIES = {
   trenord: {"bbox": [8.4, 44.8, 10.7, 46.497], "cars": true, "clip": true, "color": "#006633", "country": "IT", "credit": {"href": "https://www.dati.lombardia.it/d/3z4k-mxz9", "label": "Regione Lombardia open data (Trenord)"}, "kind": "commuter", "license": "CC BY 4.0", "name": "Trenord", "region": "Lombardy", "short": "Trenord", "tz": "Europe/Rome"},
   trentino: {"after": "arst", "bbox": [10.8, 46.074, 11.128, 46.394], "cars": true, "clip": true, "color": "#c2185b", "country": "IT", "credit": {"href": "https://dati.trentino.it/dataset/trasporti-pubblici-del-trentino-formato-gtfs", "label": "Provincia di Trento open data (Trentino Trasporti)"}, "kind": "commuter", "license": "CC BY 4.0", "name": "Ferrovia Trento–Malè–Mezzana", "region": "Trentino", "short": "Trento–Malè", "tz": "Europe/Rome"},
   trirail: {"after": "capmetro", "bbox": [-80.26, 25.781, -80.063, 26.759], "color": "#2ba84a", "country": "US", "credit": {"href": "https://www.tri-rail.com", "label": "Tri-Rail"}, "kind": "commuter", "license": null, "logo": {"also": {"trirail-onnavy": {"aspect": 4.4, "file": "img/logos/trirail-onnavy.svg"}}, "aspect": 4.4, "file": "img/logos/trirail.svg"}, "name": "Tri-Rail", "region": "South Florida", "short": "Tri-Rail", "tz": "America/New_York"},
+  uz: {"bbox": [21.0, 46.467, 36.203, 52.252], "cars": "uz", "clip": true, "color": "#0057b7", "country": "UA", "credit": {"href": "https://jbb.ghsq.de/gtfs/ua-ukrzaliznytsya.gtfs.zip", "label": "Timetable from jbb.ghsq.de (Ukrzaliznytsia GTFS, community conversion of Ukrzaliznytsia's public timetable data)"}, "kind": "intercity", "license": null, "name": "Ukrzaliznytsia", "region": "Ukraine", "short": "UZ", "tz": "Europe/Kyiv"},
   varmlandstag: {"after": "norrtag", "bbox": [12.298, 59.229, 14.441, 60.137], "cars": "senorth", "color": "#00843d", "country": "SE", "credit": {"href": "https://data.trafikverket.se", "label": "Trafikverket"}, "kind": "commuter", "license": "CC0 1.0", "name": "Värmlandstrafik", "region": "Värmland", "short": "Värmlandstrafik", "tz": "Europe/Stockholm"},
   vasttag: {"after": "oresundstag", "bbox": [11.174, 57.11, 15.211, 59.277], "cars": "sesouth", "color": "#0071b9", "country": "SE", "credit": {"href": "https://data.trafikverket.se", "label": "Trafikverket"}, "kind": "commuter", "license": "CC0 1.0", "name": "Västtågen", "region": "Västra Götaland", "short": "Västtågen", "tz": "Europe/Stockholm"},
   vivi: {"bbox": [21.017, 55.875, 28.117, 57.775], "cars": true, "color": "#8bc34a", "country": "LV", "credit": {"href": "https://gsvalbe.id.lv/pieturas/avoti.html", "label": "Vivi timetable, Pieturas live data"}, "kind": "commuter", "license": null, "name": "Vivi", "region": "Latvia", "short": "Vivi", "tz": "Europe/Riga"},
@@ -224,6 +225,7 @@ export const SOURCES = [
   {"agencies": ["trentino"], "credit": {"href": "https://dati.trentino.it/dataset/trasporti-pubblici-del-trentino-formato-gtfs", "label": "Provincia di Trento open data (Trentino Trasporti)", "license": "CC BY 4.0"}, "format": "timetable", "id": "trentino", "interval": 60, "module": "trentino", "scope": "view"},
   {"after": "sounder", "agencies": ["wes"], "credit": {"href": "https://developer.trimet.org", "label": "TriMet", "license": null}, "format": "pb", "id": "trimet", "interval": 30, "module": "trimet", "needsKey": "TRIMET_APP_ID", "relay": true, "scope": "view", "untilKey": "timetable"},
   {"after": "capmetro", "agencies": ["trirail"], "credit": {"href": "https://www.tri-rail.com", "label": "Tri-Rail", "license": null}, "format": "pb", "id": "trirail", "interval": 30, "module": "trirail", "needsKey": false, "relay": true, "scope": "always"},
+  {"agencies": ["uz"], "credit": {"href": "https://jbb.ghsq.de/gtfs/ua-ukrzaliznytsya.gtfs.zip", "label": "Timetable from jbb.ghsq.de (Ukrzaliznytsia GTFS, community conversion of Ukrzaliznytsia's public timetable data)", "license": null}, "format": "timetable", "id": "ukraine", "interval": 60, "module": "ukraine", "scope": "view"},
   {"agencies": ["vivi"], "credit": {"href": "https://gsvalbe.id.lv/pieturas/avoti.html", "label": "Vivi timetable, Pieturas live data", "license": null}, "format": "pb", "id": "vivi", "interval": 30, "module": "vivi", "needsKey": false, "relay": true, "scope": "view"},
   {"after": "metrotrains", "agencies": ["vline"], "credit": {"href": "https://opendata.transport.vic.gov.au", "label": "Transport Victoria", "license": "CC BY 4.0"}, "format": "pb", "id": "vline", "interval": 30, "module": "ptv", "needsKey": "VIC_OPENDATA_KEY", "relay": true, "scope": "view", "untilKey": "timetable"},
   {"agencies": ["vy"], "credit": {"href": "https://developer.entur.org", "label": "Entur", "license": "NLOD"}, "format": "pb", "id": "vy", "interval": 30, "module": "entur", "needsKey": false, "relay": true, "scope": "view"},
@@ -292,10 +294,12 @@ export const RAIL_REGIONS = [
   {"bbox": [5.33, 56.66, 16.56, 67.34], "bytes": 313259, "file": "data/rail/no.geojson", "region": "no"},
   {"bbox": [141.47, -37.82, 153.14, -27.47], "bytes": 246271, "file": "data/rail/nsw.geojson", "region": "nsw"},
   {"bbox": [174.58, -41.28, 175.65, -36.84], "bytes": 40889, "file": "data/rail/nz.geojson", "region": "nz"},
+  {"bbox": [12.38, 48.15, 28.62, 54.93], "bytes": 810268, "file": "data/rail/pl.geojson", "region": "pl"},
   {"bbox": [-9.42, 37.01, -6.82, 42.03], "bytes": 74553, "file": "data/rail/pt.geojson", "region": "pt"},
   {"bbox": [20.4, 43.77, 28.8, 47.99], "bytes": 242066, "file": "data/rail/ro.geojson", "region": "ro"},
   {"bbox": [10.66, 55.37, 24.15, 68.45], "bytes": 488750, "file": "data/rail/se.geojson", "region": "se"},
   {"bbox": [15.62, 47.51, 22.68, 50.28], "bytes": 380542, "file": "data/rail/sk.geojson", "region": "sk"},
+  {"bbox": [20.16, 46.45, 36.21, 52.26], "bytes": 113891, "file": "data/rail/ua.geojson", "region": "ua"},
   {"bbox": [142.47, -38.39, 147.63, -35.34], "bytes": 136558, "file": "data/rail/vic.geojson", "region": "vic"},
 ];
 
@@ -334,5 +338,6 @@ export const DATA_REGIONS = [
   {"agencies": ["astratc", "cfr", "cfrregio", "ferotrafic", "interregional", "regiocalatori", "softrans", "transferoviar"], "bbox": [20.405, 43.772, 28.79, 47.985], "files": ["stations", "departures", "firsts", "linecolors"], "region": "ro"},
   {"agencies": ["arlandaexpress", "krosatag", "malartag", "mtrx", "norrtag", "oresundstag", "ostgotapendeln", "pagatag", "sj", "slpendel", "snalltaget", "tagab", "tib", "varmlandstag", "vasttag", "xtaget"], "bbox": [8.207, 47.263, 24.132, 68.442], "files": ["stations", "departures", "firsts"], "region": "se"},
   {"agencies": ["leoexpresssk", "regiojetsk", "zssk"], "bbox": [9.446, 47.046, 22.712, 54.315], "files": ["stations", "departures", "firsts", "linecolors"], "region": "sk"},
+  {"agencies": ["uz"], "bbox": [21.0, 46.467, 36.203, 52.252], "files": ["stations", "departures"], "region": "ua"},
   {"agencies": ["metrotrains", "vline"], "bbox": [142.476, -38.386, 147.628, -35.341], "files": ["stations", "departures", "firsts", "linecolors"], "region": "vic"},
 ];
