@@ -197,7 +197,11 @@ html, body {
   color: var(--muted);
 }
 .agencies, .results { padding: 0 16px 16px; }
-.agencies .group-title, .results .group-title { margin: 22px 4px 6px; }
+/* A list's small label starts on the same line as the page's title and its
+   cards' edge, and what's at its right end ends on the cards' other edge.
+   (Labels sat 4px in from both, a third left edge between the title's and
+   the rows'.) */
+.agencies .group-title, .results .group-title { margin: 22px 0 6px; }
 /* The railroads by country: its name over its intercity and commuter cards. */
 .agencies .country-title { margin-top: 28px; font-size: var(--fs-md); font-weight: 600; color: var(--text); }
 .agencies .country-title + .group-title { margin-top: 4px; }
@@ -461,9 +465,9 @@ html, body {
 
 .recents { padding: 0 16px; flex: none; }
 .recents[hidden] { display: none; }
-.recents-head { display: flex; align-items: baseline; justify-content: space-between; padding-right: 4px; }
+.recents-head { display: flex; align-items: baseline; justify-content: space-between; }
 .recents + .agencies > .group-title:first-child { margin-top: 10px; }
-.recents-head .group-title { margin: 14px 4px 6px; }
+.recents-head .group-title { margin: 14px 0 6px; }
 .recents-head .link-btn { margin: 0; font-size: var(--fs-sm); font-weight: 400; }
 .recents-row {
   display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
@@ -611,7 +615,7 @@ kbd {
 .ft-speed { flex: 0 0 34%; min-width: 0; }
 .ft-speed:only-child { flex: 1 1 auto; }
 .ft-speed .ft-value { margin-top: 1px; }
-.ft-note { display: flex; align-items: center; gap: 5px; margin: 8px 4px 0; font-size: var(--fs-xs); color: var(--muted); }
+.ft-note { display: flex; align-items: center; gap: 5px; margin: 8px 0 0; font-size: var(--fs-xs); color: var(--muted); }
 .ft-note svg { color: var(--good); flex: none; }
 .ft-gps { display: inline-flex; align-items: center; gap: 6px; }
 .ft-gps svg { width: 15px; height: 15px; color: var(--good); flex: none; }
@@ -868,7 +872,7 @@ a.menu-link { box-sizing: border-box; text-decoration: none; }
 
 .agencies .home-title { display: flex; align-items: center; justify-content: space-between; }
 .home-title .link-btn { margin: 0; font-weight: 400; }
-.home-note { margin: 0 4px; }
+.home-note { margin: 0; }
 
 .next-trip {
   display: flex; flex-direction: column; gap: 6px; width: 100%; box-sizing: border-box;
@@ -922,7 +926,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 /* All railroads: one line a railroad, under its country. */
 .agencies .country-head {
-  display: flex; justify-content: space-between; gap: 8px; width: calc(100% - 8px); padding: 0;
+  display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 0;
   border: 0; background: none; font: inherit; font-size: var(--fs-sm); color: var(--muted); text-align: left; cursor: pointer;
 }
 .agencies .country-head:hover { color: var(--text); }
@@ -958,7 +962,7 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 
 /* Likely delays: on the live card, under each stop ahead, and on the next trip. */
-.likely-note { margin: 8px 2px 0; font-size: var(--fs-sm); color: var(--muted); }
+.likely-note { margin: 8px 0 0; font-size: var(--fs-sm); color: var(--muted); }
 .likely-note .likely, .nt-usual { font-weight: 600; }
 .likely.good, .nt-usual.good { color: var(--good); }
 .likely.warn, .nt-usual.warn { color: var(--warn); }
