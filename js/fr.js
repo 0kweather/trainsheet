@@ -317,6 +317,8 @@ export default {
   // ----- Search: trains later today -----
   "Later today": "Plus tard aujourd’hui",
   "{n} more later today": "{n} autres plus tard aujourd’hui",
+  "Coming up": "À venir",
+  "{n} more in the coming days": "{n} autres dans les prochains jours",
   "leaves {place} at {time}": "part de {place} à {time}",
   "{line} to {place}": "{line} vers {place}",
   "Loading its stops…": "Chargement de ses arrêts…",

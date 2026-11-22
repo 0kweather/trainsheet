@@ -3337,12 +3337,15 @@ function renderResults() {
   const route = routeQuery(state.query.trim());
   const routeBlock = route ? routeHtml(route) : "";
   const later = q.length >= 2 ? laterToday(terms, q) : [];
-  laterShown = new Map(later.slice(0, 12).map((u) => [upcomingKey(u), u]));
+  const future = q.length >= 2 ? futureTrains(terms, q) : [];
+  laterShown = new Map([...later.slice(0, 12), ...future.slice(0, 12)].map((u) => [upcomingKey(u), u]));
   const laterBlock = later.length ? `<div class="group-title">${T("Later today")}</div>` + upcomingHtml(later.slice(0, 12)) +
     (later.length > 12 ? `<p class="results-more">${esc(T("{n} more later today", { n: later.length - 12 }))}</p>` : "") : "";
+  const futureBlock = future.length ? `<div class="group-title">${T("Coming up")}</div>` + upcomingHtml(future.slice(0, 12)) +
+    (future.length > 12 ? `<p class="results-more">${esc(T("{n} more in the coming days", { n: future.length - 12 }))}</p>` : "") : "";
   const before = routeBlock + carBlock + railroadBlock + lineBlock + stationBlock;
   if (!matches.length) {
-    setPane(el, before + laterBlock || `<div class="empty">${esc(q ? T("Nothing matches “{q}”.", { q: state.query.trim() }) : T("No trains running match these filters."))}</div>`);
+    setPane(el, before + laterBlock + futureBlock || `<div class="empty">${esc(q ? T("Nothing matches “{q}”.", { q: state.query.trim() }) : T("No trains running match these filters."))}</div>`);
     return;
   }
   setPane(el, before + (before ? `<div class="group-title">${T("Trains")}</div>` : "") + matches.slice(0, 60).map(({ t }) => {
@@ -3354,7 +3357,7 @@ function renderResults() {
       <span><span class="title">${esc(trainTitle(t))}</span><br><span class="sub">${esc(a.short)} · ${esc(sub)}</span></span>
       ${statusSpan(t, "status")}
     </button>${t.number ? addBtn(hasTrip(t.agency, t.number, localDay()), `data-add-train="${esc(t.id)}"`, `${a.short} ${t.number}`) : ""}</div>`;
-  }).join("") + laterBlock);
+  }).join("") + laterBlock + futureBlock);
 }
 
 // ---------- Later today: trains that haven't left yet ----------
@@ -3544,6 +3547,33 @@ function laterToday(terms, q) {
   return out.sort((x, y) => Number(y.exact) - Number(x.exact) || x.at - y.at);
 }
 
+// Trains that next leave on a later day in the departures window: each run's
+// first service day after today.
+function futureTrains(terms, q) {
+  const all = departures(), out = [], tomorrow = addDaysIso(localDay(), 1);
+  for (const [id, d] of Object.entries(all)) {
+    const a = AGENCIES[id];
+    if (!a || !agencyShown(id) || !agencyFiltered(id) || !d.runs) continue;
+    const [y, m, day] = d.start.split("-").map(Number), today = zoneDay(d.tz);
+    const first = Math.round((today - Date.UTC(y, m - 1, day)) / 86400000);
+    for (const [key, line, from, to, dep, days] of d.runs) {
+      let idx = Math.max(first + 1, 0);
+      while (idx <= 13 && !(days & (1 << idx))) idx++;
+      if (idx > 13) continue;
+      const number = d.unnumbered ? null : key;
+      const origin = d.stops[from] || "", dest = d.stops[to] || "";
+      const hay = fold(`${a.name} ${a.short} ${a.region} ${number || ""} ${line} ${origin} ${dest}`);
+      if (!terms.every((w) => hay.includes(w))) continue;
+      const exact = Boolean(number) && (String(number).toLowerCase() === q || terms.includes(String(number).toLowerCase()));
+      const start = serviceStart(today - (first - idx) * 86400000, d.tz), at = start + dep * 60000;
+      const dayIso = addDaysIso(d.start, idx);
+      const dayLabel = localDay(at) === tomorrow ? T("Tomorrow") : tripDate(dayIso);
+      out.push({ id, key, number, line, origin, dest, at, dep, idx, start, tz: d.tz, exact, dayIso, dayLabel });
+    }
+  }
+  return out.sort((x, y) => Number(y.exact) - Number(x.exact) || x.at - y.at);
+}
+
 const upcomingKey = (u) => `${u.id}|${u.key}|${u.idx}|${u.dep}`;
 function upcomingHtml(list) {
   return list.map((u) => {
@@ -3551,8 +3581,8 @@ function upcomingHtml(list) {
     const leaves = T("leaves {place} at {time}", { place: u.origin, time: fmtTime(new Date(u.at).toISOString(), u.tz) });
     return `<div class="result-row"><button type="button" class="result upcoming" data-upcoming="${esc(k)}" aria-expanded="${open}">
       ${plate(u.number || a.short, a.color, "sm")}
-      <span><span class="title">${esc(u.dest ? T("{line} to {place}", { line: u.line, place: u.dest }) : u.line)}</span><br><span class="sub">${esc(a.short)} · ${esc(leaves)}</span></span>
-      <span class="status neutral">${esc(u.at - Date.now() < 30000 ? T("now") : T("in {time}", { time: fmtIn(u.at) }))}</span>
+      <span><span class="title">${esc(u.dest ? T("{line} to {place}", { line: u.line, place: u.dest }) : u.line)}</span><br><span class="sub">${esc(a.short)} · ${esc(leaves)}${u.dayLabel ? ` · ${esc(u.dayLabel)}` : ""}</span></span>
+      <span class="status neutral">${u.dayLabel && u.at - Date.now() >= 24 * 3600 * 1000 ? esc(tripDate(u.dayIso)) : esc(u.at - Date.now() < 30000 ? T("now") : T("in {time}", { time: fmtIn(u.at) }))}</span>
     </button>${u.number ? addBtn(hasTrip(u.id, u.number, localDay(u.at, u.tz)), `data-add-later="${esc(k)}"`, `${a.short} ${u.number}`) : ""}</div>${open ? upcomingStops(u) : ""}`;
   }).join("");
 }
