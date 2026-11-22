@@ -507,6 +507,8 @@ export default {
   "leaves {place} in": "part de {place} dans",
   "likely on time": "probablement à l’heure",
   "likely {late}": "probablement {late}",
+  "likely {time}": "probablement {time}",
+  "From this train's past trips. The time on the right is the railroad's.": "D’après les trajets passés de ce train. L’heure à droite est celle du réseau.",
   "min": "min",
   "on board": "à bord",
   "station": "gare",

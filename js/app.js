@@ -3786,8 +3786,13 @@ function renderDetail() {
         // Each stop opens its station's page ("back" returns to this train).
         const sid = s.key && state.stationOfKey?.get(s.key);
         const link = sid ? ` data-stop-station="${esc(sid)}" role="button" tabindex="0" title="${esc(T("{name} station", { name: s.name }))}"` : "";
+        // Under its name, when Trainsheet's own guess from the train's past
+        // trips differs from the railroad's time at the right: the time it
+        // is likely to get there ("likely 4:27 AM"), a clock time beside a
+        // clock time. ("Likely 10 min late" under a stop marked 4:17 left
+        // the reader to wonder which of the two the 4:17 was.)
         const guess = likely?.get(s.key);
-        const name = guess ? `${esc(s.name)}<small class="likely ${lateText(guess.min).cls}">${esc(likelyText(guess.min))}</small>` : esc(s.name);
+        const name = guess ? `${esc(s.name)}<small class="likely ${lateText(guess.min).cls}" title="${esc(T("From this train's past trips. The time on the right is the railroad's."))}">${esc(likelyAt(s, guess.min))}</small>` : esc(s.name);
         return `<li class="${s.status}${s.here ? " here" : ""}${leg(i)}${sid ? " link" : ""}"${link}><span class="stop-dot" aria-hidden="true"></span><span>${name}</span><span class="time">${time}</span></li>`;
       }).join("")}</ol></div>`)
     : "";
@@ -3985,6 +3990,14 @@ function usualDelay(agency, number, key) {
   const vals = loadDelays(agency, number)?.stops.get(key)?.filter((d) => d != null);
   if (!vals || vals.length < DELAY_MIN_TRIPS) return null;
   return { median: Math.round(weightedMedian(vals.map((v) => [v, 1]))), within: vals.filter((d) => d <= ON_TIME_MIN).length, n: vals.length };
+}
+// A stop's likely time, for its row in a train's stops: the timetable's time
+// and the minutes late it's likely to be, as a time ("likely 4:27 AM"); on
+// time, just that.
+function likelyAt(s, min) {
+  const sched = Date.parse(s.scheduled || s.time);
+  if (lateText(min).cls === "good" || !Number.isFinite(sched)) return likelyText(min);
+  return T("likely {time}", { time: fmtTime(new Date(sched + min * 60000).toISOString(), s.tz) });
 }
 const likelyText = (min) => (lateText(min).cls === "good" ? T("likely on time") : T("likely {late}", { late: lateText(min).text.toLowerCase() }));
 const usualText = (u) => `${lateText(u.median).cls === "good" ? T("Usually on time") : T("Usually {late}", { late: lateText(u.median).text.toLowerCase() })} · ${T("within {n} min on {k} of {m} trips", { n: ON_TIME_MIN, k: u.within, m: u.n })}`;
