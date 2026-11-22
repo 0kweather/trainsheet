@@ -61,6 +61,7 @@ EXTRACTS = [
     "europe/germany/sachsen-anhalt", "europe/germany/thueringen", "europe/germany/bayern/mittelfranken",
     "europe/germany/bayern/oberbayern", "europe/germany/bayern/schwaben", "europe/germany/bayern/unterfranken",
     "europe/denmark", "europe/poland/zachodniopomorskie", "europe/poland/lubuskie",
+    "europe/poland", "europe/ukraine", "europe/lithuania", "europe/germany",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine", "asia/china",
     "africa/morocco",
     "australia-oceania/australia", "australia-oceania/new-zealand",
