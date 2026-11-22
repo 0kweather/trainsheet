@@ -63,6 +63,7 @@ EXTRACTS = [
     "europe/denmark", "europe/poland/zachodniopomorskie", "europe/poland/lubuskie",
     "europe/poland", "europe/ukraine", "europe/lithuania", "europe/germany",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine", "asia/china",
+    "asia/iran",  # Turkey's Van-Tabriz leg (TCDD Trans-Asia Express)
     "africa/morocco",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
