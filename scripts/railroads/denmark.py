@@ -3,8 +3,9 @@ EuroCity Express and Railjet to Hamburg, Berlin and Prague), the S-tog
 (Copenhagen's S-trains, lines A, B, Bx, C, E, F, H), Lokaltog's lines on
 Zealand and Lolland-Falster, Nordjyske
 Jernbaner (Skagen and Hirtshals-Aalborg-Hobro/Skørping), Midtjyske
-Jernbaner (Holstebro-Skjern and Lemvig) and GoCollective (the former Arriva
-Denmark: Jutland's regional lines and the Tønder-Niebüll trains), from
+Jernbaner (Holstebro-Skjern and Lemvig) and DSB Vores Tog (Jutland's and
+Funen's regional lines and the Tønder-Niebüll trains, Arriva Denmark's and
+then GoCollective's until DSB took them over on September 1, 2026), from
 Rejseplanen's national timetable (GTFS, rejseplanen.info/labs: official,
 published by Rejseplanen A/S for every Danish operator, no key). It is an
 all-mode feed (buses, ferries, the Metro and the light rails too): the
@@ -16,10 +17,11 @@ each build.
 The feed's agencies, as the railroads here: dsb (agency 203, route type 2:
 IC, ICL, RE, ECE, RJ), stog (318, route type 109), lokaltog (316),
 nordjyske (206, routes 75 and 76), midtjyske (281, routes 92 and 93),
-gocollective (471, routes 030, 031 and RX). Agency 471 is named "DSB Vores
-Tog" in the feed, a quirk of Rejseplanen's: its trains are run by
-GoCollective (ex-Arriva Denmark; its Lint 41s carry GoCollective's name, as
-at Struer), and are named so here.
+vorestog (471, routes 030, 031 and RX). Agency 471 is "DSB Vores Tog" in
+the feed, and that is its operator: GoCollective's Danish rail operations
+ceased on August 31, 2026, and DSB took over its trains, staff and rolling
+stock (the teal Lint 41s and the white and navy Desiros) the next day under
+the DSB Vores Tog brand.
 Left out: Skånetrafiken's Øresundståg (agency 401, routes 802-806) and
 Snälltåget (451, route 083), which Sweden's plug-in already has (as
 oresundstag and snalltaget), the Copenhagen Metro (319), the light rails
@@ -27,7 +29,7 @@ oresundstag and snalltaget), the Copenhagen Metro (319), the light rails
 and every bus and ferry route.
 
 Cross-border trains: DSB's ECE and RJ (to Hamburg, Berlin, Dresden and
-Prague) and GoCollective's Tønder-Niebüll trains are kept whole, all their
+Prague) and DSB Vores Tog's Tønder-Niebüll trains are kept whole, all their
 stops, as SNCB's and CFL's trains over their borders are; the railroads
 "clip" to Denmark's box (BBOX, below), so their extent on the map stays
 Denmark's and doesn't stretch to Prague.
@@ -59,16 +61,16 @@ AGENCIES = {
                  "cars": "lokaltog", **COMMON},
     "nordjyske": {"name": "Nordjyske Jernbaner", "short": "Nordjyske", "color": "#0060a9", "kind": "commuter",
                   "after": "lokaltog", "cars": "nordjyske", **COMMON},
-    "midtjyske": {"name": "Midtjyske Jernbaner", "short": "Midtjyske", "color": "#3a7d44", "kind": "commuter",
+    "midtjyske": {"name": "Midtjyske Jernbaner", "short": "Midtjyske", "color": "#e01b22", "kind": "commuter",
                   "after": "nordjyske", "cars": "midtjyske", **COMMON},
-    "gocollective": {"name": "GoCollective", "short": "GoCollective", "color": "#00a3a6", "kind": "commuter",
-                     "after": "midtjyske", "cars": "gocollective", **COMMON},
+    "vorestog": {"name": "DSB Vores Tog", "short": "Vores Tog", "color": "#00a3a6", "kind": "commuter",
+                 "after": "midtjyske", "cars": "vorestog", **COMMON},
 }
 SOURCES = [{"id": "denmark", "agencies": list(AGENCIES), "format": "timetable", "interval": 60, "scope": "view"}]
 
 # The feed's agency ids, and each one's train route types (S-tog's is 109,
 # the rest 2: their buses are 3 and 715, kept out).
-OPERATORS = {"dsb": "203", "stog": "318", "lokaltog": "316", "nordjyske": "206", "midtjyske": "281", "gocollective": "471"}
+OPERATORS = {"dsb": "203", "stog": "318", "lokaltog": "316", "nordjyske": "206", "midtjyske": "281", "vorestog": "471"}
 TRAIN_TYPES = {"2", "109"}
 
 
@@ -78,8 +80,8 @@ def keep(agency):
 
 # Every railroad's lines are its routes' short names: DSB's products (IC,
 # ICL, RE, ECE, RJ), the S-tog's letters, Lokaltog's line numbers ("110R",
-# "910"), Nordjyske's and Midtjyske's (75, 76; 92, 93), GoCollective's (030,
-# 031, RX).
+# "910"), Nordjyske's and Midtjyske's (75, 76; 92, 93), DSB Vores Tog's
+# (030, 031, RX).
 line = lambda r: r["route_short_name"].strip()
 
 # "000100" -> "100".
@@ -180,7 +182,7 @@ STOG_COLORS = {"A": "#00a4e4", "B": "#4db848", "Bx": "#8dc63f", "C": "#f7941d", 
                "H": "#e2001a"}
 LINES = {"dsb": ["IC", "ICL", "RE", "ECE", "RJ"],
          "lokaltog": ["110R", "210R", "410", "510R", "710R", "910", "920R", "930R", "940R", "950R", "960R"],
-         "nordjyske": ["75", "76"], "midtjyske": ["92", "93"], "gocollective": ["030", "031", "RX"]}
+         "nordjyske": ["75", "76"], "midtjyske": ["92", "93"], "vorestog": ["030", "031", "RX"]}
 
 
 def colors(agency):
