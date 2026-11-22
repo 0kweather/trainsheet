@@ -74,7 +74,7 @@ COMMON = {"region": "Poland", "country": "PL", "tz": TZ, "credit": CREDIT, "lice
 AGENCIES = {
     "ic": {"name": "PKP Intercity", "short": "PKP IC", "color": "#004b8d", "kind": "intercity",
            "cars": "ic", **COMMON},
-    "polregio": {"name": "PolRegio", "short": "PolRegio", "color": "#e30613", "kind": "regional",
+    "polregio": {"name": "PolRegio", "short": "PolRegio", "color": "#e30613", "kind": "commuter",
                  "after": "ic", "cars": "polregio", **COMMON},
     "mazowieckie": {"name": "Koleje Mazowieckie", "short": "KM", "color": "#009444", "kind": "commuter",
                     "after": "polregio", "cars": "mazowieckie", **COMMON},
@@ -88,7 +88,7 @@ AGENCIES = {
                     "after": "wielkopolskie", "cars": "malopolskie", **COMMON},
     "lka": {"name": "Łódzka Kolej Aglomeracyjna", "short": "ŁKA", "color": "#662d91", "kind": "commuter",
             "after": "malopolskie", "cars": "lka", **COMMON},
-    "arriva": {"name": "Arriva RP", "short": "Arriva", "color": "#00a9b5", "kind": "regional",
+    "arriva": {"name": "Arriva RP", "short": "Arriva", "color": "#00a9b5", "kind": "commuter",
                "after": "lka", "cars": "arriva", **COMMON},
     "skmt": {"name": "PKP SKM Trójmiasto", "short": "SKM", "color": "#003da5", "kind": "commuter",
              "after": "arriva", "cars": "skmt", **COMMON},
