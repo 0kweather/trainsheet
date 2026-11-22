@@ -68,7 +68,9 @@ EXTRACTS = [
 # Light rail stays only where it's third-rail: OpenStreetMap files Berlin's
 # and Hamburg's S-Bahn lines as railway=light_rail (electrified=rail), the
 # trams and Stadtbahnen (overhead wire) stay out. Extracts cut before this
-# have no light rail at all.
+# have no light rail at all. Copenhagen's S-tog is light_rail too, on overhead
+# wire but at its own 1650 V DC (Denmark's trams and Letbaner run at 750 V), so
+# voltage=1650 is kept as well.
 # Tourist lines stay: build_rail.py routes only the hops a timetable runs, so
 # a line OSM tags as tourist (Sardinia's Mandas–Isili) is drawn only where a
 # scheduled train uses it.
@@ -114,7 +116,7 @@ def main(only=()):
             p = f["properties"]
             if p.get("railway") not in ("rail", "narrow_gauge", "light_rail") or "service" in p or SKIP_USAGE.match(p.get("usage", "")):
                 continue
-            if p.get("railway") == "light_rail" and p.get("electrified") != "rail":
+            if p.get("railway") == "light_rail" and p.get("electrified") != "rail" and p.get("voltage") != "1650":
                 continue
             coords = f["geometry"]["coordinates"]
             wid = int(str(p["@id"]).lstrip("w"))
