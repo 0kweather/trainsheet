@@ -1593,13 +1593,27 @@ def route_timetables(segments, mods):
             segments[k] = (nets, simplify(pts) if len(pts) >= 2 else pts)
         print(f"  {agency}: +{added / 1000:.0f} km along its routes")
     segments[:] = [(n, c) for n, c in segments if len(c) >= 2]
-    # Every piece of track: the railroads whose routes run along it.
-    guides = {a: Coverage([((a,), densify(p, 50)) for p in ps]) for a, ps in paths.items() if ps}
+    # The routing graph and the candidate ways are done with; freeing them
+    # before the guides below leaves the guides more room.
+    del graph, ways, own
+    # Every piece of track: the railroads whose routes run along it. Each
+    # railroad's guide is built, used and freed one at a time: all of them
+    # at once is several gigabytes for a big country (China's are ~2 GB
+    # each), which ran the build out of memory.
+    along = [[] for _ in segments]
+    for a, ps in paths.items():
+        if not ps:
+            continue
+        guide = Coverage([((a,), densify(p, 50)) for p in ps])
+        for k, (_nets, line) in enumerate(segments):
+            pts = densify(line, 100)
+            if sum(1 for q in pts if guide.nearest(q, ROUTE_ALONG_M)) >= 0.7 * len(pts):
+                along[k].append(a)
+        del guide
     retagged = 0
     TWINS.clear()
     for k, (nets, line) in enumerate(segments):
-        pts = densify(line, 100)
-        users = [a for a, g in guides.items() if sum(1 for q in pts if g.nearest(q, ROUTE_ALONG_M)) >= 0.7 * len(pts)]
+        users = along[k]
         if users:
             ranked = sorted(users, key=rank)
             new = tuple(ranked[:3])
