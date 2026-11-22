@@ -6,10 +6,11 @@
 // (js/carart.js), in Al Boraq's paint, lettered here (no logo files).
 // Bodies and parts from czechia.cars.js.
 //
-// The paint is drawn from memory of the fleet, not checked against
-// photographs: the white body, the dark window bands and the red and green
-// ribbons are sure; the ribbons' exact course along the side, the doors'
-// color and where the name sits on each car are Trainsheet's reading.
+// The paint is checked against photographs of the sets at Tangier: the
+// silver-white body, the dark window bands, the red band with its thin
+// green line above, the silver nose and the power car's tan filter panel.
+// The doors' color and where the name sits on each car are Trainsheet's
+// reading.
 
 import { rect, path, lines, slats, pantograph } from "../carart.js?v=dev";
 import { unit, letters, hvac, hvLine } from "./czechia.cars.js?v=dev";
@@ -25,31 +26,34 @@ const spread = (a, b, w, pitch) => {
 
 // ---------- Paint ----------
 // Al Boraq since 2018: pearl white all over, a gray roof and a gray skirt;
-// each deck's windows in a dark band; a red ribbon and a green one, the
-// colors of Morocco's flag, sweeping up from the power car's nose and
-// weaving along the train between the decks; the red spreads over the nose
-// under the windshield. "Al Boraq" and its Arabic, البراق, in red on the
-// power cars and small by the trailers' ends; ONCF's initials by the cab.
-const AB = { white: "#f3f3ef", roof: "#b9bdc2", skirt: "#8b9097", band: "#23262b", red: "#d81e2c", deep: "#b0141f", green: "#0a6b3a",
-  ink: "#3a3d42", door: "#e3e5e6", grille: "#c9ccd0" };
+// each deck's windows in a dark band; a red band with a thin green line
+// above it, the colors of Morocco's flag, sweeping up from behind the power
+// car's silver nose, under the cab window, and running level along the
+// train just under the upper deck's windows. "Al Boraq" and its Arabic,
+// البراق, in red, small on the power cars' tails and by the trailers' ends;
+// ONCF's initials on the nose.
+const AB = { white: "#f3f3ef", roof: "#b9bdc2", skirt: "#8b9097", band: "#23262b", red: "#d81e2c", deep: "#b0141f", green: "#007a3d",
+  ink: "#3a3d42", door: "#e3e5e6", grille: "#c9ccd0", tan: "#c8b48c" };
 const AB_FONT = "'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const AR_FONT = "'Geeza Pro', 'Noto Naskh Arabic', 'Noto Sans Arabic', Tahoma, Arial, sans-serif";
 const boraq = (c, x, y, h, fill = AB.red) => letters(c, x, y, h, "Al Boraq", fill, { weight: 700, style: "italic", spacing: "-0.01em", family: AB_FONT });
 const boraqAr = (c, x, y, h, fill = AB.red) => letters(c, x, y, h, "البراق", fill, { weight: 700, family: AR_FONT });
 const oncf = (c, x, y, h = 0.62) => letters(c, x, y, h, "ONCF", AB.ink, { weight: 800, spacing: "0.06em", family: AB_FONT });
 
-// A ribbon th ft thick along a whole trailer: one slow wave about y, amp ft
-// either way, level with its neighbor's at each joint so the two ribbons
-// run on from car to car, crossing at the joints and mid-car.
-const RIB = { y: 8.22, amp: 0.72 };
-function ribbon(L, th, fill, sign) {
-  const at = (x) => RIB.y + sign * RIB.amp * Math.sin((2 * Math.PI * x) / L);
-  const xs = seq(-1, (L + 2) / 36, 37);
+// The trailers' stripe: a red band with a thin green line directly above
+// it, level just under the upper deck's windows, dipping a little over the
+// last few feet at each end, where it meets its neighbor's at the joint
+// (RIB.end, also where the power car's stripe leaves its tail).
+const RIB = { red: 8.8, redTh: 0.6, green: 9.35, greenTh: 0.5, dip: 0.35, run: 9 };
+RIB.end = { red: RIB.red - RIB.dip, green: RIB.green - RIB.dip };
+function ribbon(L, y, th, fill) {
+  const at = (x) => { const d = Math.max(0, Math.min(x, L - x)); return y - (d < RIB.run ? RIB.dip * 0.5 * (1 + Math.cos((Math.PI * d) / RIB.run)) : 0); };
+  const xs = seq(-1, (L + 2) / 48, 49);
   const top = xs.map((x, i) => `${i ? "L" : "M"}${n(x)} ${n(at(x) + th / 2)}`).join("");
   const bot = xs.slice().reverse().map((x) => `L${n(x)} ${n(at(x) - th / 2)}`).join("");
   return path(top + bot + "Z", fill);
 }
-const ribbons = (L) => ribbon(L, 0.42, AB.green, -1) + ribbon(L, 0.55, AB.red, 1);
+const ribbons = (L) => ribbon(L, RIB.red, RIB.redTh, AB.red) + ribbon(L, RIB.green, RIB.greenTh, AB.green);
 
 // A plug door, single leaf, on the lower deck beside the truck.
 const plugDoor = (x, y0, y1, w = 2.9) => ({ x, w, y0, y1, leaves: 1, glassY: 0.5, glassH: 0.32, grabs: false, fill: AB.door });
@@ -66,11 +70,12 @@ const NOSE_PWR = [[1.0, 2.4], [0.6, 3.8], ["q", 0.7, 5.6, 3.0, 6.9], [11.5, 11.3
 function powerPaint(c, g) {
   const L = g.L;
   return bands(L, [[0, 20, AB.white], [13.0, 3, AB.roof], [0, 3.4, AB.skirt]]) +
-    // The green ribbon rises from the skirt behind the nose; the red covers
-    // the nose under the windshield and narrows to its ribbon over it.
-    path(`M10.5 3.4Q22 3.6 36 6.0Q52 8.6 ${n(L + 1)} 8.43L${n(L + 1)} 8.01Q52 8.0 37 5.3Q26 3.5 18 3.4Z`, AB.green) +
-    path(`M-1 2.4L-1 7.3Q5 7.9 10 8.6Q24 10.4 40 9.0Q56 7.9 ${n(L + 1)} 8.5L${n(L + 1)} 7.95Q56 7.3 40 8.3Q25 9.5 15 7.2Q10.5 5.6 10.5 3.4L10.5 2.4Z`, AB.red) +
-    path("M-1 2.4L-1 4.6Q4 4.5 7.6 3.4L7.6 2.4Z", AB.deep);
+    // The nose stays silver: the red starts as a point low behind the
+    // headlight, sweeps up under the cab's side window and runs back level
+    // along the side; the thin green line starts behind the cab, directly
+    // above it. Both dip at the tail to meet the first trailer's.
+    path(`M6.5 4.3Q12 8.6 20 9.1L${n(L - 9)} 9.1Q${n(L - 4)} 9.1 ${n(L + 1)} ${n(RIB.end.red + 0.3)}L${n(L + 1)} ${n(RIB.end.red - 0.3)}Q${n(L - 4)} 8.5 ${n(L - 9)} 8.5L24 8.5Q15 8.0 6.5 4.3Z`, AB.red) +
+    path(`M19.5 9.1L${n(L - 9)} 9.1Q${n(L - 4)} 9.1 ${n(L + 1)} ${n(RIB.end.green - RIB.greenTh / 2)}L${n(L + 1)} ${n(RIB.end.green + RIB.greenTh / 2)}Q${n(L - 4)} 9.6 ${n(L - 9)} 9.6L25 9.6Z`, AB.green);
 }
 function powerCar(c) {
   const L = c.L, up = c.index > 0;
@@ -81,12 +86,16 @@ function powerCar(c) {
       path("M14.6 9.3L18.2 9.3L18.2 11.3L16.4 11.3Z", "#1d2026", 0.4) + rect(19.6, 3.7, 2.3, 8.2, "rgba(0,0,0,0.07)", 0.5) +
       [[27.5, 12.5], [43.5, 12.5], [59.0, 9.5]].map(([x, w]) => rect(x, 10.9, w, 1.7, AB.grille, 0.4, 'rx="0.2"') + slats(x + 0.3, 10.95, w - 0.6, 1.6, 0.45, "rgba(0,0,0,0.3)")).join("") +
       lines([[25.2, 3.6, 25.2, 12.9], [42.0, 3.6, 42.0, 12.9], [57.6, 3.6, 57.6, 12.9]], "rgba(0,0,0,0.12)", 0.4) +
+      // The big tan filter panel along the lower side, in its sections.
+      rect(27, 4.0, g.L - 37, 3.9, AB.tan, 0.4, 'rx="0.15"') +
+      lines(seq(27, (g.L - 37) / 10, 11).slice(1, -1).map((x) => [n(x), 4.0, n(x), 7.9]), "rgba(60,40,10,0.28)", 0.4) +
       // Roof: the 3 kV pantograph forward, the 25 kV one aft with its line
       // to the breaker; a blower cover between.
       pantograph(30, PWR.roof, { up: false, facing: -1 }) + hvac(38, PWR.roof, 9, 0.5) +
       pantograph(g.L - 19, PWR.roof, { up, facing: -1 }) + hvLine(g.L - 15.5, g.L - 7, PWR.roof) +
-      // The name, and its Arabic, under the ribbons; ONCF by the cab door.
-      boraq(cc, 50.5, 5.3, 1.9) + boraqAr(cc, 63.5, 5.4, 1.9) + oncf(cc, 26.2, 6.4) +
+      // ONCF on the nose ahead of the cab door; the name, and its Arabic,
+      // small at the tail, clear of the filter panel.
+      oncf(cc, 14.2, 5.3) + boraq(cc, g.L - 5.2, 6.6, 0.8) + boraqAr(cc, g.L - 5.2, 5.4, 0.8) +
       letters(cc, g.L - 5.2, 4.2, 0.36, "RGV2N2", AB.ink, { weight: 600, spacing: "0.06em" }) });
 }
 

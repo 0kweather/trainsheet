@@ -8,11 +8,12 @@
 // gray and orange, lettered here (no logo files). Bodies and parts from
 // czechia.cars.js.
 //
-// The paint is drawn from memory of the fleet, not checked against
-// photographs: the white body, the gray window band and roof and ONCF's
-// orange are sure; the orange's exact course over the locomotive's cabs,
-// the doors' color and where the lettering sits are Trainsheet's reading.
-// So are the number and order of the coaches in a train.
+// The locomotive's paint follows a photograph of E 1402 at Tanger Ville:
+// orange over the whole cab, a deep orange panel along the upper side,
+// silver below, a dark gray roof. The coaches' white body, gray window band
+// and orange line and doors are sure; where the lettering sits is
+// Trainsheet's reading. So are the number and order of the coaches in a
+// train.
 
 import { C, rect, path, underframe } from "../carart.js?v=dev";
 import { unit, euroLoco, letters, hvac, buffers } from "./czechia.cars.js?v=dev";
@@ -23,12 +24,12 @@ const bands = (L, list) => list.map(([y, h, fill]) => rect(-1, y, L + 2, h, fill
 // ---------- Paint ----------
 // ONCF's long-distance stock today: white sides under a gray roof, the
 // windows in a dark gray band, a line of ONCF's orange under it, orange
-// doors, a gray skirt. The locomotive wears the same white, its cabs
-// orange, the orange sweeping down and back from the roof to a line along
-// a charcoal lower side. "ONCF" in charcoal on the white; the class figure
-// by each coach door.
-const AT = { white: "#f2f2ee", roof: "#aeb3b9", band: "#3d4148", skirt: "#8b9097", orange: "#f87820", deep: "#d9620f", ink: "#34373c", coal: "#454950",
-  door: "#f87820", night: "#27345c" };
+// doors, a gray skirt. The locomotive is mostly orange: the cabs whole,
+// and a deep orange panel over the top half of the side between them,
+// silver below and a dark gray roof, "ONCF" in white on the panel; the
+// class figure by each coach door.
+const AT = { white: "#f2f2ee", roof: "#aeb3b9", band: "#3d4148", skirt: "#8b9097", orange: "#f07d02", deep: "#d86a00", panel: "#e87400", ink: "#34373c", coal: "#454950",
+  silver: "#c9cdd2", locoRoof: "#55595f", door: "#f07d02", night: "#27345c" };
 const AT_FONT = "'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const AR_FONT = "'Geeza Pro', 'Noto Naskh Arabic', 'Noto Sans Arabic', Tahoma, Arial, sans-serif";
 const oncf = (c, x, y, h, fill = AT.ink) => letters(c, x, y, h, "ONCF", fill, { weight: 800, spacing: "0.05em", family: AT_FONT });
@@ -44,16 +45,25 @@ const atlas = (c, x, y, h = 0.8) => letters(c, x - 2.6, y, h, "Al Atlas", AT.ora
 // about 10.4 m.
 const NOSE_PRIMA = [[1.05, 4.1], [0.8, 6.7], ["q", 0.85, 8.3, 1.8, 9.2], [2.9, 12.2], ["q", 3.4, 12.9, 4.7, 12.9]];
 function primaPaint(c, L) {
-  let s = rect(0, 0, L, 20, AT.white) + bands(L, [[11.75, 3, AT.roof], [0, 5.6, AT.coal], [5.6, 0.32, AT.orange], [0, 4.45, "#2c2f34"]]);
-  // The cab: orange from the roof down, swept back to the line along the
-  // lower side; a deeper orange under the windshield.
-  s += path("M-1 4.45L-1 13L8.6 13Q10.4 8.6 15.2 5.92L15.2 5.6L7.4 5.6Q6.6 4.9 5.6 4.45Z", AT.orange) +
-    path("M-1 4.45L-1 8.1Q1.6 8.2 2.9 7.0Q4.2 5.7 6.4 5.6Q5.9 4.9 5.2 4.45Z", AT.deep);
+  // Silver lower sides over a dark frame; the paint is drawn for one half
+  // and mirrored, so the side panel runs to the middle.
+  let s = rect(0, 0, L, 20, AT.silver) + bands(L, [[0, 4.45, "#2c2f34"]]);
+  // The cab: orange over the whole nose and front, reaching back along the
+  // eave; a deeper orange low on the nose, black under the windshield.
+  s += path("M-1 4.45L-1 13L10.2 13L10.2 12.2L9.0 12.2Q7.9 7.6 5.5 4.45Z", AT.orange) +
+    path("M-1 4.45L-1 6.5Q1.8 6.6 3.2 5.9Q4.5 5.3 5.5 4.45Z", AT.deep) +
+    path("M-1 7.7L-1 9.25L2.3 9.25Q2.9 8.4 2.6 7.7Z", "#1d2026");
+  // The sweep panel: deep orange over the top half of the side, its
+  // leading edge raked back from the eave.
+  s += path(`M10.0 12.2L12.2 7.3L${L / 2 + 1} 7.3L${L / 2 + 1} 12.2Z`, AT.panel) +
+    path(`M12.2 7.3L${L / 2 + 1} 7.3L${L / 2 + 1} 7.02L12.35 7.02Z`, AT.deep);
+  // The dark gray roof, over the brow of the cab as well.
+  s += rect(-1, 12.2, L + 2, 3, AT.locoRoof);
   return s;
 }
-const primaOver = (c, L) => oncf(c, L / 2, 8.55, 1.7) +
-  letters(c, 13.4, 4.95, 0.6, "E 1400", "#ffffff", { weight: 600, spacing: "0.04em", family: AT_FONT }) +
-  letters(c, L - 13.4, 4.95, 0.6, "E 1400", "#ffffff", { weight: 600, spacing: "0.04em", family: AT_FONT });
+const primaOver = (c, L) => oncf(c, L / 2, 9.2, 1.7, "#ffffff") + oncf(c, 9.6, 5.9, 0.75) + oncf(c, L - 9.6, 5.9, 0.75) +
+  letters(c, 13.4, 5.15, 0.6, "E 1400", AT.ink, { weight: 600, spacing: "0.04em", family: AT_FONT }) +
+  letters(c, L - 13.4, 5.15, 0.6, "E 1400", AT.ink, { weight: 600, spacing: "0.04em", family: AT_FONT });
 const prima = (c) => euroLoco(c, { roof: 12.9, sill: 4.1, nose: NOSE_PRIMA, rake: [[1.8, 9.2], [2.9, 12.2]], centers: 34.1, door: 5.9, wheel: 45,
   surround: "#1d2026", paint: primaPaint, over: primaOver, grilles: [[-15.0, 8.6, 9.2, 11.3], [6.4, 8.6, 9.2, 11.3]] });
 

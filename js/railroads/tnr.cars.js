@@ -9,10 +9,10 @@
 //
 // The Z2M is AnsaldoBreda's TAF (Treno ad Alta Frequentazione, Trenitalia's
 // ALe 426/506) built for ONCF's 3 kV lines, and the dimensions here are the
-// TAF's. The paint is drawn from memory of the fleet, not checked against
-// photographs: the white body, the dark window bands and ONCF's orange are
-// sure; the violet's course over the cab and along the skirt, the doors'
-// color and where the lettering sits are Trainsheet's reading.
+// TAF's. The paint is checked against photographs of the fleet: the light gray
+// body, the charcoal upper deck and roof, the orange cab, roof edge and skirt
+// band and the body-color doors; where the lettering sits is Trainsheet's
+// reading.
 
 import { C, rect, path, underframe } from "../carart.js?v=dev";
 import { unit, letters, hvac } from "./czechia.cars.js?v=dev";
@@ -22,11 +22,12 @@ const bands = (L, list) => list.map(([y, h, fill]) => rect(-1, y, L + 2, h, fill
 const boxes = (a, b, top, k = 1, depth = 0.8) => underframe(a, b, top, { depth, boxes: k, tanks: false });
 
 // ---------- Paint ----------
-// ONCF's suburban stock: white sides under a gray roof; each deck's windows
-// in a dark band; a fine orange line between the decks; the skirt violet,
-// the violet rising over the cab to the roof behind an orange edge; orange
-// doors. "ONCF" in orange and "TNR" in violet on the white between the decks.
-const TN = { white: "#f3f3f0", roof: "#b3b8be", band: "#22252b", violet: "#4a20aa", deep: "#38188a", orange: "#f87820", skirt: "#33363c", ink: "#6c7078" };
+// ONCF's suburban stock: light gray sides; the upper deck's windows in a
+// charcoal band that carries on over the roof; the lower deck's in a dark
+// band between the doors; a bold orange band along the bottom of every car;
+// the roof edge orange over each single-deck end; the whole nose and cab roof
+// orange; doors in the body's gray. "ONCF" and "TNR" in orange between the decks.
+const TN = { white: "#e6e7e5", roof: "#2b2e33", band: "#22252b", orange: "#f07d02", skirt: "#33363c", ink: "#6c7078" };
 const SANS = "Helvetica Neue, Helvetica, Arial, sans-serif";
 
 // ---------- Z2M ----------
@@ -39,18 +40,18 @@ const SANS = "Helvetica Neue, Helvetica, Arial, sans-serif";
 // end behind the cab. A deep, rounded nose under a tall raked windshield.
 const Z = { roof: 14.1, sill: 3.7, cab: 85.1, mid: 85.5, drop: (L) => ({ a: 14.6, b: L - 14.6, y: 1.6 }) };
 const NOSE = [[1.5, 3.7], [1.0, 6.0], ["q", 0.95, 7.9, 2.5, 9.1], [5.9, 13.2], ["q", 6.7, 14.1, 8.6, 14.1]];
-// The violet's edge behind the cab, from the roof down to the skirt.
-const SWEEP = "C8.0 10.6 9.4 6.2 12.6 4.1";
+// The orange's edge behind the cab, from the roof down to the skirt band.
+const SWEEP = "C8.3 11.0 7.6 7.0 6.4 4.1";
 function paint(cab) {
   return (c, g) => {
     const L = g.L;
-    let s = bands(L, [[0, 20, TN.white], [13.25, 3, TN.roof], [7.5, 0.22, TN.orange], [2.4, 1.7, TN.violet], [0, 2.4, TN.skirt]]) +
-      // The window bands: the upper deck's, and the lower deck's between the doors.
-      rect(17.0, 9.85, L - 34.0, 2.95, TN.band, 0, 'rx="0.4"') + rect(21.9, 4.3, L - 43.8, 2.85, TN.band, 0, 'rx="0.4"');
-    if (cab) s += path(`M-1 2.4L-1 14.8L7.0 14.8${SWEEP}L12.6 2.4Z`, TN.violet) +
-      path(`M7.0 14.8${SWEEP}`, "none", 0, `stroke="${TN.orange}" stroke-width="0.5" stroke-linecap="round"`) +
-      // Darker under the windshield, down to the coupler.
-      path("M-1 2.4L-1 6.3Q2.6 6.5 4.6 5.2L6.0 2.4Z", TN.deep);
+    let s = bands(L, [[0, 20, TN.white], [13.25, 3, TN.roof], [2.4, 2.6, TN.orange], [0, 2.4, TN.skirt]]) +
+      // The orange roof edge over each single-deck end.
+      rect(-1, 12.3, 18.2, 4, TN.orange) + rect(L - 17.2, 12.3, 18.2, 4, TN.orange) +
+      // The charcoal upper deck, on over the roof, and the lower deck's band between the doors.
+      rect(17.0, 9.6, L - 34.0, 6, TN.band) + rect(21.9, 4.3, L - 43.8, 2.85, TN.band, 0, 'rx="0.4"');
+    // The nose and cab roof, orange down to the skirt band.
+    if (cab) s += path(`M-1 2.4L-1 14.8L9.0 14.8${SWEEP}L6.4 2.4Z`, TN.orange);
     return s;
   };
 }
@@ -58,14 +59,14 @@ function paint(cab) {
 // intermediate level over each truck (a ft in from each end).
 const rows = (L, a = 6.2) => [{ xs: seq(17.6, 5.4, Math.floor((L - 35.2 - 4.4) / 5.4) + 1), y: 10.1, w: 4.4, h: 2.45, r: 0.4 },
   { xs: seq(22.6, 5.5, Math.floor((L - 45.2 - 4.4) / 5.5) + 1), y: 4.5, w: 4.4, h: 2.45, r: 0.4 }, { xs: [a, L - 6.2 - 4.2], y: 7.95, w: 4.2, h: 2.6, r: 0.4 }];
-const door = (x) => ({ x, w: 4.6, y0: 1.7, y1: 8.9, leaves: 2, glassY: 0.4, glassH: 0.45, fill: TN.orange });
+const door = (x) => ({ x, w: 4.6, y0: 1.7, y1: 8.9, leaves: 2, glassY: 0.54, glassH: 0.3, fill: TN.white });
 const doors = (L) => [door(16.3), door(L - 20.9)];
 // Air-conditioning over the upper deck's ends.
 const roofGear = (L) => hvac(24, Z.roof, 10, 0.6) + hvac(L - 34, Z.roof, 10, 0.6);
 // The class figure by a door, and the names on the white between the decks.
 const figure = (c, x) => letters(c, x, 8.6, 1.0, "2", TN.ink, { weight: 700, family: SANS });
 const oncf = (c, x) => letters(c, x, 8.62, 1.15, "ONCF", TN.orange, { weight: 800, style: "italic", spacing: "0.02em", family: SANS });
-const tnr = (c, x) => letters(c, x, 8.62, 1.15, "TNR", TN.violet, { weight: 800, spacing: "0.04em", family: SANS });
+const tnr = (c, x) => letters(c, x, 8.62, 1.15, "TNR", TN.orange, { weight: 800, spacing: "0.04em", family: SANS });
 
 function z2mCab(c) {
   const L = c.L;
