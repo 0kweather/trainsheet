@@ -1391,10 +1391,9 @@ button.next-trip:hover { background: color-mix(in srgb, var(--group) 100%, var(-
 
 /* ---------- One mark for each kind of thing ----------
  * A railroad is a small square in its color, wherever it's listed or named
- * (a country's railroads, a station's, search, the recents, the line over a
- * page's title); a station is a ring; a line is a bar; a train is its
- * plate. Railroads were squares in two lists and dots in three. */
-.hero .agency-name .dot { width: 9px; height: 9px; border-radius: var(--r-2xs); }
+ * (a country's railroads, a station's, search, the recents); a station is a
+ * ring; a line is a bar; a train is its plate. The line over a page's title
+ * carries no mark: its color already says whose page it is. */
 
 /* ---------- Lists of trains: one column of plates ----------
  * A list's rows share its columns (subgrid), so the widest plate sets the

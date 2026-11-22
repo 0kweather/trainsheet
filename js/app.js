@@ -3838,7 +3838,7 @@ function renderDetail() {
   const keepStops = same ? el.querySelector(".stops-scroll")?.scrollTop || 0 : 0;
   el.dataset.train = t.id;
   const hero = `<div class="hero">
-      <button type="button" class="agency-name hero-link" data-railroad="${t.agency}" style="color:${a.color}"><span class="dot" style="background:${a.color}"></span>${esc(a.name)}</button>
+      <button type="button" class="agency-name hero-link" data-railroad="${t.agency}" style="color:${a.color}">${esc(a.name)}</button>
       <div class="hero-title">${t.number ? plate(t.number, a.color) : ""}<h2>${t.route && !singleLine(t.agency)
         // The title is the train's line: it opens the line's page (or, with
         // no line or just the one, the railroad's).
@@ -4916,7 +4916,7 @@ function renderRailroad() {
   const updated = status?.at ? ` · ${T("updated {ago}", { ago: fmtAgo(status.at) })}` : "";
 
   const hero = `<div class="hero">
-      <div class="agency-name" style="color:${a.color}"><span class="dot" style="background:${a.color}"></span>${T(a.kind === "intercity" ? "Intercity" : "Commuter rail")} · ${esc(T(a.region))}</div>
+      <div class="agency-name" style="color:${a.color}">${T(a.kind === "intercity" ? "Intercity" : "Commuter rail")} · ${esc(T(a.region))}</div>
       <h2>${esc(a.name)}</h2>
       <p class="station-facts"><span>${esc(source)}${esc(updated)}</span></p>
     </div>`;
@@ -4996,7 +4996,7 @@ function renderLine() {
   const keepStrip = el.dataset.stripOf === typical.id ? strip?.scrollLeft || 0 : 0;
   el.dataset.stripOf = typical.id;
   const hero = `<div class="hero">
-      <div class="agency-name" style="color:${a.color}"><span class="dot" style="background:${a.color}"></span>${esc(a.name)}</div>
+      <div class="agency-name" style="color:${a.color}">${esc(a.name)}</div>
       <h2>${escTitle(name)}</h2>
       ${consistSection(typical)}
     </div>`;

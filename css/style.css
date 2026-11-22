@@ -739,7 +739,6 @@ button.dep:hover .what .title, button.dep:focus-visible .what .title {
 .hero, .meta, .estimate-note, .consist { flex: none; }
 .hero { padding: 6px 0 var(--s4); border-bottom: 1px solid var(--line); }
 .hero .agency-name { font-size: var(--fs-xs); font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.hero .dot { width: 9px; height: 9px; border-radius: 50%; }
 .hero-title { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s2); }
 .hero h2 { margin: 0; font-size: var(--fs-xl); letter-spacing: -0.015em; line-height: 1.15; }
 /* Beside the number plate the title may shrink and wrap, never run past the panel. */
