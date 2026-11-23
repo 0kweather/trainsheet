@@ -1,7 +1,7 @@
 // Indian Railways' cars (scripts/railroads/india.py, agency
 // "indianrailways"): the premium loco-hauled trains — Rajdhani, Duronto,
 // Garib Rath, Tejas, Humsafar, Gatimaan, Shatabdi / Jan Shatabdi and
-// Intercity. Trainsheet's own side views at the shared scale
+// Intercity — and the Vande Bharat trainset. Trainsheet's own side views at the shared scale
 // (js/carart.js), each drawn from, and checked against, one photograph on
 // Wikimedia Commons, named here fleet by fleet. Locomotives from
 // euroLoco and the coaches from coachCar (carmodels.js); the lettering is
@@ -59,12 +59,17 @@
 //   The Intercity chair car (photo 10): medium blue above and grey below,
 //     a grey roof, big windows, "AC CHAIR CAR" lettering. The photograph
 //     is a side view; the windows' spacing is a reading.
+//   The Vande Bharat trainset (photo 01): white, a blue band along the
+//     window line and a blue band low on the side, a dark windscreen in
+//     an aerodynamic nose. The photograph is a front view at Balasore,
+//     so the side — the windows' and doors' places, the roof equipment,
+//     the car length (about 24 m a car) — is a reading.
 //
 // The timetable (the Neo2308 community GTFS) names no locomotive or
 // rolling stock, so which locomotive hauls a train and how many coaches
 // it has are judgements, labeled as typical; see TYPICAL below. Coach
 // counts are fixed rakes per line (12 for the overnight premium trains,
-// 8 for the day chair-car trains). Loco assignments: WAP-7 for Rajdhani,
+// 8 for the day chair-car trains and the Vande Bharat sets). Loco assignments: WAP-7 for Rajdhani,
 // Garib Rath, Humsafar and Intercity; WAP-5 for Duronto, Gatimaan,
 // Shatabdi, Jan Shatabdi and Tejas — the photographs show WAP-7 on
 // Rajdhani and WAP-5 on Duronto and Gatimaan; the rest is the usual
@@ -77,10 +82,18 @@
 // Intercity 105) and the other 9,154 return null; every model rendered
 // and looked at beside its photograph (what that pass found is in the
 // build's STATE.md). Renders and the script: the build's work/verify-c1/.
+//
+// VERIFIED after writing (23 Nov 2026, C2): node --check passes; TYPICAL
+// run over all 9,474 indianrailways runs through the real consist.js — 0
+// failures, 372 runs get consists (Vande Bharat 52 as an 8-car set, the
+// C1 distributions unchanged) and the other 9,102 return null; the
+// driving car, an intermediate car and the trailing driving car rendered
+// and looked at beside photograph 01. Renders and the script: the build's
+// work/verify-c2/.
 
 import { coachCar } from "../carmodels.js?v=dev";
-import { rect, circle, path, slats, underframe } from "../carart.js?v=dev";
-import { euroLoco, letters, hvac, buffers } from "./czechia.cars.js?v=dev";
+import { rect, circle, path, slats, underframe, pantograph, win } from "../carart.js?v=dev";
+import { euroLoco, letters, hvac, buffers, unit } from "./czechia.cars.js?v=dev";
 
 const bands = (L, list) => list.map(([y, h, fill]) => rect(-1, y, L + 2, h, fill)).join("");
 const boxes = (a, b, top, k = 3, depth = 1.2) => underframe(a, b, top, { depth, boxes: k, tanks: false });
@@ -216,6 +229,61 @@ const intercityCoach = (c) => lhbCoach(c, { base: IC.blue, rows: lhbRows(7.3, 5.
   livery: () => bands(c.L, [[12.4, 3, IC.roof], [0, 7.0, IC.grey]]),
   extra: (cc) => letters(cc, c.L - 12, 11.8, 1.0, "AC CHAIR CAR", "#1d3a6e", { weight: 700 }) });
 
+// ---------- The Vande Bharat trainset ----------
+// The Train 18/20 self-propelled set (photo 01, a front view at
+// Balasore): white, a blue band along the window line and a blue band
+// low on the side, a dark windscreen in an aerodynamic nose. The
+// photograph shows the front only, so the side is a reading: the
+// windows' and doors' places, the roof equipment and the car length
+// (about 24 m a car) are Trainsheet's reading of the type, not
+// measurements. The set is drawn as the standard 8-car rake; some
+// routes run 16-car sets. The driving car and the intermediate cars
+// are drawn with unit (carmodels via czechia.cars.js), as the Desiro
+// sets are in arl.cars.js.
+const VB = { white: "#f2f3f4", blue: "#1d4f9c", blueLow: "#2f6fb8", black: "#15171a", roof: "#c5c9cc", skirt: "#2a2d31" };
+const VB_G = { roof: 13.0, sill: 3.7 };
+// A pointed nose: bulging forward low, the windscreen raked back to the roof.
+const NOSE_VB = [[1.6, 3.7], [0.9, 4.6], ["q", 0.2, 6.5, 1.1, 8.4], [3.2, 11.9], ["q", 4.0, 13.0, 6.2, 13.0]];
+const vbDoor = (x) => ({ x, w: 4.6, y0: VB_G.sill, y1: 11.3, leaves: 2, glassY: 0.44, glassH: 0.44, grabs: false, fill: VB.white });
+const vbWins = (xs, w = 4.6) => ({ xs, y: 7.3, w, h: 3.3, r: 0.35 });
+const vbBox = (x, w) => hvac(x, VB_G.roof, w, 1.5).replaceAll("#a9b0b8", "#d9dcdd");
+function vbPaint(cab) {
+  return (c, g) => {
+    const L = g.L;
+    let s = bands(L, [[0, 20, VB.white], [12.3, 3, VB.roof], [0, 3.7, VB.skirt]]) +
+      // The blue window band the windows sit in, and the blue band low.
+      rect(cab ? 15.2 : 1.6, 6.9, L - (cab ? 17.0 : 3.2), 4.1, VB.blue, 0, 'rx="0.3"') +
+      rect(cab ? 9.6 : -1, 4.35, L + 2, 1.0, VB.blueLow);
+    if (cab) {
+      // The blue band sweeping up the nose to the window band, under the
+      // dark windscreen that wraps the front.
+      s += path("M-1 4.35L5.6 4.35Q8.6 4.9 10.0 7.9L11.6 11.0L13.8 11.0L13.8 6.9L10.6 6.9L8.0 8.2Q7.2 7.6 5.6 7.5L-1 7.5Z", VB.blue) +
+        path("M-1 13.5L7.2 13.5L7.2 12.7L3.6 8.1L-1 8.1Z", VB.black) +
+        path("M-1 0L-1 4.35L6.6 4.35L7.4 3.7L7.4 0Z", VB.skirt);
+    }
+    return s;
+  };
+}
+// The driving car: one window, a door, four windows, a door and three
+// windows behind the cab; the cab door with its window is drawn in cab().
+const vbCab = (c) => unit(c, { roof: VB_G.roof, sill: VB_G.sill, nose: NOSE_VB, rake: [[1.1, 8.4], [3.2, 11.9]], depth: 2.5, cabLen: 16, lampY: 5.6, bare: true,
+  rows: [vbWins([17.3, 29.6, 35.0, 40.3, 45.7]), vbWins([57.8, 61.9, 66.2], 3.4)], doors: [vbDoor(23.3), vbDoor(51.6)],
+  trucks: [10.5, c.L - 9.5], wheel: 33, paint: vbPaint(true), surround: VB.black,
+  cab: () =>
+    // The white cab door with its window.
+    rect(13.7, 4.1, 2.2, 7.3, VB.white, 0.45, 'rx="0.3"') + win(14.25, 7.5, 1.1, 3.0, 0.15),
+  extra: (cc, g) => letters(cc, g.L / 2, 6.15, 1.05, "VANDE BHARAT", VB.blue, { weight: 700 }) +
+    vbBox(22, 22) + boxes(20, g.L - 16, VB_G.sill, 3) });
+// An intermediate car: two windows, a door, seven windows, a door and
+// two windows; the pantograph is on the car behind the leading car.
+const vbMid = (c) => unit(c, { roof: VB_G.roof, sill: VB_G.sill,
+  rows: [vbWins([2.6, 6.9], 3.4), vbWins([18.2, 23.8, 29.4, 35.0, 40.6, 46.2, 51.8]), vbWins([c.L - 10.3, c.L - 6.0], 3.4)],
+  doors: [vbDoor(11.7), vbDoor(c.L - 16.3)],
+  trucks: [9.5, c.L - 9.5], wheel: 33, paint: vbPaint(false),
+  extra: (cc, g) => letters(cc, g.L / 2, 6.15, 1.05, "VANDE BHARAT", VB.blue, { weight: 700 }) +
+    (c.index === 1 ? pantograph(9, VB_G.roof, { up: true, facing: -1 }).replaceAll("currentColor", "#5b6168") + vbBox(24, 22) : vbBox(g.L / 2 - 14, 28)) +
+    boxes(16, g.L - 16, VB_G.sill, 3) });
+
 // ---------- Tables ----------
 
 export const TYPES = {
@@ -228,11 +296,14 @@ export const TYPES = {
   irHumsafarCoach: { name: "Humsafar coach", kind: "coach" },
   irGatimaanGen: { name: "Gatimaan luggage brake and generator car", kind: "coach" },
   irIntercityCoach: { name: "LHB AC chair car, Intercity blue", kind: "coach" },
+  irVbCab: { name: "Vande Bharat driving car", kind: "emu" },
+  irVbMid: { name: "Vande Bharat intermediate car", kind: "emu" },
 };
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
+const byIndex = (ctx) => ctx.index;
 // Feet over the couplers, from the figures usually published, set down
 // from memory and not checked for this file: the LHB coach 23.54 m, the
-// WAP-7 20.56 m, the WAP-5 18.16 m.
+// WAP-7 20.56 m, the WAP-5 18.16 m, a Vande Bharat car about 24 m.
 export const MODELS = {
   irWap7: M(wap7, 67.5),
   irWap5: M(wap5, 59.6),
@@ -243,6 +314,8 @@ export const MODELS = {
   irHumsafarCoach: M(humsafarCoach, 77.2),
   irGatimaanGen: M(gatimaanGen, 77.2),
   irIntercityCoach: M(intercityCoach, 77.2),
+  irVbCab: M(vbCab, 78.7, true),
+  irVbMid: M(vbMid, 78.7, false, byIndex),
 };
 
 const set = (label, ...units) => ({ label, units });
@@ -262,12 +335,15 @@ const SHATABDI = set("Typical: a WAP-5 locomotive and 8 pale-blue LHB chair cars
   ["irWap5", 1], ["irShatabdiCoach", 8]);
 const INTERCITY = set("Typical: a WAP-7 locomotive and 8 blue LHB AC chair cars (a judgement: the timetable names no rolling stock; the coach count is a fixed rake)",
   ["irWap7", 1], ["irIntercityCoach", 8]);
+const VANDE_BHARAT = set("Typical: an 8-car Vande Bharat trainset — a driving car, 6 intermediate cars and a driving car (a judgement: the timetable names no rolling stock; some routes run 16-car sets, but 8 cars is the standard set)",
+  ["irVbCab", 1], ["irVbMid", 6], ["irVbCab", 1]);
 
 // The timetable names no rolling stock, so a train is placed by its LINE
 // alone (t.line, else t.route, the line's name). C1 covers the premium
-// loco-hauled lines only; every other line returns null — C2–C5 fill
-// those in later (Vande Bharat, MEMU/DEMU, suburban EMUs, Mail/Express
-// and the rest), and Antyodaya and DMU have no photograph to draw from.
+// loco-hauled lines and C2 the Vande Bharat; every other line returns
+// null — C3–C5 fill those in later (MEMU/DEMU, suburban EMUs,
+// Mail/Express and the rest), and Antyodaya and DMU have no photograph
+// to draw from.
 const C1 = {
   "Rajdhani Express": RAJDHANI,
   "Duronto Express": DURONTO,
@@ -278,6 +354,7 @@ const C1 = {
   "Shatabdi Express": SHATABDI,
   "Jan Shatabdi Express": SHATABDI,
   "Intercity Express": INTERCITY,
+  "Vande Bharat Express": VANDE_BHARAT,
 };
 export const TYPICAL = {
   indianrailways: (t = {}) => C1[String(t.line || t.route || "")] || null,
@@ -302,6 +379,8 @@ const fGatimaan = { model: "Gatimaan luggage brake and generator car", type: "Lo
   source: `${CM}Gatimaan_express.jpg` };
 const fIntercity = { model: "LHB AC chair car (Intercity)", type: "Locomotive-hauled chair car", lengthFt: 77.2,
   source: `${CM}AC_Chair_Car_coach_of_New_Delhi-Jalandhar_City_Intercity_Express.jpg` };
+const fVb = { model: "Vande Bharat Express (Train 18/20)", type: "Electric multiple unit", builder: "Integral Coach Factory", lengthFt: 78.7,
+  source: `${CM}Howrah%E2%80%93Puri_Vande_Bharat_Express_at_Balasore_railway_station_1.jpg` };
 export const FACTS = {
   irWap7: { ...fWap7,
     about: "The WAP-7, Indian Railways' 6,350 hp passenger electric locomotive: cream with a red-brown stripe and a dark lower band. The one photographed from the side is at a station with its cab door open; WAP-7 30673 is photographed head-on hauling the New Delhi–Chennai Rajdhani. Drawing it on every Rajdhani, Garib Rath, Humsafar and Intercity train is a judgement: the timetable names no locomotive." },
@@ -321,4 +400,8 @@ export const FACTS = {
     about: "The Gatimaan's luggage brake and generator car: light grey with a red stripe at the roofline, a blue stripe and a yellow stripe below it, a big louvred door. The car photographed is behind a WAP-5 at New Delhi. It runs first behind the locomotive in the drawing, a judgement: the timetable names no rolling stock." },
   irIntercityCoach: { ...fIntercity,
     about: "An Intercity AC chair car: medium blue above, grey below, big windows, \"AC CHAIR CAR\" lettering. The coach photographed is on the New Delhi–Jalandhar City Intercity Express. The windows' spacing is a reading. Drawing 8 of them behind every Intercity Express is a judgement: the timetable names no rolling stock." },
+  irVbCab: { ...fVb,
+    about: "A driving car of a Vande Bharat Express trainset: white with a blue band along the window line and a blue band low on the side, a dark windscreen in an aerodynamic nose. The set photographed is the Howrah–Puri Vande Bharat at Balasore, seen from the front — the side is a reading, and so are the windows' and doors' places. Drawing it as an 8-car set on every Vande Bharat Express is a judgement: the timetable names no rolling stock, and some routes run 16-car sets." },
+  irVbMid: { ...fVb,
+    about: "An intermediate car of a Vande Bharat Express trainset, with the same white and blue livery. No photograph shows it squarely, so its doors and windows follow the driving car's, a judgement; so is the pantograph's place, on the car behind the leading car. Drawing 6 of them in every Vande Bharat Express set is a judgement: the timetable names no rolling stock." },
 };
