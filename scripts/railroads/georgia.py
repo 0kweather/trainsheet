@@ -80,8 +80,10 @@ CREDIT = {"label": "Timetable from jbb.ghsq.de (Georgian Railway GTFS, community
 # Georgia, from Poti and Batumi on the Black Sea coast to Gardabani in the
 # east and Sadakhlo in the south; the box takes in the cross-border
 # termini Baku and Yerevan, so the Tbilisi–Baku and Tbilisi–Yerevan
-# trains stay whole.
-BBOX = [41.5, 40.0, 50.0, 42.7]
+# trains stay whole. The south edge is 39.85, not 40.0: the Tbilisi–Baku
+# line dips to lat 39.95 at Alat, and the railroad's own-track query
+# (RAIL "relations", below) needs the box to cover it.
+BBOX = [41.5, 39.85, 50.0, 42.7]
 COMMON = {"region": "Georgia", "country": "GE", "tz": TZ, "credit": CREDIT, "license": "ODbL (stops)", "bbox": BBOX,
           "clip": True}
 
@@ -282,6 +284,42 @@ GTFS = {a: (GTFS_URL, keep(a), line, station,
             {"convert": convert, "number": number, "tz": TZ})
         for a in AGENCIES}
 
-# Georgia's track (P3): OpenStreetMap's mainline track in the box, routed
-# from the timetables.
-RAIL = {"region": "ge", "bbox": BBOX, "network": "georgianrailway"}
+# Georgia's track (P3): the railroad's own track from OpenStreetMap's
+# route=train relations, fetched into data/rail/src/georgia.json and
+# routed from the timetables over it, with the route tiles filling the
+# rest. The relations are Georgian Railway's own (operator in Georgian,
+# სს "საქართველოს რკინიგზა" — 36 relations, every train in the timetable
+# except 37/38) plus the Tbilisi–Baku 37/38/39/40 relations, which
+# Azerbaijan Railways files with no ref, under the name "Qatar #NN".
+# Own track is needed, not just the tiles: the Yevlax–Biləcəri hop's
+# line dips to lat 39.95 at Alat, below tile 49-40, and the hop's
+# straight line never enters tile 49-39, so the tile router never loads
+# the ways there and the hop can't route (225 km undrawn); and the
+# border tiles the extracts wrote (45-40/45-41) stop at the Georgian
+# border, leaving the Böyük Kəsik–Ağstafa–Ganja stretch out. Verified
+# against Overpass 2026-11-22: the relations cover every train number
+# in the timetable (37/38 via the Qatar-name match).
+#
+# By hand ("track"): three junctions where the drawn lines stop a few
+# metres short of each other and only hidden routing ties join them, so
+# a train snapped onto one drawn line can't reach the other on drawn
+# track. Each link joins the two line ends at the junction OSM's track
+# actually meets at:
+# - Tbilisi, east of the Central Station throat (20 m): the line from the
+#   station ends at 44.7995, 41.721, short of the node where the lines to
+#   Navtlughi/Gardabani and Sadakhlo leave (44.7997, 41.7211); without it
+#   the drawn track is two networks, west Georgia + Tbilisi and the east
+#   (Rustavi, Gardabani–Baku, Sadakhlo–Yerevan).
+# - Rustavi Central (6 m): the two parallel lines through the station end
+#   apart, and the one the station sits on doesn't run on to Rustavi-Cargo.
+# - Borjomi (2 m): one node kept at four decimals by one line and five by
+#   the other.
+JUNCTIONS = [
+    [[44.7995, 41.721], [44.7997, 41.7211]],
+    [[45.01962, 41.55639], [45.01969, 41.55643]],
+    [[43.5264, 41.9694], [43.52639, 41.96942]],
+]
+RAIL = {"region": "ge", "bbox": BBOX, "network": "georgianrailway",
+        "relations": {"operator": "საქართველოს რკინიგზა",
+                      "name": "Qatar #3[789]|Qatar #40"},
+        "track": JUNCTIONS}
