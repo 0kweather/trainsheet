@@ -242,8 +242,9 @@ GTFS = {a: (GTFS_URL, keep(a), line, station,
             {"make": make, "number": number, "tz": TZ})
         for a in AGENCIES}
 
-# Montenegro's track (P3, not yet built): region "me". Whether me.geojson
-# holds Montenegro's track alone (B 432's Serbian track is drawn in
-# rs.geojson already, for Srbija Voz's B 433) or the whole corridor is
-# decided in P3.
-RAIL = {"region": "me", "bbox": BBOX, "network": "zpcg"}
+# Montenegro's track: region "me", Montenegro's own lines alone (Bar –
+# Bijelo Polje to the Serbian border at the Gostun tunnel, Podgorica –
+# Nikšić). B 432's Serbian track is drawn in rs.geojson already, for Srbija
+# Voz's B 433, so the geometry box is Montenegro's, not the agency's
+# corridor box above (which stays the map-view extent).
+RAIL = {"region": "me", "bbox": [18.4, 41.85, 20.1, 43.17], "network": "zpcg"}
