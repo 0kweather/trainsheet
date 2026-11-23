@@ -38,6 +38,7 @@ EXTRACTS = [
     "europe/estonia", "europe/latvia", "europe/lithuania",
     "europe/greece", "europe/ireland-and-northern-ireland",
     "europe/romania", "europe/moldova", "europe/bulgaria", "europe/serbia", "europe/croatia", "europe/turkey",
+    "europe/montenegro", "europe/bosnia-herzegovina", "europe/macedonia", "europe/kosovo",  # Serbia's neighbours (Belgrade-Bar, border tiles)
     "europe/italy", "europe/switzerland", "europe/slovenia",
     "europe/france/provence-alpes-cote-d-azur", "europe/france/rhone-alpes", "europe/germany/baden-wuerttemberg",
     "europe/france/alsace", "europe/france/franche-comte", "europe/liechtenstein",
