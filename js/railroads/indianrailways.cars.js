@@ -133,7 +133,7 @@ const lhbRows = (y = 7.4, w = 4.6, h = 3.0, skip = []) => [{ a: 6.0, b: 77.2 - 6
 // band and a grey roof.
 const RED = { red: "#c22026", grey: "#9aa0a6", roof: "#b9bec4" };
 const redCoach = (c) => lhbCoach(c, { base: RED.red, rows: lhbRows(),
-  livery: () => bands(c.L, [[12.4, 3, RED.roof], [0, 4.0, RED.grey]]) });
+  livery: () => bands(c.L, [[12.4, 3, RED.roof], [0, 7.0, RED.grey]]) });
 
 // The Shatabdi chair car: pale blue above, grey below, a grey roof, big
 // windows; the lit destination board between the windows.
@@ -141,7 +141,7 @@ const SH = { blue: "#9cc3cd", grey: "#b0b3b6", roof: "#c5c9cc", board: "#3a3f45"
 const shatabdiCoach = (c) => {
   const bx = c.L * 0.30, bw = 14;
   return lhbCoach(c, { base: SH.blue, rows: lhbRows(7.3, 5.2, 3.2, [[bx - 0.6, bx + bw + 0.6]]),
-    livery: () => bands(c.L, [[12.4, 3, SH.roof], [0, 4.6, SH.grey], [4.6, 0.15, "#6e7a80"]]),
+    livery: () => bands(c.L, [[12.4, 3, SH.roof], [0, 7.0, SH.grey], [7.0, 0.15, "#6e7a80"]]),
     board: (cc) => rect(bx, 8.6, bw, 2.0, SH.board, 0, 'rx="0.2"') + letters(cc, bx + bw / 2, 9.6, 0.9, "SHATABDI", "#f2f3f4", { weight: 700 }) });
 };
 
@@ -213,7 +213,7 @@ const gatimaanGen = (c) => lhbCoach(c, { base: GN.grey, rows: [],
 // big windows, "AC CHAIR CAR" lettering.
 const IC = { blue: "#5a9bd4", grey: "#b0b3b6", roof: "#c5c9cc" };
 const intercityCoach = (c) => lhbCoach(c, { base: IC.blue, rows: lhbRows(7.3, 5.2, 3.2),
-  livery: () => bands(c.L, [[12.4, 3, IC.roof], [0, 4.6, IC.grey]]),
+  livery: () => bands(c.L, [[12.4, 3, IC.roof], [0, 7.0, IC.grey]]),
   extra: (cc) => letters(cc, c.L - 12, 11.8, 1.0, "AC CHAIR CAR", "#1d3a6e", { weight: 700 }) });
 
 // ---------- Tables ----------
