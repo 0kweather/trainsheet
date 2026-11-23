@@ -67,7 +67,7 @@ CREDIT = {"label": "Timetable from a community Indian Railways GTFS (Neo2308/ind
 COMMON = {"region": "India", "country": "IN", "license": None, "bbox": BBOX, "clip": True}
 
 AGENCIES = {
-    "indianrailways": {"name": "Indian Railways", "short": "IR", "color": "#1565c0", "kind": "national",
+    "indianrailways": {"name": "Indian Railways", "short": "IR", "color": "#1565c0", "kind": "intercity",
                        "cars": "indianrailways", "tz": TZ, "credit": CREDIT, **COMMON},
 }
 SOURCES = [{"id": "india", "agencies": ["indianrailways"], "format": "timetable", "interval": 60, "scope": "view"}]
