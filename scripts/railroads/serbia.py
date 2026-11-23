@@ -1,5 +1,5 @@
 """Serbia: Srbija Voz's trains (plus the cross-border trains filed under
-ŽPCG and MÁV in the same feed), from the community Srbijavoz merged GTFS
+MÁV in the same feed), from the community Srbijavoz merged GTFS
 published by vekejsn/gtfs-generators on GitLab (srbijavoz-merged-gtfs,
 srbijavoz_merged.zip: keyless, converted from Srbijavoz's published
 timetables — Srbijavoz publishes no GTFS itself). No live feed is read:
@@ -29,11 +29,14 @@ every listed stop is a call, as Turkey's are.
 
 Its three agency ids are a converter artifact of the HAFAS source, and
 they carry a trailing "____:" ("EFZ:72____:"): Srbija Voz (251 routes),
-MÁV (12: Re 7300–7314 Szeged–Subotica) and ŽPCG (1: B 432). Each is its
-own railroad, in Poland's manner. Quirk: the two directions of the
-Belgrade–Bar train are filed under different agencies — B 432 under
-ŽPCG, B 433 under Srbija Voz — so the pair is split across the two
-railroads. Cross-border trains are kept whole, all their stops, as
+MÁV (12: Re 7300–7314 Szeged–Subotica) and ŽPCG (1: B 432). Srbija Voz
+and MÁV are each their own railroad here, in Poland's manner; ŽPCG is
+Montenegro's plug-in's railroad (montenegro.py), whose "make" takes
+B 432 from this same file and merges it with the community ŽPCG feed's
+domestic trains — so "convert" here leaves ŽPCG's route out. Quirk: the
+two directions of the Belgrade–Bar train are filed under different
+agencies — B 432 under ŽPCG, B 433 under Srbija Voz — so the pair is
+still split across two railroads (now across two plug-ins). Cross-border trains are kept whole, all their stops, as
 Denmark's ECE and Austria's RJ are; the railroads "clip" to the box
 (BBOX, below), so their extent stays Serbia's. The far termini — Bar,
 Szeged — stay inside it as stops on trains kept whole.
@@ -70,8 +73,6 @@ COMMON = {"region": "Serbia", "country": "RS", "tz": TZ, "credit": CREDIT, "lice
 AGENCIES = {
     "srbijavoz": {"name": "Srbija Voz", "short": "Srbija Voz", "color": "#c8102e", "kind": "intercity",
                   "cars": "srbijavoz", **COMMON},
-    "zpcg": {"name": "Željeznički prevoz Crne Gore", "short": "ŽPCG", "color": "#0057a8", "kind": "intercity",
-             "cars": "zpcg", **COMMON},
     "mav": {"name": "MÁV", "short": "MÁV", "color": "#e30613", "kind": "commuter",
             "cars": "mav", **COMMON},
 }
@@ -79,7 +80,8 @@ SOURCES = [{"id": "serbia", "agencies": list(AGENCIES), "format": "timetable", "
 
 # The feed's agency ids, trailing "____:" as filed; and its rail route
 # types (extended GTFS: 102 long-distance, 106 regional).
-OPERATORS = {"srbijavoz": "EFZ:72____:", "zpcg": "EFZ:62____:", "mav": "EFZ:55____:"}
+# ŽPCG's ("EFZ:62____:", B 432) is read by montenegro.py, not here.
+OPERATORS = {"srbijavoz": "EFZ:72____:", "mav": "EFZ:55____:"}
 TRAIN_TYPES = {"102", "106"}
 
 
@@ -150,8 +152,9 @@ def _write(rows):
 
 def convert(data):
     """vekejsn/gtfs-generators' file as a GTFS of Serbia's trains alone
-    (feeds.py's "convert", run once a build): the rail routes (all of
-    them: the feed carries no buses), their trips and stop times, the
+    (feeds.py's "convert", run once a build): Srbija Voz's and MÁV's rail
+    routes (all of them: the feed carries no buses; ŽPCG's B 432 is
+    montenegro.py's), their trips and stop times, the
     stops those call at, and their services' calendar_dates (the feed
     has no calendar.txt). The shapes (and feed_info, attributions) are
     left out. Each route's long name is its endpoints, each trip's short
@@ -162,7 +165,8 @@ def convert(data):
     zf = zipfile.ZipFile(io.BytesIO(data))
     routes = _read(zf, "routes.txt")
     rc = routes[0]
-    kept_routes = [routes[0]] + [r for r in routes[1:] if r[rc.index("route_type")] in TRAIN_TYPES]
+    kept_routes = [routes[0]] + [r for r in routes[1:] if r[rc.index("route_type")] in TRAIN_TYPES
+                                 and r[rc.index("agency_id")] in OPERATORS.values()]
     route_ids = {r[rc.index("route_id")] for r in kept_routes[1:]}
     by_route = {r[rc.index("route_id")]: r for r in kept_routes[1:]}
     trips = _read(zf, "trips.txt")
