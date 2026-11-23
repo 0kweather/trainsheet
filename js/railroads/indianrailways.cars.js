@@ -61,6 +61,23 @@
 //   The Intercity chair car (photo 10): medium blue above and grey below,
 //     a grey roof, big windows, "AC CHAIR CAR" lettering. The photograph
 //     is a side view; the windows' spacing is a reading.
+//   The red LHB coach again (photo 16): the same red LHB coach with a
+//     grey lower band, photographed close on the Golden Temple Mail
+//     (12903/12904) — an AC 2-tier coach, "AC TWO TIER" lettering, a
+//     yellow destination board, the Indian Railways roundel low on the
+//     side. It confirms the red LHB stock serves the Mail/Express
+//     family too: Express, Passenger, Superfast Express and Mail/Express
+//     all run behind WAP-7s on red LHB rakes, a judgement (the timetable
+//     names no rolling stock).
+//   The Palace on Wheels saloon coach (photo 18): cream with a dark
+//     maroon lower band and a gold line along its top edge, a silver
+//     roof, big windows with arched tops in maroon surrounds, a
+//     scalloped maroon valance with gold dots above the windows, a red
+//     shield crest between the window groups, a dark "DUNGARPUR SALOON"
+//     board above the right-hand windows and a small red "PALACE ON
+//     WHEELS" plate low on the side, an oval window in the end door.
+//     The photograph is a side view at Jaipur; the windows' spacing,
+//     the crest's place and the rake are a reading.
 //   The Vande Bharat trainset (photo 01): white, a blue band along the
 //     window line and a blue band low on the side, a dark windscreen in
 //     an aerodynamic nose. The photograph is a front view at Balasore,
@@ -76,11 +93,21 @@
 // it has are judgements, labeled as typical; see TYPICAL below. Coach
 // counts are fixed rakes per line (12 for the overnight premium trains,
 // 8 for the day chair-car trains, the Vande Bharat sets and the MEMU
-// rakes, 6 for the DEMU rakes). Loco assignments: WAP-7 for Rajdhani,
-// Garib Rath, Humsafar and Intercity; WAP-5 for Duronto, Gatimaan,
-// Shatabdi, Jan Shatabdi and Tejas — the photographs show WAP-7 on
+// rakes, 6 for the DEMU rakes, 12 for the Mail/Express family and for the
+// Palace on Wheels saloon rake). Loco assignments: WAP-7 for Rajdhani,
+// Garib Rath, Humsafar and Intercity, and for the Mail/Express family
+// (Express, Passenger, Superfast Express, Mail/Express); WAP-5 for Duronto,
+// Gatimaan, Shatabdi, Jan Shatabdi and Tejas — the photographs show WAP-7 on
 // Rajdhani and WAP-5 on Duronto and Gatimaan; the rest is the usual
-// pairing.
+// pairing. The Palace on Wheels rake is drawn with no locomotive: the
+// photograph shows the saloon coaches only. Special is left null: the
+// line mixes long-distance festival specials (loco-hauled) with the
+// narrow-gauge Darjeeling Himalayan Railway toy trains (02540/02541/
+// 02549/02550 Darjeeling–Kurseong), a Kolkata suburban hop (31762
+// Gede–Ranaghat) and short regional hops (65129/65130 Banaras–Jhusi,
+// 68082, 79457, 59076, 10109, 18413) that run as MEMU/DMU/EMU stock,
+// so no single typical fits it and the feed names no stock to tell
+// them apart.
 //
 // VERIFIED after writing (23 Nov 2026): node --check passes; TYPICAL run
 // over all 9,474 indianrailways runs through the real consist.js — 0
@@ -106,6 +133,18 @@
 // driving car of each rendered and looked at beside photographs 11 and
 // 12 (the DEMU renders use real DEMU run 71451; the MEMU renders use
 // real MEMU run 06605). Renders and the script: the build's work/verify-c3/.
+//
+// VERIFIED after writing (23 Nov 2026, C5): node --check passes; TYPICAL
+// run over all 9,474 indianrailways runs through the real consist.js — 0
+// failures, 8,819 runs get consists (Express 2,435, Passenger 1,247,
+// Superfast Express 514 and Mail/Express 27 as WAP-7 + 12 red LHB coaches;
+// Tourist 3 as 12 Palace saloon coaches; the C1–C4 distributions
+// unchanged) and the other 655 return null (DMU 505, Antyodaya Express
+// 13, Suburban 102, Local 1, Special 34 — Special is deliberately null:
+// the line mixes loco-hauled festival specials with narrow-gauge
+// Darjeeling toy trains and short regional hops); the Palace coach
+// rendered and looked at beside photograph 18. Renders and the script:
+// the build's work/verify-c5/.
 //
 // VERIFIED after writing (23 Nov 2026, C4): node --check passes; TYPICAL
 // run over all 9,474 indianrailways runs through the real consist.js — 0
@@ -257,6 +296,52 @@ const IC = { blue: "#5a9bd4", grey: "#b0b3b6", roof: "#c5c9cc" };
 const intercityCoach = (c) => lhbCoach(c, { base: IC.blue, rows: lhbRows(7.3, 5.2, 3.2),
   livery: () => bands(c.L, [[12.4, 3, IC.roof], [0, 7.0, IC.grey]]),
   extra: (cc) => letters(cc, c.L - 12, 11.8, 1.0, "AC CHAIR CAR", "#1d3a6e", { weight: 700 }) });
+
+// The Palace on Wheels saloon coach (photo 18): cream with a dark
+// maroon lower band, a gold line along the band's top edge and a thin
+// maroon pinstripe above it, a silver roof, big arched windows with a
+// scalloped maroon valance and gold dots above them, a red shield crest
+// in the wide pillar between the window groups, a dark "DUNGARPUR
+// SALOON" board above the right-hand windows and a small red "PALACE ON
+// WHEELS" plate low on the side. The photograph is a side view at
+// Jaipur, so the windows' spacing and the crest's and boards' places
+// are a reading; the oval window in the end door is drawn over the
+// coach's square door glass. The window row skips one window for the
+// crest's pillar, as in the photograph.
+const PL = { cream: "#f2e2a4", maroon: "#5a1f1f", maroonDeep: "#3a1414", gold: "#c9a227", goldLight: "#e8c85a", roof: "#d9dcdd", crest: "#b3271e" };
+// Window left edges, as lhbRows lays them out (a 6.0, b 71.2, w 4.8,
+// pitch 6.45): the row is centred, so the first window sits at 7.175.
+const palaceWinXs = [7.175, 13.625, 20.075, 26.525, 32.975, 45.875, 65.225];
+const palaceCoach = (c) => lhbCoach(c, { base: PL.cream, rows: lhbRows(7.2, 4.8, 3.4, [[38.8, 44.9]]),
+  livery: () => bands(c.L, [[12.4, 3, PL.roof], [0, 6.0, PL.maroon], [6.0, 0.25, PL.gold], [6.6, 0.12, PL.maroon]]),
+  extra: (cc) => {
+    let s = "";
+    // The scalloped maroon valance with a gold dot above each window,
+    // except the two under the saloon board.
+    for (const x of palaceWinXs) {
+      s += path(`M${x} 11.0 Q${x + 2.4} 12.4 ${x + 4.8} 11.0 L${x + 4.8} 10.75 L${x} 10.75 Z`, PL.maroon) +
+        circle(x + 2.4, 11.9, 0.28, PL.gold);
+    }
+    // The gold fretwork diamonds along the gold line at the top of the
+    // maroon band, clear of the doors.
+    for (let x = 8.5; x < 70; x += 4.0) {
+      s += path(`M${x} 6.12l0.5 0.5l-0.5 0.5l-0.5 -0.5Z`, PL.gold);
+    }
+    // The red shield crest in the wide pillar between the window groups.
+    const cx = 42.2;
+    s += path(`M${cx - 1.1} 7.8 L${cx + 1.1} 7.8 L${cx + 1.1} 9.8 Q${cx + 1.1} 10.8 ${cx} 11.2 Q${cx - 1.1} 10.8 ${cx - 1.1} 9.8 Z`, PL.crest) +
+      circle(cx, 9.1, 0.35, PL.goldLight);
+    // The "DUNGARPUR SALOON" board above the right-hand windows.
+    s += rect(51, 10.9, 14, 1.5, PL.maroonDeep, 0, 'rx="0.15"') +
+      letters(cc, 58, 11.65, 0.7, "DUNGARPUR SALOON", PL.goldLight, { weight: 700 });
+    // The small red "PALACE ON WHEELS" plate low on the side, below the
+    // windows and above the gold line.
+    s += rect(55.5, 6.4, 9, 0.8, PL.crest, 0, 'rx="0.1"') +
+      letters(cc, 60, 6.8, 0.5, "PALACE ON WHEELS", "#f2f3f4", { weight: 700 });
+    // The oval window in the left end door, over the square door glass.
+    s += `<ellipse cx="3.3" cy="8.9" rx="0.9" ry="1.6" fill="#1d2026" stroke="${PL.maroon}" stroke-width="0.15"/>`;
+    return s;
+  } });
 
 // ---------- The Vande Bharat trainset ----------
 // The Train 18/20 self-propelled set (photo 01, a front view at
@@ -541,6 +626,7 @@ export const TYPES = {
   irKolkataMid: { name: "Kolkata suburban EMU intermediate car", kind: "emu" },
   irChennaiCab: { name: "Chennai suburban EMU driving car", kind: "emu" },
   irChennaiMid: { name: "Chennai suburban EMU intermediate car", kind: "emu" },
+  irPalaceCoach: { name: "Palace on Wheels saloon coach", kind: "coach" },
 };
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
 const byIndex = (ctx) => ctx.index;
@@ -570,6 +656,7 @@ export const MODELS = {
   irKolkataMid: M(kolkataMid, 70.0, false, byIndex),
   irChennaiCab: M(chennaiCab, 70.0, true),
   irChennaiMid: M(chennaiMid, 70.0, false, byIndex),
+  irPalaceCoach: M(palaceCoach, 77.2),
 };
 
 const set = (label, ...units) => ({ label, units });
@@ -601,6 +688,10 @@ const KOLKATA = set("Typical: a 12-car Kolkata suburban EMU rake — a driving c
   ["irKolkataCab", 1], ["irKolkataMid", 10], ["irKolkataCab", 1]);
 const CHENNAI = set("Typical: a 12-car Chennai suburban EMU rake — a driving car, 10 intermediate cars and a driving car (a judgement: the timetable names no rolling stock; Chennai locals run 9- and 12-car rakes, 12 is the usual set)",
   ["irChennaiCab", 1], ["irChennaiMid", 10], ["irChennaiCab", 1]);
+const MAIL_EXPRESS = set("Typical: a WAP-7 locomotive and 12 red LHB coaches (a judgement: the timetable names no rolling stock; the coach count is a fixed rake — the same red LHB stock as the Rajdhani and Duronto, confirmed by the Golden Temple Mail coach in photograph 16)",
+  ["irWap7", 1], ["irRedCoach", 12]);
+const PALACE = set("Typical: 12 cream and maroon Palace on Wheels saloon coaches and no locomotive (a judgement: the timetable names no rolling stock; the photograph shows the saloon coaches only, and the coach count is a fixed rake)",
+  ["irPalaceCoach", 12]);
 
 // The timetable names no rolling stock, so a train is placed by its LINE
 // alone (t.line, else t.route, the line's name) — except Local and
@@ -634,6 +725,14 @@ const C1 = {
   "Vande Bharat Express": VANDE_BHARAT,
   "MEMU": MEMU,
   "DEMU": DEMU,
+  "Express": MAIL_EXPRESS,
+  "Passenger": MAIL_EXPRESS,
+  "Superfast Express": MAIL_EXPRESS,
+  "Mail/Express": MAIL_EXPRESS,
+  "Tourist": PALACE,
+  // "Special" is deliberately absent: the line mixes loco-hauled
+  // festival specials with narrow-gauge toy trains and short regional
+  // hops, so no single typical fits it — see the header comment.
 };
 export const TYPICAL = {
   indianrailways: (t = {}) => {
@@ -674,13 +773,15 @@ const fKolkata = { model: "Kolkata suburban EMU", type: "Electric multiple unit"
   source: `${CM}EMU_at_Bandel.jpg` };
 const fChennai = { model: "Chennai suburban EMU", type: "Electric multiple unit", builder: "Integral Coach Factory", lengthFt: 70.0,
   source: `${CM}Chennai_local_14003.jpg` };
+const fPalace = { model: "Palace on Wheels saloon coach", type: "Locomotive-hauled luxury saloon coach", lengthFt: 77.2,
+  source: `${CM}Palace_on_Wheels_luxury_train_at_Jaipur_India.jpg` };
 export const FACTS = {
   irWap7: { ...fWap7,
-    about: "The WAP-7, Indian Railways' 6,350 hp passenger electric locomotive: cream with a red-brown stripe and a dark lower band. The one photographed from the side is at a station with its cab door open; WAP-7 30673 is photographed head-on hauling the New Delhi–Chennai Rajdhani. Drawing it on every Rajdhani, Garib Rath, Humsafar and Intercity train is a judgement: the timetable names no locomotive." },
+    about: "The WAP-7, Indian Railways' 6,350 hp passenger electric locomotive: cream with a red-brown stripe and a dark lower band. The one photographed from the side is at a station with its cab door open; WAP-7 30673 is photographed head-on hauling the New Delhi–Chennai Rajdhani. Drawing it on every Rajdhani, Garib Rath, Humsafar and Intercity train, and on every Express, Passenger, Superfast Express and Mail/Express train, is a judgement: the timetable names no locomotive." },
   irWap5: { ...fWap5,
     about: "The WAP-5, Indian Railways' 6,000 hp passenger electric locomotive: white with a red stripe over an orange-yellow stripe and \"INDIAN RAILWAYS\" lettering. The one photographed head-on at New Delhi is WAP-5 30197 on the Duronto; the side view is from the Gatimaan. Drawing it on every Duronto, Gatimaan, Shatabdi, Jan Shatabdi and Tejas train is a judgement: the timetable names no locomotive." },
   irRedCoach: { ...fRed,
-    about: "A red LHB coach with a grey lower band, as the Rajdhani rake behind WAP-7 30673 in the photograph. The same coach serves the Duronto. The windows' spacing and the band's depth are a reading — the coaches in the photograph are distant. Drawing 12 of them behind every Rajdhani and Duronto is a judgement: the timetable names no rolling stock." },
+    about: "A red LHB coach with a grey lower band, as the Rajdhani rake behind WAP-7 30673 in the photograph. The same coach serves the Duronto, and the Golden Temple Mail coach photographed close up confirms it serves the Mail/Express family too. The windows' spacing and the band's depth are a reading — the coaches in the photograph are distant. Drawing 12 of them behind every Rajdhani, Duronto, Express, Passenger, Superfast Express and Mail/Express train is a judgement: the timetable names no rolling stock." },
   irShatabdiCoach: { ...fShatabdi,
     about: "A Shatabdi AC chair car: pale blue above, grey below, big windows in dark surrounds, a lit destination board. The coach photographed is on the New Delhi–Kanpur Shatabdi; its board reads \"KANPUR–NEW DELHI\" where the drawing's reads \"SHATABDI\". The same stock serves the Jan Shatabdi and, as a judgement, the Gatimaan, whose chair cars have no separate photograph. Drawing 8 of them behind every Shatabdi and Jan Shatabdi is a judgement: the timetable names no rolling stock." },
   irGaribRathCoach: { ...fGaribRath,
@@ -717,4 +818,6 @@ export const FACTS = {
     about: "A driving car of a Chennai suburban EMU: white with red doors, the dark-green lower front of the photograph drawn as a wedge rising up the nose. The unit photographed is EMU 14003 at a station, seen from the front and side — its red unit number and \"B\" board are not drawn. Which Local and Suburban trains are Chennai's is read from the train number (4xxxx), verified against the timetable; drawing it as a 12-car rake on every one is a judgement: the timetable names no rolling stock." },
   irChennaiMid: { ...fChennai,
     about: "An intermediate car of a Chennai suburban EMU: white with red doors, as the cars behind EMU 14003 in the photograph — no green band, as in the photograph. Its doors and windows are a reading of that side view; so is the pantograph's place, on the car behind the leading car. Drawing 10 of them in every Chennai suburban rake is a judgement: the timetable names no rolling stock." },
+  irPalaceCoach: { ...fPalace,
+    about: "A Palace on Wheels saloon coach: cream with a dark maroon lower band and a gold line along its top edge, a silver roof, big arched windows with a scalloped maroon valance above them, a red shield crest and a dark \"DUNGARPUR SALOON\" board. The coach photographed is the Dungarpur Saloon at Jaipur. The windows' spacing and the crest's and boards' places are a reading. Drawing 12 of them, with no locomotive, on every Tourist train is a judgement: the timetable names no rolling stock, and the photograph shows the saloon coaches only." },
 };
