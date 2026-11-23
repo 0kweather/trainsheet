@@ -19,6 +19,7 @@
 {"region": "ie", "bbox": [-9.7, 51.84, -5.93, 54.6], "file": "data/rail/ie.geojson", "bytes": 93264},
 {"region": "il", "bbox": [34.55, 31.06, 35.5, 33.01], "file": "data/rail/il.geojson", "bytes": 51888},
 {"region": "it", "bbox": [5.92, 36.72, 18.17, 48.0], "file": "data/rail/it.geojson", "bytes": 507607},
+{"region": "lt", "bbox": [21.09, 54.05, 26.47, 56.95], "file": "data/rail/lt.geojson", "bytes": 24597},
 {"region": "lu", "bbox": [5.76, 49.1, 6.66, 50.12], "file": "data/rail/lu.geojson", "bytes": 12397},
 {"region": "lv", "bbox": [21.01, 55.75, 28.18, 57.78], "file": "data/rail/lv.geojson", "bytes": 55645},
 {"region": "ma", "bbox": [-9.26, 31.62, -1.92, 35.78], "file": "data/rail/ma.geojson", "bytes": 40546},
