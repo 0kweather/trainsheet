@@ -29,7 +29,8 @@ OSMFR = "https://download.openstreetmap.fr/extracts"
 # Geofabrik carries no Caucasus extracts; the openstreetmap.fr mirror has
 # asia/georgia and asia/armenia (no Azerbaijan on either mirror — its tiles
 # come from Overpass via build_rail.py's own fetch, OSM_ROUTE_FETCH=1).
-MIRROR_EXTRACTS = {"asia/georgia", "asia/armenia"}
+MIRROR_EXTRACTS = {"asia/georgia", "asia/armenia",
+                    "asia/indonesia/jakarta", "asia/indonesia/banten", "asia/indonesia/west_java"}
 TILE = 1.0  # degrees, as build_rail.py's ROUTE_TILE
 # The regions' countries, and the parts of their neighbors their trains run into.
 EXTRACTS = [
@@ -70,6 +71,11 @@ EXTRACTS = [
     "europe/denmark", "europe/poland/zachodniopomorskie", "europe/poland/lubuskie",
     "europe/poland", "europe/ukraine", "europe/lithuania", "europe/germany",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine", "asia/china",
+    # Indonesia: Jabodetabek KRL lives in Jakarta, Banten and West Java;
+    # the whole-country extract is ~2 GB, the three provinces ~0.5 GB.
+    # Geofabrik carries no indonesia extract (404); these come from the
+    # openstreetmap.fr mirror (see MIRROR_EXTRACTS).
+    "asia/indonesia/jakarta", "asia/indonesia/banten", "asia/indonesia/west_java",
     "asia/iran",  # Turkey's Van-Tabriz leg (TCDD Trans-Asia Express)
     "africa/morocco",
     "australia-oceania/australia", "australia-oceania/new-zealand",
