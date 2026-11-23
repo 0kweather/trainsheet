@@ -31,7 +31,7 @@ OSMFR = "https://download.openstreetmap.fr/extracts"
 # come from Overpass via build_rail.py's own fetch, OSM_ROUTE_FETCH=1).
 MIRROR_EXTRACTS = {"asia/georgia", "asia/armenia",
                     "asia/indonesia/jakarta", "asia/indonesia/banten", "asia/indonesia/west_java",
-                    "north-america/mexico"}
+                    "north-america/mexico", "south-america/chile"}
 TILE = 1.0  # degrees, as build_rail.py's ROUTE_TILE
 # The regions' countries, and the parts of their neighbors their trains run into.
 EXTRACTS = [
@@ -84,6 +84,12 @@ EXTRACTS = [
     # once (scripts/.osm-extracts/north-america-mexico.geojsonseq) and the
     # tiles reused; the extract itself lives in countries/mx/osm/.
     "north-america/mexico",
+    # Chile: whole-country extract (~366 MB) from the openstreetmap.fr
+    # mirror — Geofabrik direct fails through the proxy. The extract itself
+    # lives in countries/cl/osm/; its track is cut once
+    # (scripts/.osm-extracts/south-america-chile.geojsonseq) and the tiles
+    # reused, as with Mexico.
+    "south-america/chile",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
 # Light rail stays only where it's third-rail: OpenStreetMap files Berlin's
