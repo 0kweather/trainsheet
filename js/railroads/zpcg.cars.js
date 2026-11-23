@@ -90,7 +90,8 @@
 //     body, grey roof, orange band at lamp level, red below the band,
 //     red doors, the chevron's arm along the side, the headlamp pod on
 //     the cab roof (one fix made in the pass: the "412-045" lettering was
-//     first drawn over the first door, and was moved clear of it). The
+//     first drawn over the first door; the coordinator's re-check found
+//     the "4" still clipped at 16.2, and moved it to 18.0, clear). The
 //     Civity cab re-rendered unchanged.
 
 import { rect, circle, path, underframe } from "../carart.js?v=dev";
@@ -185,7 +186,7 @@ const zpcg412Cab = (c) => unit(c, { roof: EM412G.roof, sill: EM412G.sill, nose: 
   // The headlamp pod on the cab roof, and the cab's side window.
   cab: () => rect(1.6, 13.2, 3.4, 1.1, EM412.roof, 0.4, 'rx="0.4"') + circle(2.7, 13.75, 0.45, EM412.lamp, 0.3) + circle(4.0, 13.75, 0.45, EM412.lamp, 0.3) +
     path("M4.6 8.5L7.6 8.5L7.6 11.2L4.6 11.2Z", "#1d2026", 0.4),
-  extra: (cc, g) => letters(cc, 16.2, 7.0, 0.5, "412-045", EM412.ink, { weight: 600 }) +
+  extra: (cc, g) => letters(cc, 18.0, 7.0, 0.5, "412-045", EM412.ink, { weight: 600 }) +
     hvac(16, EM412G.roof, 10, 0.55) + hvac(g.L - 24, EM412G.roof, 12, 0.55) + boxes(16, g.L - 16, EM412G.sill, 3, 1.2) });
 const zpcg416Mid = (c) => unit(c, { roof: EM412G.roof, sill: EM412G.sill,
   rows: [emu412Win([5.0, 8.4, ...seq(19, 3.4, 7), ...seq(48.5, 3.4, 4)])],
