@@ -43,7 +43,9 @@ stations, filed in capitals ("JAKARTA KOTA", "DUREN KALIBATA",
 "UNIV. PANCASILA"); build_stations.py title-cases them. All 94 ids are
 distinct. Times are Jakarta's (Asia/Jakarta, WIB).
 
-P2 spot check: (filled in from the built file below)."""
+P2 spot check (data/schedules/kci.json): train 1000, Manggarai 05:10 ->
+Bogor 06:14 via Depok 05:48; train 1159, Bogor 04:08 -> Jakarta Kota
+05:33 via Depok 04:35 and Manggarai 05:11. 94 stations, 1,139 trains."""
 import re, unicodedata
 
 GTFS_URL = "https://github.com/open-krl/pipeline/releases/latest/download/krl_gtfs_v1.zip"
