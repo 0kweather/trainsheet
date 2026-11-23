@@ -316,6 +316,12 @@ all_stations = read_split("stations.json")
 for agency, (url, keep, line_name, number_of, *station_by) in FEEDS.items():
     if only and agency not in only:
         continue
+    if agency not in all_stations:
+        # No stations (its feed failed in build_stations.py, e.g. a
+        # suspended service whose converter raises): nothing to schedule,
+        # and the KeyError used to kill the whole run here.
+        print(f"{agency}: SKIPPED, no stations")
+        continue
     out = build(agency, url, keep, line_name, number_of, {r[0]: r for r in all_stations[agency]}, *station_by)
     path = DATA / "schedules" / f"{agency}.json"
     path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
