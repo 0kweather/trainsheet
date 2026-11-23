@@ -1,7 +1,8 @@
 // Indian Railways' cars (scripts/railroads/india.py, agency
 // "indianrailways"): the premium loco-hauled trains — Rajdhani, Duronto,
 // Garib Rath, Tejas, Humsafar, Gatimaan, Shatabdi / Jan Shatabdi and
-// Intercity — and the Vande Bharat trainset. Trainsheet's own side views at the shared scale
+// Intercity — the Vande Bharat trainset, and the MEMU and DEMU regional
+// multiple units. Trainsheet's own side views at the shared scale
 // (js/carart.js), each drawn from, and checked against, one photograph on
 // Wikimedia Commons, named here fleet by fleet. Locomotives from
 // euroLoco and the coaches from coachCar (carmodels.js); the lettering is
@@ -64,12 +65,15 @@
 //     an aerodynamic nose. The photograph is a front view at Balasore,
 //     so the side — the windows' and doors' places, the roof equipment,
 //     the car length (about 24 m a car) — is a reading.
+//   The MEMU (photo 11) and the DEMU (photo 12): see the MEMU and DEMU
+//     section below.
 //
 // The timetable (the Neo2308 community GTFS) names no locomotive or
 // rolling stock, so which locomotive hauls a train and how many coaches
 // it has are judgements, labeled as typical; see TYPICAL below. Coach
 // counts are fixed rakes per line (12 for the overnight premium trains,
-// 8 for the day chair-car trains and the Vande Bharat sets). Loco assignments: WAP-7 for Rajdhani,
+// 8 for the day chair-car trains, the Vande Bharat sets and the MEMU
+// rakes, 6 for the DEMU rakes). Loco assignments: WAP-7 for Rajdhani,
 // Garib Rath, Humsafar and Intercity; WAP-5 for Duronto, Gatimaan,
 // Shatabdi, Jan Shatabdi and Tejas — the photographs show WAP-7 on
 // Rajdhani and WAP-5 on Duronto and Gatimaan; the rest is the usual
@@ -90,6 +94,15 @@
 // driving car, an intermediate car and the trailing driving car rendered
 // and looked at beside photograph 01. Renders and the script: the build's
 // work/verify-c2/.
+//
+// VERIFIED after writing (23 Nov 2026, C3): node --check passes; TYPICAL
+// run over all 9,474 indianrailways runs through the real consist.js — 0
+// failures, 1,743 runs get consists (MEMU 1,304 as an 8-car set, DEMU 67
+// as a 6-car set, the C1/C2 distributions unchanged) and the other 7,731
+// return null; the driving car, an intermediate car and the trailing
+// driving car of each rendered and looked at beside photographs 11 and
+// 12 (the DEMU renders use real DEMU run 71451; the MEMU renders use
+// real MEMU run 06605). Renders and the script: the build's work/verify-c3/.
 
 import { coachCar } from "../carmodels.js?v=dev";
 import { rect, circle, path, slats, underframe, pantograph, win } from "../carart.js?v=dev";
@@ -284,6 +297,96 @@ const vbMid = (c) => unit(c, { roof: VB_G.roof, sill: VB_G.sill,
     (c.index === 1 ? pantograph(9, VB_G.roof, { up: true, facing: -1 }).replaceAll("currentColor", "#5b6168") + vbBox(24, 22) : vbBox(g.L / 2 - 14, 28)) +
     boxes(16, g.L - 16, VB_G.sill, 3) });
 
+// ---------- MEMU and DEMU ----------
+// The regional multiple units (photos 11, 12): ICF cars about 21.3 m
+// long, drawn with unit like the Vande Bharat. The MEMU photograph is a
+// front view at Paravur, so the side is a reading; the DEMU photograph
+// is an elevated side view at Miryalguda, so the side is drawn from it.
+//
+//   The MEMU (photo 11): MEMU 13023, pale yellow-cream above, a deep
+//     blue band low on the front with a wide orange chevron pointing
+//     down across it, "MEMU" lettering low on the front, two windscreens
+//     with vertical bars over them, a round headlight in the middle of
+//     the chevron and big round buffers low. The side stretching away
+//     shows the cream upper and the chevron's arm sweeping down the
+//     nose. The blue ICF coach alongside is another train, not the MEMU.
+//   The DEMU (photo 12): a blue/red/white rake at Miryalguda — deep
+//     royal-blue body, a red band along the top of the side under a
+//     light-grey roof, "VENDORS" and "SC" lettering on the red band, a
+//     white stripe and a red band low on the side, small roof vents,
+//     dark open doorways. The driving car's front is too distant to
+//     read, so its nose follows the MEMU's, a judgement.
+const MU = { cream: "#e9dc96", blue: "#1f4d9e", orange: "#ef7d1a", roof: "#c5c9cc", skirt: "#2a2d31" };
+const DE = { blue: "#1f45a8", red: "#c8352c", white: "#f2f3f4", roof: "#d9dcdd", skirt: "#2a2d31" };
+const MU_G = { roof: 13.0, sill: 3.7 };
+// A flat-ish multiple-unit nose: nearly upright low, the windscreens
+// raked back to the roof.
+const NOSE_MU = [[1.6, 3.7], [1.2, 4.6], ["q", 0.6, 6.5, 1.4, 8.4], [3.2, 11.9], ["q", 4.0, 13.0, 6.2, 13.0]];
+const muWins = (xs, w = 4.6) => ({ xs, y: 7.3, w, h: 3.3, r: 0.35 });
+const muDoor = (x, fill) => ({ x, w: 4.6, y0: MU_G.sill, y1: 11.3, leaves: 2, glassY: 0.44, glassH: 0.44, grabs: false, fill });
+const muCabRows = [muWins([17.3, 29.6, 35.0, 40.3, 45.7]), muWins([57.8, 61.9], 3.4)];
+const muCabDoors = (fill) => [muDoor(23.3, fill), muDoor(51.6, fill)];
+const muMidRows = [muWins([2.6, 6.9], 3.4), muWins([18.2, 23.8, 29.4, 35.0, 40.6, 46.2]), muWins([59.7, 64.0], 3.4)];
+const muMidDoors = (fill) => [muDoor(11.7, fill), muDoor(53.7, fill)];
+function memuPaint(cab) {
+  return (c, g) => {
+    const L = g.L;
+    let s = bands(L, [[0, 20, MU.cream], [12.3, 3, MU.roof], [0, 3.7, MU.skirt]]) +
+      // The blue window band the windows sit in, and the blue band low.
+      rect(cab ? 15.2 : 1.6, 6.9, L - (cab ? 17.0 : 3.2), 4.1, MU.blue, 0, 'rx="0.3"') +
+      rect(cab ? 9.6 : -1, 4.35, L + 2, 1.0, MU.blue);
+    if (cab) {
+      // The orange chevron sweeping down the nose to the low band, as on
+      // the front at Paravur.
+      s += path("M13.8 11.0L13.8 9.0L2.6 4.35L-1 4.35L-1 5.9L11.8 11.0Z", MU.orange);
+    }
+    return s;
+  };
+}
+// The driving car: a window, a door, four windows, a door and two windows
+// behind the cab; the cab door with its window is drawn in cab().
+const memuCab = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill, nose: NOSE_MU, rake: [[1.4, 8.4], [3.2, 11.9]], depth: 2.5, cabLen: 16, lampY: 5.6, bare: true,
+  rows: muCabRows, doors: muCabDoors(MU.cream),
+  trucks: [10.5, c.L - 9.5], wheel: 33, paint: memuPaint(true), surround: "#15171a",
+  cab: () =>
+    // The cream cab door with its window.
+    rect(13.7, 4.1, 2.2, 7.3, MU.cream, 0.45, 'rx="0.3"') + win(14.25, 7.5, 1.1, 3.0, 0.15),
+  extra: (cc, g) => letters(cc, g.L / 2, 6.15, 1.05, "MEMU", MU.blue, { weight: 700 }) +
+    hvac(22, MU_G.roof, 22, 1.0) + boxes(20, g.L - 16, MU_G.sill, 3) });
+// An intermediate car: two windows, a door, six windows, a door and two
+// windows; the pantograph is on the car behind the leading car.
+const memuMid = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill,
+  rows: muMidRows, doors: muMidDoors(MU.cream),
+  trucks: [9.5, c.L - 9.5], wheel: 33, paint: memuPaint(false),
+  extra: (cc, g) => letters(cc, g.L / 2, 6.15, 1.05, "MEMU", MU.blue, { weight: 700 }) +
+    (c.index === 1 ? pantograph(9, MU_G.roof, { up: true, facing: -1 }).replaceAll("currentColor", "#5b6168") + hvac(24, MU_G.roof, 22, 1.0) : hvac(g.L / 2 - 14, MU_G.roof, 28, 1.0)) +
+    boxes(16, g.L - 16, MU_G.sill, 3) });
+function demuPaint(cab) {
+  return (c, g) => {
+    const L = g.L;
+    return bands(L, [[0, 20, DE.blue], [12.3, 3, DE.roof], [11.1, 1.2, DE.red], [4.6, 0.6, DE.white], [3.7, 0.9, DE.red], [0, 3.7, DE.skirt]]);
+  };
+}
+// The DEMU driving car: the same carbody and window/door layout as the
+// MEMU, in the blue/red/white livery; its front is a reading.
+const demuCab = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill, nose: NOSE_MU, rake: [[1.4, 8.4], [3.2, 11.9]], depth: 2.5, cabLen: 16, lampY: 5.6, bare: true,
+  rows: muCabRows, doors: muCabDoors(DE.blue),
+  trucks: [10.5, c.L - 9.5], wheel: 33, paint: demuPaint(true), surround: "#15171a",
+  cab: () =>
+    rect(13.7, 4.1, 2.2, 7.3, DE.blue, 0.45, 'rx="0.3"') + win(14.25, 7.5, 1.1, 3.0, 0.15),
+  extra: (cc, g) => letters(cc, g.L * 0.30, 11.7, 0.75, "SC", "#ffffff", { weight: 700 }) +
+    letters(cc, g.L * 0.62, 11.7, 0.75, "VENDORS", "#ffffff", { weight: 700 }) +
+    hvac(22, MU_G.roof, 22, 1.0) + boxes(20, g.L - 16, MU_G.sill, 3) });
+// An intermediate car: two windows, a door, six windows, a door and two
+// windows; small roof vents along the roof, as in the photograph.
+const demuMid = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill,
+  rows: muMidRows, doors: muMidDoors(DE.blue),
+  trucks: [9.5, c.L - 9.5], wheel: 33, paint: demuPaint(false),
+  extra: (cc, g) => letters(cc, g.L * 0.30, 11.7, 0.75, "SC", "#ffffff", { weight: 700 }) +
+    letters(cc, g.L * 0.62, 11.7, 0.75, "VENDORS", "#ffffff", { weight: 700 }) +
+    hvac(10, MU_G.roof, 5, 0.6) + hvac(30, MU_G.roof, 5, 0.6) + hvac(50, MU_G.roof, 5, 0.6) +
+    boxes(16, g.L - 16, MU_G.sill, 3) });
+
 // ---------- Tables ----------
 
 export const TYPES = {
@@ -298,12 +401,17 @@ export const TYPES = {
   irIntercityCoach: { name: "LHB AC chair car, Intercity blue", kind: "coach" },
   irVbCab: { name: "Vande Bharat driving car", kind: "emu" },
   irVbMid: { name: "Vande Bharat intermediate car", kind: "emu" },
+  irMemuCab: { name: "MEMU driving car", kind: "emu" },
+  irMemuMid: { name: "MEMU intermediate car", kind: "emu" },
+  irDemuCab: { name: "DEMU driving car", kind: "dmu" },
+  irDemuMid: { name: "DEMU intermediate car", kind: "dmu" },
 };
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
 const byIndex = (ctx) => ctx.index;
 // Feet over the couplers, from the figures usually published, set down
 // from memory and not checked for this file: the LHB coach 23.54 m, the
-// WAP-7 20.56 m, the WAP-5 18.16 m, a Vande Bharat car about 24 m.
+// WAP-7 20.56 m, the WAP-5 18.16 m, a Vande Bharat car about 24 m, a
+// MEMU or DEMU car about 21.3 m.
 export const MODELS = {
   irWap7: M(wap7, 67.5),
   irWap5: M(wap5, 59.6),
@@ -316,6 +424,10 @@ export const MODELS = {
   irIntercityCoach: M(intercityCoach, 77.2),
   irVbCab: M(vbCab, 78.7, true),
   irVbMid: M(vbMid, 78.7, false, byIndex),
+  irMemuCab: M(memuCab, 70.0, true),
+  irMemuMid: M(memuMid, 70.0, false, byIndex),
+  irDemuCab: M(demuCab, 70.0, true),
+  irDemuMid: M(demuMid, 70.0, false),
 };
 
 const set = (label, ...units) => ({ label, units });
@@ -337,11 +449,15 @@ const INTERCITY = set("Typical: a WAP-7 locomotive and 8 blue LHB AC chair cars 
   ["irWap7", 1], ["irIntercityCoach", 8]);
 const VANDE_BHARAT = set("Typical: an 8-car Vande Bharat trainset — a driving car, 6 intermediate cars and a driving car (a judgement: the timetable names no rolling stock; some routes run 16-car sets, but 8 cars is the standard set)",
   ["irVbCab", 1], ["irVbMid", 6], ["irVbCab", 1]);
+const MEMU = set("Typical: an 8-car MEMU rake — a driving car, 6 intermediate cars and a driving car (a judgement: the timetable names no rolling stock; MEMU rakes run 8–12 cars, 8 is the usual set)",
+  ["irMemuCab", 1], ["irMemuMid", 6], ["irMemuCab", 1]);
+const DEMU = set("Typical: a 6-car DEMU rake — a driving car, 4 intermediate cars and a driving car (a judgement: the timetable names no rolling stock)",
+  ["irDemuCab", 1], ["irDemuMid", 4], ["irDemuCab", 1]);
 
 // The timetable names no rolling stock, so a train is placed by its LINE
 // alone (t.line, else t.route, the line's name). C1 covers the premium
-// loco-hauled lines and C2 the Vande Bharat; every other line returns
-// null — C3–C5 fill those in later (MEMU/DEMU, suburban EMUs,
+// loco-hauled lines, C2 the Vande Bharat and C3 the MEMU and DEMU; every
+// other line returns null — C4–C5 fill those in later (suburban EMUs,
 // Mail/Express and the rest), and Antyodaya and DMU have no photograph
 // to draw from.
 const C1 = {
@@ -355,6 +471,8 @@ const C1 = {
   "Jan Shatabdi Express": SHATABDI,
   "Intercity Express": INTERCITY,
   "Vande Bharat Express": VANDE_BHARAT,
+  "MEMU": MEMU,
+  "DEMU": DEMU,
 };
 export const TYPICAL = {
   indianrailways: (t = {}) => C1[String(t.line || t.route || "")] || null,
@@ -381,6 +499,10 @@ const fIntercity = { model: "LHB AC chair car (Intercity)", type: "Locomotive-ha
   source: `${CM}AC_Chair_Car_coach_of_New_Delhi-Jalandhar_City_Intercity_Express.jpg` };
 const fVb = { model: "Vande Bharat Express (Train 18/20)", type: "Electric multiple unit", builder: "Integral Coach Factory", lengthFt: 78.7,
   source: `${CM}Howrah%E2%80%93Puri_Vande_Bharat_Express_at_Balasore_railway_station_1.jpg` };
+const fMemu = { model: "MEMU (Mainline Electric Multiple Unit)", type: "Electric multiple unit", builder: "Integral Coach Factory", lengthFt: 70.0,
+  source: `${CM}A_MEMU_train_at_Paravur_railway_station,_Jan_2020.jpg` };
+const fDemu = { model: "DEMU (Diesel Electric Multiple Unit)", type: "Diesel multiple unit", builder: "Integral Coach Factory", lengthFt: 70.0,
+  source: `${CM}KCG-Miryalguda_DEMU_Passenger_train_01.jpg` };
 export const FACTS = {
   irWap7: { ...fWap7,
     about: "The WAP-7, Indian Railways' 6,350 hp passenger electric locomotive: cream with a red-brown stripe and a dark lower band. The one photographed from the side is at a station with its cab door open; WAP-7 30673 is photographed head-on hauling the New Delhi–Chennai Rajdhani. Drawing it on every Rajdhani, Garib Rath, Humsafar and Intercity train is a judgement: the timetable names no locomotive." },
@@ -404,4 +526,12 @@ export const FACTS = {
     about: "A driving car of a Vande Bharat Express trainset: white with a blue band along the window line and a blue band low on the side, a dark windscreen in an aerodynamic nose. The set photographed is the Howrah–Puri Vande Bharat at Balasore, seen from the front — the side is a reading, and so are the windows' and doors' places. Drawing it as an 8-car set on every Vande Bharat Express is a judgement: the timetable names no rolling stock, and some routes run 16-car sets." },
   irVbMid: { ...fVb,
     about: "An intermediate car of a Vande Bharat Express trainset, with the same white and blue livery. No photograph shows it squarely, so its doors and windows follow the driving car's, a judgement; so is the pantograph's place, on the car behind the leading car. Drawing 6 of them in every Vande Bharat Express set is a judgement: the timetable names no rolling stock." },
+  irMemuCab: { ...fMemu,
+    about: "A driving car of a MEMU (Mainline Electric Multiple Unit): pale yellow-cream with a blue window band and a blue band low, and an orange chevron sweeping down the nose. The unit photographed is MEMU 13023 at Paravur, seen from the front — the side is a reading, and so are the windows' and doors' places and the car length (about 21.3 m a car). Drawing it as an 8-car set on every MEMU is a judgement: the timetable names no rolling stock, and MEMU rakes run 8–12 cars." },
+  irMemuMid: { ...fMemu,
+    about: "An intermediate car of a MEMU, with the same cream and blue livery. No photograph shows it squarely, so its doors and windows follow the driving car's, a judgement; so is the pantograph's place, on the car behind the leading car. Drawing 6 of them in every MEMU set is a judgement: the timetable names no rolling stock." },
+  irDemuCab: { ...fDemu,
+    about: "A driving car of a DEMU (Diesel Electric Multiple Unit): deep royal blue with a red band along the top of the side under a light-grey roof, a white stripe and a red band low, \"SC\" and \"VENDORS\" lettering on the red band. The rake photographed is at Miryalguda, seen from above and to the side — its driving car's front is too distant to read, so the nose follows the MEMU's, a judgement. Drawing it as a 6-car set on every DEMU is a judgement: the timetable names no rolling stock." },
+  irDemuMid: { ...fDemu,
+    about: "An intermediate car of a DEMU, with the same blue, red and white livery and the small roof vents of the photograph. Its doors and windows are a reading of the side view at Miryalguda. Drawing 4 of them in every DEMU set is a judgement: the timetable names no rolling stock." },
 };
