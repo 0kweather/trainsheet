@@ -20,21 +20,24 @@
 //     México estación Buenavista.jpg",
 //     https://commons.wikimedia.org/wiki/File:Ferrocarril_Suburbano_de_la_Zona_Metropolitana_del_Valle_de_M%C3%A9xico_estaci%C3%B3n_Buenavista.jpg)
 //     shows unit M1.0102: a white body, a red band along the roof,
-//     a black swoosh sweeping down the cab's side, a red lower front
-//     with a black band across it at the windshield's base, the red
-//     "S" roundel in a white square on the front face, a big
-//     windshield with two wipers, a destination display above it,
-//     twin round headlamps in a black housing above the display,
-//     the red CAF mark, red doors, a dark window band and a grey
-//     roof box. The Tlalnepantla photograph ("Suburbano
-//     tlalnepantla.jpg",
+//     a large red swoosh sweeping up the side from the front lower
+//     corner to a red band above the windows, with a thin black curved
+//     stripe above it, a red lower front with a black band across it
+//     at the windshield's base, the red "S" roundel in a white square
+//     on the front face, a big windshield with two wipers, a
+//     destination display above it, twin round headlamps in a black
+//     housing above the display, the red CAF mark, red doors, a dark
+//     window band and a grey roof box. The Tlalnepantla photograph
+//     ("Suburbano tlalnepantla.jpg",
 //     https://commons.wikimedia.org/wiki/File:Suburbano_tlalnepantla.jpg)
-//     shows a northbound set from the side: the black swoosh
-//     descending from the roof toward the rear of each car, red
-//     doors, a dark window band, a black skirt. Drawn as a
-//     three-car unit, cab + intermediate + cab: the FE-07's own
-//     formation (sets couple in service; the timetable names no
-//     stock, so the three-car set is a judgement).
+//     shows a northbound set from the side: the red swoosh rising
+//     from the front lower corner of the leading car to a red band
+//     above the windows, a thin black stripe curving down from the
+//     roof above it, red doors, a dark window band, a black skirt.
+//     The intermediate car carries the red band and black stripe but
+//     no swoosh wedge. Drawn as a three-car unit, cab + intermediate
+//     + cab: the FE-07's own formation (sets couple in service; the
+//     timetable names no stock, so the three-car set is a judgement).
 //
 // Not drawn: the AIFA branch's CAF CIVIA 465 sets
 // ("suburbano-aifa-civia.jpg" in the photo manifest) — no AIFA
@@ -65,20 +68,31 @@ const D3 = [8, 31, 54], D3CAB = [13, 33, 53];
 const G = { roof: 13.0, sill: 3.6 };
 
 // ---------- CAF 447 (FE-07/FE-10) ----------
-// White with a red band along the roof, a black swoosh sweeping down
-// the side from the cab toward the rear, red doors, a dark window
-// band and a black skirt. The cab's front is red below with a black
-// band across it at the windshield's base; the swoosh's exact curve
-// is a reading.
-const FE = { white: "#f2f3f4", red: "#e02318", black: "#1d2024", roof: "#b9bec4", skirt: "#26292e" };
+// White with a red band along the roof, a large red swoosh rising from
+// the front lower corner to a red band above the windows, a thin black
+// curved stripe above the swoosh, red doors, a dark window band and a
+// black skirt. The cab's front is red below with a black band across it
+// at the windshield's base; the swoosh's exact curve is a reading.
+const FE = { white: "#f2f3f4", red: "#e30613", black: "#1d2024", roof: "#b9bec4", skirt: "#26292e" };
 const NOSE_FE = [[1.0, 3.6], [0.8, 8.5], [1.3, 12.2], ["q", 1.5, 13.0, 3.0, 13.0]];
-// The swoosh: a black diagonal band, high at the car's front end and
-// low at its rear, as in the Tlalnepantla side view.
-const swoosh = () => path("M2 12.9L10 12.9L36 3.6L28 3.6Z", FE.black);
+// The swoosh, as in the Tlalnepantla side view: a LARGE RED wedge rising
+// from the front lower corner to the red band above the windows, with a
+// thin black curved stripe above it that starts at the roof behind the
+// cab and flattens out above the band. The intermediate cars carry no
+// wedge — just the red band and the black stripe, straight along the car.
+const BAND_Y = 10.5, BAND_H = 0.85;      // red band above the windows
+const STRIPE_Y = 11.35, STRIPE_H = 0.55; // thin black stripe above the band
+const wedge = () => path("M-1 6.0 Q22 8.2 44 11.35 L44 3.6 L-1 3.6 Z", FE.red);
+const stripeCurve = (L) => {
+  const e = Math.round((L - 1.8) * 10) / 10;
+  return path(`M4 13.0 Q24 12.3 44 11.9 L${e} 11.9 L${e} 11.35 L44 11.35 Q24 11.75 4 12.45 Z`, FE.black);
+};
 function fePaint(cab) {
   return (c, g) => {
     const L = g.L;
-    let s = bands(L, [[0, 20, FE.white], [12.3, 3, FE.red], [0, 3.6, FE.skirt]]) + swoosh();
+    let s = bands(L, [[0, 20, FE.white], [12.3, 3, FE.red], [0, 3.6, FE.skirt]]);
+    if (cab) s += wedge() + rect(43.5, BAND_Y, L - 41.5, BAND_H) + stripeCurve(L);
+    else s += rect(-1, BAND_Y, L + 2, BAND_H) + rect(-1, STRIPE_Y, L + 2, STRIPE_H);
     if (cab) s += rect(-1, 0, 11, 5.6, FE.red) + rect(-1, 5.6, 11, 0.9, FE.black);
     return s;
   };
@@ -125,7 +139,7 @@ const fFE07 = { model: "CAF 447 (FE-07/FE-10)", type: "Electric multiple unit", 
   source: `${CM}Ferrocarril_Suburbano_de_la_Zona_Metropolitana_del_Valle_de_M%C3%A9xico_estaci%C3%B3n_Buenavista.jpg` };
 export const FACTS = {
   suburbanoFE07Cab: { ...fFE07,
-    about: "An end car of a CAF 447 (FE-07/FE-10) unit, Tren Suburbano's only fleet: white with a red band along the roof, a black swoosh sweeping down the side, a red lower front with a black band across it at the windshield's base and the red \"S\" roundel on the front face, red doors. The unit photographed at Buenavista is M1.0102; the swoosh's exact curve is a reading." },
+    about: "An end car of a CAF 447 (FE-07/FE-10) unit, Tren Suburbano's only fleet: white with a red band along the roof, a large red swoosh sweeping up the side from the front lower corner to a red band above the windows with a thin black curved stripe above it, a red lower front with a black band across it at the windshield's base and the red \"S\" roundel on the front face, red doors. The unit photographed at Buenavista is M1.0102; the swoosh's exact curve is a reading." },
   suburbanoFE07Mid: { ...fFE07,
-    about: "An intermediate car of a CAF 447 (FE-07/FE-10) unit, white with the red roof band, the black swoosh and red doors, carrying the pantograph. The Tlalnepantla photograph shows the swoosh and doors from the side." },
+    about: "An intermediate car of a CAF 447 (FE-07/FE-10) unit, white with the red roof band, the red band above the windows with its thin black stripe, and red doors, carrying the pantograph. The Tlalnepantla photograph shows the band, stripe and doors from the side; the intermediate car carries no swoosh wedge." },
 };
