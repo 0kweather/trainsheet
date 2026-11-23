@@ -30,7 +30,8 @@ OSMFR = "https://download.openstreetmap.fr/extracts"
 # asia/georgia and asia/armenia (no Azerbaijan on either mirror — its tiles
 # come from Overpass via build_rail.py's own fetch, OSM_ROUTE_FETCH=1).
 MIRROR_EXTRACTS = {"asia/georgia", "asia/armenia",
-                    "asia/indonesia/jakarta", "asia/indonesia/banten", "asia/indonesia/west_java"}
+                    "asia/indonesia/jakarta", "asia/indonesia/banten", "asia/indonesia/west_java",
+                    "north-america/mexico"}
 TILE = 1.0  # degrees, as build_rail.py's ROUTE_TILE
 # The regions' countries, and the parts of their neighbors their trains run into.
 EXTRACTS = [
@@ -78,6 +79,11 @@ EXTRACTS = [
     "asia/indonesia/jakarta", "asia/indonesia/banten", "asia/indonesia/west_java",
     "asia/iran",  # Turkey's Van-Tabriz leg (TCDD Trans-Asia Express)
     "africa/morocco",
+    # Mexico: the whole-country extract (~760 MB) from the openstreetmap.fr
+    # mirror — Geofabrik direct fails through the proxy. Its track is cut
+    # once (scripts/.osm-extracts/north-america-mexico.geojsonseq) and the
+    # tiles reused; the extract itself lives in countries/mx/osm/.
+    "north-america/mexico",
     "australia-oceania/australia", "australia-oceania/new-zealand",
 ]
 # Light rail stays only where it's third-rail: OpenStreetMap files Berlin's
