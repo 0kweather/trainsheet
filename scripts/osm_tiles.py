@@ -25,6 +25,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE = ROOT / "scripts" / ".osm-cache"
 WORK = ROOT / "scripts" / ".osm-extracts"
 GEOFABRIK = "https://download.geofabrik.de"
+OSMFR = "https://download.openstreetmap.fr/extracts"
+# Geofabrik carries no Caucasus extracts; the openstreetmap.fr mirror has
+# asia/georgia and asia/armenia (no Azerbaijan on either mirror — its tiles
+# come from Overpass via build_rail.py's own fetch, OSM_ROUTE_FETCH=1).
+MIRROR_EXTRACTS = {"asia/georgia", "asia/armenia"}
 TILE = 1.0  # degrees, as build_rail.py's ROUTE_TILE
 # The regions' countries, and the parts of their neighbors their trains run into.
 EXTRACTS = [
@@ -39,6 +44,7 @@ EXTRACTS = [
     "europe/greece", "europe/ireland-and-northern-ireland",
     "europe/romania", "europe/moldova", "europe/bulgaria", "europe/serbia", "europe/croatia", "europe/turkey",
     "europe/montenegro", "europe/bosnia-herzegovina", "europe/macedonia", "europe/kosovo",  # Serbia's neighbours (Belgrade-Bar, border tiles)
+    "asia/georgia", "asia/armenia",  # Georgia's neighbours (Tbilisi-Yerevan, border tiles); Geofabrik carries no Caucasus extracts — these come from the openstreetmap.fr mirror (see MIRROR_EXTRACTS)
     "europe/italy", "europe/switzerland", "europe/slovenia",
     "europe/france/provence-alpes-cote-d-azur", "europe/france/rhone-alpes", "europe/germany/baden-wuerttemberg",
     "europe/france/alsace", "europe/france/franche-comte", "europe/liechtenstein",
@@ -93,8 +99,9 @@ def rail_of(extract):
     WORK.mkdir(parents=True, exist_ok=True)
     pbf, rail = WORK / f"{name}.osm.pbf", WORK / f"{name}-rail.osm.pbf"
     print(f"{extract}: downloading", flush=True)
+    url = f"{OSMFR}/{extract}.osm.pbf" if extract in MIRROR_EXTRACTS else f"{GEOFABRIK}/{extract}-latest.osm.pbf"
     subprocess.run(["curl", "-fsSL", "--retry", "5", "-A", "Trainsheet/1.0 (+https://trainsheet.com)",
-                    "-o", str(pbf), f"{GEOFABRIK}/{extract}-latest.osm.pbf"], check=True)
+                    "-o", str(pbf), url], check=True)
     osmium("tags-filter", str(pbf), "w/railway=rail,narrow_gauge,light_rail", "-o", str(rail), "--overwrite")
     pbf.unlink()
     osmium("export", str(rail), "-f", "geojsonseq", "--geometry-types=linestring", "-a", "id",
