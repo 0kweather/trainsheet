@@ -40,6 +40,7 @@
 {"region": "rs", "bbox": [19.04, 42.08, 22.61, 46.25], "file": "data/rail/rs.geojson", "bytes": 64692},
 {"region": "se", "bbox": [10.66, 55.37, 24.15, 68.45], "file": "data/rail/se.geojson", "bytes": 488750},
 {"region": "sk", "bbox": [15.62, 47.51, 22.68, 50.28], "file": "data/rail/sk.geojson", "bytes": 380542},
+{"region": "th", "bbox": [100.27, 13.54, 100.77, 14.0], "file": "data/rail/th.geojson", "bytes": 2796},
 {"region": "tr", "bbox": [23.31, 36.97, 46.23, 44.48], "file": "data/rail/tr.geojson", "bytes": 258401},
 {"region": "ua", "bbox": [20.16, 46.45, 36.21, 52.26], "file": "data/rail/ua.geojson", "bytes": 113891},
 {"region": "vic", "bbox": [142.47, -38.39, 147.63, -35.34], "file": "data/rail/vic.geojson", "bytes": 136558}

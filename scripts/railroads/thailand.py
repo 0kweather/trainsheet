@@ -308,5 +308,8 @@ GTFS = {
                  {"make": make_thailand, "number": lambda t: t.get("trip_short_name") or None, "tz": TZ}),
 }
 
-# Thailand's track (P3) is not built yet: add RAIL = {"region": "th",
-# "bbox": BBOX, ...} then. The region is "th" from the agencies' country.
+# Thailand's track (P3): the Bangkok partial's three clusters — Red Lines
+# north, ARL east, Mahachai southwest — all inside BBOX. The routing pass
+# re-tags each stretch with the agency whose trains run on it; "srtred" is
+# the base network for the OSM fetch, as Morocco uses "alatlas".
+RAIL = {"region": "th", "bbox": BBOX, "network": "srtred"}
