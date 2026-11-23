@@ -38,8 +38,8 @@ stations, named as signed in Latin through translations.txt ("Skopje",
 "Veles"); no two used stops fold into one id in this edition. Times are
 North Macedonia's (Europe/Skopje).
 
-P2 spot check: train 641, Skopje 07:06 -> Bitola 10:35 (on to Žabeni
-10:44) via Veles 07:59 and Prilep 09:44; train 611, Skopje 06:20 ->
+P2 spot check: train 641, Skopje 07:06 -> Bitola 10:31 arr (on to Žabeni
+10:44) via Veles 07:57 arr and Prilep 09:42 arr; train 611, Skopje 06:20 ->
 Gevgelija 08:59 via Veles 07:22."""
 import re, unicodedata
 
