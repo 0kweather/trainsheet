@@ -31,6 +31,7 @@ OSMFR = "https://download.openstreetmap.fr/extracts"
 # come from Overpass via build_rail.py's own fetch, OSM_ROUTE_FETCH=1).
 MIRROR_EXTRACTS = {"asia/georgia", "asia/armenia",
                     "asia/indonesia/jakarta", "asia/indonesia/banten", "asia/indonesia/west_java",
+                    "asia/india",  # India: the mirror carries it (verified 200, 2026-11-23); Geofabrik's is smaller/newer but the mirror is the brief's first try
                     "north-america/mexico", "south-america/chile"}
 TILE = 1.0  # degrees, as build_rail.py's ROUTE_TILE
 # The regions' countries, and the parts of their neighbors their trains run into.
@@ -72,6 +73,7 @@ EXTRACTS = [
     "europe/denmark", "europe/poland/zachodniopomorskie", "europe/poland/lubuskie",
     "europe/poland", "europe/ukraine", "europe/lithuania", "europe/germany",
     "asia/malaysia-singapore-brunei", "asia/thailand", "asia/israel-and-palestine", "asia/china",
+    "asia/india",  # India (2026-11-23): mirror extract ~1.98 GB, Geofabrik ~1.72 GB; whole-country, no provinces
     # Indonesia: Jabodetabek KRL lives in Jakarta, Banten and West Java;
     # the whole-country extract is ~2 GB, the three provinces ~0.5 GB.
     # Geofabrik carries no indonesia extract (404); these come from the
