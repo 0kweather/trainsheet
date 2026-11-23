@@ -1,10 +1,11 @@
 // Indian Railways' cars (scripts/railroads/india.py, agency
 // "indianrailways"): the premium loco-hauled trains — Rajdhani, Duronto,
 // Garib Rath, Tejas, Humsafar, Gatimaan, Shatabdi / Jan Shatabdi and
-// Intercity — the Vande Bharat trainset, and the MEMU and DEMU regional
-// multiple units. Trainsheet's own side views at the shared scale
-// (js/carart.js), each drawn from, and checked against, one photograph on
-// Wikimedia Commons, named here fleet by fleet. Locomotives from
+// Intercity — the Vande Bharat trainset, the MEMU and DEMU regional
+// multiple units, and the Mumbai, Kolkata and Chennai suburban EMUs.
+// Trainsheet's own side views at the shared scale (js/carart.js), each
+// drawn from, and checked against, one photograph on Wikimedia Commons,
+// named here fleet by fleet. Locomotives from
 // euroLoco and the coaches from coachCar (carmodels.js); the lettering is
 // drawn here (no logo files).
 //
@@ -67,6 +68,8 @@
 //     the car length (about 24 m a car) — is a reading.
 //   The MEMU (photo 11) and the DEMU (photo 12): see the MEMU and DEMU
 //     section below.
+//   The suburban EMUs (photos 13, 14, 15): see the suburban EMU section
+//     below.
 //
 // The timetable (the Neo2308 community GTFS) names no locomotive or
 // rolling stock, so which locomotive hauls a train and how many coaches
@@ -103,6 +106,19 @@
 // driving car of each rendered and looked at beside photographs 11 and
 // 12 (the DEMU renders use real DEMU run 71451; the MEMU renders use
 // real MEMU run 06605). Renders and the script: the build's work/verify-c3/.
+//
+// VERIFIED after writing (23 Nov 2026, C4): node --check passes; TYPICAL
+// run over all 9,474 indianrailways runs through the real consist.js — 0
+// failures, 4,593 runs get consists (Mumbai 485, Kolkata 1,490, Chennai
+// 875, each as a 12-car set; the C1–C3 distributions unchanged) and the
+// other 4,881 return null; the driving car, an intermediate car and the
+// trailing driving car of each rendered and looked at beside photographs
+// 13, 14 and 15 (the renders use real Local runs 95423 Mumbai, 38302
+// Kolkata, 43001 Chennai). One mismatch found and fixed: the Mumbai
+// intermediate car's "WR" sat behind its middle door (the doors are
+// drawn over the lettering) and was invisible; moved to x = 0.30 L, clear
+// of the doors, and re-rendered. Renders and the script: the build's
+// work/verify-c4/.
 
 import { coachCar } from "../carmodels.js?v=dev";
 import { rect, circle, path, slats, underframe, pantograph, win } from "../carart.js?v=dev";
@@ -316,6 +332,35 @@ const vbMid = (c) => unit(c, { roof: VB_G.roof, sill: VB_G.sill,
 //     white stripe and a red band low on the side, small roof vents,
 //     dark open doorways. The driving car's front is too distant to
 //     read, so its nose follows the MEMU's, a judgement.
+//   The suburban EMUs (photos 13, 14, 15): ICF cars about 21.3 m long,
+//     drawn with unit like the MEMU and DEMU. The timetable names no
+//     rolling stock and the lines are families, not cities, so which
+//     city a Local or Suburban train belongs to is read from its train
+//     number (verified against departures.json — see TYPICAL): 3xxxx
+//     Kolkata, 4xxxx Chennai, 9xxxx Mumbai. Numbers outside those
+//     ranges (Delhi 6xxxx, Bengaluru 0xxxx) have no photograph and
+//     keep returning null.
+//     The Mumbai EMU (photo 13): a Western Railway AC EMU, a side view
+//       — white with a purple band low on the side, a thin purple
+//       stripe under the roof, big "WR" lettering on the purple band,
+//       "WESTERN RAILWAY" in small purple letters above the band, grey
+//       roof, mesh-covered windows, oval windows on the doors. The cab
+//       end is not visible, so the nose follows the MEMU's, a judgement.
+//     The Kolkata EMU (photo 14): EMU 11417, a front/side view at
+//       Bandel — cream above, dark green below with a red chevron
+//       across the front and "12 COACH" on the green, red stripes on
+//       the cream front, silver buffers. The side stretching away shows
+//       the cream upper, the green lower band and a thin red stripe
+//       between them. The chevron's arm sweeping down the nose is a
+//       reading of the front; the "12 COACH" is drawn on the green
+//       band, and the unit number is not drawn.
+//     The Chennai EMU (photo 15): EMU 14003, a front/side view —
+//       cream front with a dark-green lower front sweeping up in a V,
+//       the red unit number 14003 and a "B" board, white buffer discs;
+//       the cars behind are white with red doors and dark windows. The
+//       green V is drawn as a wedge rising up the nose; the mid cars
+//       are white with red doors and no green band, as in the
+//       photograph. The unit number and the board are not drawn.
 const MU = { cream: "#e9dc96", blue: "#1f4d9e", orange: "#ef7d1a", roof: "#c5c9cc", skirt: "#2a2d31" };
 const DE = { blue: "#1f45a8", red: "#c8352c", white: "#f2f3f4", roof: "#d9dcdd", skirt: "#2a2d31" };
 const MU_G = { roof: 13.0, sill: 3.7 };
@@ -387,6 +432,91 @@ const demuMid = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill,
     hvac(10, MU_G.roof, 5, 0.6) + hvac(30, MU_G.roof, 5, 0.6) + hvac(50, MU_G.roof, 5, 0.6) +
     boxes(16, g.L - 16, MU_G.sill, 3) });
 
+// ---------- The suburban EMUs ----------
+// Mumbai, Kolkata and Chennai (photos 13, 14, 15): the same ICF carbody
+// as the MEMU, so the driving cars reuse its window/door layout and the
+// nose; the intermediate cars have three doors a side, as the Chennai
+// photograph shows. The liveries are drawn from the photographs, the
+// layouts are a reading.
+const MB = { white: "#f2f3f4", purple: "#8e2a8e", roof: "#c5c9cc", skirt: "#2a2d31" };
+const KK = { cream: "#e8ddb0", green: "#1d5c3a", red: "#c8352c", roof: "#c5c9cc", skirt: "#2a2d31" };
+const CH = { white: "#eef0f1", red: "#c8352c", green: "#1d5c3a", roof: "#c5c9cc", skirt: "#2a2d31" };
+const subMidRows = [muWins([2.6, 6.9], 3.4), muWins([18.2, 23.8]), muWins([39.4, 45.0]), muWins([59.7, 64.0], 3.4)];
+const subMidDoors = (fill) => [muDoor(11.7, fill), muDoor(33.0, fill), muDoor(53.7, fill)];
+const subCab = (fill) => rect(13.7, 4.1, 2.2, 7.3, fill, 0.45, 'rx="0.3"') + win(14.25, 7.5, 1.1, 3.0, 0.15);
+// The Mumbai EMU (photo 13): white with a purple band low on the side,
+// a thin purple stripe under the roof, "WR" on the purple band.
+function mumbaiPaint(cab) {
+  return (c, g) => {
+    const L = g.L;
+    return bands(L, [[0, 20, MB.white], [12.3, 3, MB.roof], [0, 3.7, MB.skirt], [3.7, 2.0, MB.purple], [11.9, 0.35, MB.purple]]);
+  };
+}
+const mumbaiCab = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill, nose: NOSE_MU, rake: [[1.4, 8.4], [3.2, 11.9]], depth: 2.5, cabLen: 16, lampY: 5.6, bare: true,
+  rows: muCabRows, doors: muCabDoors(MB.white),
+  trucks: [10.5, c.L - 9.5], wheel: 33, paint: mumbaiPaint(true), surround: "#15171a",
+  cab: () => subCab(MB.white),
+  extra: (cc, g) => letters(cc, g.L - 10, 4.7, 1.6, "WR", "#ffffff", { weight: 800 }) +
+    letters(cc, g.L * 0.45, 6.4, 0.65, "WESTERN RAILWAY", MB.purple, { weight: 700 }) +
+    hvac(22, MU_G.roof, 22, 1.0) + boxes(20, g.L - 16, MU_G.sill, 3) });
+const mumbaiMid = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill,
+  rows: subMidRows, doors: subMidDoors(MB.white),
+  trucks: [9.5, c.L - 9.5], wheel: 33, paint: mumbaiPaint(false),
+  extra: (cc, g) => letters(cc, g.L * 0.30, 4.7, 1.6, "WR", "#ffffff", { weight: 800 }) +
+    (c.index === 1 ? pantograph(9, MU_G.roof, { up: true, facing: -1 }).replaceAll("currentColor", "#5b6168") + hvac(24, MU_G.roof, 22, 1.0) : hvac(g.L / 2 - 14, MU_G.roof, 28, 1.0)) +
+    boxes(16, g.L - 16, MU_G.sill, 3) });
+// The Kolkata EMU (photo 14): cream above, dark green below with a thin
+// red stripe between them; the red chevron's arm sweeping down the nose.
+function kolkataPaint(cab) {
+  return (c, g) => {
+    const L = g.L;
+    let s = bands(L, [[0, 20, KK.cream], [12.3, 3, KK.roof], [0, 3.7, KK.skirt], [3.7, 2.6, KK.green], [6.3, 0.3, KK.red]]);
+    if (cab) {
+      // The red chevron's arm sweeping down the nose to the green band,
+      // as on the front at Bandel.
+      s += path("M13.8 11.0L13.8 9.2L3.0 6.6L-1 6.6L-1 8.2L11.8 11.0Z", KK.red);
+    }
+    return s;
+  };
+}
+const kolkataCab = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill, nose: NOSE_MU, rake: [[1.4, 8.4], [3.2, 11.9]], depth: 2.5, cabLen: 16, lampY: 5.6, bare: true,
+  rows: muCabRows, doors: muCabDoors(KK.cream),
+  trucks: [10.5, c.L - 9.5], wheel: 33, paint: kolkataPaint(true), surround: "#15171a",
+  cab: () => subCab(KK.cream),
+  extra: (cc, g) => letters(cc, g.L / 2, 5.0, 1.0, "12 COACH", "#f2f3f4", { weight: 700 }) +
+    hvac(22, MU_G.roof, 22, 1.0) + boxes(20, g.L - 16, MU_G.sill, 3) });
+const kolkataMid = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill,
+  rows: subMidRows, doors: subMidDoors(KK.cream),
+  trucks: [9.5, c.L - 9.5], wheel: 33, paint: kolkataPaint(false),
+  extra: (cc, g) =>
+    (c.index === 1 ? pantograph(9, MU_G.roof, { up: true, facing: -1 }).replaceAll("currentColor", "#5b6168") + hvac(24, MU_G.roof, 22, 1.0) : hvac(g.L / 2 - 14, MU_G.roof, 28, 1.0)) +
+    boxes(16, g.L - 16, MU_G.sill, 3) });
+// The Chennai EMU (photo 15): white with red doors; the green lower
+// front of the photograph is drawn as a wedge rising up the nose.
+function chennaiPaint(cab) {
+  return (c, g) => {
+    const L = g.L;
+    let s = bands(L, [[0, 20, CH.white], [12.3, 3, CH.roof], [0, 3.7, CH.skirt]]);
+    if (cab) {
+      // The green lower front sweeping up in a V, as at the station in
+      // the photograph: a wedge rising up the nose from the low band.
+      s += path("M-1 3.7L-1 7.4L5.0 7.4L13.8 11.0L13.8 9.6L7.0 5.7L-1 5.7Z", CH.green);
+    }
+    return s;
+  };
+}
+const chennaiCab = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill, nose: NOSE_MU, rake: [[1.4, 8.4], [3.2, 11.9]], depth: 2.5, cabLen: 16, lampY: 5.6, bare: true,
+  rows: muCabRows, doors: muCabDoors(CH.red),
+  trucks: [10.5, c.L - 9.5], wheel: 33, paint: chennaiPaint(true), surround: "#15171a",
+  cab: () => subCab(CH.white),
+  extra: (cc, g) => hvac(22, MU_G.roof, 22, 1.0) + boxes(20, g.L - 16, MU_G.sill, 3) });
+const chennaiMid = (c) => unit(c, { roof: MU_G.roof, sill: MU_G.sill,
+  rows: subMidRows, doors: subMidDoors(CH.red),
+  trucks: [9.5, c.L - 9.5], wheel: 33, paint: chennaiPaint(false),
+  extra: (cc, g) =>
+    (c.index === 1 ? pantograph(9, MU_G.roof, { up: true, facing: -1 }).replaceAll("currentColor", "#5b6168") + hvac(24, MU_G.roof, 22, 1.0) : hvac(g.L / 2 - 14, MU_G.roof, 28, 1.0)) +
+    boxes(16, g.L - 16, MU_G.sill, 3) });
+
 // ---------- Tables ----------
 
 export const TYPES = {
@@ -405,13 +535,19 @@ export const TYPES = {
   irMemuMid: { name: "MEMU intermediate car", kind: "emu" },
   irDemuCab: { name: "DEMU driving car", kind: "dmu" },
   irDemuMid: { name: "DEMU intermediate car", kind: "dmu" },
+  irMumbaiCab: { name: "Mumbai suburban EMU driving car", kind: "emu" },
+  irMumbaiMid: { name: "Mumbai suburban EMU intermediate car", kind: "emu" },
+  irKolkataCab: { name: "Kolkata suburban EMU driving car", kind: "emu" },
+  irKolkataMid: { name: "Kolkata suburban EMU intermediate car", kind: "emu" },
+  irChennaiCab: { name: "Chennai suburban EMU driving car", kind: "emu" },
+  irChennaiMid: { name: "Chennai suburban EMU intermediate car", kind: "emu" },
 };
 const M = (draw, len, oneEnd = false, variant = null) => ({ draw, len, oneEnd, variant });
 const byIndex = (ctx) => ctx.index;
 // Feet over the couplers, from the figures usually published, set down
 // from memory and not checked for this file: the LHB coach 23.54 m, the
 // WAP-7 20.56 m, the WAP-5 18.16 m, a Vande Bharat car about 24 m, a
-// MEMU or DEMU car about 21.3 m.
+// MEMU or DEMU car about 21.3 m, a suburban EMU car about 21.3 m.
 export const MODELS = {
   irWap7: M(wap7, 67.5),
   irWap5: M(wap5, 59.6),
@@ -428,6 +564,12 @@ export const MODELS = {
   irMemuMid: M(memuMid, 70.0, false, byIndex),
   irDemuCab: M(demuCab, 70.0, true),
   irDemuMid: M(demuMid, 70.0, false),
+  irMumbaiCab: M(mumbaiCab, 70.0, true),
+  irMumbaiMid: M(mumbaiMid, 70.0, false, byIndex),
+  irKolkataCab: M(kolkataCab, 70.0, true),
+  irKolkataMid: M(kolkataMid, 70.0, false, byIndex),
+  irChennaiCab: M(chennaiCab, 70.0, true),
+  irChennaiMid: M(chennaiMid, 70.0, false, byIndex),
 };
 
 const set = (label, ...units) => ({ label, units });
@@ -453,13 +595,32 @@ const MEMU = set("Typical: an 8-car MEMU rake — a driving car, 6 intermediate 
   ["irMemuCab", 1], ["irMemuMid", 6], ["irMemuCab", 1]);
 const DEMU = set("Typical: a 6-car DEMU rake — a driving car, 4 intermediate cars and a driving car (a judgement: the timetable names no rolling stock)",
   ["irDemuCab", 1], ["irDemuMid", 4], ["irDemuCab", 1]);
+const MUMBAI = set("Typical: a 12-car Mumbai suburban EMU rake — a driving car, 10 intermediate cars and a driving car (a judgement: the timetable names no rolling stock; Mumbai locals run 12- and 15-car rakes, 12 is the usual set)",
+  ["irMumbaiCab", 1], ["irMumbaiMid", 10], ["irMumbaiCab", 1]);
+const KOLKATA = set("Typical: a 12-car Kolkata suburban EMU rake — a driving car, 10 intermediate cars and a driving car (a judgement: the timetable names no rolling stock; the photograph's unit is marked \"12 COACH\")",
+  ["irKolkataCab", 1], ["irKolkataMid", 10], ["irKolkataCab", 1]);
+const CHENNAI = set("Typical: a 12-car Chennai suburban EMU rake — a driving car, 10 intermediate cars and a driving car (a judgement: the timetable names no rolling stock; Chennai locals run 9- and 12-car rakes, 12 is the usual set)",
+  ["irChennaiCab", 1], ["irChennaiMid", 10], ["irChennaiCab", 1]);
 
 // The timetable names no rolling stock, so a train is placed by its LINE
-// alone (t.line, else t.route, the line's name). C1 covers the premium
-// loco-hauled lines, C2 the Vande Bharat and C3 the MEMU and DEMU; every
-// other line returns null — C4–C5 fill those in later (suburban EMUs,
-// Mail/Express and the rest), and Antyodaya and DMU have no photograph
-// to draw from.
+// alone (t.line, else t.route, the line's name) — except Local and
+// Suburban, which are placed by train number. The feed's number ranges
+// are the cities, verified against data/regions/in/departures.json
+// (2026-11-23): 3xxxx Kolkata (Sealdah, Howrah Jn, Bandel, Ranaghat,
+// Gede, Lalgola), 4xxxx Chennai (Chennai Beach, Chennai Central
+// Suburban, Tambaram, St Thomas Mount MRTS), 9xxxx Mumbai (Kalyan,
+// Titvala, Lonavala, Pune Jn). Numbers outside those ranges keep
+// returning null — Delhi 6xxxx (94 Suburban runs) and Bengaluru 0xxxx
+// (8 Suburban runs) have no photograph, and the single Local 66007
+// (Chennai Central Suburban – Avadi) is numbered in the Delhi 6xxxx
+// range, so its city is not guessed from its stations.
+const SUBURBAN = (t) => {
+  const n = String(t.number || "");
+  if (n[0] === "3") return KOLKATA;
+  if (n[0] === "4") return CHENNAI;
+  if (n[0] === "9") return MUMBAI;
+  return null;
+};
 const C1 = {
   "Rajdhani Express": RAJDHANI,
   "Duronto Express": DURONTO,
@@ -475,7 +636,11 @@ const C1 = {
   "DEMU": DEMU,
 };
 export const TYPICAL = {
-  indianrailways: (t = {}) => C1[String(t.line || t.route || "")] || null,
+  indianrailways: (t = {}) => {
+    const line = String(t.line || t.route || "");
+    if (line === "Local" || line === "Suburban") return SUBURBAN(t);
+    return C1[line] || null;
+  },
 };
 
 const CM = "https://commons.wikimedia.org/wiki/File:";
@@ -503,6 +668,12 @@ const fMemu = { model: "MEMU (Mainline Electric Multiple Unit)", type: "Electric
   source: `${CM}A_MEMU_train_at_Paravur_railway_station,_Jan_2020.jpg` };
 const fDemu = { model: "DEMU (Diesel Electric Multiple Unit)", type: "Diesel multiple unit", builder: "Integral Coach Factory", lengthFt: 70.0,
   source: `${CM}KCG-Miryalguda_DEMU_Passenger_train_01.jpg` };
+const fMumbai = { model: "Mumbai suburban EMU (Western Railway AC EMU)", type: "Electric multiple unit", builder: "Integral Coach Factory", lengthFt: 70.0,
+  source: `${CM}Mumbai_EMU_AC_coaches.jpg` };
+const fKolkata = { model: "Kolkata suburban EMU", type: "Electric multiple unit", builder: "Integral Coach Factory", lengthFt: 70.0,
+  source: `${CM}EMU_at_Bandel.jpg` };
+const fChennai = { model: "Chennai suburban EMU", type: "Electric multiple unit", builder: "Integral Coach Factory", lengthFt: 70.0,
+  source: `${CM}Chennai_local_14003.jpg` };
 export const FACTS = {
   irWap7: { ...fWap7,
     about: "The WAP-7, Indian Railways' 6,350 hp passenger electric locomotive: cream with a red-brown stripe and a dark lower band. The one photographed from the side is at a station with its cab door open; WAP-7 30673 is photographed head-on hauling the New Delhi–Chennai Rajdhani. Drawing it on every Rajdhani, Garib Rath, Humsafar and Intercity train is a judgement: the timetable names no locomotive." },
@@ -534,4 +705,16 @@ export const FACTS = {
     about: "A driving car of a DEMU (Diesel Electric Multiple Unit): deep royal blue with a red band along the top of the side under a light-grey roof, a white stripe and a red band low, \"SC\" and \"VENDORS\" lettering on the red band. The rake photographed is at Miryalguda, seen from above and to the side — its driving car's front is too distant to read, so the nose follows the MEMU's, a judgement. Drawing it as a 6-car set on every DEMU is a judgement: the timetable names no rolling stock." },
   irDemuMid: { ...fDemu,
     about: "An intermediate car of a DEMU, with the same blue, red and white livery and the small roof vents of the photograph. Its doors and windows are a reading of the side view at Miryalguda. Drawing 4 of them in every DEMU set is a judgement: the timetable names no rolling stock." },
+  irMumbaiCab: { ...fMumbai,
+    about: "A driving car of a Mumbai suburban EMU: white with a purple band low on the side, a thin purple stripe under the roof, big \"WR\" lettering on the band and \"WESTERN RAILWAY\" in small purple letters above it. The car photographed is a Western Railway AC EMU, seen from the side — the cab end is not visible, so the nose follows the MEMU's, a judgement. Which Local and Suburban trains are Mumbai's is read from the train number (9xxxx), verified against the timetable; drawing it as a 12-car rake on every one is a judgement: the timetable names no rolling stock, and Mumbai locals also run 15-car rakes." },
+  irMumbaiMid: { ...fMumbai,
+    about: "An intermediate car of a Mumbai suburban EMU, with the same white and purple livery and \"WR\" on the band. Its doors and windows are a reading — the photograph shows the side of an AC EMU, not a measured elevation — and so is the pantograph's place, on the car behind the leading car. Drawing 10 of them in every Mumbai suburban rake is a judgement: the timetable names no rolling stock." },
+  irKolkataCab: { ...fKolkata,
+    about: "A driving car of a Kolkata suburban EMU: cream above, dark green below with a thin red stripe between them, the red chevron's arm sweeping down the nose, \"12 COACH\" on the green band. The unit photographed is EMU 11417 at Bandel, seen from the front and side — the unit number is not drawn. Which Local and Suburban trains are Kolkata's is read from the train number (3xxxx), verified against the timetable; drawing it as a 12-car rake on every one is a judgement: the timetable names no rolling stock." },
+  irKolkataMid: { ...fKolkata,
+    about: "An intermediate car of a Kolkata suburban EMU, with the same cream and green livery and the thin red stripe. Its doors and windows are a reading of the side stretching away in the photograph at Bandel; so is the pantograph's place, on the car behind the leading car. Drawing 10 of them in every Kolkata suburban rake is a judgement: the timetable names no rolling stock." },
+  irChennaiCab: { ...fChennai,
+    about: "A driving car of a Chennai suburban EMU: white with red doors, the dark-green lower front of the photograph drawn as a wedge rising up the nose. The unit photographed is EMU 14003 at a station, seen from the front and side — its red unit number and \"B\" board are not drawn. Which Local and Suburban trains are Chennai's is read from the train number (4xxxx), verified against the timetable; drawing it as a 12-car rake on every one is a judgement: the timetable names no rolling stock." },
+  irChennaiMid: { ...fChennai,
+    about: "An intermediate car of a Chennai suburban EMU: white with red doors, as the cars behind EMU 14003 in the photograph — no green band, as in the photograph. Its doors and windows are a reading of that side view; so is the pantograph's place, on the car behind the leading car. Drawing 10 of them in every Chennai suburban rake is a judgement: the timetable names no rolling stock." },
 };
