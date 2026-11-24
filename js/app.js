@@ -7,6 +7,7 @@ import { NETWORKS, networkColor } from "./networks.js?v=dev";
 import { trainNotices, stationNotices } from "./notices.js?v=dev";
 import { loadDisruptions, aboutLine } from "./disruptions.js?v=dev";
 import { inferDelay } from "./delays.js?v=dev";
+import { estimateRide } from "./rideeta.js?v=dev";
 import { consistOf, consistHtml, carSvg, modelIds, fleetSamples, onCars, loadCars, pluginFacts } from "./consist.js?v=dev";
 import { stationLifts } from "./lifts.js?v=dev";
 import { t as T, tn as Tn, lang, langPref, locale, dateFormat, translatePage } from "./i18n.js?v=dev";
@@ -109,6 +110,16 @@ const state = {
   relayFeeds: null,      // feeds the relay can serve (null = no relay)
   // The train a rider pressing locate seems to be on: { id, mph, at }.
   rideGuess: null,
+  // Ride location (below): the ride the rider's own location is placing,
+  // { trainId, watchId, fix }, fix being { lat, lon, snappedLat, snappedLon,
+  // alongM, at, accM, speedMps }; and that train's route traced stop to stop,
+  // { trainId, key, path, stopAlong } (stopAlong: meters along path at each
+  // of t.stops, null where a stop couldn't be placed). In memory only.
+  rideMode: null,
+  rideRoute: null,
+  // And how late that ride is by the rider's location (rideeta.js), worked
+  // out with each fix and every half minute: { trainId, at, destIndex, est }.
+  rideEstimate: null,
   // Statuses told apart by shape as well as color, in colors that work
   // with red-green colorblindness (css/design.css).
   colorblind: store.get("tt-colorblind", false),
@@ -806,6 +817,24 @@ function addLayers() {
     paint: { "icon-opacity": zoomFade(TRAIN_FLOOR, ["case", ["get", "stale"], 0.45, 1]) },
   });
 
+  // Ride location: the rider, a white-ringed blue dot on their train's
+  // route, over its arrow. Faded once their last fix is too old to place
+  // the train (rideModeCollection).
+  map.addSource("tt-you", { type: "geojson", data: rideModeCollection() });
+  map.addLayer({
+    id: "tt-you",
+    type: "circle",
+    source: "tt-you",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4, 12, 6],
+      "circle-color": "#1a73e8",
+      "circle-stroke-color": "#fff",
+      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 5, 1.5, 12, 2.5],
+      "circle-opacity": ["case", ["get", "stale"], 0.4, 1],
+      "circle-stroke-opacity": ["case", ["get", "stale"], 0.4, 1],
+    },
+  });
+
   // Each train is labeled with its plate once there's room for it. Plates
   // collide with each other instead of piling up, and intercity trains win
   // ties. The selected and tracked trains' plates are placed first and shown
@@ -1440,9 +1469,20 @@ function redrawStations() {
 
 // Where to draw a train: on the nearest track. Falls back to exactly what the
 // feed reported (e.g., trains beyond the rail data).
+// Ride location: the ride whose rider turned on "Use my location" is drawn
+// where they are instead, moved onto its route, while their fix is fresh
+// (rideModeTarget). Only in this browser; everything that places, slides or
+// points a train reads it from here.
 function targetOf(t) {
-  return state.est.get(t.id) || t;
+  if (state.rideMode?.trainId === t.id) {
+    const you = rideModeTarget(t);
+    if (you) return you;
+  }
+  return feedTargetOf(t);
 }
+// Where the feed alone puts it, for whatever compares the train with the
+// rider's location (checkRiding): the rider's own fix would always match.
+const feedTargetOf = (t) => state.est.get(t.id) || t;
 
 // Snapping depends only on the reported position, so cache it per train.
 const snapCache = new Map(); // id -> { lat, lon, result }
@@ -1893,6 +1933,7 @@ function mergeTrains() {
   checkTracked();
   trackPlanned();
   checkRiding();
+  rideModeCheck();
   renderAll();
   if (state.follow && state.selected) {
     const t = state.trains.get(state.selected);
@@ -5116,6 +5157,7 @@ const saveTracked = () => {
   store.set("tt-tracked", state.tracked);
   trackedChanged(); // a tracked train's country shows with it
   account?.trackedChanged(state.tracked); // to the rider's other devices, when signed in
+  rideModeCheck(); // a ride untracked (here or on another device) stops using the rider's location
 };
 
 // The live train for a tracked record, if it's reporting. A feed can reuse a
@@ -5257,7 +5299,9 @@ function checkRiding() {
       const fix = { lat: pos.coords.latitude, lon: pos.coords.longitude };
       let changed = false;
       for (const rec of open) {
-        const t = trackedTrain(rec), p = t && (state.display.get(t.id) || targetOf(t));
+        // (A ride the rider's location is placing is drawn where they are:
+        // matching it against the feed's position, not that.)
+        const t = trackedTrain(rec), p = t && (t.id === state.rideMode?.trainId ? feedTargetOf(t) : state.display.get(t.id) || targetOf(t));
         if (p && meters(fix, p) < 1500 + Math.min(pos.coords.accuracy || 0, 1000)) {
           rec.confirmed = true;
           changed = true;
@@ -5285,7 +5329,7 @@ const BELL_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="
 function trackButton(t) {
   const rec = state.tracked.find((r) => r.id === t.id);
   if (rec) {
-    return `<button type="button" class="btn small tracking-btn" data-track="${esc(t.id)}">${BELL_ICON}${esc(rec.stopName ? T("Tracking to {to}", { to: rec.stopName }) : T("Tracking"))}</button>`;
+    return `<button type="button" class="btn small tracking-btn" data-track="${esc(t.id)}">${BELL_ICON}${esc(rec.stopName ? T("Tracking to {to}", { to: rec.stopName }) : T("Tracking"))}</button>${rideModeButton(rec, "btn small")}`;
   }
   return `<button type="button" class="btn primary small track-btn" data-track="${esc(t.id)}">${BELL_ICON}${T("Track")}</button>`;
 }
@@ -5491,7 +5535,7 @@ function renderTracked() {
     const sub = [status, warn].filter(Boolean).join(" · ") || esc(rec.route || AGENCIES[rec.agency]?.name || "");
     return `<div class="tb-row" style="--c:${t?.routeColor || a.color}" role="button" tabindex="0" data-track-open="${esc(rec.id)}"${rec.id === open ? ' aria-current="true"' : ""}>
       ${plate(rec.number || a.short, a.color, "xs")}
-      <span class="tb-main"><span class="tb-where">${where || esc(trainLabel(rec))}</span><span class="tb-sub">${sub}</span></span>
+      <span class="tb-main"><span class="tb-where">${where || esc(trainLabel(rec))}</span><span class="tb-sub">${sub}</span>${t ? rideEtaLines(rec, t) + rideModeButton(rec, "tb-loc") : ""}</span>
       ${left.eta ? `<span class="tb-eta">${left.eta}</span>` : ""}
       <button type="button" class="tc-x" data-untrack="${esc(rec.id)}" aria-label="${esc(T("Stop tracking {train}", { train: trainLabel(rec) }))}" title="${T("Stop tracking")}">×</button>
       ${left.done == null ? "" : `<span class="tb-progress" aria-hidden="true"><span style="width:${(left.done * 100).toFixed(1)}%"></span></span>`}
@@ -5637,6 +5681,341 @@ function answerRideGuess(id, answer) {
   openTrackSheet(t, { riding: true, confirmed: true }); // found by the rider's own location
 }
 
+// ---------- Ride location ----------
+// Riding a tracked train, the rider can let their own location place it:
+// "Use my location" (on the ride's row in the tracking bar, and beside
+// Tracking on its page) watches where they are, moves each fix onto the
+// train's route and draws the train there, with a dot for them, in this
+// browser only. The location is asked for only when they press it. Fixes
+// are held in memory while it's on and forgotten when it stops: never saved
+// in the browser, never added to their trips or account, never sent anywhere.
+// (Separate from "Which train am I on?" above and checkRiding, which look
+// once and stop.)
+const RIDE_MODE_FRESH_MS = 3 * 60 * 1000; // an older fix no longer places the train
+const RIDE_MODE_ACC_M = 500;              // a vaguer fix than this is passed over
+const RIDE_MODE_OFF_M = 1500;             // further than this from the route, the rider isn't on it
+let rideModeShown = false;                // the train is drawn where the rider is
+let rideModeDrawn = 0;                    // when it last slid there (performance.now())
+let rideModeTimer = null;                 // a slide put off to keep to one a second
+const LOC_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M20 4 4 10.6l6.9 2.5L13.4 20Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+
+function toggleRideMode(id) {
+  if (state.rideMode?.trainId === id) return stopRideMode();
+  startRideMode(id);
+}
+function startRideMode(id) {
+  const rec = state.tracked.find((r) => r.id === id && r.riding);
+  const t = rec && trackedTrain(rec);
+  if (!t) return toast(T("That train isn't reporting right now."));
+  if (!navigator.geolocation) return toast(T("This browser can't tell Trainsheet where you are, so your train can't be placed from your location."));
+  stopRideMode(); // one ride at a time
+  const m = { trainId: t.id, watchId: null, fix: null };
+  state.rideMode = m;
+  rideRouteOf(t); // traced now, not on the first fix
+  // Each callback is tied to its own watch: one stopped can't touch the next.
+  m.watchId = navigator.geolocation.watchPosition((pos) => onRideModeFix(m, pos), (err) => onRideModeError(m, err), { enableHighAccuracy: true, maximumAge: 0 });
+  rideModeRender(t.id);
+}
+function stopRideMode() {
+  const m = state.rideMode;
+  if (!m) return;
+  if (m.watchId != null) navigator.geolocation.clearWatch(m.watchId);
+  clearTimeout(rideModeTimer);
+  rideModeTimer = null;
+  state.rideMode = null;
+  state.rideRoute = null;
+  state.rideEstimate = null;
+  map.getSource("tt-you")?.setData(rideModeCollection());
+  if (rideModeShown) {
+    rideModeShown = false;
+    animateTo(); // back where its feed puts it
+  }
+  rideModeRender(m.trainId);
+}
+// The toggle shows on the ride's row in the bar and on its page.
+function rideModeRender(id) {
+  renderTracked();
+  if (state.selected === id) renderDetail();
+}
+
+function onRideModeFix(m, pos) {
+  const c = pos.coords;
+  if (state.rideMode !== m || !(c.accuracy <= RIDE_MODE_ACC_M)) return;
+  const t = state.trains.get(m.trainId);
+  if (!t) return; // rideModeCheck ends it with the next update
+  const last = m.fix, at = Date.now(); // (the time it came, not pos.timestamp: some devices' clocks are off)
+  const fix = { lat: c.latitude, lon: c.longitude, snappedLat: null, snappedLon: null, alongM: null, at, accM: c.accuracy, speedMps: null };
+  // Onto the track, then onto this train's route: its place along it.
+  const route = rideRouteOf(t);
+  const s = route && state.rail.snap([fix.lon, fix.lat], RIDE_MODE_OFF_M, t.agency);
+  if (s) {
+    const [lon, lat] = state.rail.at(s.line, s.along).point;
+    const on = rideAlong(route.path, { lat, lon }, last?.alongM ?? null);
+    if (on && meters(fix, on) <= RIDE_MODE_OFF_M) Object.assign(fix, { snappedLat: on.lat, snappedLon: on.lon, alongM: on.alongM });
+  }
+  // Speed as the device reports it, else from the last fix (along the route
+  // where both are on it).
+  const secs = last ? (at - last.at) / 1000 : 0;
+  if (Number.isFinite(c.speed)) fix.speedMps = c.speed;
+  else if (secs >= 1) fix.speedMps = (fix.alongM != null && last.alongM != null ? Math.abs(fix.alongM - last.alongM) : meters(last, fix)) / secs;
+  m.fix = fix;
+  const lateChanged = updateRideEstimate();
+  if (!last) rideModeRender(m.trainId); // "Finding you…" gives way to "Location on"
+  else if (lateChanged) renderTracked(); // (fixes come every second or so: only when what it says changes)
+  rideModeDraw(true);
+}
+function onRideModeError(m, err) {
+  if (state.rideMode !== m || err.code !== 1) return; // no fix just now: it keeps watching
+  stopRideMode();
+  toast(T("Location is off for Trainsheet. Allow it in your browser's settings to place your train from where you are."));
+}
+
+// While it's on, with every feed update and every half minute: it stops
+// when the ride is untracked, its train stops reporting, or the train has
+// left the rider's stop behind (the ride is over); a fix grown too old
+// hands the train back to its feed and fades the dot.
+function rideModeCheck() {
+  const m = state.rideMode;
+  if (!m) return;
+  const rec = state.tracked.find((r) => r.id === m.trainId && r.riding);
+  if (!rec) return stopRideMode();
+  const t = trackedTrain(rec);
+  if (!t) {
+    stopRideMode();
+    return toast(T("Stopped using your location: {train} isn't reporting.", { train: trainLabel(rec) }));
+  }
+  if (endStop(t, rec)?.status === "past") return stopRideMode();
+  updateRideEstimate(); // (the bar is drawn again right after, by both callers)
+  rideModeDraw();
+}
+
+// ---------- Ride location: how late, from where the rider is ----------
+// With each fix and every half minute, rideeta.js works out how late the
+// ride is from the rider's place on its route, and when it reaches their
+// stop. Only in this browser, like the fixes it comes from. The bar shows it
+// under the ride's line (rideEtaLines) when it's sure enough; otherwise
+// nothing changes.
+const RIDE_ETA_MIN_CONF = 0.35;     // less sure than this, it isn't shown
+const RIDE_ETA_MAX_AGE_MS = 90000;  // worked out longer ago than this (a tab asleep), it isn't either
+const RIDE_ETA_RANGE_MS = 4 * 60000; // a range this wide or wider shows as one ("6:38–6:47")
+const RIDE_ETA_ON_TIME_MIN = 2;     // within this of the timetable it's on time (it never claims better than a minute)
+
+// rideeta.js's input from the train as its feed has it now. Scheduled times
+// as delays.js reads them: the timetable's own arrival and departure where
+// the feed gives them (Amtrak, VIA), else its one scheduled time for both.
+// Predicted: when the feed has it leaving (arriving, at its last stop), so a
+// stop counts as ahead until the train has left it.
+function rideEstimateInput(t, rec, fix, now) {
+  const ms = (iso) => { const v = iso ? Date.parse(iso) : NaN; return Number.isFinite(v) ? v : null; };
+  const stops = t.stops.map((s) => ({
+    schedArr: ms(s.schArr || s.scheduled),
+    schedDep: ms(s.schDep || s.scheduled),
+    pred: ms(s.dep || s.time || s.arr),
+  }));
+  const route = state.rideRoute;
+  const along = route?.trainId === t.id && route.stopAlong?.length === t.stops.length ? route.stopAlong : null;
+  const chosen = rec.stopKey ? t.stops.findIndex((s) => s.key === rec.stopKey) : -1;
+  const destIndex = chosen >= 0 ? chosen : t.stops.length - 1;
+  // The feed's delay at the first stop it hasn't passed: like for like,
+  // arrival against arrival (departure, standing there), else its one time
+  // against its one scheduled time.
+  const s = t.stops.find((x) => x.status !== "past");
+  const gap = (a, b) => (ms(a) != null && ms(b) != null ? ms(a) - ms(b) : null);
+  const feedDelayMs = !s ? null
+    : (s.here ? gap(s.dep, s.schDep) ?? gap(s.arr, s.schArr) : gap(s.arr, s.schArr) ?? gap(s.dep, s.schDep)) ?? gap(s.time, s.scheduled);
+  return {
+    now, stops, along, destIndex, feedDelayMs,
+    fix: fix && { alongM: fix.alongM, atMs: fix.at, accM: fix.accM, speedMps: fix.speedMps },
+  };
+}
+
+// Works it out again (or clears it, with the mode off or no fix yet).
+// Returns whether what the bar shows for it has changed.
+function updateRideEstimate() {
+  const m = state.rideMode;
+  const rec = m && state.tracked.find((r) => r.id === m.trainId && r.riding);
+  const t = rec && trackedTrain(rec);
+  const before = t ? rideEtaLines(rec, t) : "";
+  state.rideEstimate = null;
+  if (t?.stops?.length && m.fix) {
+    const now = Date.now(), input = rideEstimateInput(t, rec, m.fix, now);
+    const est = estimateRide(input);
+    if (est) state.rideEstimate = { trainId: t.id, at: now, destIndex: input.destIndex, est };
+  }
+  return (t ? rideEtaLines(rec, t) : "") !== before;
+}
+
+// Under the ride's line in the bar: "About 9 min late · from your location ·
+// Arriving 6:41" (a range when it can't say closer than four minutes), and
+// at most one line on why ("Held at Alexandria"). Nothing at all when the
+// estimate is missing, old, unsure, or rests on the feed alone.
+function rideEtaLines(rec, t) {
+  const e = state.rideEstimate, est = e?.est;
+  if (!est || e.trainId !== t.id || state.rideMode?.trainId !== t.id) return "";
+  if (est.basis === "feed" || !(est.confidence >= RIDE_ETA_MIN_CONF) || Date.now() - e.at > RIDE_ETA_MAX_AGE_MS) return "";
+  const min = Math.round(est.delayMs / 60000);
+  const late = min >= RIDE_ETA_ON_TIME_MIN
+    ? (min < 60 ? T("About {n} min late", { n: min }) : T("About {h} h {m} min late", { h: Math.floor(min / 60), m: min % 60 }))
+    : min <= -RIDE_ETA_ON_TIME_MIN ? T("About {n} min early", { n: -min }) : T("On time");
+  const iso = (v) => new Date(v).toISOString();
+  const dest = est.stops.find((s) => s.index === e.destIndex), tz = t.stops[e.destIndex]?.tz;
+  const when = dest?.etaMs == null ? ""
+    : dest.hiMs - dest.loMs >= RIDE_ETA_RANGE_MS ? `${fmtTime(iso(dest.loMs), tz)}–${fmtTime(iso(dest.hiMs), tz)}`
+    : fmtTime(iso(dest.etaMs), tz);
+  const parts = [`<span class="status ${lateText(Math.max(0, min)).cls}">${esc(late)}</span>`, esc(T("from your location"))];
+  if (when) parts.push(esc(T("Arriving {time}", { time: when })));
+  const held = est.heldAtStop != null ? t.stops[est.heldAtStop]?.name : null;
+  const why = held ? T("Held at {station}", { station: held })
+    : est.reasons.includes("recovery") ? T("Some time may be made up on the way")
+    : est.reasons.includes("feed-differs") ? T("The railroad's estimate differs")
+    : "";
+  const title = esc(T("Worked out on this device from where you are and the timetable. The countdown is the railroad's."));
+  return `<span class="tb-sub tb-ride" title="${title}">${parts.join(" · ")}</span>${why ? `<span class="tb-sub tb-ride">${esc(why)}</span>` : ""}`;
+}
+
+const rideModeFresh = (fix) => !!fix && Date.now() - fix.at < RIDE_MODE_FRESH_MS;
+const rideModePlacing = () => { const fix = state.rideMode?.fix; return rideModeFresh(fix) && fix.snappedLat != null; };
+
+// Where targetOf() draws the ride while the rider's location places it: at
+// their place on its route, pointing along the route there (its feed's way
+// where the route can't say). Null when there's no fresh fix on the route.
+function rideModeTarget(t) {
+  const fix = state.rideMode.fix;
+  if (!rideModeFresh(fix) || fix.snappedLat == null) return null;
+  const route = state.rideRoute;
+  const bearing = route?.trainId === t.id && route.path ? rideBearingAt(route.path, fix.alongM) : null;
+  return { lat: fix.snappedLat, lon: fix.snappedLon, bearing: bearing ?? feedTargetOf(t).bearing ?? null };
+}
+
+// The dot and the train, after a fix (moved) or as a fix ages: the train
+// slides to the rider, at most once a second (fixes come about that often),
+// or back to its feed's spot once the fix can't place it.
+function rideModeDraw(moved = false) {
+  map.getSource("tt-you")?.setData(rideModeCollection());
+  const placing = rideModePlacing();
+  if (placing === rideModeShown && !(placing && moved)) return;
+  if (placing && rideModeShown) {
+    const wait = 1000 - (performance.now() - rideModeDrawn);
+    if (wait > 0) {
+      rideModeTimer ??= setTimeout(() => { rideModeTimer = null; rideModeDraw(true); }, wait);
+      return;
+    }
+  }
+  rideModeShown = placing;
+  rideModeDrawn = performance.now();
+  animateTo(900);
+}
+
+// The tt-you layer's one point: the rider's place on their train's route,
+// faded once it's too old to place the train. Nothing off the route.
+function rideModeCollection() {
+  const fix = state.rideMode?.fix;
+  if (fix?.snappedLat == null) return { type: "FeatureCollection", features: [] };
+  return {
+    type: "FeatureCollection",
+    features: [{ type: "Feature", geometry: { type: "Point", coordinates: [fix.snappedLon, fix.snappedLat] }, properties: { stale: !rideModeFresh(fix) } }],
+  };
+}
+
+// The train's whole route, its stops (each snapped to the track) joined
+// along the track as the selected train's line is, kept as state.rideRoute:
+// { trainId, key, path: { coords, cum, length }, stopAlong } (stopAlong:
+// meters along it at each of t.stops, null where a stop couldn't be
+// placed). Traced once per train and stop list, again when more track or
+// stations come in. Where the track doesn't join two stops within reason, a
+// straight line bridges them, so the stops after still count along. Null
+// (path null) without track or two placed stops: fixes are still kept, but
+// can't place the train.
+function rideRouteOf(t) {
+  if (!state.rail || !t?.stops?.length) return null;
+  const placed = t.stops.map((s) => state.stopPos.get(s.key) || null);
+  const key = `${t.id}|${t.stops.map((s) => s.key).join(",")}|${placed.filter(Boolean).length}|${state.rail.lines.length}`;
+  if (state.rideRoute?.key === key) return state.rideRoute.path ? state.rideRoute : null;
+  const coords = [], at = t.stops.map(() => null); // at: each stop's index in coords
+  let prev = null, prevPos = null;
+  placed.forEach((p, i) => {
+    const s = p && state.rail.snap([p.lon, p.lat], 1500, t.agency);
+    if (!s) return;
+    const here = state.rail.at(s.line, s.along).point;
+    if (prev) {
+      const leg = state.rail.route(prev, s, t.agency);
+      const legCoords = leg && leg.length < meters(prevPos, p) * 2.5 + 2000 ? leg.coords : [coords[coords.length - 1], here];
+      for (let k = 1; k < legCoords.length; k++) coords.push(legCoords[k]); // (a Path the router keeps: copied, not changed)
+    } else coords.push(here);
+    at[i] = coords.length - 1;
+    prev = s;
+    prevPos = p;
+  });
+  let path = null, stopAlong = at.map(() => null);
+  if (coords.length >= 2) {
+    const cum = [0];
+    for (let k = 1; k < coords.length; k++) cum.push(cum[k - 1] + meters({ lon: coords[k - 1][0], lat: coords[k - 1][1] }, { lon: coords[k][0], lat: coords[k][1] }));
+    path = { coords, cum, length: cum[cum.length - 1] };
+    stopAlong = at.map((k) => (k == null ? null : cum[k]));
+  }
+  state.rideRoute = { trainId: t.id, key, path, stopAlong };
+  return path ? state.rideRoute : null;
+}
+
+// A point's place on the route: the nearest point of its nearest piece (as
+// offLine finds it), { alongM, lat, lon }. Near where the last fix was, a
+// piece about as close wins over the nearest, for a route that doubles back
+// past itself (a reversal, a loop).
+function rideAlong(path, p, near = null) {
+  const { coords, cum } = path, kx = Math.cos((p.lat * Math.PI) / 180);
+  const piece = (i) => {
+    const [ax, ay] = coords[i - 1], [bx, by] = coords[i];
+    const dx = (bx - ax) * kx, dy = by - ay, px = (p.lon - ax) * kx, py = p.lat - ay;
+    const len2 = dx * dx + dy * dy;
+    const u = len2 ? Math.max(0, Math.min(1, (px * dx + py * dy) / len2)) : 0;
+    return { i, u, d: Math.hypot(px - u * dx, py - u * dy), along: cum[i - 1] + (cum[i] - cum[i - 1]) * u };
+  };
+  let best = null;
+  for (let i = 1; i < coords.length; i++) {
+    const h = piece(i);
+    if (!best || h.d < best.d) best = h;
+  }
+  if (!best) return null;
+  if (near != null) {
+    const slack = best.d + 60 / 111320; // 60 m, in the same flat degrees
+    for (let i = 1; i < coords.length; i++) {
+      const h = piece(i);
+      if (h.d <= slack && Math.abs(h.along - near) < Math.abs(best.along - near)) best = h;
+    }
+  }
+  const [ax, ay] = coords[best.i - 1], [bx, by] = coords[best.i];
+  return { alongM: best.along, lon: ax + (bx - ax) * best.u, lat: ay + (by - ay) * best.u };
+}
+
+// Which way the route runs at a distance along it (its stops' order, so the
+// train's way), or null.
+function rideBearingAt(path, alongM) {
+  const { coords, cum } = path;
+  if (alongM == null || coords.length < 2) return null;
+  let lo = 0, hi = cum.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (cum[mid] <= alongM) lo = mid;
+    else hi = mid;
+  }
+  // A piece of no length (two stops on one spot) says nothing: the next does.
+  while (hi < coords.length - 1 && cum[hi] === cum[lo]) hi++;
+  if (cum[hi] === cum[lo]) return null;
+  const [ax, ay] = coords[lo], [bx, by] = coords[hi];
+  return compassBearing({ lat: ay, lon: ax }, { lat: by, lon: bx });
+}
+
+// The toggle, for a ride (not a train only watched): "Use my location", or
+// once on, "Location on" with its × to stop ("Finding you…" until the first
+// fix). cls: its look in the bar or on the train's page.
+function rideModeButton(rec, cls) {
+  if (!rec.riding) return "";
+  if (state.rideMode?.trainId !== rec.id) {
+    return `<button type="button" class="${cls} ride-loc" data-ride-mode="${esc(rec.id)}" title="${esc(T("Place this train on the map from where you are. Your location stays on this device."))}">${LOC_ICON}${T("Use my location")}</button>`;
+  }
+  return `<button type="button" class="${cls} ride-loc on" data-ride-mode="${esc(rec.id)}" aria-label="${esc(T("Location on: stop using my location"))}" title="${esc(T("Stop using my location"))}">${LOC_ICON}${state.rideMode.fix ? T("Location on") : T("Finding you…")}<span class="ride-loc-x" aria-hidden="true">×</span></button>`;
+}
+
 // The bar's row opens its train's page (already open, it stays).
 function openTracked(id) {
   if (!state.trains.get(id)) return toast(T("That train isn't reporting right now."));
@@ -5651,6 +6030,7 @@ function syncLivePanel() {
 setInterval(() => {
   if (document.hidden) return;
   checkTracked();
+  rideModeCheck(); // a rider's fix ages too
   renderTracked(); // ETAs count down between feed updates
   if (state.tab === "trips" && !state.selected && !state.station && !state.railroad) renderAgencies(); // and the next trip's
 }, 30000);
@@ -6132,6 +6512,8 @@ on("tracked", "click", (e) => {
   }
   const guess = e.target.closest("[data-ride-guess]");
   if (guess) return answerRideGuess(guess.dataset.rideGuess, e.target.closest("[data-ride-no]") ? "no" : e.target.closest("[data-ride-yes]") ? "yes" : "open");
+  const loc = e.target.closest("[data-ride-mode]");
+  if (loc) return toggleRideMode(loc.dataset.rideMode);
   const x = e.target.closest("[data-untrack]");
   if (x) return untrack(x.dataset.untrack);
   const card = e.target.closest("[data-track-open]");
@@ -6139,7 +6521,8 @@ on("tracked", "click", (e) => {
 });
 on("tracked", "keydown", (e) => {
   const card = e.target.closest("[data-track-open]");
-  if (card && (e.key === "Enter" || e.key === " ")) {
+  // (A button in the row, × or the location toggle, presses itself.)
+  if (card && !e.target.closest("button") && (e.key === "Enter" || e.key === " ")) {
     e.preventDefault();
     openTracked(card.dataset.trackOpen);
   }
@@ -6224,6 +6607,8 @@ on("train-detail", "click", (e) => {
     store.set("tt-notices-collapsed", state.noticesCollapsed);
     return renderDetail();
   }
+  const loc = e.target.closest("[data-ride-mode]");
+  if (loc) return toggleRideMode(loc.dataset.rideMode);
   const track = e.target.closest("[data-track]");
   if (track) {
     const t = state.trains.get(track.dataset.track);
